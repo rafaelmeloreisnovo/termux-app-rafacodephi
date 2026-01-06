@@ -174,6 +174,84 @@ public class BareMetal {
      */
     public static native float matrixDeterminant(long handle);
     
+    /**
+     * Invert matrix using Gauss-Jordan elimination
+     * RAFAELIA deterministic method
+     * 
+     * @param handle Input matrix handle
+     * @param handleResult Result matrix handle (must be same size)
+     * @return 0 on success, -1 on error (singular matrix)
+     */
+    public static native int matrixInvert(long handle, long handleResult);
+    
+    /**
+     * Add two matrices element-wise: C = A + B
+     * @param handleA First matrix
+     * @param handleB Second matrix
+     * @param handleResult Result matrix
+     */
+    public static native void matrixAdd(long handleA, long handleB, long handleResult);
+    
+    /**
+     * Subtract two matrices element-wise: C = A - B
+     * @param handleA First matrix
+     * @param handleB Second matrix
+     * @param handleResult Result matrix
+     */
+    public static native void matrixSubtract(long handleA, long handleB, long handleResult);
+    
+    /**
+     * Scale matrix by scalar: M = s * M
+     * @param handle Matrix handle
+     * @param scalar Scaling factor
+     */
+    public static native void matrixScale(long handle, float scalar);
+    
+    /**
+     * Compute trace (sum of diagonal elements)
+     * @param handle Matrix handle
+     * @return Trace value
+     */
+    public static native float matrixTrace(long handle);
+    
+    /**
+     * Set matrix to identity matrix
+     * @param handle Matrix handle (must be square)
+     */
+    public static native void matrixIdentity(long handle);
+    
+    /**
+     * Solve linear system Ax = b using Gaussian elimination
+     * RAFAELIA deterministic method with partial pivoting
+     * 
+     * @param handle Matrix A handle
+     * @param b Right-hand side vector
+     * @param x Solution vector (output)
+     * @return 0 on success, -1 on error (singular matrix)
+     */
+    public static native int matrixSolveLinear(long handle, float[] b, float[] x);
+    
+    /**
+     * Transpose matrix: B = Aᵀ
+     * @param handle Input matrix handle
+     * @param handleResult Result matrix handle (must be transposed dimensions)
+     */
+    public static native void matrixTranspose(long handle, long handleResult);
+    
+    /**
+     * Get matrix data as flat array (row-major order)
+     * @param handle Matrix handle
+     * @param data Output array (must be at least rows*cols)
+     */
+    public static native void matrixGetData(long handle, float[] data);
+    
+    /**
+     * Set matrix data from flat array (row-major order)
+     * @param handle Matrix handle
+     * @param data Input array (must be at least rows*cols)
+     */
+    public static native void matrixSetData(long handle, float[] data);
+    
     /* ========================================================================
      * Fast Math - No legacy functions, bare-metal implementations
      * ====================================================================== */
@@ -261,8 +339,9 @@ public class BareMetal {
     
     /**
      * Matrix helper class for easier usage
+     * Implements RAFAELIA deterministic matrix operations
      */
-    public static class Matrix {
+    public static class Matrix implements AutoCloseable {
         private long handle;
         private int rows;
         private int cols;
@@ -280,6 +359,27 @@ public class BareMetal {
         public int getCols() { return cols; }
         public long getHandle() { return handle; }
         
+        /**
+         * Get matrix data as flat array (row-major order)
+         */
+        public float[] getData() {
+            float[] data = new float[rows * cols];
+            matrixGetData(handle, data);
+            return data;
+        }
+        
+        /**
+         * Set matrix data from flat array (row-major order)
+         */
+        public void setData(float[] data) {
+            if (data.length < rows * cols) {
+                throw new IllegalArgumentException("Data array too small");
+            }
+            matrixSetData(handle, data);
+        }
+        
+        /* Flip operations - RAFAELIA deterministic method */
+        
         public void flipHorizontal() {
             matrixFlipHorizontal(handle);
         }
@@ -292,9 +392,25 @@ public class BareMetal {
             matrixFlipDiagonal(handle);
         }
         
+        /* Basic operations */
+        
         public float determinant() {
             return matrixDeterminant(handle);
         }
+        
+        public float trace() {
+            return matrixTrace(handle);
+        }
+        
+        public void scale(float scalar) {
+            matrixScale(handle, scalar);
+        }
+        
+        public void setIdentity() {
+            matrixIdentity(handle);
+        }
+        
+        /* Matrix algebra */
         
         public Matrix multiply(Matrix other) {
             if (this.cols != other.rows) {
@@ -305,20 +421,81 @@ public class BareMetal {
             return result;
         }
         
+        public Matrix add(Matrix other) {
+            if (this.rows != other.rows || this.cols != other.cols) {
+                throw new IllegalArgumentException("Matrix dimensions must match for addition");
+            }
+            Matrix result = new Matrix(this.rows, this.cols);
+            matrixAdd(this.handle, other.handle, result.handle);
+            return result;
+        }
+        
+        public Matrix subtract(Matrix other) {
+            if (this.rows != other.rows || this.cols != other.cols) {
+                throw new IllegalArgumentException("Matrix dimensions must match for subtraction");
+            }
+            Matrix result = new Matrix(this.rows, this.cols);
+            matrixSubtract(this.handle, other.handle, result.handle);
+            return result;
+        }
+        
+        public Matrix transpose() {
+            Matrix result = new Matrix(this.cols, this.rows);
+            matrixTranspose(this.handle, result.handle);
+            return result;
+        }
+        
+        /**
+         * Invert matrix using Gauss-Jordan elimination
+         * @return Inverted matrix, or null if singular
+         */
+        public Matrix invert() {
+            if (this.rows != this.cols) {
+                throw new IllegalArgumentException("Only square matrices can be inverted");
+            }
+            Matrix result = new Matrix(this.rows, this.cols);
+            int status = matrixInvert(this.handle, result.handle);
+            if (status != 0) {
+                result.close();
+                return null;  // Singular matrix
+            }
+            return result;
+        }
+        
+        /**
+         * Solve linear system Ax = b
+         * @param b Right-hand side vector
+         * @return Solution vector x, or null if singular
+         */
+        public float[] solve(float[] b) {
+            if (b.length != this.rows) {
+                throw new IllegalArgumentException("Vector b size must match matrix rows");
+            }
+            float[] x = new float[this.cols];
+            int status = matrixSolveLinear(this.handle, b, x);
+            if (status != 0) {
+                return null;  // Singular matrix
+            }
+            return x;
+        }
+        
         @Override
         protected void finalize() throws Throwable {
-            if (handle != 0) {
-                matrixFree(handle);
-                handle = 0;
-            }
+            close();
             super.finalize();
         }
         
+        @Override
         public void close() {
             if (handle != 0) {
                 matrixFree(handle);
                 handle = 0;
             }
+        }
+        
+        @Override
+        public String toString() {
+            return String.format("Matrix[%dx%d]@0x%x", rows, cols, handle);
         }
     }
 }
