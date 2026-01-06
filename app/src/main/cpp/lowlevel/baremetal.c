@@ -1,9 +1,54 @@
 /**
  * Bare-metal low-level operations for Termux
+ * RAFAELIA Framework Implementation
  * No external dependencies, architecture-optimized
  * 
- * Copyright (c) instituto-Rafael
+ * RAFAELIA Methodology:
+ * ---------------------
+ * This module implements the RAFAELIA (RAfael FrAmework for Ethical Linear and 
+ * Iterative Analysis) computational framework, which emphasizes:
+ * 
+ * 1. Matrix-based deterministic computation
+ *    - All operations are expressed as matrix transformations
+ *    - Flip operations (horizontal, vertical, diagonal) for solving systems
+ *    - Linear algebra without external library dependencies
+ * 
+ * 2. Minimal abstraction
+ *    - Variables use short names (m, r, c) to reduce overhead
+ *    - Direct memory access for performance
+ *    - No legacy function names
+ * 
+ * 3. Ethical computation (Φ_ethica)
+ *    - Minimize entropy, maximize coherence
+ *    - Deterministic outcomes for reproducibility
+ *    - Clear, verifiable algorithms
+ * 
+ * 4. Hardware optimization
+ *    - SIMD support (NEON, AVX, SSE)
+ *    - Architecture-specific optimizations
+ *    - Bare-metal implementations
+ * 
+ * 5. Self-contained implementation
+ *    - Only stdlib for malloc/free
+ *    - Custom math functions (fm_*)
+ *    - Custom memory operations (bmem_*)
+ *    - Custom string operations (bstr_*)
+ * 
+ * Mathematical Foundation:
+ * ------------------------
+ * R_Ω = Σ_n (ψ_n·χ_n·ρ_n·Δ_n·Σ_n·Ω_n)^{Φλ}
+ * 
+ * Where the ψχρΔΣΩ cycle represents:
+ *   ψ (psi):   Perception - Input processing and validation
+ *   χ (chi):   Feedback - Retroalignment and coherence check
+ *   ρ (rho):   Expansion - Transformation and computation
+ *   Δ (Delta): Validation - Verification of results
+ *   Σ (Sigma): Execution - Synthesis and output
+ *   Ω (Omega): Alignment - Ethical coherence (Φ_ethica)
+ * 
+ * Copyright (c) 2024-present instituto-Rafael
  * License: GPLv3
+ * Attribution: RAFAELIA Framework - RAFCODE-Φ
  */
 
 #include "baremetal.h"
@@ -145,7 +190,7 @@ void mx_transpose(const mx_t* a, mx_t* r) {
     }
 }
 
-/* Determinant calculation - deterministic approach */
+/* Determinant calculation - deterministic approach using RAFAELIA method */
 float mx_det(const mx_t* m) {
     if (!m || m->r != m->c) return 0.0f;
     
@@ -157,20 +202,148 @@ float mx_det(const mx_t* m) {
         return m->m[0] * m->m[3] - m->m[1] * m->m[2];
     }
     
-    /* For larger matrices, use cofactor expansion */
-    /* Simplified for demonstration */
-    return 0.0f;
+    if (m->r == 3) {
+        /* Sarrus rule for 3x3 matrices - deterministic */
+        float a = m->m[0], b = m->m[1], c = m->m[2];
+        float d = m->m[3], e = m->m[4], f = m->m[5];
+        float g = m->m[6], h = m->m[7], i = m->m[8];
+        return a*e*i + b*f*g + c*d*h - c*e*g - b*d*i - a*f*h;
+    }
+    
+    /* For larger matrices, use Gaussian elimination - O(n^3) */
+    /* Create working copy */
+    mx_t* w = mx_create(m->r, m->c);
+    if (!w) return 0.0f;
+    
+    bmem_cpy(w->m, m->m, m->r * m->c * sizeof(float));
+    
+    float det = 1.0f;
+    
+    /* Forward elimination with partial pivoting */
+    for (uint32_t k = 0; k < m->r; k++) {
+        /* Find pivot */
+        uint32_t pivot = k;
+        float max = fm_sqrt(fm_pow2(w->m[k * w->c + k])); /* abs value */
+        
+        for (uint32_t i = k + 1; i < w->r; i++) {
+            float val = fm_sqrt(fm_pow2(w->m[i * w->c + k]));
+            if (val > max) {
+                max = val;
+                pivot = i;
+            }
+        }
+        
+        /* Swap rows if needed */
+        if (pivot != k) {
+            for (uint32_t j = 0; j < w->c; j++) {
+                float tmp = w->m[k * w->c + j];
+                w->m[k * w->c + j] = w->m[pivot * w->c + j];
+                w->m[pivot * w->c + j] = tmp;
+            }
+            det = -det; /* Row swap changes sign */
+        }
+        
+        float diag = w->m[k * w->c + k];
+        if (diag == 0.0f) {
+            mx_free(w);
+            return 0.0f; /* Singular matrix */
+        }
+        
+        det *= diag;
+        
+        /* Eliminate column */
+        for (uint32_t i = k + 1; i < w->r; i++) {
+            float factor = w->m[i * w->c + k] / diag;
+            for (uint32_t j = k; j < w->c; j++) {
+                w->m[i * w->c + j] -= factor * w->m[k * w->c + j];
+            }
+        }
+    }
+    
+    mx_free(w);
+    return det;
 }
 
-/* Matrix inversion - returns 0 on success */
+/* Matrix inversion using Gauss-Jordan elimination - RAFAELIA deterministic method */
 int mx_inv(const mx_t* m, mx_t* r) {
     if (!m || !r) return -1;
-    if (m->r != m->c) return -1;
+    if (m->r != m->c || r->r != m->r || r->c != m->c) return -1;
     
-    float det = mx_det(m);
-    if (det == 0.0f) return -1;  /* Singular matrix */
+    uint32_t n = m->r;
     
-    /* Simplified - would implement full Gauss-Jordan elimination */
+    /* Create augmented matrix [M | I] */
+    mx_t* aug = mx_create(n, 2 * n);
+    if (!aug) return -1;
+    
+    /* Copy M to left half */
+    for (uint32_t i = 0; i < n; i++) {
+        for (uint32_t j = 0; j < n; j++) {
+            aug->m[i * aug->c + j] = m->m[i * m->c + j];
+        }
+    }
+    
+    /* Set identity matrix in right half */
+    for (uint32_t i = 0; i < n; i++) {
+        for (uint32_t j = 0; j < n; j++) {
+            aug->m[i * aug->c + (n + j)] = (i == j) ? 1.0f : 0.0f;
+        }
+    }
+    
+    /* Gauss-Jordan elimination with partial pivoting */
+    for (uint32_t k = 0; k < n; k++) {
+        /* Find pivot */
+        uint32_t pivot = k;
+        float max = 0.0f;
+        
+        for (uint32_t i = k; i < n; i++) {
+            float val = aug->m[i * aug->c + k];
+            float abs_val = (val < 0.0f) ? -val : val;
+            if (abs_val > max) {
+                max = abs_val;
+                pivot = i;
+            }
+        }
+        
+        /* Check for singular matrix */
+        if (max < 1e-10f) {
+            mx_free(aug);
+            return -1;
+        }
+        
+        /* Swap rows if needed */
+        if (pivot != k) {
+            for (uint32_t j = 0; j < aug->c; j++) {
+                float tmp = aug->m[k * aug->c + j];
+                aug->m[k * aug->c + j] = aug->m[pivot * aug->c + j];
+                aug->m[pivot * aug->c + j] = tmp;
+            }
+        }
+        
+        /* Scale pivot row */
+        float diag = aug->m[k * aug->c + k];
+        for (uint32_t j = 0; j < aug->c; j++) {
+            aug->m[k * aug->c + j] /= diag;
+        }
+        
+        /* Eliminate column in all other rows */
+        for (uint32_t i = 0; i < n; i++) {
+            if (i != k) {
+                float factor = aug->m[i * aug->c + k];
+                for (uint32_t j = 0; j < aug->c; j++) {
+                    aug->m[i * aug->c + j] -= factor * aug->m[k * aug->c + j];
+                }
+            }
+        }
+    }
+    
+    /* Extract inverse from right half */
+    for (uint32_t i = 0; i < n; i++) {
+        for (uint32_t j = 0; j < n; j++) {
+            r->m[i * r->c + j] = aug->m[i * aug->c + (n + j)];
+        }
+    }
+    
+    mx_free(aug);
     return 0;
 }
 
@@ -219,6 +392,141 @@ void mx_flip_d(mx_t* m) {
             m->m[idx2] = tmp;
         }
     }
+}
+
+/* ============================================================================
+ * Advanced Matrix Operations - RAFAELIA extended methods
+ * ========================================================================== */
+
+/* Element-wise matrix addition */
+void mx_add(const mx_t* a, const mx_t* b, mx_t* r) {
+    if (!a || !b || !r) return;
+    if (a->r != b->r || a->c != b->c) return;
+    if (r->r != a->r || r->c != a->c) return;
+    
+    uint32_t n = a->r * a->c;
+    for (uint32_t i = 0; i < n; i++) {
+        r->m[i] = a->m[i] + b->m[i];
+    }
+}
+
+/* Element-wise matrix subtraction */
+void mx_sub(const mx_t* a, const mx_t* b, mx_t* r) {
+    if (!a || !b || !r) return;
+    if (a->r != b->r || a->c != b->c) return;
+    if (r->r != a->r || r->c != a->c) return;
+    
+    uint32_t n = a->r * a->c;
+    for (uint32_t i = 0; i < n; i++) {
+        r->m[i] = a->m[i] - b->m[i];
+    }
+}
+
+/* Scalar multiplication */
+void mx_scale(mx_t* m, float s) {
+    if (!m) return;
+    
+    uint32_t n = m->r * m->c;
+    for (uint32_t i = 0; i < n; i++) {
+        m->m[i] *= s;
+    }
+}
+
+/* Trace - sum of diagonal elements */
+float mx_trace(const mx_t* m) {
+    if (!m || m->r != m->c) return 0.0f;
+    
+    float trace = 0.0f;
+    for (uint32_t i = 0; i < m->r; i++) {
+        trace += m->m[i * m->c + i];
+    }
+    return trace;
+}
+
+/* Set matrix to identity */
+void mx_identity(mx_t* m) {
+    if (!m || m->r != m->c) return;
+    
+    for (uint32_t i = 0; i < m->r; i++) {
+        for (uint32_t j = 0; j < m->c; j++) {
+            m->m[i * m->c + j] = (i == j) ? 1.0f : 0.0f;
+        }
+    }
+}
+
+/* Solve linear system Ax = b using Gaussian elimination with back substitution
+ * RAFAELIA deterministic method - no external dependencies
+ * Returns 0 on success, -1 on failure (singular matrix)
+ */
+int mx_solve_linear(const mx_t* a, const float* b, float* x) {
+    if (!a || !b || !x) return -1;
+    if (a->r != a->c) return -1;  /* Must be square */
+    
+    uint32_t n = a->r;
+    
+    /* Create augmented matrix [A | b] */
+    mx_t* aug = mx_create(n, n + 1);
+    if (!aug) return -1;
+    
+    /* Copy A to left part */
+    for (uint32_t i = 0; i < n; i++) {
+        for (uint32_t j = 0; j < n; j++) {
+            aug->m[i * aug->c + j] = a->m[i * a->c + j];
+        }
+        /* Copy b to right column */
+        aug->m[i * aug->c + n] = b[i];
+    }
+    
+    /* Forward elimination with partial pivoting */
+    for (uint32_t k = 0; k < n; k++) {
+        /* Find pivot */
+        uint32_t pivot = k;
+        float max = 0.0f;
+        
+        for (uint32_t i = k; i < n; i++) {
+            float val = aug->m[i * aug->c + k];
+            float abs_val = (val < 0.0f) ? -val : val;
+            if (abs_val > max) {
+                max = abs_val;
+                pivot = i;
+            }
+        }
+        
+        /* Check for singular matrix */
+        if (max < 1e-10f) {
+            mx_free(aug);
+            return -1;
+        }
+        
+        /* Swap rows if needed */
+        if (pivot != k) {
+            for (uint32_t j = k; j <= n; j++) {
+                float tmp = aug->m[k * aug->c + j];
+                aug->m[k * aug->c + j] = aug->m[pivot * aug->c + j];
+                aug->m[pivot * aug->c + j] = tmp;
+            }
+        }
+        
+        /* Eliminate column below pivot */
+        for (uint32_t i = k + 1; i < n; i++) {
+            float factor = aug->m[i * aug->c + k] / aug->m[k * aug->c + k];
+            for (uint32_t j = k; j <= n; j++) {
+                aug->m[i * aug->c + j] -= factor * aug->m[k * aug->c + j];
+            }
+        }
+    }
+    
+    /* Back substitution */
+    for (int i = n - 1; i >= 0; i--) {
+        float sum = aug->m[i * aug->c + n];
+        for (uint32_t j = i + 1; j < n; j++) {
+            sum -= aug->m[i * aug->c + j] * x[j];
+        }
+        x[i] = sum / aug->m[i * aug->c + i];
+    }
+    
+    mx_free(aug);
+    return 0;
 }
 
 /* ============================================================================

@@ -1,9 +1,25 @@
 /**
  * Bare-metal low-level operations for Termux
+ * RAFAELIA Framework - Header File
  * No external dependencies, architecture-optimized
  * 
- * Copyright (c) instituto-Rafael
+ * This header defines the RAFAELIA computational framework interface:
+ * - Matrix operations with deterministic mathematics
+ * - Vector operations optimized with SIMD
+ * - Flip operations for matrix solving (horizontal, vertical, diagonal)
+ * - Fast math functions without legacy dependencies
+ * - Bare-metal memory and string operations
+ * 
+ * Design Principles (RAFAELIA):
+ * - Φ_ethica: Minimize entropy, maximize coherence
+ * - Determinism: Predictable, reproducible results
+ * - Self-contained: No external library dependencies
+ * - Hardware-optimized: NEON/AVX/SSE support
+ * - Modular: Clean separation of concerns
+ * 
+ * Copyright (c) 2024-present instituto-Rafael
  * License: GPLv3
+ * Attribution: RAFAELIA Framework - RAFCODE-Φ
  */
 
 #ifndef TERMUX_BAREMETAL_H
@@ -67,10 +83,18 @@ void mx_transpose(const mx_t* a, mx_t* r);
 float mx_det(const mx_t* m);
 int mx_inv(const mx_t* m, mx_t* r);
 
-/* Flip operations for matrix solving */
+/* Flip operations for matrix solving - RAFAELIA deterministic method */
 void mx_flip_h(mx_t* m);  /* Horizontal flip */
 void mx_flip_v(mx_t* m);  /* Vertical flip */
 void mx_flip_d(mx_t* m);  /* Diagonal flip (transpose) */
+
+/* Advanced matrix operations - RAFAELIA extended methods */
+void mx_add(const mx_t* a, const mx_t* b, mx_t* r);  /* Element-wise addition */
+void mx_sub(const mx_t* a, const mx_t* b, mx_t* r);  /* Element-wise subtraction */
+void mx_scale(mx_t* m, float s);  /* Scalar multiplication */
+float mx_trace(const mx_t* m);  /* Trace (sum of diagonal) */
+void mx_identity(mx_t* m);  /* Set to identity matrix */
+int mx_solve_linear(const mx_t* a, const float* b, float* x);  /* Solve Ax=b */
 
 /* Fast math - no legacy functions */
 float fm_sqrt(float x);

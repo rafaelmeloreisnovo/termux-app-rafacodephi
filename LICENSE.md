@@ -126,8 +126,90 @@ This disclaimer applies to the original Termux project, this fork, and all incor
 
 ---
 
+## RAFAELIA Framework Attribution
+
+### Acknowledgment of RAFAELIA Methodology
+
+This fork incorporates the **RAFAELIA Framework** - a modular, matrix-based computational methodology developed by instituto-Rafael. RAFAELIA represents a systematic approach to low-level programming that emphasizes:
+
+- **Matrix-based computation**: Using deterministic linear algebra for problem solving
+- **Minimal dependencies**: Self-contained implementations without external libraries
+- **Architectural optimization**: Hardware-specific SIMD optimizations (NEON, AVX, SSE)
+- **Ethical computation**: Following principles of Φ_ethica (ethical filter) in all operations
+- **Modular design**: Clean separation between Java interfaces and C/ASM implementations
+
+#### RAFAELIA Core Principles
+
+The RAFAELIA methodology is guided by the following principles:
+
+1. **Humildade_Ω (Humility)**: Acknowledge what is known and unknown; proceed iteratively
+2. **Coerência (Coherence)**: Maintain consistency across all layers of the system
+3. **Φ_ethica (Ethical Filter)**: Minimize entropy, maximize coherence in all decisions
+4. **Retroalimentação (Feedback)**: Continuous feedback loops for improvement (ψχρΔΣΩ cycle)
+5. **Determinismo (Determinism)**: Matrix operations with predictable, verifiable outcomes
+
+#### RAFAELIA Authorship Note
+
+The following components are original contributions under the RAFAELIA framework:
+
+- **Low-level matrix operations** (`app/src/main/cpp/lowlevel/`): Pure C/ASM implementations without external dependencies
+- **Bare-metal utilities** (`rafaelia/`): SIMD-optimized vector and matrix operations
+- **Deterministic flip operations**: Matrix solving through horizontal, vertical, and diagonal transformations
+- **Architecture-optimized kernels**: Platform-specific NEON/AVX/SSE implementations
+
+**Copyright**: © 2024-present instituto-Rafael  
+**Methodology**: RAFAELIA Framework (RAFCODE-Φ)  
+**License**: GPLv3 (maintaining compatibility with upstream Termux)  
+**Attribution Required**: When using RAFAELIA components, please acknowledge:
+  - "Powered by RAFAELIA Framework - instituto-Rafael"
+  - Reference to this repository and methodology
+
+#### RAFAELIA Mathematical Foundation
+
+The RAFAELIA framework is built on rigorous mathematical foundations:
+
+```
+R_Ω = Σ_n (ψ_n·χ_n·ρ_n·Δ_n·Σ_n·Ω_n)^{Φλ}
+```
+
+Where:
+- **ψ** (psi): Perception and input processing
+- **χ** (chi): Feedback and retroalignment
+- **ρ** (rho): Expansion and transformation
+- **Δ** (Delta): Validation and verification
+- **Σ** (Sigma): Execution and synthesis
+- **Ω** (Omega): Ethical alignment and completion
+- **Φλ** (Phi-lambda): Coherence scaling factor
+
+This cycle ensures that all computational operations maintain ethical coherence (Φ_ethica) and deterministic outcomes through matrix-based transformations.
+
+#### Technical Implementation Notes
+
+1. **Matrix Structures**: All matrices use minimal structure `mx_t` with direct memory access
+2. **Variable Naming**: Intentionally minimal (m, r, c) to reduce abstraction overhead
+3. **Flip Operations**: Deterministic matrix solving via transformations:
+   - `mx_flip_h()`: Horizontal flip for row-wise operations
+   - `mx_flip_v()`: Vertical flip for column-wise operations  
+   - `mx_flip_d()`: Diagonal flip (transpose) for linear system solving
+4. **No Legacy Dependencies**: All functions have new names (e.g., `fm_sqrt`, `vop_dot`, `bmem_cpy`)
+5. **Hardware Optimization**: Automatic detection and use of NEON/AVX/SSE SIMD instructions
+
+#### Gratitude and Acknowledgments
+
+The RAFAELIA framework acknowledges and thanks:
+
+- **Original Termux Project**: For providing the foundation and terminal infrastructure
+- **Android Open Source Project**: For filesystem utilities and platform support
+- **Open Source Community**: For mathematical algorithms and optimization techniques that inspired RAFAELIA's implementation
+- **Contributors**: All individuals who have contributed to the evolution of this methodology
+
+**Special Note**: While RAFAELIA implements its own low-level primitives, it stands on the shoulders of decades of computer science research. We acknowledge that mathematical techniques (Newton-Raphson, SIMD vectorization, linear algebra methods) are part of the collective knowledge of humanity and are used here in the spirit of advancing accessible, ethical computation.
+
+---
+
 ## Questions and Attribution Requests
 
 For questions about licensing, attribution, or to report missing attributions:
 - **Original Termux**: See [https://termux.com](https://termux.com)
+- **RAFAELIA Framework**: Open an issue at [https://github.com/instituto-Rafael/termux-app-rafacodephi/issues](https://github.com/instituto-Rafael/termux-app-rafacodephi/issues)
 - **This Fork**: Open an issue at [https://github.com/instituto-Rafael/termux-app-rafacodephi/issues](https://github.com/instituto-Rafael/termux-app-rafacodephi/issues)
