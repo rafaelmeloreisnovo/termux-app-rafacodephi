@@ -3,6 +3,8 @@ plugins {
 }
 
 android {
+    namespace "com.termux.rafaelia"
+    
     compileSdkVersion project.properties.compileSdkVersion.toInteger()
     ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
 
