@@ -98,7 +98,6 @@ mx_t* mx_create(uint32_t r, uint32_t c) {
     if (!m) return NULL;
     
     /* Allocate matrix data */
-    size_t size = r * c * sizeof(float);
     m->m = (float*)calloc(r * c, sizeof(float));
     if (!m->m) {
         free(m);
