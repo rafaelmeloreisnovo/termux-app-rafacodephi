@@ -11,6 +11,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.IBinder;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
@@ -214,6 +215,11 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_termux);
+
+        // Android 11+ (especially Android 15/API 35) will hard-fail shared storage access
+        // if All Files Access is not granted. Request it early so we don't crash later
+        // when any code path touches /sdcard or ~/storage/shared.
+        maybeRequestAllFilesAccessOnStartup();
 
         // Load termux shared preferences
         // This will also fail if TermuxConstants.TERMUX_PACKAGE_NAME does not equal applicationId
@@ -760,6 +766,30 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
 
 
 
+
+    /**
+     * Request All Files Access (MANAGE_EXTERNAL_STORAGE) on Android 11+ if not already granted.
+     *
+     * Termux can run without it, but any code path that touches shared storage (/sdcard, ~/storage/shared)
+     * will throw SecurityException/EACCES on modern Android if permission isn't granted.
+     *
+     * This is a startup guard to prevent "opens then instantly crashes" after raising targetSdkVersion.
+     */
+    private void maybeRequestAllFilesAccessOnStartup() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // If legacy storage is possible, Termux will request READ/WRITE when user runs setup-storage,
+                // otherwise it requires MANAGE_EXTERNAL_STORAGE for primary shared storage access.
+                if (!PermissionUtils.isLegacyExternalStoragePossible(this) && !Environment.isExternalStorageManager()) {
+                    // Trigger the existing request flow (opens system Settings screen).
+                    requestStoragePermission(false);
+                }
+            }
+        } catch (Throwable t) {
+            // Never crash the app because of permission checks.
+            Logger.logStackTraceWithMessage(LOG_TAG, "maybeRequestAllFilesAccessOnStartup failed", t);
+        }
+    }
     /**
      * For processes to access primary external storage (/sdcard, /storage/emulated/0, ~/storage/shared),
      * termux needs to be granted legacy WRITE_EXTERNAL_STORAGE or MANAGE_EXTERNAL_STORAGE permissions
