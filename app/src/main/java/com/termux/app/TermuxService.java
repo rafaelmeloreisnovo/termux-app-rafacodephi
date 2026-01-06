@@ -310,23 +310,34 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
 
         Logger.logDebug(LOG_TAG, "Acquiring WakeLocks");
 
-        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TermuxConstants.TERMUX_APP_NAME.toLowerCase() + ":service-wakelock");
-        mWakeLock.acquire();
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null) {
+                mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TermuxConstants.TERMUX_APP_NAME.toLowerCase() + ":service-wakelock");
+                mWakeLock.acquire();
+            } else {
+                Logger.logError(LOG_TAG, "PowerManager service is null, cannot acquire wake lock");
+            }
 
-        // http://tools.android.com/tech-docs/lint-in-studio-2-3#TOC-WifiManager-Leak
-        WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        mWifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, TermuxConstants.TERMUX_APP_NAME.toLowerCase());
-        mWifiLock.acquire();
+            // http://tools.android.com/tech-docs/lint-in-studio-2-3#TOC-WifiManager-Leak
+            WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            if (wm != null) {
+                mWifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, TermuxConstants.TERMUX_APP_NAME.toLowerCase());
+                mWifiLock.acquire();
+            } else {
+                Logger.logError(LOG_TAG, "WifiManager service is null, cannot acquire wifi lock");
+            }
 
-        if (!PermissionUtils.checkIfBatteryOptimizationsDisabled(this)) {
-            PermissionUtils.requestDisableBatteryOptimizations(this);
+            if (!PermissionUtils.checkIfBatteryOptimizationsDisabled(this)) {
+                PermissionUtils.requestDisableBatteryOptimizations(this);
+            }
+
+            updateNotification();
+
+            Logger.logDebug(LOG_TAG, "WakeLocks acquired successfully");
+        } catch (Exception e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Error acquiring WakeLocks", e);
         }
-
-        updateNotification();
-
-        Logger.logDebug(LOG_TAG, "WakeLocks acquired successfully");
-
     }
 
     /** Process action to release Power and Wi-Fi WakeLocks. */
@@ -338,20 +349,31 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
 
         Logger.logDebug(LOG_TAG, "Releasing WakeLocks");
 
-        if (mWakeLock != null) {
-            mWakeLock.release();
-            mWakeLock = null;
-        }
+        try {
+            if (mWakeLock != null) {
+                if (mWakeLock.isHeld()) {
+                    mWakeLock.release();
+                }
+                mWakeLock = null;
+            }
 
-        if (mWifiLock != null) {
-            mWifiLock.release();
+            if (mWifiLock != null) {
+                if (mWifiLock.isHeld()) {
+                    mWifiLock.release();
+                }
+                mWifiLock = null;
+            }
+
+            if (updateNotification)
+                updateNotification();
+
+            Logger.logDebug(LOG_TAG, "WakeLocks released successfully");
+        } catch (Exception e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Error releasing WakeLocks", e);
+            // Set to null even on error to prevent repeated failures
+            mWakeLock = null;
             mWifiLock = null;
         }
-
-        if (updateNotification)
-            updateNotification();
-
-        Logger.logDebug(LOG_TAG, "WakeLocks released successfully");
     }
 
     /** Process {@link TERMUX_SERVICE#ACTION_SERVICE_EXECUTE} intent to execute a shell command in
