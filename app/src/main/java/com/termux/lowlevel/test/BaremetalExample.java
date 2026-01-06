@@ -77,28 +77,125 @@ public class BaremetalExample {
     }
     
     private static void example3_MatrixOperations() {
-        System.out.println("=== Example 3: Matrix Operations ===");
+        System.out.println("=== Example 3: Matrix Operations (RAFAELIA) ===");
         
-        // Create a 3x3 matrix
-        BareMetal.Matrix m = new BareMetal.Matrix(3, 3);
-        System.out.println("Created 3x3 matrix");
+        // Create a 3x3 identity matrix
+        BareMetal.Matrix I = new BareMetal.Matrix(3, 3);
+        I.setIdentity();
+        System.out.println("Created 3x3 identity matrix");
+        System.out.println("Trace of I: " + I.trace());
+        System.out.println("Determinant of I: " + I.determinant());
         
-        // Apply flip operations
-        m.flipHorizontal();
-        System.out.println("Applied horizontal flip");
+        // Create a test matrix
+        BareMetal.Matrix A = new BareMetal.Matrix(3, 3);
+        float[] dataA = {
+            2.0f, 1.0f, 1.0f,
+            1.0f, 3.0f, 2.0f,
+            1.0f, 2.0f, 2.0f
+        };
+        A.setData(dataA);
+        System.out.println("\nMatrix A created with determinant: " + A.determinant());
+        System.out.println("Trace of A: " + A.trace());
         
-        m.flipVertical();
+        // RAFAELIA Flip operations - deterministic transformations
+        BareMetal.Matrix Ah = new BareMetal.Matrix(3, 3);
+        Ah.setData(dataA);
+        Ah.flipHorizontal();
+        System.out.println("\nApplied horizontal flip");
+        System.out.println("Det after horizontal flip: " + Ah.determinant());
+        Ah.close();
+        
+        BareMetal.Matrix Av = new BareMetal.Matrix(3, 3);
+        Av.setData(dataA);
+        Av.flipVertical();
         System.out.println("Applied vertical flip");
+        System.out.println("Det after vertical flip: " + Av.determinant());
+        Av.close();
         
-        m.flipDiagonal();
-        System.out.println("Applied diagonal flip (transpose)");
+        // Transpose (diagonal flip)
+        BareMetal.Matrix At = A.transpose();
+        System.out.println("\nTranspose computed");
+        System.out.println("Det of transpose: " + At.determinant());
         
-        // Compute determinant
-        float det = m.determinant();
-        System.out.println("Determinant: " + det);
+        // Matrix multiplication
+        BareMetal.Matrix AAt = A.multiply(At);
+        System.out.println("\nA × A^T computed");
+        System.out.println("Det(A × A^T): " + AAt.determinant());
+        
+        // Matrix addition and subtraction
+        BareMetal.Matrix sum = A.add(I);
+        System.out.println("\nA + I computed");
+        System.out.println("Trace(A + I): " + sum.trace());
+        
+        BareMetal.Matrix diff = A.subtract(I);
+        System.out.println("A - I computed");
+        System.out.println("Trace(A - I): " + diff.trace());
+        
+        // Scalar multiplication
+        BareMetal.Matrix A2 = new BareMetal.Matrix(3, 3);
+        A2.setData(dataA);
+        A2.scale(2.0f);
+        System.out.println("\n2A computed");
+        System.out.println("Det(2A): " + A2.determinant());
+        System.out.println("Expected: " + (8 * A.determinant()));
+        
+        // Matrix inversion
+        BareMetal.Matrix Ainv = A.invert();
+        if (Ainv != null) {
+            System.out.println("\nA^-1 computed");
+            System.out.println("Det(A^-1): " + Ainv.determinant());
+            System.out.println("Expected: " + (1.0f / A.determinant()));
+            
+            // Verify A × A^-1 ≈ I
+            BareMetal.Matrix verify = A.multiply(Ainv);
+            System.out.println("A × A^-1 computed (should be ≈ I)");
+            System.out.println("Trace(A × A^-1): " + verify.trace() + " (expected: 3.0)");
+            verify.close();
+            Ainv.close();
+        } else {
+            System.out.println("\nMatrix is singular (cannot invert)");
+        }
+        
+        // Solve linear system Ax = b
+        float[] b = {6.0f, 11.0f, 9.0f};
+        float[] x = A.solve(b);
+        if (x != null) {
+            System.out.println("\nSolved Ax = b");
+            System.out.print("Solution x = [");
+            for (int i = 0; i < x.length; i++) {
+                System.out.printf("%.2f", x[i]);
+                if (i < x.length - 1) System.out.print(", ");
+            }
+            System.out.println("]");
+            
+            // Verify solution
+            float[] Ax = new float[3];
+            float[] dataAArray = A.getData();
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    Ax[i] += dataAArray[i * 3 + j] * x[j];
+                }
+            }
+            System.out.print("Verification Ax = [");
+            for (int i = 0; i < Ax.length; i++) {
+                System.out.printf("%.2f", Ax[i]);
+                if (i < Ax.length - 1) System.out.print(", ");
+            }
+            System.out.println("] (should equal b)");
+        } else {
+            System.out.println("\nLinear system could not be solved");
+        }
         
         // Clean up
-        m.close();
+        I.close();
+        A.close();
+        At.close();
+        AAt.close();
+        sum.close();
+        diff.close();
+        A2.close();
+        
+        System.out.println("\nAll matrix operations completed successfully!");
         System.out.println();
     }
     
