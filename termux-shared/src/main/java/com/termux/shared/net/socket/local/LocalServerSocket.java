@@ -188,6 +188,9 @@ public class LocalServerSocket implements Closeable {
         Logger.logVerbose(LOG_TAG, "accept");
 
         int clientFD;
+        int consecutiveErrors = 0;
+        final int MAX_CONSECUTIVE_ERRORS = 100;
+        
         while (true) {
             // If server socket closed
             int fd = mLocalSocketRunConfig.getFD();
@@ -199,6 +202,18 @@ public class LocalServerSocket implements Closeable {
             if (result == null || result.retval != 0) {
                 mLocalSocketManager.onError(
                     LocalSocketErrno.ERRNO_ACCEPT_CLIENT_SOCKET_FAILED.getError(mLocalSocketRunConfig.getTitle(), JniResult.getErrorString(result)));
+                
+                // Exponential backoff on consecutive errors to prevent CPU spinning
+                if (++consecutiveErrors > MAX_CONSECUTIVE_ERRORS) {
+                    Logger.logError(LOG_TAG, "Too many consecutive accept errors, stopping server");
+                    return null;
+                }
+                try {
+                    Thread.sleep(Math.min(100 * consecutiveErrors, 5000));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return null;
+                }
                 continue;
             }
 
@@ -206,8 +221,22 @@ public class LocalServerSocket implements Closeable {
             if (clientFD < 0) {
                 mLocalSocketManager.onError(
                     LocalSocketErrno.ERRNO_CLIENT_SOCKET_FD_INVALID.getError(clientFD, mLocalSocketRunConfig.getTitle()));
+                
+                if (++consecutiveErrors > MAX_CONSECUTIVE_ERRORS) {
+                    Logger.logError(LOG_TAG, "Too many consecutive client FD errors, stopping server");
+                    return null;
+                }
+                try {
+                    Thread.sleep(Math.min(100 * consecutiveErrors, 5000));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return null;
+                }
                 continue;
             }
+
+            // Reset error counter on successful accept
+            consecutiveErrors = 0;
 
             PeerCred peerCred = new PeerCred();
             result = LocalSocketManager.getPeerCred(mLocalSocketRunConfig.getLogTitle() + " (client)", clientFD, peerCred);

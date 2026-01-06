@@ -94,7 +94,7 @@ public final class TerminalRow {
 
         int currentColumn = 0;
         int currentCharIndex = 0;
-        while (true) { // 0<2 1 < 2
+        while (currentCharIndex < mSpaceUsed) {
             int newCharIndex = currentCharIndex;
             char c = mText[newCharIndex++]; // cci=1, cci=2
             boolean isHigh = Character.isHighSurrogate(c);
@@ -125,6 +125,8 @@ public final class TerminalRow {
             }
             currentCharIndex = newCharIndex;
         }
+        // If we've exhausted all characters, return the space used
+        return mSpaceUsed;
     }
 
     private boolean wideDisplayCharacterStartingAt(int column) {

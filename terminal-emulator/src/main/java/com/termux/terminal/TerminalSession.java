@@ -135,7 +135,7 @@ public final class TerminalSession extends TerminalOutput {
             public void run() {
                 try (InputStream termIn = new FileInputStream(terminalFileDescriptorWrapped)) {
                     final byte[] buffer = new byte[4096];
-                    while (true) {
+                    while (!Thread.currentThread().isInterrupted()) {
                         int read = termIn.read(buffer);
                         if (read == -1) return;
                         if (!mProcessToTerminalIOQueue.write(buffer, 0, read)) return;
@@ -152,7 +152,7 @@ public final class TerminalSession extends TerminalOutput {
             public void run() {
                 final byte[] buffer = new byte[4096];
                 try (FileOutputStream termOut = new FileOutputStream(terminalFileDescriptorWrapped)) {
-                    while (true) {
+                    while (!Thread.currentThread().isInterrupted()) {
                         int bytesToWrite = mTerminalToProcessIOQueue.read(buffer, true);
                         if (bytesToWrite == -1) return;
                         termOut.write(buffer, 0, bytesToWrite);
@@ -350,17 +350,17 @@ public final class TerminalSession extends TerminalOutput {
                 int exitCode = (Integer) msg.obj;
                 cleanupResources(exitCode);
 
-                String exitDescription = "\r\n[Process completed";
+                StringBuilder exitDescription = new StringBuilder("\r\n[Process completed");
                 if (exitCode > 0) {
                     // Non-zero process exit.
-                    exitDescription += " (code " + exitCode + ")";
+                    exitDescription.append(" (code ").append(exitCode).append(")");
                 } else if (exitCode < 0) {
                     // Negated signal.
-                    exitDescription += " (signal " + (-exitCode) + ")";
+                    exitDescription.append(" (signal ").append(-exitCode).append(")");
                 }
-                exitDescription += " - press Enter]";
+                exitDescription.append(" - press Enter]");
 
-                byte[] bytesToWrite = exitDescription.getBytes(StandardCharsets.UTF_8);
+                byte[] bytesToWrite = exitDescription.toString().getBytes(StandardCharsets.UTF_8);
                 mEmulator.append(bytesToWrite, bytesToWrite.length);
                 notifyScreenUpdate();
 
