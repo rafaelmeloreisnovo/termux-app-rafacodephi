@@ -8,6 +8,7 @@
 JNIEXPORT void JNICALL
 Java_com_termux_rafaelia_RafaeliaUtils_memcpy(JNIEnv *env, jclass clazz,
                                                 jbyteArray dest, jbyteArray src, jint n) {
+    (void)clazz;
     if (!dest || !src || n <= 0) return;
     
     jbyte *dest_ptr = (*env)->GetByteArrayElements(env, dest, NULL);
@@ -24,6 +25,7 @@ Java_com_termux_rafaelia_RafaeliaUtils_memcpy(JNIEnv *env, jclass clazz,
 JNIEXPORT void JNICALL
 Java_com_termux_rafaelia_RafaeliaUtils_memset(JNIEnv *env, jclass clazz,
                                                 jbyteArray array, jint value, jint n) {
+    (void)clazz;
     if (!array || n <= 0) return;
     
     jbyte *array_ptr = (*env)->GetByteArrayElements(env, array, NULL);
@@ -38,6 +40,8 @@ Java_com_termux_rafaelia_RafaeliaUtils_memset(JNIEnv *env, jclass clazz,
 
 JNIEXPORT jfloat JNICALL
 Java_com_termux_rafaelia_RafaeliaUtils_sqrt(JNIEnv *env, jclass clazz, jfloat x) {
+    (void)env;
+    (void)clazz;
     if (x < 0.0f) return 0.0f;
     return sqrtf(x);
 }
@@ -47,6 +51,7 @@ Java_com_termux_rafaelia_RafaeliaUtils_sqrt(JNIEnv *env, jclass clazz, jfloat x)
 JNIEXPORT jfloat JNICALL
 Java_com_termux_rafaelia_RafaeliaUtils_cosineSimilarity(JNIEnv *env, jclass clazz,
                                                          jfloatArray v1, jfloatArray v2) {
+    (void)clazz;
     if (!v1 || !v2) return 0.0f;
     
     jsize len1 = (*env)->GetArrayLength(env, v1);
@@ -83,6 +88,7 @@ Java_com_termux_rafaelia_RafaeliaUtils_cosineSimilarity(JNIEnv *env, jclass claz
 JNIEXPORT jfloat JNICALL
 Java_com_termux_rafaelia_RafaeliaUtils_euclideanDistance(JNIEnv *env, jclass clazz,
                                                           jfloatArray v1, jfloatArray v2) {
+    (void)clazz;
     if (!v1 || !v2) return 0.0f;
     
     jsize len1 = (*env)->GetArrayLength(env, v1);
@@ -115,6 +121,7 @@ Java_com_termux_rafaelia_RafaeliaUtils_euclideanDistance(JNIEnv *env, jclass cla
 JNIEXPORT jboolean JNICALL
 Java_com_termux_rafaelia_RafaeliaUtils_testReversalInvariance(JNIEnv *env, jclass clazz,
                                                                 jfloatArray v, jfloat threshold) {
+    (void)clazz;
     if (!v || threshold < 0.0f) return JNI_FALSE;
     
     jsize len = (*env)->GetArrayLength(env, v);
@@ -144,6 +151,9 @@ Java_com_termux_rafaelia_RafaeliaUtils_testReversalInvariance(JNIEnv *env, jclas
 JNIEXPORT jlong JNICALL
 Java_com_termux_rafaelia_RafaeliaUtils_initVA(JNIEnv *env, jclass clazz,
                                                jint spaceDim, jint featureType) {
+    (void)env;
+    (void)clazz;
+    (void)featureType;
     // Stub: return a dummy context handle
     // In production, this would allocate and initialize a VA context
     if (spaceDim <= 0) return 0;
@@ -152,6 +162,9 @@ Java_com_termux_rafaelia_RafaeliaUtils_initVA(JNIEnv *env, jclass clazz,
 
 JNIEXPORT void JNICALL
 Java_com_termux_rafaelia_RafaeliaUtils_releaseVA(JNIEnv *env, jclass clazz, jlong ctx) {
+    (void)env;
+    (void)clazz;
+    (void)ctx;
     // Stub: release VA context
     // In production, this would free the allocated context
 }
@@ -161,6 +174,7 @@ Java_com_termux_rafaelia_RafaeliaUtils_releaseVA(JNIEnv *env, jclass clazz, jlon
 JNIEXPORT jobject JNICALL
 Java_com_termux_rafaelia_RafaeliaUtils_fitLeastSquares(JNIEnv *env, jclass clazz,
                                                         jfloatArray x, jfloatArray y) {
+    (void)clazz;
     if (!x || !y) return NULL;
     
     jsize len_x = (*env)->GetArrayLength(env, x);
@@ -233,6 +247,7 @@ Java_com_termux_rafaelia_RafaeliaUtils_fitLeastSquares(JNIEnv *env, jclass clazz
 JNIEXPORT jfloatArray JNICALL
 Java_com_termux_rafaelia_RafaeliaUtils_computeSSDecomposition(JNIEnv *env, jclass clazz,
                                                                jfloatArray y, jfloatArray y_pred) {
+    (void)clazz;
     if (!y || !y_pred) return NULL;
     
     jsize len_y = (*env)->GetArrayLength(env, y);
