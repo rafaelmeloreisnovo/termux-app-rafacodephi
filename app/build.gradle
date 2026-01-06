@@ -244,3 +244,160 @@ afterEvaluate {
         variant.javaCompileProvider.get().dependsOn(downloadBootstraps)
     }
 }
+
+// Validation task to check for hardcoded package names
+task validatePackageNames {
+    description = 'Validates that no hardcoded com.termux package names exist (except in package/import declarations)'
+    group = 'verification'
+    
+    doLast {
+        def errors = []
+        def rootDir = project.rootProject.projectDir
+        def customPackageName = android.defaultConfig.applicationId
+        
+        // Files to check
+        fileTree(rootDir) {
+            include '**/*.java', '**/*.kt', '**/*.xml'
+            exclude '**/build/**', '**/.gradle/**', '**/.git/**', '**/bootstrap-*.zip'
+        }.each { file ->
+            def lineNumber = 0
+            def inBlockComment = false
+            file.eachLine { line ->
+                lineNumber++
+                def trimmedLine = line.trim()
+                
+                // Track multi-line comments
+                if (trimmedLine.contains('/*') && !trimmedLine.contains('*/')) {
+                    inBlockComment = true
+                }
+                if (inBlockComment && trimmedLine.contains('*/')) {
+                    inBlockComment = false
+                    return
+                }
+                
+                // Skip package declarations, imports, comments, javadocs, single-line block comments, and default value comments
+                if (trimmedLine.startsWith('package ') || 
+                    trimmedLine.startsWith('import ') ||
+                    trimmedLine.startsWith('//') ||
+                    trimmedLine.startsWith('*') ||
+                    trimmedLine.contains('package="com.termux.') || // XML package attribute for Java structure
+                    line.contains('// Default:') || // Default value comments
+                    (trimmedLine.contains('/*') && trimmedLine.contains('*/')) || // Single-line block comment
+                    inBlockComment) {
+                    return
+                }
+                
+                // Check for hardcoded com.termux (but not custom package name)
+                if (line.contains('com.termux') && !line.contains(customPackageName)) {
+                    // Check if it's using a constant or placeholder or is a class reference
+                    if (!line.contains('TERMUX_PACKAGE_NAME') && 
+                        !line.contains('BuildConfig.APPLICATION_ID') && 
+                        !line.contains('${TERMUX_PACKAGE_NAME}') &&
+                        !line.contains('TERMUX_PACKAGE_NAME}') &&
+                        !line.contains('com.termux.app.') && // Class reference
+                        !line.contains('com.termux.shared.') && // Class reference  
+                        !line.contains('com.termux.view.') && // Class reference
+                        !line.contains('com.termux.terminal.') && // Class reference
+                        !line.contains('com.termux.rafaelia.') && // Class reference
+                        !line.contains('from "com.termux"') && // Documentation references
+                        !line.contains('changed from "com.termux"')) { // Documentation references
+                        errors.add("${file.path}:${lineNumber}: ${trimmedLine}")
+                    }
+                }
+            }
+        }
+        
+        if (!errors.isEmpty()) {
+            def errorMsg = "\n❌ Found hardcoded package names (should use TERMUX_PACKAGE_NAME or placeholder):\n"
+            errors.each { errorMsg += "  ${it}\n" }
+            throw new GradleException(errorMsg)
+        } else {
+            println "✅ Package name validation passed!"
+        }
+    }
+}
+
+// Validation task to check for legacy storage flags
+task validateStorageFlags {
+    description = 'Validates that requestLegacyExternalStorage is not used when targeting SDK >= 30'
+    group = 'verification'
+    
+    doLast {
+        def targetSdk = android.defaultConfig.targetSdkVersion.apiLevel
+        if (targetSdk < 30) {
+            println "⚠️  targetSdkVersion is ${targetSdk}, skipping legacy storage check"
+            return
+        }
+        
+        def errors = []
+        def manifestFiles = fileTree(project.rootProject.projectDir) {
+            include '**/AndroidManifest.xml'
+            exclude '**/build/**'
+        }
+        
+        manifestFiles.each { file ->
+            def lineNumber = 0
+            file.eachLine { line ->
+                lineNumber++
+                if (line.contains('requestLegacyExternalStorage') && line.contains('true')) {
+                    errors.add("${file.path}:${lineNumber}: requestLegacyExternalStorage=true found")
+                }
+            }
+        }
+        
+        if (!errors.isEmpty()) {
+            def errorMsg = "\n❌ Found requestLegacyExternalStorage with targetSdk >= 30:\n"
+            errors.each { errorMsg += "  ${it}\n" }
+            throw new GradleException(errorMsg)
+        } else {
+            println "✅ Storage flags validation passed!"
+        }
+    }
+}
+
+// Validation task to check authorities use placeholders
+task validateAuthorities {
+    description = 'Validates that all authorities use ${TERMUX_PACKAGE_NAME} placeholder'
+    group = 'verification'
+    
+    doLast {
+        def errors = []
+        def manifestFiles = fileTree(project.rootProject.projectDir) {
+            include '**/AndroidManifest.xml'
+            exclude '**/build/**'
+        }
+        
+        manifestFiles.each { file ->
+            def lineNumber = 0
+            file.eachLine { line ->
+                lineNumber++
+                // Check for android:authorities with hardcoded package name
+                if (line.contains('android:authorities=') && 
+                    line.contains('com.termux') && 
+                    !line.contains('${TERMUX_PACKAGE_NAME}') &&
+                    !line.contains('com.termux.rafacodephi')) {
+                    errors.add("${file.path}:${lineNumber}: ${line.trim()}")
+                }
+            }
+        }
+        
+        if (!errors.isEmpty()) {
+            def errorMsg = "\n❌ Found authorities without placeholder:\n"
+            errors.each { errorMsg += "  ${it}\n" }
+            throw new GradleException(errorMsg)
+        } else {
+            println "✅ Authorities validation passed!"
+        }
+    }
+}
+
+// Master validation task that runs all checks
+task validateAndroid15Compatibility {
+    description = 'Runs all Android 15 compatibility validations'
+    group = 'verification'
+    dependsOn validatePackageNames, validateStorageFlags, validateAuthorities
+    
+    doLast {
+        println "\n✅ All Android 15 compatibility validations passed!"
+    }
+}
