@@ -42,8 +42,41 @@ Quick how-to about Termux package management is available at [Package Management
 
 ***
 
+## 🚀 Termux RAFCODEΦ - Android 15 Ready
+
+**This fork is fully compatible with Android 15 and can be installed side-by-side with official Termux.**
+
+### Key Features
+- ✅ **Package Name**: `com.termux.rafacodephi` (unique, no conflicts)
+- ✅ **App Name**: `Termux RAFCODEΦ` (distinct branding)
+- ✅ **Side-by-Side**: Install alongside official Termux without conflicts
+- ✅ **Android 15**: Optimized for latest Android with Phantom Process Killer handling
+- ✅ **Zero Collisions**: Unique authorities, permissions, and data directories
+
+### Quick Start
+
+```bash
+# Build
+./gradlew assembleDebug
+
+# Install
+adb install app/build/outputs/apk/debug/termux-app_apt-android-7-debug_universal.apk
+
+# Diagnose
+./scripts/diagnose.sh
+```
+
+### Documentation
+- 📄 [Android 15 Audit Report](./ANDROID15_AUDIT_REPORT.md) - Complete audit and status
+- 📚 [Android 15 Compatibility Guide](./docs/RAFCODEPHI_ANDROID15_COMPATIBILITY.md) - Technical documentation
+- 🔧 [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common issues and solutions
+- 📝 [Changes and Patch](./docs/MUDANCAS_ANDROID15.md) - Detailed changelog
+
+***
+
 ## Contents
 - [Fork Notice and Attribution](#fork-notice-and-attribution)
+- [Termux RAFCODEΦ - Android 15 Ready](#-termux-rafcodeφ---android-15-ready)
 - [Termux App and Plugins](#termux-app-and-plugins)
 - [Installation](#installation)
 - [Uninstallation](#uninstallation)
