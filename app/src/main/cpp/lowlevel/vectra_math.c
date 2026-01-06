@@ -1,4 +1,5 @@
 #include "vectra_math.h"
+#include <stdlib.h>
 #include <string.h>
 
 /**
@@ -260,4 +261,15 @@ float va_pow_fast(float base, int exp) {
     }
     
     return (exp < 0) ? (1.0f / result) : result;
+}
+
+// Fallback dot product for non-ARM architectures
+float va_dot_product_fallback(const float* v1, const float* v2, size_t n) {
+    if (!v1 || !v2 || n == 0) return 0.0f;
+    
+    float sum = 0.0f;
+    for (size_t i = 0; i < n; i++) {
+        sum += v1[i] * v2[i];
+    }
+    return sum;
 }

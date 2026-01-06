@@ -88,4 +88,9 @@ void* va_memset_optimized(void* s, int c, size_t n);
 float va_sqrt_fast(float x);
 float va_pow_fast(float base, int exp);
 
+/**
+ * Fallback implementation for non-ARM architectures
+ */
+float va_dot_product_fallback(const float* v1, const float* v2, size_t n);
+
 #endif // TERMUX_VECTRA_MATH_H

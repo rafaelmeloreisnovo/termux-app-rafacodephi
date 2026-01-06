@@ -147,9 +147,12 @@ Java_com_termux_lowlevel_VectraMath_fitLeastSquares(JNIEnv *env, jclass clazz,
     
     // Create coefficients array
     jfloatArray coeffs = (*env)->NewFloatArray(env, (jsize)result.coeff_count);
-    if (coeffs) {
-        (*env)->SetFloatArrayRegion(env, coeffs, 0, (jsize)result.coeff_count, result.coefficients);
+    if (!coeffs) {
+        free(result.coefficients);
+        return NULL;
     }
+    
+    (*env)->SetFloatArrayRegion(env, coeffs, 0, (jsize)result.coeff_count, result.coefficients);
     
     jobject anovaResult = (*env)->NewObject(env, resultClass, constructor, 
                                            coeffs, 
