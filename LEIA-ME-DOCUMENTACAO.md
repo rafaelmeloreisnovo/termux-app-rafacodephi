@@ -10,6 +10,21 @@ Este repositório agora conta com documentação completa e abrangente, conforme
 
 ### 1. Documentação Geral
 
+#### [BENCHMARKS_COMPARISON.md](BENCHMARKS_COMPARISON.md) - 📊 Benchmarks e Comparação Detalhada ⭐ NOVO
+**O que contém**: Análise comparativa abrangente com 30+ métricas de benchmark
+- ✅ **30+ métricas de benchmark** quantificáveis
+- ✅ **Comparações lado-a-lado** detalhadas (Termux Oficial vs RAFCODEΦ)
+- ✅ **Ganhos reais de performance** com dados empíricos (2.7x speedup)
+- ✅ **Inovações técnicas** e metodológicas completas
+- ✅ **Metodologia de teste** reproduzível
+- ✅ Análise de impacto real (tempo, bateria, memória)
+- ✅ Framework RAFAELIA detalhado
+- ✅ Implementação bare-metal e SIMD
+
+**Tamanho**: ~110KB, 900+ linhas  
+**Público**: Todos - especialmente quem quer entender os ganhos reais  
+**Quando ler**: Para ver métricas concretas e comparações objetivas
+
 #### [DOCUMENTACAO.md](DOCUMENTACAO.md) - Documentação Completa
 **O que contém**: Visão geral completa do que este fork possui
 - ✅ Todas as funcionalidades e capacidades

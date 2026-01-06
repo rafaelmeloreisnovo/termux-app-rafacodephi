@@ -67,6 +67,7 @@ adb install app/build/outputs/apk/debug/termux-app_apt-android-7-debug_universal
 ```
 
 ### Documentation
+- 📊 [**Benchmarks & Comparison**](./BENCHMARKS_COMPARISON.md) - **30+ metrics, side-by-side comparison, innovations**
 - 📄 [Android 15 Audit Report](./ANDROID15_AUDIT_REPORT.md) - Complete audit and status
 - 📚 [Android 15 Compatibility Guide](./docs/RAFCODEPHI_ANDROID15_COMPATIBILITY.md) - Technical documentation
 - 🔧 [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common issues and solutions
