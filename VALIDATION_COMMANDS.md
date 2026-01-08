@@ -116,3 +116,16 @@ Add to your CI pipeline:
 - name: Build Debug APK
   run: ./gradlew :app:assembleDebug
 ```
+
+---
+
+## Validate Gradle Wrapper (CI)
+
+Use the existing `Validate Gradle Wrapper` workflow to ensure the wrapper JAR and properties are untampered.
+
+Steps:
+1. Open GitHub Actions ➜ **Validate Gradle Wrapper**.
+2. Click **Run workflow** and choose the branch to check.
+3. The workflow executes:
+   - Checkout repository
+   - `gradle/actions/wrapper-validation@v5` to verify the wrapper artifacts
