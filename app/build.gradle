@@ -65,7 +65,9 @@ android {
 
         externalNativeBuild {
             ndkBuild {
-                cFlags "-std=c11", "-Wall", "-Wextra", "-Werror", "-Os", "-fno-stack-protector", "-Wl,--gc-sections"
+                cFlags "-std=c11", "-Wall", "-Wextra", "-Werror", "-Os", "-fno-stack-protector"
+                // Critical: 16KB page alignment for Android 15/16 compatibility
+                ldFlags "-Wl,--gc-sections", "-Wl,-z,max-page-size=16384"
             }
         }
 
