@@ -41,8 +41,12 @@ echo -e "${COLOR_BLUE}=== Native Libraries ===${COLOR_RESET}"
 LIBS_FOUND=0
 LIBS_CHECKED=0
 LIBS_VALID=0
+ARM64_VALID=0
+ARM64_TOTAL=0
+X86_64_VALID=0
+X86_64_TOTAL=0
 
-for arch in arm64-v8a armeabi-v7a x86_64 x86; do
+for arch in arm64-v8a x86_64 armeabi-v7a x86; do
     LIB_DIR="$TEMP_DIR/lib/$arch"
     if [ -d "$LIB_DIR" ]; then
         echo -e "${COLOR_YELLOW}Architecture: $arch${COLOR_RESET}"
@@ -59,11 +63,28 @@ for arch in arm64-v8a armeabi-v7a x86_64 x86; do
                     # Check page alignment
                     ALIGNMENT=$(readelf -l "$lib" 2>/dev/null | grep -A1 "LOAD" | grep -o "0x[0-9a-f]\+" | tail -1)
                     
+                    # Track by architecture
+                    if [ "$arch" = "arm64-v8a" ]; then
+                        ARM64_TOTAL=$((ARM64_TOTAL + 1))
+                    elif [ "$arch" = "x86_64" ]; then
+                        X86_64_TOTAL=$((X86_64_TOTAL + 1))
+                    fi
+                    
                     if [ "$ALIGNMENT" = "0x4000" ] || [ "$ALIGNMENT" = "0x10000" ]; then
                         echo -e "  ${COLOR_GREEN}✓${COLOR_RESET} $LIBNAME - Alignment: $ALIGNMENT (16KB = 0x4000) ✓"
                         LIBS_VALID=$((LIBS_VALID + 1))
+                        if [ "$arch" = "arm64-v8a" ]; then
+                            ARM64_VALID=$((ARM64_VALID + 1))
+                        elif [ "$arch" = "x86_64" ]; then
+                            X86_64_VALID=$((X86_64_VALID + 1))
+                        fi
                     else
-                        echo -e "  ${COLOR_RED}✗${COLOR_RESET} $LIBNAME - Alignment: $ALIGNMENT (should be 0x4000)"
+                        # 32-bit architectures use different alignment
+                        if [ "$arch" = "armeabi-v7a" ] || [ "$arch" = "x86" ]; then
+                            echo -e "  ${COLOR_BLUE}•${COLOR_RESET} $LIBNAME - Alignment: $ALIGNMENT (32-bit arch)"
+                        else
+                            echo -e "  ${COLOR_RED}✗${COLOR_RESET} $LIBNAME - Alignment: $ALIGNMENT (should be 0x4000)"
+                        fi
                     fi
                 else
                     echo -e "  ${COLOR_BLUE}•${COLOR_RESET} $LIBNAME - found"
@@ -80,22 +101,39 @@ echo -e "${COLOR_BLUE}=== Summary ===${COLOR_RESET}"
 echo -e "Libraries found: $LIBS_FOUND"
 if command -v readelf &> /dev/null; then
     echo -e "Libraries checked: $LIBS_CHECKED"
-    echo -e "Libraries with correct alignment: $LIBS_VALID"
+    echo -e "Libraries with 16KB alignment: $LIBS_VALID"
+    echo ""
+    echo -e "${COLOR_BLUE}=== Critical Architectures (Android 15/16 with 16KB pages) ===${COLOR_RESET}"
+    echo -e "arm64-v8a: $ARM64_VALID/$ARM64_TOTAL libraries with correct alignment"
+    echo -e "x86_64:    $X86_64_VALID/$X86_64_TOTAL libraries with correct alignment"
     echo ""
     
-    if [ "$LIBS_CHECKED" -gt 0 ] && [ "$LIBS_VALID" -eq "$LIBS_CHECKED" ]; then
-        echo -e "${COLOR_GREEN}✓✓✓ ALL CHECKS PASSED! ✓✓✓${COLOR_RESET}"
+    # Check if critical architectures pass
+    CRITICAL_PASS=true
+    if [ "$ARM64_TOTAL" -gt 0 ] && [ "$ARM64_VALID" -ne "$ARM64_TOTAL" ]; then
+        CRITICAL_PASS=false
+    fi
+    if [ "$X86_64_TOTAL" -gt 0 ] && [ "$X86_64_VALID" -ne "$X86_64_TOTAL" ]; then
+        CRITICAL_PASS=false
+    fi
+    
+    if [ "$CRITICAL_PASS" = true ] && [ "$ARM64_VALID" -gt 0 ]; then
+        echo -e "${COLOR_GREEN}✓✓✓ CRITICAL CHECKS PASSED! ✓✓✓${COLOR_RESET}"
         echo -e "APK is correctly built for Android 15/16 with 16KB page size support"
         echo ""
         echo -e "${COLOR_GREEN}Safe to install on:${COLOR_RESET}"
-        echo "  • Android 15 with 4KB pages"
-        echo "  • Android 15 with 16KB pages"
-        echo "  • Android 16 Beta"
+        echo "  • Android 15 with 4KB pages ✓"
+        echo "  • Android 15 with 16KB pages ✓"
+        echo "  • Android 16 Beta (arm64-v8a devices) ✓"
+        echo "  • RMX3834 and similar ARM64 devices ✓"
+        echo ""
+        echo -e "${COLOR_BLUE}Note:${COLOR_RESET} 32-bit architectures (armeabi-v7a, x86) use standard alignment."
+        echo "This is acceptable as Android 15/16 16KB page requirement is for 64-bit only."
         echo ""
         exit 0
     else
         echo -e "${COLOR_RED}✗✗✗ VALIDATION FAILED! ✗✗✗${COLOR_RESET}"
-        echo -e "Some libraries do not have correct 16KB page alignment"
+        echo -e "Critical 64-bit libraries do not have correct 16KB page alignment"
         echo -e "The app may crash on Android 15/16 devices with 16KB pages"
         echo ""
         exit 1
