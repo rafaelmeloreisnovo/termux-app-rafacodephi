@@ -14,13 +14,13 @@ RESET='\033[0m'
 ensure_safe_workdir() {
     local workdir
     workdir="$(pwd -P)"
-    if [[ -z "${workdir}" || "${workdir}" == "/" || "${workdir}" == "." || ${#workdir} -lt 5 ]]; then
+    if [[ -z "${workdir}" || "${workdir}" == "/" || "${workdir}" == "." ]]; then
         echo "Unsafe working directory for git operations: ${workdir}" >&2
         exit 1
     fi
     case "${workdir}" in
         "${HOME%/}/"*) ;;
-        /data/*|/dev/*|/cache/*) ;;
+        /data/*|/cache/*) ;;
         *)
             echo "Working directory outside allowed prefixes: ${workdir}" >&2
             exit 1

@@ -66,12 +66,13 @@ echo ""
 
 # --- PASSO 1: SELEÇÃO DE ALVOS (COM FALLBACK) ---
 echo -e "${CYAN}[1/3] ESCANEANDO SETOR: $SOURCE_DIR${NC}"
-safe_rm_f selection_list.tmp
+SELECTION_FILE="${TMPDIR:-/tmp}/selection_list.tmp"
+safe_rm_f "${SELECTION_FILE}"
 
 if command -v fzf &> /dev/null; then
     # MODO FZF (Se estiver instalado)
     find "$SOURCE_DIR" -maxdepth 1 -type f -printf "%s\t%p\n" | \
-    fzf --multi --with-nth=2 --preview 'echo "Size: {1} bytes"' > selection_list.tmp
+    fzf --multi --with-nth=2 --preview 'echo "Size: {1} bytes"' > "${SELECTION_FILE}"
 else
     # MODO NATIVO (Se FZF falhar por falta de espaço)
     echo -e "${RED}[AVISO] FZF não detectado (Erro de Espaço?). Usando modo manual.${NC}"
@@ -92,18 +93,18 @@ else
     read -r selection
     
     if [ "$selection" == "a" ]; then
-        for file in "${files[@]}"; do echo -e "0\t$file" >> selection_list.tmp; done
+        for file in "${files[@]}"; do echo -e "0\t$file" >> "${SELECTION_FILE}"; done
     else
         for index in $selection; do
             if [ -n "${files[$index]}" ]; then
-                echo -e "0\t${files[$index]}" >> selection_list.tmp
+                echo -e "0\t${files[$index]}" >> "${SELECTION_FILE}"
             fi
         done
     fi
 fi
 
 # Validação
-if [ ! -s selection_list.tmp ]; then
+if [ ! -s "${SELECTION_FILE}" ]; then
     echo -e "${RED}[ABORT] Nada selecionado.${NC}"
     exit 0
 fi
@@ -131,7 +132,7 @@ while IFS=$'\t' read -r _ file_path; do
         echo -e "${RED}[FALHA/MANTIDO]${NC}"
         echo "$(date) | ERR | $filename" >> "$LOG_FILE"
     fi
-done < selection_list.tmp
+done < "${SELECTION_FILE}"
 
-rm selection_list.tmp
+safe_rm_f "${SELECTION_FILE}"
 echo -e "\n${GREEN}:: OPERAÇÃO FINALIZADA ::${NC}"

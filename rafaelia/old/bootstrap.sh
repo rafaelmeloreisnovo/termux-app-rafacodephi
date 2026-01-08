@@ -963,7 +963,7 @@ echo "  tools/rafvm"
 B
 safe_chmod +x "$ROOT/build.sh"
 
-safe_chmod +x "$ROOT/tools/rafc"
-safe_chmod +x "$ROOT/tools/rafvm"
+[[ -f "$ROOT/tools/rafc" ]] && safe_chmod +x "$ROOT/tools/rafc"
+[[ -f "$ROOT/tools/rafvm" ]] && safe_chmod +x "$ROOT/tools/rafvm"
 
 echo "OK: generated $ROOT"

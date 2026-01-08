@@ -97,7 +97,7 @@ log() {
 
 ensure_safe_path() {
     local path="$1"
-    if [[ -z "${path}" || "${path}" == "/" || "${path}" == "." || ${#path} -lt 5 ]]; then
+    if [[ -z "${path}" || "${path}" == "/" || "${path}" == "." ]]; then
         log "FATAL" "Unsafe path: '${path}'"
         exit 1
     fi
@@ -687,8 +687,7 @@ cleanup_on_exit() {
     # Cleanup temporary files
     if [[ -n "${TEMP_FILES:-}" ]]; then
         log "DEBUG" "Cleaning up temporary files"
-        mapfile -t temp_files_array <<< "${TEMP_FILES}"
-        for temp_file in "${temp_files_array[@]}"; do
+        for temp_file in ${TEMP_FILES}; do
             [[ -z "${temp_file}" ]] && continue
             safe_rm_f "${temp_file}"
         done
@@ -755,7 +754,14 @@ compile_binary() {
     safe_chmod +x "${output_binary}"
     
     # Copy to work directory root for easy access
-    cp "${output_binary}" "${WORKDIR}/${BINARY_NAME}"
+    safe_cp() {
+        local src="$1"
+        local dst="$2"
+        ensure_safe_path "${src}"
+        ensure_safe_path "$(dirname "${dst}")"
+        cp "${src}" "${dst}"
+    }
+    safe_cp "${output_binary}" "${WORKDIR}/${BINARY_NAME}"
     
     log "INFO" "Compilation successful: ${output_binary}"
 }
