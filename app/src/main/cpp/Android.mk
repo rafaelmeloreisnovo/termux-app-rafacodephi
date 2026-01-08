@@ -39,6 +39,6 @@ ifeq ($(TARGET_ARCH_ABI),x86_64)
 endif
 
 # Link against pthread for thread support and math library
-LOCAL_LDLIBS := -llog -lm -lpthread
+LOCAL_LDLIBS := -llog -lm
 include $(BUILD_SHARED_LIBRARY)
 
