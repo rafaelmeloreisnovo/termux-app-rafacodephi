@@ -6,6 +6,41 @@
 # COMPLIANCE: ISO 27001 (Encryption), NIST SP 800-88 (Sanitization/Wipe)
 # ==============================================================================
 
+set -euo pipefail
+
+SAFE_PREFIXES=("${PWD%/}/" "${HOME%/}/" "/tmp/" "/data/" "/dev/" "/cache/")
+
+ensure_safe_path() {
+    local path="$1"
+    if [[ -z "${path}" || "${path}" == "/" || "${path}" == "." ]]; then
+        echo "Unsafe path: '${path}'" >&2
+        exit 1
+    fi
+    local normalized
+    normalized="$(realpath -m "${path}")"
+    if [[ ${#normalized} -lt 5 ]]; then
+        echo "Path too short: ${normalized}" >&2
+        exit 1
+    fi
+    local safe=false
+    for prefix in "${SAFE_PREFIXES[@]}"; do
+        if [[ "${normalized}" == "${prefix}"* ]]; then
+            safe=true
+            break
+        fi
+    done
+    if [[ "${safe}" != true ]]; then
+        echo "Path outside allowed prefixes: ${normalized}" >&2
+        exit 1
+    fi
+}
+
+safe_rm_f() {
+    local target="$1"
+    ensure_safe_path "${target}"
+    rm -f -- "${target}"
+}
+
 # --- CONFIGURAÇÃO ---
 RCLONE_REMOTE="vault"   # Aponta para o Crypt (Segurança Máxima)
 REMOTE_PATH="/DCIM_Backup_Cripto"
@@ -31,7 +66,7 @@ echo ""
 
 # --- PASSO 1: SELEÇÃO DE ALVOS (COM FALLBACK) ---
 echo -e "${CYAN}[1/3] ESCANEANDO SETOR: $SOURCE_DIR${NC}"
-rm -f selection_list.tmp
+safe_rm_f selection_list.tmp
 
 if command -v fzf &> /dev/null; then
     # MODO FZF (Se estiver instalado)

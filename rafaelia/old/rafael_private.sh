@@ -4,6 +4,44 @@
 
 set -euo pipefail
 
+SAFE_PREFIXES=("${HOME%/}/" "/tmp/" "/data/" "/dev/" "/cache/")
+
+ensure_safe_path() {
+    local path="$1"
+    if [[ -z "${path}" || "${path}" == "/" || "${path}" == "." || ${#path} -lt 5 ]]; then
+        echo "Unsafe path: '${path}'" >&2
+        exit 1
+    fi
+    local normalized
+    normalized="$(realpath -m "${path}")"
+    local safe=false
+    for prefix in "${SAFE_PREFIXES[@]}"; do
+        if [[ "${normalized}" == "${prefix}"* ]]; then
+            safe=true
+            break
+        fi
+    done
+    if [[ "${safe}" != true ]]; then
+        echo "Path outside allowed prefixes: ${normalized}" >&2
+        exit 1
+    fi
+}
+
+safe_chmod() {
+    local mode="$1"
+    shift
+    for path in "$@"; do
+        ensure_safe_path "${path}"
+    done
+    chmod "${mode}" "$@"
+}
+
+safe_rm_f() {
+    local target="$1"
+    ensure_safe_path "${target}"
+    rm -f -- "${target}"
+}
+
 GITHUB_EMAIL="rafaelmeloreisnovo@gmail.com"
 GITHUB_USER="${GITHUB_EMAIL%@*}"      # pega tudo antes do @
 REPO_NAME="Rafaelia_Private"
@@ -23,7 +61,7 @@ cat > "$ASKPASS_SCRIPT" <<EOF
 #!/usr/bin/env bash
 echo "$GITHUB_PAT"
 EOF
-chmod 700 "$ASKPASS_SCRIPT"
+safe_chmod 700 "$ASKPASS_SCRIPT"
 
 export GIT_ASKPASS="$ASKPASS_SCRIPT"
 export GIT_TERMINAL_PROMPT=0
@@ -40,7 +78,7 @@ else
     git clone "$GIT_URL" "$TARGET_DIR"
 fi
 
-rm -f "$ASKPASS_SCRIPT"
+safe_rm_f "$ASKPASS_SCRIPT"
 unset GITHUB_PAT GIT_ASKPASS GIT_TERMINAL_PROMPT
 
 echo

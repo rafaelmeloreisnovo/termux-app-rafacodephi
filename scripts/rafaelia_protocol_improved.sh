@@ -28,6 +28,8 @@ readonly LOG_DIR="${WORKDIR}/logs"
 readonly CACHE_DIR="${WORKDIR}/.cache"
 readonly BINARY_NAME="raf_engine"
 readonly SOURCE_FILE="raf_core.c"
+readonly SAFE_WORKDIR="$(realpath -m "${WORKDIR}")"
+readonly SAFE_PATH_PREFIXES=("${SAFE_WORKDIR%/}/" "${HOME%/}/" "/data/" "/dev/" "/cache/" "/tmp/")
 
 # Build configuration
 readonly BUILD_TYPE="${BUILD_TYPE:-release}"  # Aspect 23: Debug vs Release builds
@@ -93,6 +95,59 @@ log() {
     return 0
 }
 
+ensure_safe_path() {
+    local path="$1"
+    if [[ -z "${path}" || "${path}" == "/" || "${path}" == "." || ${#path} -lt 5 ]]; then
+        log "FATAL" "Unsafe path: '${path}'"
+        exit 1
+    fi
+
+    local normalized_path
+    normalized_path="$(realpath -m "${path}")"
+
+    local safe=false
+    for prefix in "${SAFE_PATH_PREFIXES[@]}"; do
+        if [[ "${normalized_path}" == "${prefix}"* ]]; then
+            safe=true
+            break
+        fi
+    done
+
+    if [[ "${safe}" != true ]]; then
+        log "FATAL" "Path outside allowed prefixes: ${normalized_path}"
+        exit 1
+    fi
+}
+
+safe_rm_rf() {
+    local target="$1"
+    ensure_safe_path "${target}"
+    rm -rf -- "${target}"
+}
+
+safe_rm_f() {
+    local target="$1"
+    ensure_safe_path "${target}"
+    rm -f -- "${target}"
+}
+
+safe_mv() {
+    local src="$1"
+    local dst="$2"
+    ensure_safe_path "${src}"
+    ensure_safe_path "${dst}"
+    mv "${src}" "${dst}"
+}
+
+safe_chmod() {
+    local mode="$1"
+    shift
+    for path in "$@"; do
+        ensure_safe_path "${path}"
+    done
+    chmod "${mode}" "$@"
+}
+
 ################################################################################
 # ASPECT 4: Input Validation & Sanitization
 ################################################################################
@@ -136,13 +191,13 @@ create_directory_structure() {
     if [[ -d "${WORKDIR}" ]]; then
         log "WARN" "Work directory exists. Creating backup..."
         BACKUP_DIR="${WORKDIR}.backup.$(date +%s)"
-        mv "${WORKDIR}" "${BACKUP_DIR}" 2>/dev/null || true
+        safe_mv "${WORKDIR}" "${BACKUP_DIR}" 2>/dev/null
     fi
     
     # Create directories with proper permissions
     mkdir -p "${SOURCE_DIR}" "${BUILD_DIR}" "${LOG_DIR}" "${CACHE_DIR}"
-    chmod 755 "${WORKDIR}" "${SOURCE_DIR}" "${BUILD_DIR}"
-    chmod 700 "${LOG_DIR}" "${CACHE_DIR}"  # Aspect 14: Security - Restrict log access
+    safe_chmod 755 "${WORKDIR}" "${SOURCE_DIR}" "${BUILD_DIR}"
+    safe_chmod 700 "${LOG_DIR}" "${CACHE_DIR}"  # Aspect 14: Security - Restrict log access
     
     log "DEBUG" "Directory structure created at ${WORKDIR}"
 }
@@ -625,14 +680,16 @@ cleanup_on_exit() {
         # Remove backup on success
         if [[ -n "${BACKUP_DIR}" && -d "${BACKUP_DIR}" ]]; then
             log "DEBUG" "Removing backup directory: ${BACKUP_DIR}"
-            rm -rf "${BACKUP_DIR}" 2>/dev/null || true
+            safe_rm_rf "${BACKUP_DIR}"
         fi
     fi
     
     # Cleanup temporary files
     if [[ -n "${TEMP_FILES:-}" ]]; then
         log "DEBUG" "Cleaning up temporary files"
-        rm -f ${TEMP_FILES} 2>/dev/null || true
+        for temp_file in ${TEMP_FILES}; do
+            safe_rm_f "${temp_file}"
+        done
     fi
     
     log "DEBUG" "Cleanup completed"
@@ -693,7 +750,7 @@ compile_binary() {
     log "INFO" "Binary size: ${binary_size} bytes"
     
     # Make executable
-    chmod +x "${output_binary}"
+    safe_chmod +x "${output_binary}"
     
     # Copy to work directory root for easy access
     cp "${output_binary}" "${WORKDIR}/${BINARY_NAME}"

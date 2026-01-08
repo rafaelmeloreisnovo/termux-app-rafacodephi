@@ -11,12 +11,51 @@
 
 set -euo pipefail
 
+SAFE_PREFIX="$(pwd)/"
+
+ensure_safe_path() {
+  local path="$1"
+  if [[ -z "${path}" || "${path}" == "/" || "${path}" == "." ]]; then
+    echo "Unsafe path: '${path}'" >&2
+    exit 1
+  fi
+  local normalized
+  normalized="$(realpath -m "${path}")"
+  if [[ ${#normalized} -lt 5 ]]; then
+    echo "Path too short: ${normalized}" >&2
+    exit 1
+  fi
+  case "${normalized}" in
+    "${SAFE_PREFIX}"*)
+      ;;
+    *)
+      echo "Path outside allowed prefix: ${normalized}" >&2
+      exit 1
+      ;;
+  esac
+}
+
+safe_rm_rf() {
+  local target="$1"
+  ensure_safe_path "${target}"
+  rm -rf -- "${target}"
+}
+
+safe_chmod() {
+  local mode="$1"
+  shift
+  for path in "$@"; do
+    ensure_safe_path "${path}"
+  done
+  chmod "${mode}" "$@"
+}
+
 PROJECT="Rafaelia_FullStack"
 PKG="com.rafaelia.engine"
 APP_DIR="$PROJECT/app"
 
 echo "==[1/7] Limpando e criando estrutura =="
-rm -rf "$PROJECT"
+safe_rm_rf "$PROJECT"
 mkdir -p "$APP_DIR/src/main/java/com/rafaelia/engine"
 mkdir -p "$APP_DIR/src/main/cpp"
 mkdir -p "$PROJECT/gradle/wrapper"
@@ -68,7 +107,7 @@ fi
 
 exec java -classpath "$WRAPPER_JAR" org.gradle.wrapper.GradleWrapperMain "$@"
 EOT
-chmod +x "$PROJECT/gradlew"
+safe_chmod +x "$PROJECT/gradlew"
 
 # (Opcional) Windows
 cat << 'EOT' > "$PROJECT/gradlew.bat"

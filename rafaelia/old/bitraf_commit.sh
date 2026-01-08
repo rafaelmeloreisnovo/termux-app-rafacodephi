@@ -5,6 +5,8 @@
 #  - Salva saida em RAFAELIA_LOGS/contextos/bitraf_commits.log
 #  - Marca timestamp e separador
 
+set -euo pipefail
+
 LOGDIR="$HOME/RAFAELIA_LOGS/contextos"
 LOGFILE="$LOGDIR/bitraf_commits.log"
 BIN="$HOME/rafaelia_bitraf_hash"

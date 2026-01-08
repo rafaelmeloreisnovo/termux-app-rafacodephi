@@ -3,6 +3,41 @@ set -euo pipefail
 
 ROOT="${HOME}"
 OUT="${ROOT}/out"
+SAFE_PREFIXES=("${ROOT%/}/" "${HOME%/}/" "/tmp/" "/data/" "/dev/" "/cache/")
+
+ensure_safe_path() {
+    local path="$1"
+    if [[ -z "${path}" || "${path}" == "/" || "${path}" == "." ]]; then
+        echo "Unsafe path: '${path}'" >&2
+        exit 1
+    fi
+    local normalized
+    normalized="$(realpath -m "${path}")"
+    if [[ ${#normalized} -lt 5 ]]; then
+        echo "Path too short: ${normalized}" >&2
+        exit 1
+    fi
+    local safe=false
+    for prefix in "${SAFE_PREFIXES[@]}"; do
+        if [[ "${normalized}" == "${prefix}"* ]]; then
+            safe=true
+            break
+        fi
+    done
+    if [[ "${safe}" != true ]]; then
+        echo "Path outside allowed prefixes: ${normalized}" >&2
+        exit 1
+    fi
+}
+
+safe_chmod() {
+    local mode="$1"
+    shift
+    for path in "$@"; do
+        ensure_safe_path "${path}"
+    done
+    chmod "${mode}" "$@"
+}
 mkdir -p "$OUT"
 
 echo "[1/3] Criando probe de cache robusto..."
@@ -34,7 +69,7 @@ echo
 echo "== LSCPU (cache/model/arch) =="
 lscpu 2>/dev/null | grep -Ei 'cache|model|arch|cpu\(s\)|thread|core' || true
 SH
-chmod +x "${ROOT}/rafaelia_probe_cache.sh"
+safe_chmod +x "${ROOT}/rafaelia_probe_cache.sh"
 
 echo "[2/3] Criando analyzer (out/bench.json + sysinfo)..."
 cat <<'PY' > "${ROOT}/rafaelia_bench_analyze.py"
@@ -110,7 +145,7 @@ def main():
 if __name__=="__main__":
     main()
 PY
-chmod +x "${ROOT}/rafaelia_bench_analyze.py"
+safe_chmod +x "${ROOT}/rafaelia_bench_analyze.py"
 
 echo "[3/3] Rodando cache probe e analyzer..."
 "${ROOT}/rafaelia_probe_cache.sh" | tee "${OUT}/cache_probe_fixpack.txt" >/dev/null

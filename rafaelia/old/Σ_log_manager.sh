@@ -1,6 +1,8 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # Σ_log_manager.sh — RAFAELIA LOGS + BitRAF integrado
 
+set -euo pipefail
+
 root="$HOME/RAFAELIA_LOGS"
 mkdir -p "$root"/{syslog,contextos,indices,maps}
 

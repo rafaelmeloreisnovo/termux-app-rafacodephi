@@ -6,6 +6,8 @@
 # TARGET: VAULT (CRYPT) -> RANOVO (DRIVE)
 # ==============================================================================
 
+set -euo pipefail
+
 # --- CONFIG ---
 RCLONE_REMOTE="vault"
 REMOTE_PATH="/DCIM_Backup_Cripto"

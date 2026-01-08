@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # --- CONFIGURAÇÕES ---
 ENGINE="RAFAELIA_GENESIS_ENGINE.py"

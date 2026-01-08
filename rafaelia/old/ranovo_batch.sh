@@ -6,6 +6,8 @@
 # COMPLIANCE: ISO 27001 (Integrity) | NIST (Data Sanitation)
 # ==============================================================================
 
+set -euo pipefail
+
 # --- CONFIGURAÇÃO (AJUSTE SEU REMOTE AQUI) ---
 RCLONE_REMOTE="vault"
 ROOT_REMOTE_PATH="/Android_Backup"

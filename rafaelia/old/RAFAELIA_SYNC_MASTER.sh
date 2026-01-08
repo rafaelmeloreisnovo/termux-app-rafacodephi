@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # --- RAFAELIA SYNC MASTER v1.0 ---
 # Função: Limpeza Profunda e Upload Fracionado
 
@@ -8,6 +10,23 @@ CYAN='\033[1;36m'
 YELLOW='\033[1;33m'
 RED='\033[1;31m'
 RESET='\033[0m'
+
+ensure_safe_workdir() {
+    local workdir
+    workdir="$(pwd -P)"
+    if [[ -z "${workdir}" || "${workdir}" == "/" || "${workdir}" == "." || ${#workdir} -lt 5 ]]; then
+        echo "Unsafe working directory for git operations: ${workdir}" >&2
+        exit 1
+    fi
+    case "${workdir}" in
+        "${HOME%/}/"*) ;;
+        /data/*|/dev/*|/cache/*) ;;
+        *)
+            echo "Working directory outside allowed prefixes: ${workdir}" >&2
+            exit 1
+            ;;
+    esac
+}
 
 clear
 echo -e "${CYAN}⚛︎ PROTOCOLO DE SINCRONIZAÇÃO MESTRA ⚛︎${RESET}"
@@ -26,6 +45,7 @@ read -r OPCAO
 case $OPCAO in
     1)
         echo -e "\n${YELLOW}🧹 Iniciando Purificação do Índice...${RESET}"
+        ensure_safe_workdir
         # 1. Remove tudo do índice (não apaga arquivos físicos)
         git rm -r --cached .
         # 2. Re-adiciona tudo (respeitando o novo .gitignore)

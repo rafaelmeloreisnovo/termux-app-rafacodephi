@@ -6,6 +6,8 @@
 # REMOTE: 'ranovo' | MODO: VISUAL SEGURO (BASE64 ENGINE)
 # ==============================================================================
 
+set -euo pipefail
+
 # --- 1. CONFIGURAÇÃO (PARAMETRIZAÇÃO) ---
 RCLONE_REMOTE="ranovo"
 REMOTE_PATH_ROOT="/_Backup_Cripto"
@@ -18,6 +20,39 @@ fi
 
 TEMP_LIST="${TMPDIR:-/tmp}/ranovo_table.tmp"
 LOG_FILE="ranovo_ops.log"
+
+SAFE_PREFIXES=("${TMPDIR:-/tmp}/" "/data/" "/dev/" "/cache/" "${HOME%/}/")
+
+ensure_safe_path() {
+    local path="$1"
+    if [[ -z "${path}" || "${path}" == "/" || "${path}" == "." ]]; then
+        echo "Unsafe path: '${path}'" >&2
+        exit 1
+    fi
+    local normalized
+    normalized="$(realpath -m "${path}")"
+    if [[ ${#normalized} -lt 5 ]]; then
+        echo "Path too short: ${normalized}" >&2
+        exit 1
+    fi
+    local safe=false
+    for prefix in "${SAFE_PREFIXES[@]}"; do
+        if [[ "${normalized}" == "${prefix}"* ]]; then
+            safe=true
+            break
+        fi
+    done
+    if [[ "${safe}" != true ]]; then
+        echo "Path outside allowed prefixes: ${normalized}" >&2
+        exit 1
+    fi
+}
+
+safe_rm_f() {
+    local target="$1"
+    ensure_safe_path "${target}"
+    rm -f -- "${target}"
+}
 
 # --- 2. CONTROLE DE ESTADO ---
 declare -A selected_b64
@@ -39,7 +74,7 @@ cleanup() {
     tput rmcup # Sai do modo tela cheia
     tput cnorm # Mostra o cursor do mouse/texto de volta
     stty echo  # Volta a mostrar o que digita
-    rm -f "$TEMP_LIST"
+    safe_rm_f "$TEMP_LIST"
 }
 trap cleanup EXIT INT TERM
 

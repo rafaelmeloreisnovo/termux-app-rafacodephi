@@ -1,4 +1,4 @@
-set -eu
+set -euo pipefail
 
 F="${1:-}"
 if [ -z "$F" ]; then

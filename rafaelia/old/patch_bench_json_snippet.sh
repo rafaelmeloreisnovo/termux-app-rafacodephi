@@ -1,6 +1,8 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # Patch: garantir loops no bench.json
 
+set -euo pipefail
+
 OUTDIR="$HOME/out"
 BENCH="$OUTDIR/bench.json"
 mkdir -p "$OUTDIR"
