@@ -65,7 +65,10 @@ android {
 
         externalNativeBuild {
             ndkBuild {
-                cFlags "-std=c11", "-Wall", "-Wextra", "-Werror", "-Os", "-fno-stack-protector", "-Wl,--gc-sections"
+                cFlags "-std=c11", "-Wall", "-Wextra", "-Werror", "-Os", "-fno-stack-protector"
+                // Critical: 16KB page alignment for Android 15/16 compatibility
+                // Note: ldFlags are set in Android.mk with LOCAL_LDFLAGS
+                arguments "NDK_APP_LDFLAGS=-Wl,--gc-sections -Wl,-z,max-page-size=16384"
             }
         }
 

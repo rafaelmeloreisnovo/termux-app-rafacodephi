@@ -42,16 +42,28 @@ Quick how-to about Termux package management is available at [Package Management
 
 ***
 
-## 🚀 Termux RAFCODEΦ - Android 15 Ready
+## 🚀 Termux RAFCODEΦ - Android 15/16 Ready
 
-**This fork is fully compatible with Android 15 and can be installed side-by-side with official Termux.**
+**This fork is fully compatible with Android 15/16 and can be installed side-by-side with official Termux.**
+
+### ⚡ Critical Android 16 Fix Applied
+
+**✅ 16KB Page Size Compatibility** - This build includes the critical fix for Android 15/16 devices with 16KB memory pages. The app **will NOT crash** on:
+- Android 15 with 16KB pages enabled
+- Android 16 Beta (all devices)
+- Devices with kernel 5.15.178+ (like RMX3834)
+
+Without this fix, apps crash with SIGSEGV on startup. **This fork is patched and production-ready.**
+
+📖 See [Android 16 Page Size Fix Documentation](./ANDROID16_PAGE_SIZE_FIX.md) for technical details.
 
 ### Key Features
 - ✅ **Package Name**: `com.termux.rafacodephi` (unique, no conflicts)
 - ✅ **App Name**: `Termux RAFCODEΦ` (distinct branding)
 - ✅ **Side-by-Side**: Install alongside official Termux without conflicts
-- ✅ **Android 15**: Optimized for latest Android with Phantom Process Killer handling
+- ✅ **Android 15/16**: Optimized with 16KB page alignment and Phantom Process Killer handling
 - ✅ **Zero Collisions**: Unique authorities, permissions, and data directories
+- ✅ **Bare-Metal**: NEON/SIMD optimized native code with pthread support
 
 ### Quick Start
 
@@ -67,11 +79,13 @@ adb install app/build/outputs/apk/debug/termux-app_apt-android-7-debug_universal
 ```
 
 ### Documentation
+- 🔥 [**Android 16 Page Size Fix**](./ANDROID16_PAGE_SIZE_FIX.md) - **Critical fix for Android 15/16 stability**
 - 📊 [**Benchmarks & Comparison**](./BENCHMARKS_COMPARISON.md) - **30+ metrics, side-by-side comparison, innovations**
 - 📄 [Android 15 Audit Report](./ANDROID15_AUDIT_REPORT.md) - Complete audit and status
 - 📚 [Android 15 Compatibility Guide](./docs/RAFCODEPHI_ANDROID15_COMPATIBILITY.md) - Technical documentation
 - 🔧 [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common issues and solutions
 - 📝 [Changes and Patch](./docs/MUDANCAS_ANDROID15.md) - Detailed changelog
+- ⚙️ [Bare-Metal Implementation](./IMPLEMENTACAO_BAREMETAL.md) - Native code optimizations
 
 ***
 

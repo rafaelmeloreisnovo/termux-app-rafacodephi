@@ -141,16 +141,16 @@ bm_memcpy_neon:
 .global bm_dot_neon
 .type bm_dot_neon, %function
 bm_dot_neon:
-    movi        v0.4s, #0           @ Initialize accumulator
+    movi        v0.4s, #0           // Initialize accumulator
     
 .L_dot64_loop:
     cmp         w2, #4
     b.lt        .L_dot64_remainder
     
-    ld1         {v1.4s}, [x0], #16  @ Load 4 floats from a
-    ld1         {v2.4s}, [x1], #16  @ Load 4 floats from b
+    ld1         {v1.4s}, [x0], #16  // Load 4 floats from a
+    ld1         {v2.4s}, [x1], #16  // Load 4 floats from b
     
-    fmla        v0.4s, v1.4s, v2.4s @ Fused multiply-add
+    fmla        v0.4s, v1.4s, v2.4s // Fused multiply-add
     
     sub         w2, w2, #4
     b           .L_dot64_loop
@@ -166,7 +166,7 @@ bm_dot_neon:
     b.ne        .L_dot64_rem_loop
     
 .L_dot64_sum:
-    @ Horizontal sum of v0
+    // Horizontal sum of v0
     faddp       v0.4s, v0.4s, v0.4s
     faddp       v0.4s, v0.4s, v0.4s
     fmov        w0, s0
@@ -212,7 +212,7 @@ bm_vadd_neon:
 .global bm_memcpy_neon
 .type bm_memcpy_neon, %function
 bm_memcpy_neon:
-    mov         x3, x0              @ Save dst
+    mov         x3, x0              // Save dst
     
 .L_memcpy64_loop:
     cmp         x2, #64
