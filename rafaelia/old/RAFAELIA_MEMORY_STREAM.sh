@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 CORE="$HOME/RAFAELIA_CORE"
 BACK="$CORE/BACKUPS"
 mkdir -p "$BACK"

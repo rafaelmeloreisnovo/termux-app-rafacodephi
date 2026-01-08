@@ -6,6 +6,8 @@
 # COMPLIANCE: ISO 27001 (Integrity Check)
 # ==============================================================================
 
+set -euo pipefail
+
 # --- CONFIGURAÇÃO ---
 RCLONE_REMOTE="rafanovo"
 REMOTE_PATH_ROOT="/_Backup_Cripto"

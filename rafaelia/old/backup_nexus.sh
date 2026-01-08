@@ -6,6 +6,8 @@
 # AUTHOR:       Gemini_Φ // Restauratio Gaia
 # ==============================================================================
 
+set -euo pipefail
+
 # --- [ 0. CONFIGURATION & CONSTANTS ] ---
 REMOTE_NAME="gdrive"                # Nome do seu remote no Rclone
 BACKUP_NAME="Android_Backup_Stream"

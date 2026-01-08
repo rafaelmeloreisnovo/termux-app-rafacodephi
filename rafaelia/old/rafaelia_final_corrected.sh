@@ -6,7 +6,32 @@
 
 set -euo pipefail
 
-rm -rf Rafaelia_Corrected
+SAFE_PREFIX="$(pwd)/"
+
+safe_rm_rf() {
+    local target="$1"
+    if [[ -z "${target}" || "${target}" == "/" || "${target}" == "." ]]; then
+        echo "Unsafe path: '${target}'" >&2
+        exit 1
+    fi
+    local abs
+    abs="$(realpath -m "$target")"
+    if [[ ${#abs} -lt 5 ]]; then
+        echo "Path too short: ${abs}" >&2
+        exit 1
+    fi
+    case "$abs" in
+        "${SAFE_PREFIX}"*)
+            rm -rf -- "${abs}"
+            ;;
+        *)
+            echo "Refusing to remove outside ${SAFE_PREFIX}: ${abs}" >&2
+            exit 1
+            ;;
+    esac
+}
+
+safe_rm_rf "Rafaelia_Corrected"
 mkdir -p Rafaelia_Corrected/app/src/main/cpp
 mkdir -p Rafaelia_Corrected/app/src/main/java/com/rafaelia/engine
 

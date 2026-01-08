@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 CORE="$HOME/RAFAELIA_CORE"
 DEC="$CORE/DECISION_OMEGA.json"
 while true; do

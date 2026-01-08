@@ -1,7 +1,44 @@
-#!/usr/bin/env sh
-set -eu
+#!/usr/bin/env bash
+set -euo pipefail
 
 ROOT="rafaelia_os"
+ROOT_ABS="$(realpath -m "${ROOT}")"
+SAFE_PREFIXES=("${ROOT_ABS%/}/" "${PWD%/}/" "${HOME%/}/" "/data/" "/cache/" "/tmp/")
+
+ensure_safe_path() {
+    local path="$1"
+    if [[ -z "${path}" || "${path}" == "/" || "${path}" == "." ]]; then
+        echo "Unsafe path: '${path}'" >&2
+        exit 1
+    fi
+    local normalized
+    normalized="$(realpath -m "${path}")"
+    if [[ ${#normalized} -lt 5 ]]; then
+        echo "Path too short: ${normalized}" >&2
+        exit 1
+    fi
+    local safe=false
+    for prefix in "${SAFE_PREFIXES[@]}"; do
+        if [[ "${normalized}" == "${prefix}"* ]]; then
+            safe=true
+            break
+        fi
+    done
+    if [[ "${safe}" != true ]]; then
+        echo "Path outside allowed prefixes: ${normalized}" >&2
+        exit 1
+    fi
+}
+
+safe_chmod() {
+    local mode="$1"
+    shift
+    for path in "$@"; do
+        ensure_safe_path "${path}"
+    done
+    chmod "${mode}" "$@"
+}
+
 mkdir -p "$ROOT"/{src,include,tools,out,docs}
 
 # -------------------------
@@ -924,9 +961,9 @@ echo "  out/rafaelia_os"
 echo "  tools/rafc"
 echo "  tools/rafvm"
 B
-chmod +x "$ROOT/build.sh"
+safe_chmod +x "$ROOT/build.sh"
 
-chmod +x "$ROOT/tools/rafc" 2>/dev/null || true
-chmod +x "$ROOT/tools/rafvm" 2>/dev/null || true
+[[ -f "$ROOT/tools/rafc" ]] && safe_chmod +x "$ROOT/tools/rafc"
+[[ -f "$ROOT/tools/rafvm" ]] && safe_chmod +x "$ROOT/tools/rafvm"
 
 echo "OK: generated $ROOT"

@@ -5,6 +5,8 @@
 #  - Extrai timestamp e checksum de cada commit
 #  - Gera RAFAELIA_LOGS/maps/bitraf_map.md
 
+set -euo pipefail
+
 ROOT="$HOME/RAFAELIA_LOGS"
 LOGDIR="$ROOT/contextos"
 MAPDIR="$ROOT/maps"

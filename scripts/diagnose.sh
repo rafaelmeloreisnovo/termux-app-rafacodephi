@@ -6,7 +6,7 @@
 # e pode coexistir com o Termux oficial sem conflitos.
 #
 
-set -e
+set -euo pipefail
 
 PACKAGE_NAME="com.termux.rafacodephi"
 OFFICIAL_PACKAGE="com.termux"

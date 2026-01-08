@@ -1,10 +1,43 @@
-#!/data/data/com.termux/files/usr/bin/sh
-set -eu
+#!/data/data/com.termux/files/usr/bin/bash
+set -euo pipefail
 
 ROOT="${ROOT:-CatOS_RAFAELIA}"
 CC="${CC:-clang}"
 CFLAGS="${CFLAGS:--O3 -DNDEBUG}"
 LDFLAGS="${LDFLAGS:-}"
+
+ROOT_ABS="$(realpath -m "${ROOT}")"
+SAFE_PREFIXES=("${ROOT_ABS%/}/" "${PWD%/}/" "${HOME%/}/" "/data/" "/cache/" "/tmp/")
+
+ensure_safe_path() {
+    local path="$1"
+    if [[ -z "${path}" || "${path}" == "/" || "${path}" == "." || ${#path} -lt 5 ]]; then
+        echo "Unsafe path: '${path}'" >&2
+        exit 1
+    fi
+    local normalized
+    normalized="$(realpath -m "${path}")"
+    local safe=false
+    for prefix in "${SAFE_PREFIXES[@]}"; do
+        if [[ "${normalized}" == "${prefix}"* ]]; then
+            safe=true
+            break
+        fi
+    done
+    if [[ "${safe}" != true ]]; then
+        echo "Path outside allowed prefixes: ${normalized}" >&2
+        exit 1
+    fi
+}
+
+safe_chmod() {
+    local mode="$1"
+    shift
+    for path in "$@"; do
+        ensure_safe_path "${path}"
+    done
+    chmod "${mode}" "$@"
+}
 
 mkdir -p "$ROOT/bin" "$ROOT/src" "$ROOT/tools" "$ROOT/docs" "$ROOT/out" "$ROOT/ativo" "$ROOT/barra" "$ROOT/patches"
 
@@ -50,7 +83,7 @@ END{
 
 mv "$TMP" "$F"
 SH
-chmod +x "$ROOT/tools/mid_replace.sh"
+safe_chmod +x "$ROOT/tools/mid_replace.sh"
 
 # ────────────────────────────────────────────────────────────────
 # tools: json_find (sem jq) — grep com contexto e offsets
@@ -69,7 +102,7 @@ P="$2"
 # show line numbers + 2 lines of context
 grep -n -C 2 -- "$P" "$F" || true
 SH
-chmod +x "$ROOT/tools/json_find.sh"
+safe_chmod +x "$ROOT/tools/json_find.sh"
 
 # ────────────────────────────────────────────────────────────────
 # docs: MID map
@@ -761,7 +794,7 @@ case "\$cmd" in
          ;;
 esac
 SH
-chmod +x "$ROOT/bin/catos"
+safe_chmod +x "$ROOT/bin/catos"
 
 # ────────────────────────────────────────────────────────────────
 # ativo scripts (atalhos)
@@ -772,7 +805,7 @@ set -eu
 ROOT="${ROOT:-CatOS_RAFAELIA}"
 "$ROOT/bin/catos" quick
 SH
-chmod +x "$ROOT/ativo/run_quick.sh"
+safe_chmod +x "$ROOT/ativo/run_quick.sh"
 
 cat > "$ROOT/ativo/run_full.sh" <<'SH'
 #!/data/data/com.termux/files/usr/bin/sh
@@ -780,7 +813,7 @@ set -eu
 ROOT="${ROOT:-CatOS_RAFAELIA}"
 "$ROOT/bin/catos" run --size-mb 256 --seconds 2 --repeat 3 --json "$ROOT/out/bench.json" --csv "$ROOT/out/bench.csv"
 SH
-chmod +x "$ROOT/ativo/run_full.sh"
+safe_chmod +x "$ROOT/ativo/run_full.sh"
 
 echo "✅ CatOS pronto em: $ROOT"
 echo "▶ build: $ROOT/bin/catos build"

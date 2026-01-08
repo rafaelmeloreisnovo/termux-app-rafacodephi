@@ -6,11 +6,42 @@
 # ENGINE: ALTERNATE SCREEN BUFFER + DYNAMIC HEIGHT
 # ==============================================================================
 
+set -euo pipefail
+
 # --- CONFIGURAÇÃO ---
 RCLONE_REMOTE="ranovo"
 REMOTE_PATH_ROOT="/_Backup_Cripto"
 CURRENT_DIR="/storage/0886-EC05" # Ajuste se necessário, ou use $PWD
 TEMP_LIST="${TMPDIR:-/tmp}/ranovo_list.tmp"
+
+SAFE_PREFIXES=("${TMPDIR:-/tmp}/" "/data/" "/cache/" "${HOME%/}/")
+
+ensure_safe_path() {
+    local path="$1"
+    if [[ -z "${path}" || "${path}" == "/" || "${path}" == "." || ${#path} -lt 5 ]]; then
+        echo "Unsafe path: '${path}'" >&2
+        exit 1
+    fi
+    local normalized
+    normalized="$(realpath -m "${path}")"
+    local safe=false
+    for prefix in "${SAFE_PREFIXES[@]}"; do
+        if [[ "${normalized}" == "${prefix}"* ]]; then
+            safe=true
+            break
+        fi
+    done
+    if [[ "${safe}" != true ]]; then
+        echo "Path outside allowed prefixes: ${normalized}" >&2
+        exit 1
+    fi
+}
+
+safe_rm_f() {
+    local target="$1"
+    ensure_safe_path "${target}"
+    rm -f -- "${target}"
+}
 
 # --- CONTROLE ---
 declare -A selected_b64
@@ -31,7 +62,7 @@ cleanup() {
     tput rmcup # Sai do modo fullscreen
     tput cnorm # Mostra cursor
     stty echo  # Ativa escrita
-    rm -f "$TEMP_LIST"
+    safe_rm_f "$TEMP_LIST"
 }
 trap cleanup EXIT INT TERM
 

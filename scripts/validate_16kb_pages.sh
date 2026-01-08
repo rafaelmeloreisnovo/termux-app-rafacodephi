@@ -2,7 +2,7 @@
 # Validation script for Android 15/16 16KB page size compatibility
 # This script checks if the APK is built correctly with proper memory alignment
 
-set -e
+set -euo pipefail
 
 COLOR_RED='\033[0;31m'
 COLOR_GREEN='\033[0;32m'
@@ -30,7 +30,31 @@ echo ""
 
 # Create temp directory for extraction
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+
+cleanup() {
+    local temp_path="${TEMP_DIR:-}"
+    if [[ -z "${temp_path}" || "${temp_path}" == "/" || "${temp_path}" == "." ]]; then
+        echo "Unsafe TEMP_DIR; aborting cleanup" >&2
+        return 1
+    fi
+    local normalized
+    normalized="$(realpath -m "${temp_path}")"
+    if [[ ${#normalized} -lt 5 ]]; then
+        echo "TEMP_DIR path too short; aborting cleanup" >&2
+        return 1
+    fi
+    case "${normalized}" in
+        /tmp/*)
+            rm -rf -- "${normalized}"
+        ;;
+        *)
+            echo "Refusing to remove non-/tmp directory: ${normalized}" >&2
+            return 1
+            ;;
+    esac
+}
+
+trap cleanup EXIT
 
 echo -e "${COLOR_BLUE}Extracting APK...${COLOR_RESET}"
 unzip -q "$APK_FILE" -d "$TEMP_DIR"
