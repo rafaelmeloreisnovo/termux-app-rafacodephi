@@ -443,7 +443,7 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         setIntent(null);
 
         if (mTermuxService.isTermuxSessionsEmpty()) {
-            if (mIsVisible) {
+            if (mIsVisible || mIsOnResumeAfterOnCreate) {
                 TermuxInstaller.setupBootstrapIfNeeded(TermuxActivity.this, () -> {
                     if (mTermuxService == null) return; // Activity might have been destroyed.
                     try {
