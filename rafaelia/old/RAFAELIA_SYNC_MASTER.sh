@@ -42,10 +42,11 @@ echo "-----------------------------------------------"
 echo -n "Escolha a Tática [1-3]: "
 read -r OPCAO
 
+ensure_safe_workdir
+
 case $OPCAO in
     1)
         echo -e "\n${YELLOW}🧹 Iniciando Purificação do Índice...${RESET}"
-        ensure_safe_workdir
         # 1. Remove tudo do índice (não apaga arquivos físicos)
         git rm -r --cached .
         # 2. Re-adiciona tudo (respeitando o novo .gitignore)

@@ -29,7 +29,7 @@ readonly CACHE_DIR="${WORKDIR}/.cache"
 readonly BINARY_NAME="raf_engine"
 readonly SOURCE_FILE="raf_core.c"
 readonly SAFE_WORKDIR="$(realpath -m "${WORKDIR}")"
-readonly SAFE_PATH_PREFIXES=("${SAFE_WORKDIR%/}/" "${HOME%/}/" "/data/" "/dev/" "/cache/" "/tmp/")
+readonly SAFE_PATH_PREFIXES=("${SAFE_WORKDIR%/}/" "${HOME%/}/" "/data/" "/cache/" "/tmp/")
 
 # Build configuration
 readonly BUILD_TYPE="${BUILD_TYPE:-release}"  # Aspect 23: Debug vs Release builds
@@ -191,7 +191,7 @@ create_directory_structure() {
     if [[ -d "${WORKDIR}" ]]; then
         log "WARN" "Work directory exists. Creating backup..."
         BACKUP_DIR="${WORKDIR}.backup.$(date +%s)"
-        safe_mv "${WORKDIR}" "${BACKUP_DIR}" 2>/dev/null
+        safe_mv "${WORKDIR}" "${BACKUP_DIR}"
     fi
     
     # Create directories with proper permissions
@@ -687,7 +687,9 @@ cleanup_on_exit() {
     # Cleanup temporary files
     if [[ -n "${TEMP_FILES:-}" ]]; then
         log "DEBUG" "Cleaning up temporary files"
-        for temp_file in ${TEMP_FILES}; do
+        mapfile -t temp_files_array <<< "${TEMP_FILES}"
+        for temp_file in "${temp_files_array[@]}"; do
+            [[ -z "${temp_file}" ]] && continue
             safe_rm_f "${temp_file}"
         done
     fi

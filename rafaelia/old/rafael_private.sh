@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-SAFE_PREFIXES=("${HOME%/}/" "/tmp/" "/data/" "/dev/" "/cache/")
+SAFE_PREFIXES=("${HOME%/}/" "/tmp/" "/data/" "/cache/")
 
 ensure_safe_path() {
     local path="$1"

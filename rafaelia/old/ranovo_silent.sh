@@ -14,7 +14,7 @@ REMOTE_PATH_ROOT="/_Backup_Cripto"
 CURRENT_DIR="/storage/0886-EC05" # Ajuste se necessário, ou use $PWD
 TEMP_LIST="${TMPDIR:-/tmp}/ranovo_list.tmp"
 
-SAFE_PREFIXES=("${TMPDIR:-/tmp}/" "/data/" "/dev/" "/cache/" "${HOME%/}/")
+SAFE_PREFIXES=("${TMPDIR:-/tmp}/" "/data/" "/cache/" "${HOME%/}/")
 
 ensure_safe_path() {
     local path="$1"

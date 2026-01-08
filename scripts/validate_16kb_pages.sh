@@ -32,17 +32,24 @@ echo ""
 TEMP_DIR=$(mktemp -d)
 
 cleanup() {
-    if [[ -z "${TEMP_DIR:-}" || "${#TEMP_DIR}" -lt 5 ]]; then
+    local temp_path="${TEMP_DIR:-}"
+    if [[ -z "${temp_path}" || "${temp_path}" == "/" || "${temp_path}" == "." ]]; then
         echo "Unsafe TEMP_DIR; aborting cleanup" >&2
-        exit 1
+        return 1
     fi
-    case "${TEMP_DIR}" in
+    local normalized
+    normalized="$(realpath -m "${temp_path}")"
+    if [[ ${#normalized} -lt 5 ]]; then
+        echo "TEMP_DIR path too short; aborting cleanup" >&2
+        return 1
+    fi
+    case "${normalized}" in
         /tmp/*)
-            rm -rf -- "${TEMP_DIR}"
-            ;;
+            rm -rf -- "${normalized}"
+        ;;
         *)
-            echo "Refusing to remove non-/tmp directory: ${TEMP_DIR}" >&2
-            exit 1
+            echo "Refusing to remove non-/tmp directory: ${normalized}" >&2
+            return 1
             ;;
     esac
 }

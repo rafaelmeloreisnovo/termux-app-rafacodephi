@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="${ROOT:-CatOS_RAFAELIA}"
 ROOT_ABS="$(realpath -m "${ROOT}")"
-SAFE_PREFIXES=("${ROOT_ABS%/}/" "${PWD%/}/" "${HOME%/}/" "/data/" "/dev/" "/cache/" "/tmp/")
+SAFE_PREFIXES=("${ROOT_ABS%/}/" "${PWD%/}/" "${HOME%/}/" "/data/" "/cache/" "/tmp/")
 
 ensure_safe_path() {
     local path="$1"

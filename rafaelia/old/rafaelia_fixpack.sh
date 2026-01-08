@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="${HOME}"
 OUT="${ROOT}/out"
-SAFE_PREFIXES=("${ROOT%/}/" "${HOME%/}/" "/tmp/" "/data/" "/dev/" "/cache/")
+SAFE_PREFIXES=("${ROOT%/}/" "${HOME%/}/" "/tmp/" "/data/" "/cache/")
 
 ensure_safe_path() {
     local path="$1"

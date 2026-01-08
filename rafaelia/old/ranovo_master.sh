@@ -21,7 +21,7 @@ fi
 TEMP_LIST="${TMPDIR:-/tmp}/ranovo_table.tmp"
 LOG_FILE="ranovo_ops.log"
 
-SAFE_PREFIXES=("${TMPDIR:-/tmp}/" "/data/" "/dev/" "/cache/" "${HOME%/}/")
+SAFE_PREFIXES=("${TMPDIR:-/tmp}/" "/data/" "/cache/" "${HOME%/}/")
 
 ensure_safe_path() {
     local path="$1"
