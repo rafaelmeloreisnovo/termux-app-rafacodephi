@@ -447,7 +447,9 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
 
         mTermuxService = ((TermuxService.LocalBinder) service).service;
 
-        // Check if service is null immediately after binding, before accessing it
+        // Defensive check: While LocalBinder.service should never be null (assigned as 
+        // TermuxService.this), we check anyway to handle any unexpected edge cases or
+        // future code changes that might affect service lifecycle
         if (mTermuxService == null) {
             Logger.logError(LOG_TAG, "mTermuxService is null in onServiceConnected after binding");
             Logger.showToast(this, getString(R.string.error_termux_service_start_failed_general), true);
@@ -589,6 +591,8 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
     private void setTermuxSessionsListView() {
         if (mTermuxService == null) {
             Logger.logError(LOG_TAG, "Cannot set TermuxSessionsListView: TermuxService is null");
+            // This can happen if service is disconnected or not yet bound
+            Logger.showToast(this, getString(R.string.error_termux_service_start_failed_general), true);
             return;
         }
         ListView termuxSessionsListView = findViewById(R.id.terminal_sessions_list);
