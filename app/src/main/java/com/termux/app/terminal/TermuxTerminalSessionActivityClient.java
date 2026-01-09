@@ -363,7 +363,11 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
 
     public void addNewSession(boolean isFailSafe, String sessionName) {
         TermuxService service = mActivity.getTermuxService();
-        if (service == null) return;
+        if (service == null) {
+            Logger.logError(LOG_TAG, "Cannot add new session: TermuxService is null");
+            Logger.showToast(mActivity, mActivity.getString(R.string.error_termux_service_start_failed_general), true);
+            return;
+        }
 
         if (service.getTermuxSessionsSize() >= MAX_SESSIONS) {
             new AlertDialog.Builder(mActivity).setTitle(R.string.title_max_terminals_reached).setMessage(R.string.msg_max_terminals_reached)
@@ -379,7 +383,11 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
             }
 
             TermuxSession newTermuxSession = service.createTermuxSession(null, null, null, workingDirectory, isFailSafe, sessionName);
-            if (newTermuxSession == null) return;
+            if (newTermuxSession == null) {
+                Logger.logError(LOG_TAG, "Failed to create new TermuxSession");
+                Logger.showToast(mActivity, "Failed to create terminal session", true);
+                return;
+            }
 
             TerminalSession newTerminalSession = newTermuxSession.getTerminalSession();
             setCurrentSession(newTerminalSession);
