@@ -10,7 +10,22 @@ Este repositório agora conta com documentação completa e abrangente, conforme
 
 ### 1. Documentação Geral
 
-#### [BENCHMARKS_COMPARISON.md](BENCHMARKS_COMPARISON.md) - 📊 Benchmarks e Comparação Detalhada ⭐ NOVO
+#### [BOOSTERS_DOCUMENTACAO.md](BOOSTERS_DOCUMENTACAO.md) - 🚀 Documentação Completa dos Boosters de Performance ⭐ NOVO
+**O que contém**: Guia completo sobre os boosters de performance (otimizações SIMD)
+- ✅ **Tipos de boosters** detalhados (NEON, AVX, SSE)
+- ✅ **Benchmarks específicos** por tipo de operação
+- ✅ **Implementação técnica** com código Assembly e C
+- ✅ **Detecção automática** de hardware
+- ✅ **Arquiteturas suportadas** (ARM, ARM64, x86, x86_64)
+- ✅ **Como usar** os boosters com exemplos práticos
+- ✅ **Melhores práticas** e troubleshooting
+- ✅ **Comparação** com implementações tradicionais
+
+**Tamanho**: ~120KB, 1000+ linhas  
+**Público**: Desenvolvedores, usuários avançados, interessados em performance  
+**Quando ler**: Para entender os boosters de performance em detalhes
+
+#### [BENCHMARKS_COMPARISON.md](BENCHMARKS_COMPARISON.md) - 📊 Benchmarks e Comparação Detalhada
 **O que contém**: Análise comparativa abrangente com 30+ métricas de benchmark
 - ✅ **30+ métricas de benchmark** quantificáveis
 - ✅ **Comparações lado-a-lado** detalhadas (Termux Oficial vs RAFCODEΦ)
