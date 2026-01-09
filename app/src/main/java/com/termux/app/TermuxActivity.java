@@ -592,7 +592,7 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         if (mTermuxService == null) {
             Logger.logError(LOG_TAG, "Cannot set TermuxSessionsListView: TermuxService is null");
             /* This can occur during service lifecycle transitions such as:
-             * - Service disconnection (onServiceDisconnected sets mTermuxService to null)
+             * - onDestroy() (which explicitly sets mTermuxService to null at line 416)
              * - Activity recreation before service binding completes
              * - Service crashes or is killed by the system */
             Logger.showToast(this, getString(R.string.error_termux_service_start_failed_general), true);
