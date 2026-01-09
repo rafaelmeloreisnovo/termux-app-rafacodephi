@@ -616,6 +616,8 @@ Consulte [TROUBLESHOOTING.md](TROUBLESHOOTING.md) para problemas comuns.
 | Documento | Descrição |
 |-----------|-----------|
 | [README.md](README.md) | README principal |
+| [BOOSTERS_DOCUMENTACAO.md](BOOSTERS_DOCUMENTACAO.md) | Guia completo de boosters de performance |
+| [BENCHMARKS_COMPARISON.md](BENCHMARKS_COMPARISON.md) | Benchmarks e comparação detalhada |
 | [RAFAELIA_METHODOLOGY.md](RAFAELIA_METHODOLOGY.md) | Metodologia RAFAELIA |
 | [RAFAELIA_IMPLEMENTATION_SUMMARY.md](RAFAELIA_IMPLEMENTATION_SUMMARY.md) | Resumo de implementação |
 | [IMPLEMENTACAO_BAREMETAL.md](IMPLEMENTACAO_BAREMETAL.md) | Guia bare-metal |
