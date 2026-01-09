@@ -12,7 +12,9 @@ import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Gravity;
@@ -175,6 +177,11 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
      */
     private boolean mIsInvalidState;
 
+    /**
+     * Handler for posting delayed tasks.
+     */
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
+
     private int mNavBarHeight;
 
     private float mTerminalToolbarDefaultHeight;
@@ -195,6 +202,9 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
 
     private static final String ARG_TERMINAL_TOOLBAR_TEXT_INPUT = "terminal_toolbar_text_input";
     private static final String ARG_ACTIVITY_RECREATED = "activity_recreated";
+
+    /** Delay in milliseconds before retrying to create a session after service rebind */
+    private static final int SESSION_RETRY_DELAY_MS = 500;
 
     private static final String LOG_TAG = "TermuxActivity";
 
@@ -445,16 +455,23 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         if (mTermuxService.isTermuxSessionsEmpty()) {
             if (mIsVisible || mIsOnResumeAfterOnCreate) {
                 TermuxInstaller.setupBootstrapIfNeeded(TermuxActivity.this, () -> {
-                    if (mTermuxService == null) return; // Activity might have been destroyed.
-                    try {
-                        boolean launchFailsafe = false;
-                        if (intent != null && intent.getExtras() != null) {
-                            launchFailsafe = intent.getExtras().getBoolean(TERMUX_ACTIVITY.EXTRA_FAILSAFE_SESSION, false);
-                        }
-                        mTermuxTerminalSessionActivityClient.addNewSession(launchFailsafe, null);
-                    } catch (WindowManager.BadTokenException e) {
-                        // Activity finished - ignore.
+                    if (mTermuxService == null) {
+                        Logger.logError(LOG_TAG, "TermuxService is null after bootstrap setup. Cannot create initial session.");
+                        // Try to rebind the service
+                        startAndBindTermuxServiceOrFail();
+                        // Schedule retry to create session after service reconnects
+                        mHandler.postDelayed(() -> {
+                            if (mTermuxService != null && mTermuxService.isTermuxSessionsEmpty()) {
+                                createInitialSession(intent);
+                            } else if (mTermuxService == null) {
+                                Logger.logError(LOG_TAG, "Failed to rebind TermuxService. Please restart the app.");
+                                Logger.showToast(TermuxActivity.this, getString(R.string.error_termux_service_start_failed_general), true);
+                                finishActivityIfNotFinishing();
+                            }
+                        }, SESSION_RETRY_DELAY_MS);
+                        return;
                     }
+                    createInitialSession(intent);
                 });
             } else {
                 // The service connected while not in foreground - just bail out.
@@ -487,7 +504,23 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
 
 
 
-
+    /**
+     * Helper method to create a new terminal session with optional failsafe mode.
+     * Handles BadTokenException gracefully when activity is finishing.
+     *
+     * @param intent The intent containing session configuration
+     */
+    private void createInitialSession(Intent intent) {
+        try {
+            boolean launchFailsafe = false;
+            if (intent != null && intent.getExtras() != null) {
+                launchFailsafe = intent.getExtras().getBoolean(TERMUX_ACTIVITY.EXTRA_FAILSAFE_SESSION, false);
+            }
+            mTermuxTerminalSessionActivityClient.addNewSession(launchFailsafe, null);
+        } catch (WindowManager.BadTokenException e) {
+            // Activity finished - ignore.
+        }
+    }
 
 
     private void reloadProperties() {
