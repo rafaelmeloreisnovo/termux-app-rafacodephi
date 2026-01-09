@@ -452,6 +452,13 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         final Intent intent = getIntent();
         setIntent(null);
 
+        if (mTermuxService == null) {
+            Logger.logError(LOG_TAG, "mTermuxService is null in onServiceConnected after binding");
+            Logger.showToast(this, getString(R.string.error_termux_service_start_failed_general), true);
+            finishActivityIfNotFinishing();
+            return;
+        }
+
         if (mTermuxService.isTermuxSessionsEmpty()) {
             if (mIsVisible || mIsOnResumeAfterOnCreate) {
                 TermuxInstaller.setupBootstrapIfNeeded(TermuxActivity.this, () -> {
@@ -491,7 +498,12 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         }
 
         // Update the {@link TerminalSession} and {@link TerminalEmulator} clients.
-        mTermuxService.setTermuxTerminalSessionClient(mTermuxTerminalSessionActivityClient);
+        // Only set the client if service is not null to avoid NullPointerException
+        if (mTermuxService != null) {
+            mTermuxService.setTermuxTerminalSessionClient(mTermuxTerminalSessionActivityClient);
+        } else {
+            Logger.logError(LOG_TAG, "mTermuxService is null, cannot set terminal session client");
+        }
     }
 
     @Override
@@ -579,6 +591,10 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
     }
 
     private void setTermuxSessionsListView() {
+        if (mTermuxService == null) {
+            Logger.logError(LOG_TAG, "Cannot set TermuxSessionsListView: TermuxService is null");
+            return;
+        }
         ListView termuxSessionsListView = findViewById(R.id.terminal_sessions_list);
         mTermuxSessionListViewController = new TermuxSessionsListViewController(this, mTermuxService.getTermuxSessions());
         termuxSessionsListView.setAdapter(mTermuxSessionListViewController);
