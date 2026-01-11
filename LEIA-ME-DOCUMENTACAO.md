@@ -8,9 +8,44 @@ Este repositório agora conta com documentação completa e abrangente, conforme
 
 ## 📋 Índice de Documentos
 
+### 🆕 Novos Documentos (Janeiro 2026)
+
+#### [INDICE_DOCUMENTACAO.md](INDICE_DOCUMENTACAO.md) - 📚 Índice Centralizado ⭐ NOVO
+**O que contém**: Índice mestre de toda documentação do projeto
+- ✅ Navegação completa por categoria
+- ✅ Mapa de relacionamentos entre documentos
+- ✅ Guias de leitura por perfil de usuário
+- ✅ Busca rápida por tópico
+
+#### [ARQUIVOS_SOLTOS_INVENTARIO.md](ARQUIVOS_SOLTOS_INVENTARIO.md) - 📦 Inventário de Arquivos ⭐ NOVO
+**O que contém**: Catálogo completo de arquivos legados e experimentais
+- ✅ 98 arquivos catalogados
+- ✅ Classificação por status (referência, experimental, utilitário)
+- ✅ Recomendações de integração/arquivamento
+
+#### [ASSINATURA_AUTORIA.md](ASSINATURA_AUTORIA.md) - 🛡️ Proteção de Autoria ⭐ NOVO
+**O que contém**: Sistema de proteção ética de autoria
+- ✅ Mecanismos de assinatura embedded
+- ✅ Verificação em runtime
+- ✅ Proteção contra apropriação por IA
+
+#### [PIPELINE_ORQUESTRADO.md](PIPELINE_ORQUESTRADO.md) - 🔄 Pipeline CI/CD ⭐ NOVO
+**O que contém**: Pipeline integrado seguindo ciclo ψχρΔΣΩ
+- ✅ 6 estágios do pipeline
+- ✅ Workflow GitHub Actions completo
+- ✅ Checklists por estágio
+
+#### [mvp/README.md](mvp/README.md) - 🔧 MVP Low-Level ⭐ NOVO
+**O que contém**: MVP puro em Assembly sem dependências
+- ✅ Assembly AArch64 completo
+- ✅ Representação hexadecimal
+- ✅ Zero dependências (nem libc)
+
+---
+
 ### 1. Documentação Geral
 
-#### [BOOSTERS_DOCUMENTACAO.md](BOOSTERS_DOCUMENTACAO.md) - 🚀 Documentação Completa dos Boosters de Performance ⭐ NOVO
+#### [BOOSTERS_DOCUMENTACAO.md](BOOSTERS_DOCUMENTACAO.md) - 🚀 Documentação Completa dos Boosters de Performance
 **O que contém**: Guia completo sobre os boosters de performance (otimizações SIMD)
 - ✅ **Tipos de boosters** detalhados (NEON, AVX, SSE)
 - ✅ **Benchmarks específicos** por tipo de operação

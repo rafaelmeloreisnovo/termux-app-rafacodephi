@@ -28,6 +28,43 @@ Results show an average 2.7x performance gain compared to pure Java implementati
 
 ---
 
+## Prefácio
+
+Esta dissertação representa a culminação de um esforço de pesquisa e desenvolvimento iniciado em 2024, com o objetivo de demonstrar que é possível unir princípios éticos, eficiência computacional e sustentabilidade de software em um único projeto coerente.
+
+O nome **RAFAELIA** (RAfael FrAmework for Ethical Linear and Iterative Analysis) homenageia tanto o autor quanto a busca por uma computação mais ética e alinhada com valores humanos. O framework não pretende ser apenas uma metodologia técnica, mas também uma declaração de que o desenvolvimento de software pode e deve considerar aspectos além da mera funcionalidade.
+
+### Agradecimentos
+
+Agradeço à comunidade open source, especialmente aos desenvolvedores do projeto Termux original, cujo trabalho exemplar serviu como base para este fork. Agradeço também a todos os contribuidores que, através de issues, pull requests e discussões, ajudaram a moldar este projeto.
+
+Um agradecimento especial à comunidade Android e aos desenvolvedores de ferramentas de baixo nível que tornaram possível a otimização bare-metal em dispositivos móveis.
+
+### Motivação Pessoal
+
+A motivação para este trabalho surgiu da observação de que muitos projetos de software, ao crescerem, tornam-se cada vez mais dependentes de bibliotecas externas, aumentando sua complexidade e reduzindo sua eficiência. Simultaneamente, a discussão sobre ética em tecnologia frequentemente permanece no campo abstrato, sem integração concreta ao processo de desenvolvimento.
+
+Este projeto busca demonstrar que é possível:
+1. Reduzir dependências sem sacrificar funcionalidade
+2. Otimizar para hardware sem perder portabilidade
+3. Integrar princípios éticos ao ciclo de desenvolvimento
+4. Documentar adequadamente para reprodutibilidade
+
+### Estrutura da Dissertação
+
+A dissertação está organizada em dez capítulos principais, seguidos de apêndices com material suplementar. Recomenda-se a leitura sequencial para compreensão completa, embora cada capítulo possa ser consultado independentemente.
+
+### Nota sobre Terminologia
+
+Termos em grego (ψ, χ, ρ, Δ, Σ, Ω) são utilizados para representar conceitos específicos do framework RAFAELIA. Um glossário completo está disponível no Apêndice E.
+
+---
+
+**instituto-Rafael**  
+*Janeiro de 2026*
+
+---
+
 ## Índice
 
 1. [Introdução](#1-introdução)
@@ -1431,6 +1468,109 @@ Detalhamento matemático completo dos Teoremas 1 e 2.
 ### Apêndice D: Guia de Reprodução
 
 Instruções passo-a-passo para replicar todos os experimentos.
+
+### Apêndice E: Glossário
+
+| Termo | Definição |
+|-------|-----------|
+| **RAFAELIA** | RAfael FrAmework for Ethical Linear and Iterative Analysis |
+| **Φ_ethica** | Filtro ético - Min(Entropia) × Max(Coerência) |
+| **ψ (Psi)** | Percepção - Fase de leitura e análise |
+| **χ (Chi)** | Feedback - Fase de verificação de coerência |
+| **ρ (Rho)** | Expansão - Fase de transformação e implementação |
+| **Δ (Delta)** | Validação - Fase de verificação de resultados |
+| **Σ (Sigma)** | Execução - Fase de síntese e build |
+| **Ω (Omega)** | Alinhamento - Fase de verificação ética |
+| **Humildade_Ω** | Princípio de reconhecimento dos limites do conhecimento |
+| **Bare-Metal** | Programação de baixo nível sem abstrações |
+| **SIMD** | Single Instruction, Multiple Data |
+| **NEON** | Extensão SIMD para processadores ARM |
+| **AVX** | Advanced Vector Extensions (x86) |
+| **JNI** | Java Native Interface |
+| **mx_t** | Estrutura de matriz no framework |
+| **Flip** | Operação de transformação matricial |
+
+### Apêndice F: Citação Sugerida
+
+Para citar este trabalho em publicações acadêmicas:
+
+**ABNT**:
+```
+RAFAEL, Instituto. Termux RAFCODEΦ: Framework RAFAELIA e Implementação 
+Bare-Metal para Computação Móvel de Alto Desempenho. 2026. Dissertação 
+Tecnológica - Projeto RAFCODE. Disponível em: 
+<https://github.com/instituto-Rafael/termux-app-rafacodephi>.
+```
+
+**IEEE**:
+```
+instituto-Rafael, "Termux RAFCODEΦ: RAFAELIA Framework and Bare-Metal 
+Implementation for High-Performance Mobile Computing," RAFCODE Project, 
+Tech. Rep., 2026. [Online]. Available: 
+https://github.com/instituto-Rafael/termux-app-rafacodephi
+```
+
+**BibTeX**:
+```bibtex
+@techreport{rafaelia2026,
+  author       = {instituto-Rafael},
+  title        = {{Termux RAFCODEΦ: Framework RAFAELIA e Implementação 
+                  Bare-Metal para Computação Móvel de Alto Desempenho}},
+  institution  = {Projeto RAFCODE},
+  year         = {2026},
+  type         = {Dissertação Tecnológica},
+  url          = {https://github.com/instituto-Rafael/termux-app-rafacodephi}
+}
+```
+
+---
+
+## Bibliografia Expandida
+
+### Obras Fundamentais
+
+**Computação e Algoritmos**
+
+- Knuth, D. E. (1997). *The Art of Computer Programming*. Addison-Wesley.
+- Cormen, T. H., Leiserson, C. E., Rivest, R. L., & Stein, C. (2009). *Introduction to Algorithms* (3rd ed.). MIT Press.
+- Sedgewick, R., & Wayne, K. (2011). *Algorithms* (4th ed.). Addison-Wesley.
+
+**Álgebra Linear e Matemática Numérica**
+
+- Golub, G. H., & Van Loan, C. F. (2013). *Matrix Computations* (4th ed.). Johns Hopkins University Press.
+- Strang, G. (2016). *Introduction to Linear Algebra* (5th ed.). Wellesley-Cambridge Press.
+- Press, W. H., et al. (2007). *Numerical Recipes: The Art of Scientific Computing* (3rd ed.). Cambridge University Press.
+
+**Otimização e Performance**
+
+- Fog, A. (2019). *Optimizing software in C++*. Technical University of Denmark.
+- Drepper, U. (2007). *What Every Programmer Should Know About Memory*. Red Hat.
+- Intel Corporation. (2021). *Intel 64 and IA-32 Architectures Optimization Reference Manual*.
+
+**Engenharia de Software e Ética**
+
+- Martin, R. C. (2008). *Clean Code: A Handbook of Agile Software Craftsmanship*. Prentice Hall.
+- Gotterbarn, D., et al. (1997). Software Engineering Code of Ethics. *Communications of the ACM*, 40(11).
+- Floridi, L. (2013). *The Ethics of Information*. Oxford University Press.
+
+**Sistemas Android e Mobile**
+
+- Google Inc. (2024). *Android Open Source Project*. https://source.android.com
+- Termux Team. (2024). *Termux Documentation*. https://termux.com
+- ARM Holdings. (2021). *ARM Architecture Reference Manual ARMv8*.
+
+### Artigos e Papers
+
+- Lomont, C. (2003). Fast Inverse Square Root. *Technical Report*.
+- McCabe, T. J. (1976). A Complexity Measure. *IEEE Transactions on Software Engineering*, SE-2(4), 308-320.
+- Dongarra, J. J., et al. (1988). An Extended Set of FORTRAN Basic Linear Algebra Subprograms. *ACM TOMS*, 14(1), 1-17.
+
+### Recursos Online
+
+- GitHub: https://github.com
+- Stack Overflow: https://stackoverflow.com
+- ARM Developer: https://developer.arm.com
+- Android Developers: https://developer.android.com
 
 ---
 

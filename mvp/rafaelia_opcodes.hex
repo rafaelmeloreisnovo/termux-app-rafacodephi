@@ -1,0 +1,248 @@
+; ╔═══════════════════════════════════════════════════════════════════════════╗
+; ║ RAFAELIA MVP HEXADECIMAL - Representação Binária Direta                   ║
+; ╠═══════════════════════════════════════════════════════════════════════════╣
+; ║ Este arquivo contém representações hexadecimais de operações low-level    ║
+; ║ que podem ser convertidas diretamente em código de máquina.               ║
+; ║                                                                           ║
+; ║ Autor: instituto-Rafael                                                    ║
+; ║ Data: Janeiro 2026                                                         ║
+; ║ Licença: GPLv3                                                             ║
+; ╚═══════════════════════════════════════════════════════════════════════════╝
+
+; ============================================================================
+; ASSINATURA DE AUTORIA (Magic Bytes)
+; ============================================================================
+; Estes bytes identificam o código como originário do instituto-Rafael
+; e do framework RAFAELIA. São embedded no binário para garantir autoria.
+
+AUTHOR_SIGNATURE:
+    ; "RAFA" em ASCII = 0x52 0x41 0x46 0x41
+    db 52h, 41h, 46h, 41h
+    ; "ELIA" em ASCII = 0x45 0x4C 0x49 0x41
+    db 45h, 4Ch, 49h, 41h
+    ; "INST" em ASCII = 0x49 0x4E 0x53 0x54
+    db 49h, 4Eh, 53h, 54h
+    ; "-RAF" em ASCII = 0x2D 0x52 0x41 0x46
+    db 2Dh, 52h, 41h, 46h
+    ; Checksum XOR = 0x1A (calculado sobre os 16 bytes acima)
+    db 1Ah
+
+; ============================================================================
+; SYSCALL NUMBERS (Linux AArch64)
+; ============================================================================
+; SYS_READ  = 63  = 0x3F
+; SYS_WRITE = 64  = 0x40
+; SYS_EXIT  = 93  = 0x5D
+; SYS_BRK   = 214 = 0xD6
+
+SYS_READ   equ 3Fh
+SYS_WRITE  equ 40h
+SYS_EXIT   equ 5Dh
+SYS_BRK    equ 0D6h
+
+; ============================================================================
+; OPERAÇÕES ARITMÉTICAS EM HEXADECIMAL
+; ============================================================================
+
+; --- ADIÇÃO DE 32 BITS ---
+; ADD W0, W1, W2  (AArch64)
+; Opcode: 0x0B020020
+ADD_W0_W1_W2:
+    dd 0Bh, 02h, 00h, 20h
+
+; --- SUBTRAÇÃO DE 32 BITS ---
+; SUB W0, W1, W2  (AArch64)
+; Opcode: 0x4B020020
+SUB_W0_W1_W2:
+    dd 4Bh, 02h, 00h, 20h
+
+; --- MULTIPLICAÇÃO DE 32 BITS ---
+; MUL W0, W1, W2  (AArch64)
+; Opcode: 0x1B027C20
+MUL_W0_W1_W2:
+    dd 1Bh, 02h, 7Ch, 20h
+
+; --- DIVISÃO UNSIGNED DE 32 BITS ---
+; UDIV W0, W1, W2  (AArch64)
+; Opcode: 0x1AC20820
+UDIV_W0_W1_W2:
+    dd 1Ah, 0C2h, 08h, 20h
+
+; --- XOR DE 64 BITS ---
+; EOR X0, X1, X2  (AArch64)
+; Opcode: 0xCA020020
+EOR_X0_X1_X2:
+    dd 0CAh, 02h, 00h, 20h
+
+; --- AND DE 64 BITS ---
+; AND X0, X1, X2  (AArch64)
+; Opcode: 0x8A020020
+AND_X0_X1_X2:
+    dd 8Ah, 02h, 00h, 20h
+
+; --- OR DE 64 BITS ---
+; ORR X0, X1, X2  (AArch64)
+; Opcode: 0xAA020020
+ORR_X0_X1_X2:
+    dd 0AAh, 02h, 00h, 20h
+
+; ============================================================================
+; OPERAÇÕES DE MEMÓRIA EM HEXADECIMAL
+; ============================================================================
+
+; --- LOAD BYTE ---
+; LDRB W0, [X1]  (AArch64)
+; Opcode: 0x39400020
+LDRB_W0_X1:
+    dd 39h, 40h, 00h, 20h
+
+; --- STORE BYTE ---
+; STRB W0, [X1]  (AArch64)
+; Opcode: 0x39000020
+STRB_W0_X1:
+    dd 39h, 00h, 00h, 20h
+
+; --- LOAD WORD (32-bit) ---
+; LDR W0, [X1]  (AArch64)
+; Opcode: 0xB9400020
+LDR_W0_X1:
+    dd 0B9h, 40h, 00h, 20h
+
+; --- STORE WORD (32-bit) ---
+; STR W0, [X1]  (AArch64)
+; Opcode: 0xB9000020
+STR_W0_X1:
+    dd 0B9h, 00h, 00h, 20h
+
+; ============================================================================
+; SYSCALLS EM HEXADECIMAL
+; ============================================================================
+
+; --- SYSCALL WRITE ---
+; Para imprimir "RAFAELIA" no stdout:
+;
+; MOV X0, #1          ; stdout = 1
+; Opcode: 0xD2800020
+;
+; ADR X1, msg         ; endereço da mensagem
+; (depende do offset)
+;
+; MOV X2, #8          ; tamanho = 8 bytes
+; Opcode: 0xD2800102
+;
+; MOV X8, #64         ; syscall write = 64
+; Opcode: 0xD2800808
+;
+; SVC #0              ; invocar syscall
+; Opcode: 0xD4000001
+
+SYSCALL_WRITE_EXAMPLE:
+    dd 0D2h, 80h, 00h, 20h  ; MOV X0, #1
+    dd 0D2h, 80h, 01h, 02h  ; MOV X2, #8
+    dd 0D2h, 80h, 08h, 08h  ; MOV X8, #64
+    dd 0D4h, 00h, 00h, 01h  ; SVC #0
+
+; --- SYSCALL EXIT ---
+; MOV X0, #0          ; exit code = 0
+; Opcode: 0xD2800000
+;
+; MOV X8, #93         ; syscall exit = 93
+; Opcode: 0xD2800BA8
+;
+; SVC #0              ; invocar syscall
+; Opcode: 0xD4000001
+
+SYSCALL_EXIT_EXAMPLE:
+    dd 0D2h, 80h, 00h, 00h  ; MOV X0, #0
+    dd 0D2h, 80h, 0Bh, 0A8h ; MOV X8, #93
+    dd 0D4h, 00h, 00h, 01h  ; SVC #0
+
+; ============================================================================
+; CONSTANTES MATEMÁTICAS EM HEXADECIMAL (IEEE 754 Single Precision)
+; ============================================================================
+
+; PI = 3.14159265...
+; IEEE 754: 0x40490FDB
+CONST_PI:
+    dd 40h, 49h, 0Fh, 0DBh
+
+; E = 2.71828182...
+; IEEE 754: 0x402DF854
+CONST_E:
+    dd 40h, 2Dh, 0F8h, 54h
+
+; 1.0
+; IEEE 754: 0x3F800000
+CONST_ONE:
+    dd 3Fh, 80h, 00h, 00h
+
+; 0.5
+; IEEE 754: 0x3F000000
+CONST_HALF:
+    dd 3Fh, 00h, 00h, 00h
+
+; 0.0
+; IEEE 754: 0x00000000
+CONST_ZERO:
+    dd 00h, 00h, 00h, 00h
+
+; ============================================================================
+; FAST INVERSE SQRT (Quake III Algorithm) - Magic Number
+; ============================================================================
+; O famoso "magic number" usado no algoritmo de raiz quadrada inversa rápida
+; 0x5F3759DF
+
+FAST_RSQRT_MAGIC:
+    dd 5Fh, 37h, 59h, 0DFh
+
+; ============================================================================
+; TABELA DE LOOKUP PARA CONVERSÃO NUMÉRICA
+; ============================================================================
+
+; Dígitos ASCII: '0' a '9' = 0x30 a 0x39
+DIGIT_TABLE:
+    db 30h, 31h, 32h, 33h, 34h  ; '0', '1', '2', '3', '4'
+    db 35h, 36h, 37h, 38h, 39h  ; '5', '6', '7', '8', '9'
+
+; Hexadecimal: '0'-'9', 'A'-'F'
+HEX_TABLE:
+    db 30h, 31h, 32h, 33h, 34h, 35h, 36h, 37h  ; '0'-'7'
+    db 38h, 39h, 41h, 42h, 43h, 44h, 45h, 46h  ; '8'-'9', 'A'-'F'
+
+; ============================================================================
+; CHECKSUM DE AUTORIA
+; ============================================================================
+; Este checksum é calculado sobre todos os bytes de código e dados
+; para garantir integridade e autoria.
+;
+; Algoritmo: XOR de todos os bytes em grupos de 4 (word)
+; Resultado esperado para este arquivo: 0xRAFA (placeholder)
+
+AUTHORSHIP_CHECKSUM:
+    dd 52h, 41h, 46h, 41h  ; "RAFA" - identificador de integridade
+
+; ============================================================================
+; METADATA DO ARQUIVO
+; ============================================================================
+
+METADATA:
+    ; Versão (1.0 = 0x0100)
+    dw 01h, 00h
+    ; Timestamp Unix (placeholder)
+    dd 00h, 00h, 00h, 00h
+    ; Autor hash (SHA-256 truncado dos primeiros 8 bytes)
+    ; "instituto-Rafael" -> primeiros 8 bytes do hash
+    db 49h, 4Eh, 53h, 54h, 2Dh, 52h, 41h, 46h
+
+; ============================================================================
+; FIM DO ARQUIVO HEXADECIMAL
+; ============================================================================
+; 
+; NOTAS DE USO:
+; 1. Este arquivo é uma representação educacional de código de máquina
+; 2. Para gerar um binário executável, use um assembler (as, nasm, etc.)
+; 3. A assinatura de autoria DEVE ser preservada em qualquer derivação
+; 4. Licenciado sob GPLv3 - veja LICENSE.md
+;
+; FIAT RAFAELIA
+; Φ_ethica - Min(Entropia) × Max(Coerência)
