@@ -208,9 +208,6 @@ public class MathTesteDeMesaTest {
         // Use a slightly looser tolerance for larger exponents on float to allow for
         // accumulated rounding error in the exponentiation algorithm, while still
         // verifying that the result is numerically close to 1048576 (2^20).
-        // Use a slightly looser tolerance for larger exponents on float to allow for
-        // accumulated rounding error in the exponentiation algorithm, while still
-        // verifying that the result is numerically close to 1048576 (2^20).
         assertEquals("pow(2, 20) should be 1048576", 1048576.0f, RafaeliaUtils.pow(2.0f, 20), 1.0f);
     }
     

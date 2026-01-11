@@ -63,12 +63,16 @@ Detailed step-by-step verification of algorithm execution.
 ```
 Input: base=2.0, exp=5
 
-| Step | absExp | current | result | absExp & 1 | Action                    |
-|------|--------|---------|--------|------------|---------------------------|
-| 0    | 5      | 2.0     | 1.0    | 1          | result *= current (1*2=2) |
-| 1    | 2      | 4.0     | 2.0    | 0          | skip                      |
-| 2    | 1      | 16.0    | 2.0    | 1          | result *= current (2*16)  |
-| 3    | 0      | -       | 32.0   | -          | exit loop                 |
+| Step | absExp | current | result | absExp & 1 | Action                       |
+|------|--------|---------|--------|------------|------------------------------|
+| init | 5      | 2.0     | 1.0    | -          | initialize                   |
+| 0    | 5      | 2.0     | 1.0    | 1          | result *= current (1*2=2)    |
+|      | 2      | 4.0     | 2.0    | -          | absExp >>= 1, current²       |
+| 1    | 2      | 4.0     | 2.0    | 0          | skip (bit is 0)              |
+|      | 1      | 16.0    | 2.0    | -          | absExp >>= 1, current²       |
+| 2    | 1      | 16.0    | 2.0    | 1          | result *= current (2*16)     |
+|      | 0      | -       | 32.0   | -          | absExp becomes 0, loop ends  |
+| end  | 0      | -       | 32.0   | -          | exit loop (absExp == 0)      |
 
 Expected: 32.0
 ```
