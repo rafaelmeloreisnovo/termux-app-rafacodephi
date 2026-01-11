@@ -46,45 +46,46 @@ SYS_BRK    equ 0D6h
 
 ; --- ADIÇÃO DE 32 BITS ---
 ; ADD W0, W1, W2  (AArch64)
-; Opcode: 0x0B020020
+; Opcode: 0x0B020020 (little-endian: 20 00 02 0B)
+; Nota: Bytes em ordem little-endian para AArch64
 ADD_W0_W1_W2:
-    dd 0Bh, 02h, 00h, 20h
+    db 20h, 00h, 02h, 0Bh
 
 ; --- SUBTRAÇÃO DE 32 BITS ---
 ; SUB W0, W1, W2  (AArch64)
-; Opcode: 0x4B020020
+; Opcode: 0x4B020020 (little-endian: 20 00 02 4B)
 SUB_W0_W1_W2:
-    dd 4Bh, 02h, 00h, 20h
+    db 20h, 00h, 02h, 4Bh
 
 ; --- MULTIPLICAÇÃO DE 32 BITS ---
-; MUL W0, W1, W2  (AArch64)
-; Opcode: 0x1B027C20
+; MUL W0, W1, W2  (AArch64) - alias de MADD W0, W1, W2, WZR
+; Opcode: 0x1B027C20 (little-endian: 20 7C 02 1B)
 MUL_W0_W1_W2:
-    dd 1Bh, 02h, 7Ch, 20h
+    db 20h, 7Ch, 02h, 1Bh
 
 ; --- DIVISÃO UNSIGNED DE 32 BITS ---
 ; UDIV W0, W1, W2  (AArch64)
-; Opcode: 0x1AC20820
+; Opcode: 0x1AC20820 (little-endian: 20 08 C2 1A)
 UDIV_W0_W1_W2:
-    dd 1Ah, 0C2h, 08h, 20h
+    db 20h, 08h, 0C2h, 1Ah
 
 ; --- XOR DE 64 BITS ---
 ; EOR X0, X1, X2  (AArch64)
-; Opcode: 0xCA020020
+; Opcode: 0xCA020020 (little-endian: 20 00 02 CA)
 EOR_X0_X1_X2:
-    dd 0CAh, 02h, 00h, 20h
+    db 20h, 00h, 02h, 0CAh
 
 ; --- AND DE 64 BITS ---
 ; AND X0, X1, X2  (AArch64)
-; Opcode: 0x8A020020
+; Opcode: 0x8A020020 (little-endian: 20 00 02 8A)
 AND_X0_X1_X2:
-    dd 8Ah, 02h, 00h, 20h
+    db 20h, 00h, 02h, 8Ah
 
 ; --- OR DE 64 BITS ---
 ; ORR X0, X1, X2  (AArch64)
-; Opcode: 0xAA020020
+; Opcode: 0xAA020020 (little-endian: 20 00 02 AA)
 ORR_X0_X1_X2:
-    dd 0AAh, 02h, 00h, 20h
+    db 20h, 00h, 02h, 0AAh
 
 ; ============================================================================
 ; OPERAÇÕES DE MEMÓRIA EM HEXADECIMAL
@@ -92,27 +93,27 @@ ORR_X0_X1_X2:
 
 ; --- LOAD BYTE ---
 ; LDRB W0, [X1]  (AArch64)
-; Opcode: 0x39400020
+; Opcode: 0x39400020 (little-endian: 20 00 40 39)
 LDRB_W0_X1:
-    dd 39h, 40h, 00h, 20h
+    db 20h, 00h, 40h, 39h
 
 ; --- STORE BYTE ---
 ; STRB W0, [X1]  (AArch64)
-; Opcode: 0x39000020
+; Opcode: 0x39000020 (little-endian: 20 00 00 39)
 STRB_W0_X1:
-    dd 39h, 00h, 00h, 20h
+    db 20h, 00h, 00h, 39h
 
 ; --- LOAD WORD (32-bit) ---
 ; LDR W0, [X1]  (AArch64)
-; Opcode: 0xB9400020
+; Opcode: 0xB9400020 (little-endian: 20 00 40 B9)
 LDR_W0_X1:
-    dd 0B9h, 40h, 00h, 20h
+    db 20h, 00h, 40h, 0B9h
 
 ; --- STORE WORD (32-bit) ---
 ; STR W0, [X1]  (AArch64)
-; Opcode: 0xB9000020
+; Opcode: 0xB9000020 (little-endian: 20 00 00 B9)
 STR_W0_X1:
-    dd 0B9h, 00h, 00h, 20h
+    db 20h, 00h, 00h, 0B9h
 
 ; ============================================================================
 ; SYSCALLS EM HEXADECIMAL
@@ -122,78 +123,78 @@ STR_W0_X1:
 ; Para imprimir "RAFAELIA" no stdout:
 ;
 ; MOV X0, #1          ; stdout = 1
-; Opcode: 0xD2800020
+; Opcode: 0xD2800020 (little-endian: 20 00 80 D2)
 ;
 ; ADR X1, msg         ; endereço da mensagem
 ; (depende do offset)
 ;
 ; MOV X2, #8          ; tamanho = 8 bytes
-; Opcode: 0xD2800102
+; Opcode: 0xD2800102 (little-endian: 02 01 80 D2)
 ;
 ; MOV X8, #64         ; syscall write = 64
-; Opcode: 0xD2800808
+; Opcode: 0xD2800808 (little-endian: 08 08 80 D2)
 ;
 ; SVC #0              ; invocar syscall
-; Opcode: 0xD4000001
+; Opcode: 0xD4000001 (little-endian: 01 00 00 D4)
 
 SYSCALL_WRITE_EXAMPLE:
-    dd 0D2h, 80h, 00h, 20h  ; MOV X0, #1
-    dd 0D2h, 80h, 01h, 02h  ; MOV X2, #8
-    dd 0D2h, 80h, 08h, 08h  ; MOV X8, #64
-    dd 0D4h, 00h, 00h, 01h  ; SVC #0
+    db 20h, 00h, 80h, 0D2h  ; MOV X0, #1
+    db 02h, 01h, 80h, 0D2h  ; MOV X2, #8
+    db 08h, 08h, 80h, 0D2h  ; MOV X8, #64
+    db 01h, 00h, 00h, 0D4h  ; SVC #0
 
 ; --- SYSCALL EXIT ---
 ; MOV X0, #0          ; exit code = 0
-; Opcode: 0xD2800000
+; Opcode: 0xD2800000 (little-endian: 00 00 80 D2)
 ;
-; MOV X8, #93         ; syscall exit = 93
-; Opcode: 0xD2800BA8
+; MOV X8, #93         ; syscall exit = 93 (0x5D)
+; Opcode: 0xD2800BA8 (little-endian: A8 0B 80 D2)
 ;
 ; SVC #0              ; invocar syscall
-; Opcode: 0xD4000001
+; Opcode: 0xD4000001 (little-endian: 01 00 00 D4)
 
 SYSCALL_EXIT_EXAMPLE:
-    dd 0D2h, 80h, 00h, 00h  ; MOV X0, #0
-    dd 0D2h, 80h, 0Bh, 0A8h ; MOV X8, #93
-    dd 0D4h, 00h, 00h, 01h  ; SVC #0
+    db 00h, 00h, 80h, 0D2h  ; MOV X0, #0
+    db 0A8h, 0Bh, 80h, 0D2h ; MOV X8, #93
+    db 01h, 00h, 00h, 0D4h  ; SVC #0
 
 ; ============================================================================
 ; CONSTANTES MATEMÁTICAS EM HEXADECIMAL (IEEE 754 Single Precision)
 ; ============================================================================
 
 ; PI = 3.14159265...
-; IEEE 754: 0x40490FDB
+; IEEE 754 Single Precision: 0x40490FDB (little-endian: DB 0F 49 40)
 CONST_PI:
-    dd 40h, 49h, 0Fh, 0DBh
+    db 0DBh, 0Fh, 49h, 40h
 
 ; E = 2.71828182...
-; IEEE 754: 0x402DF854
+; IEEE 754 Single Precision: 0x402DF854 (little-endian: 54 F8 2D 40)
 CONST_E:
-    dd 40h, 2Dh, 0F8h, 54h
+    db 54h, 0F8h, 2Dh, 40h
 
 ; 1.0
-; IEEE 754: 0x3F800000
+; IEEE 754 Single Precision: 0x3F800000 (little-endian: 00 00 80 3F)
 CONST_ONE:
-    dd 3Fh, 80h, 00h, 00h
+    db 00h, 00h, 80h, 3Fh
 
 ; 0.5
-; IEEE 754: 0x3F000000
+; IEEE 754 Single Precision: 0x3F000000 (little-endian: 00 00 00 3F)
 CONST_HALF:
-    dd 3Fh, 00h, 00h, 00h
+    db 00h, 00h, 00h, 3Fh
 
 ; 0.0
-; IEEE 754: 0x00000000
+; IEEE 754 Single Precision: 0x00000000
 CONST_ZERO:
-    dd 00h, 00h, 00h, 00h
+    db 00h, 00h, 00h, 00h
 
 ; ============================================================================
 ; FAST INVERSE SQRT (Quake III Algorithm) - Magic Number
 ; ============================================================================
 ; O famoso "magic number" usado no algoritmo de raiz quadrada inversa rápida
-; 0x5F3759DF
+; 0x5F3759DF (little-endian: DF 59 37 5F)
 
 FAST_RSQRT_MAGIC:
-    dd 5Fh, 37h, 59h, 0DFh
+    db 0DFh, 59h, 37h, 5Fh
 
 ; ============================================================================
 ; TABELA DE LOOKUP PARA CONVERSÃO NUMÉRICA
@@ -219,17 +220,17 @@ HEX_TABLE:
 ; Resultado esperado para este arquivo: 0xRAFA (placeholder)
 
 AUTHORSHIP_CHECKSUM:
-    dd 52h, 41h, 46h, 41h  ; "RAFA" - identificador de integridade
+    db 52h, 41h, 46h, 41h  ; "RAFA" - identificador de integridade
 
 ; ============================================================================
 ; METADATA DO ARQUIVO
 ; ============================================================================
 
 METADATA:
-    ; Versão (1.0 = 0x0100)
-    dw 01h, 00h
-    ; Timestamp Unix (placeholder)
-    dd 00h, 00h, 00h, 00h
+    ; Versão (1.0 = 0x0100) - 2 bytes little-endian
+    db 00h, 01h
+    ; Timestamp Unix (placeholder) - 4 bytes
+    db 00h, 00h, 00h, 00h
     ; Autor hash (SHA-256 truncado dos primeiros 8 bytes)
     ; "instituto-Rafael" -> primeiros 8 bytes do hash
     db 49h, 4Eh, 53h, 54h, 2Dh, 52h, 41h, 46h

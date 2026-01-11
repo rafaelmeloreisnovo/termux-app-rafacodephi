@@ -35,10 +35,12 @@
 .equ STDERR,        2       /* File descriptor stderr */
 
 /* Constantes matemáticas em ponto fixo (Q16.16) */
-.equ FP_ONE,        0x00010000      /* 1.0 em Q16.16 */
-.equ FP_HALF,       0x00008000      /* 0.5 em Q16.16 */
-.equ FP_PI,         0x0003243F      /* π em Q16.16 */
-.equ FP_E,          0x0002B7E1      /* e em Q16.16 */
+/* Formato: valor_inteiro * 65536 (2^16) */
+.equ FP_ONE,        0x00010000      /* 1.0 em Q16.16 = 1 * 65536 */
+.equ FP_HALF,       0x00008000      /* 0.5 em Q16.16 = 0.5 * 65536 */
+.equ FP_PI,         0x0003243F      /* π em Q16.16 ≈ 3.14159 * 65536 (simplificado) */
+.equ FP_E,          0x0002B7E1      /* e em Q16.16 ≈ 2.71828 * 65536 (simplificado) */
+/* Nota: Valores de PI e E são aproximações para demonstração */
 
 /* Assinatura de autoria (magic bytes) */
 .equ AUTHOR_SIG_1,  0x52414641      /* "RAFA" */
@@ -273,12 +275,14 @@ test_fast_sqrt:
     
     /* Calcular sqrt(16) = 4 */
     /* 16 em Q16.16 = 16 * 65536 = 1048576 = 0x100000 */
-    mov x0, #0x100000
+    /* Usar ldr com literal pool para valores grandes */
+    ldr x0, =0x100000
     bl fast_sqrt
     
     /* Converter resultado para decimal e imprimir */
-    /* resultado esperado: 4 * 65536 = 262144 = 0x40000 */
-    /* Converter de Q16.16 para inteiro: >> 16 */
+    /* Resultado em Q16.16: sqrt(16) = 4 */
+    /* 4 em Q16.16 = 4 * 65536 = 262144 = 0x40000 */
+    /* Converter de Q16.16 para inteiro: >> 16 = 4 */
     lsr x0, x0, #16
     bl print_u64
     
