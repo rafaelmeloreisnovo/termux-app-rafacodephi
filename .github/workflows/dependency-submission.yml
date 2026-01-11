@@ -1,9 +1,18 @@
 name: Automatic Dependency Submission
 
+# =============================================================================
+# This workflow submits dependency graph to GitHub.
+# Runs only on workflow_dispatch or scheduled to avoid duplicate runs.
+# =============================================================================
+
 on:
-  push:
-    branches: [ 'master' ]
+  # Only run on manual dispatch or schedule - not on every push
+  # push:
+  #   branches: [ 'master' ]
   workflow_dispatch:
+  schedule:
+    # Weekly dependency submission on Sundays at 00:00 UTC
+    - cron: '0 0 * * 0'
 
 permissions:
   contents: write
