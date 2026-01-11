@@ -70,6 +70,10 @@ env:
   QMS_VERSION: '2024.1'
   BUILD_STANDARD: 'ISO-9001-2015'
 
+# Limit permissions for GITHUB_TOKEN to minimum required
+permissions:
+  contents: read
+
 jobs:
   # Phase 1: Pre-build Validation
   quality-gate:
