@@ -137,6 +137,16 @@
 
     <!-- Termux Settings -->
     <string name="title_activity_termux_settings">&TERMUX_APP_NAME; Settings</string>
+    <string name="title_activity_android15_wizard">Android 15 Setup Wizard</string>
+    <string name="title_activity_system_audit">System Audit</string>
+
+    <!-- Android 15 Wizard Preferences -->
+    <string name="android15_wizard_title">Android 15 Setup Wizard</string>
+    <string name="android15_wizard_summary">Configure Termux for optimal Android 15+ compatibility</string>
+
+    <!-- System Audit Preferences -->
+    <string name="system_audit_title">System Audit</string>
+    <string name="system_audit_summary">Hardware/software compatibility, ISO compliance, and diagnostics</string>
 
     <!-- Termux App Preferences -->
     <string name="termux_preferences_title">&TERMUX_APP_NAME;</string>

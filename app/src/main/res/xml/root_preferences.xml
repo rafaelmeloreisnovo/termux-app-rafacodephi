@@ -7,6 +7,18 @@
         app:fragment="com.termux.app.fragments.settings.TermuxPreferencesFragment"/>
 
     <Preference
+        app:key="android15_wizard"
+        app:title="@string/android15_wizard_title"
+        app:summary="@string/android15_wizard_summary"
+        app:persistent="false"/>
+
+    <Preference
+        app:key="system_audit"
+        app:title="@string/system_audit_title"
+        app:summary="@string/system_audit_summary"
+        app:persistent="false"/>
+
+    <Preference
         app:key="termux_api"
         app:title="@string/termux_api_preferences_title"
         app:summary="@string/termux_api_preferences_summary"

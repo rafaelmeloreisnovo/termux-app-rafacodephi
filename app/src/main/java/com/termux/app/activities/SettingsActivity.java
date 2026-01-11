@@ -1,6 +1,7 @@
 package com.termux.app.activities;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
 
@@ -63,6 +64,8 @@ public class SettingsActivity extends AppCompatActivity {
             new Thread() {
                 @Override
                 public void run() {
+                    configureAndroid15WizardPreference(context);
+                    configureSystemAuditPreference(context);
                     configureTermuxAPIPreference(context);
                     configureTermuxFloatPreference(context);
                     configureTermuxTaskerPreference(context);
@@ -71,6 +74,28 @@ public class SettingsActivity extends AppCompatActivity {
                     configureDonatePreference(context);
                 }
             }.start();
+        }
+
+        private void configureAndroid15WizardPreference(@NonNull Context context) {
+            Preference wizardPreference = findPreference("android15_wizard");
+            if (wizardPreference != null) {
+                wizardPreference.setOnPreferenceClickListener(preference -> {
+                    Intent intent = new Intent(context, Android15WizardActivity.class);
+                    startActivity(intent);
+                    return true;
+                });
+            }
+        }
+
+        private void configureSystemAuditPreference(@NonNull Context context) {
+            Preference auditPreference = findPreference("system_audit");
+            if (auditPreference != null) {
+                auditPreference.setOnPreferenceClickListener(preference -> {
+                    Intent intent = new Intent(context, SystemAuditActivity.class);
+                    startActivity(intent);
+                    return true;
+                });
+            }
         }
 
         private void configureTermuxAPIPreference(@NonNull Context context) {
