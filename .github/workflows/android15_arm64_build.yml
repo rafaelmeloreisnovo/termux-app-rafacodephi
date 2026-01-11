@@ -191,7 +191,9 @@ jobs:
           CURRENT_VERSION_NAME="${{ needs.quality-gate.outputs.version_name }}"
           RELEASE_VERSION_NAME="v$CURRENT_VERSION_NAME+${GITHUB_SHA:0:7}"
           
-          APK_DIR_PATH="./app/build/outputs/apk/debug"
+          # Determine build type for path (debug or release)
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
+          APK_DIR_PATH="./app/build/outputs/apk/$BUILD_TYPE"
           APK_VERSION_TAG="$RELEASE_VERSION_NAME-$PACKAGE_VARIANT-arm64-android15"
           APK_BASENAME_PREFIX="termux-app_$APK_VERSION_TAG"
           
@@ -207,8 +209,16 @@ jobs:
           export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG"
           export TERMUX_PACKAGE_VARIANT="$PACKAGE_VARIANT"
           
+          # Determine build type (from workflow_dispatch input or default to debug)
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
+          GRADLE_TASK="assemble${BUILD_TYPE^}" # Capitalize first letter: assembleDebug or assembleRelease
+          
+          echo "Build Type: $BUILD_TYPE"
+          echo "Gradle Task: $GRADLE_TASK"
+          echo ""
+          
           # Build with focus on arm64
-          if ! ./gradlew assembleDebug \
+          if ! ./gradlew $GRADLE_TASK \
               -Pandroid.injected.build.abi=arm64-v8a \
               --no-daemon \
               --warning-mode all; then
