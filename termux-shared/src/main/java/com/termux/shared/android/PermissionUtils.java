@@ -38,6 +38,7 @@ public class PermissionUtils {
 
     public static final int REQUEST_DISABLE_BATTERY_OPTIMIZATIONS = 2000;
     public static final int REQUEST_GRANT_DISPLAY_OVER_OTHER_APPS_PERMISSION = 2001;
+    public static final int REQUEST_POST_NOTIFICATIONS_PERMISSION = 2002;
 
     private static final String LOG_TAG = "PermissionUtils";
 
@@ -568,6 +569,63 @@ public class PermissionUtils {
             return ActivityUtils.startActivityForResult(context, requestCode, intent);
         else
             return ActivityUtils.startActivity(context, intent);
+    }
+
+
+
+
+    /**
+     * Check if {@link Manifest.permission#POST_NOTIFICATIONS} permission has been granted.
+     * This permission is required starting from Android 13 (API 33) for posting notifications.
+     *
+     * @param context The context for operations.
+     * @return Returns {@code true} if permission is granted or not required (pre-Android 13), otherwise {@code false}.
+     */
+    public static boolean checkPostNotificationsPermission(@NonNull Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return checkPermission(context, Manifest.permission.POST_NOTIFICATIONS);
+        }
+        // Permission not required on Android 12 and below
+        return true;
+    }
+
+    /**
+     * Request user to grant {@link Manifest.permission#POST_NOTIFICATIONS} permission to the app.
+     * This permission is required starting from Android 13 (API 33) for posting notifications.
+     *
+     * @param context The context for operations. It must be an instance of {@link Activity} or
+     * {@link AppCompatActivity}.
+     * @param requestCode The request code to use while asking for permission. It must be `>=0` or
+     *                    will fail silently and will log an exception.
+     * @return Returns {@code true} if requesting the permission was successful or not required, otherwise {@code false}.
+     */
+    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+    public static boolean requestPostNotificationsPermission(@NonNull Context context, int requestCode) {
+        Logger.logInfo(LOG_TAG, "Requesting POST_NOTIFICATIONS permission");
+        return requestPermission(context, Manifest.permission.POST_NOTIFICATIONS, requestCode);
+    }
+
+    /**
+     * Check if running on Android 13 (API 33) or higher and {@link Manifest.permission#POST_NOTIFICATIONS}
+     * permission has been granted or not.
+     *
+     * @param context The context for operations.
+     * @param logResults If it should be logged that permission has been granted or not.
+     * @return Returns {@code true} if permission is granted or not required, otherwise {@code false}.
+     */
+    public static boolean validatePostNotificationsPermissionForPostAndroid13(@NonNull Context context,
+                                                                               boolean logResults) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true;
+
+        if (!checkPostNotificationsPermission(context)) {
+            if (logResults)
+                Logger.logWarn(LOG_TAG, context.getPackageName() + " does not have POST_NOTIFICATIONS permission");
+            return false;
+        } else {
+            if (logResults)
+                Logger.logDebug(LOG_TAG, context.getPackageName() + " already has POST_NOTIFICATIONS permission");
+            return true;
+        }
     }
 
 }
