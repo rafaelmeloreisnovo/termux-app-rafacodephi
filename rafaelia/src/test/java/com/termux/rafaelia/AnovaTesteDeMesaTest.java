@@ -234,7 +234,9 @@ public class AnovaTesteDeMesaTest {
         originalCoefs[0] = 999.0f;
         
         // Result should be unchanged (defensive copy was made)
-        assertEquals("Constructor should make defensive copy", 1.0f, result.coefficients[0], EPSILON);
+        // Use getCoefficients() to verify internal state wasn't affected
+        float[] internalCoefs = result.getCoefficients();
+        assertEquals("Constructor should make defensive copy", 1.0f, internalCoefs[0], EPSILON);
     }
     
     @Test
@@ -246,8 +248,9 @@ public class AnovaTesteDeMesaTest {
         float[] returned = result.getCoefficients();
         returned[0] = 888.0f;
         
-        // Result should still be unchanged (defensive copy returned)
-        assertEquals("getCoefficients should return defensive copy", 1.0f, result.coefficients[0], EPSILON);
+        // Get coefficients again - should still be unchanged (defensive copy returned)
+        float[] secondGet = result.getCoefficients();
+        assertEquals("getCoefficients should return defensive copy", 1.0f, secondGet[0], EPSILON);
     }
     
     // ==================== COHERENCE TESTS (Ω - Omega) ====================

@@ -164,9 +164,10 @@ STRICT_EPSILON = 1e-10f; // High-precision requirements
 
 ```
 rafaelia/src/test/java/com/termux/rafaelia/
-├── AnovaResultTest.java        # ANOVA class tests
-├── RafaeliaUtilsTest.java      # Utility function tests  
-└── TesteDeMesaTest.java        # Comprehensive trace table tests
+├── AnovaResultTest.java        # Basic ANOVA class tests
+├── AnovaTesteDeMesaTest.java   # Trace table tests for ANOVA operations
+├── MathTesteDeMesaTest.java    # Trace table tests for math operations (pow)
+└── RafaeliaUtilsTest.java      # Utility function tests  
 ```
 
 ---
@@ -177,8 +178,8 @@ rafaelia/src/test/java/com/termux/rafaelia/
 # Run all tests
 ./gradlew test
 
-# Run specific test class
-./gradlew test --tests "com.termux.rafaelia.TesteDeMesaTest"
+# Run specific test module
+./gradlew :rafaelia:test
 
 # Run with detailed output
 ./gradlew test --info
