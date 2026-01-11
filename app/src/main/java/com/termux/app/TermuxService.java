@@ -205,20 +205,37 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
 
     /** Make service run in foreground mode. */
     private void runStartForeground() {
-        setupNotificationChannel();
-        startForeground(TermuxConstants.TERMUX_APP_NOTIFICATION_ID, buildNotification());
+        try {
+            setupNotificationChannel();
+            Notification notification = buildNotification();
+            if (notification != null) {
+                startForeground(TermuxConstants.TERMUX_APP_NOTIFICATION_ID, notification);
+            } else {
+                Logger.logError(LOG_TAG, "Failed to build notification for foreground service");
+            }
+        } catch (Exception e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to start foreground service", e);
+        }
     }
 
     /** Make service leave foreground mode. */
     private void runStopForeground() {
-        stopForeground(true);
+        try {
+            stopForeground(true);
+        } catch (Exception e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to stop foreground service", e);
+        }
     }
 
     /** Request to stop service. */
     private void requestStopService() {
         Logger.logDebug(LOG_TAG, "Requesting to stop service");
         runStopForeground();
-        stopSelf();
+        try {
+            stopSelf();
+        } catch (Exception e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to stop service", e);
+        }
     }
 
     /** Process action to stop service. */
@@ -889,7 +906,17 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
             // Exit if we are updating after the user disabled all locks with no sessions or tasks running.
             requestStopService();
         } else {
-            ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).notify(TermuxConstants.TERMUX_APP_NOTIFICATION_ID, buildNotification());
+            try {
+                NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                if (notificationManager != null) {
+                    Notification notification = buildNotification();
+                    if (notification != null) {
+                        notificationManager.notify(TermuxConstants.TERMUX_APP_NOTIFICATION_ID, notification);
+                    }
+                }
+            } catch (Exception e) {
+                Logger.logStackTraceWithMessage(LOG_TAG, "Failed to update notification", e);
+            }
         }
     }
 

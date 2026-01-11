@@ -24,52 +24,112 @@ public class TermuxApplication extends Application {
     public void onCreate() {
         super.onCreate();
 
+        try {
+            initializeApplication();
+        } catch (Exception e) {
+            // Log the error but don't crash the app during initialization
+            Logger.logError(LOG_TAG, "Critical error during application initialization: " + e.getMessage());
+            Logger.logStackTraceWithMessage(LOG_TAG, "Application initialization failed", e);
+        }
+    }
+
+    /**
+     * Initialize the application with comprehensive error handling.
+     * This method contains all the initialization logic that was previously in onCreate.
+     */
+    private void initializeApplication() {
         Context context = getApplicationContext();
 
-        // Set crash handler for the app
-        TermuxCrashUtils.setDefaultCrashHandler(this);
+        // Set crash handler for the app - do this first to catch any subsequent crashes
+        try {
+            TermuxCrashUtils.setDefaultCrashHandler(this);
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "Failed to set crash handler: " + e.getMessage());
+        }
 
         // Set log config for the app
-        setLogConfig(context);
+        try {
+            setLogConfig(context);
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "Failed to set log config: " + e.getMessage());
+        }
 
         Logger.logDebug("Starting Application");
 
         // Set TermuxBootstrap.TERMUX_APP_PACKAGE_MANAGER and TermuxBootstrap.TERMUX_APP_PACKAGE_VARIANT
-        TermuxBootstrap.setTermuxPackageManagerAndVariant(BuildConfig.TERMUX_PACKAGE_VARIANT);
+        try {
+            TermuxBootstrap.setTermuxPackageManagerAndVariant(BuildConfig.TERMUX_PACKAGE_VARIANT);
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "Failed to set package manager variant: " + e.getMessage());
+        }
 
         // Init app wide SharedProperties loaded from termux.properties
-        TermuxAppSharedProperties properties = TermuxAppSharedProperties.init(context);
+        TermuxAppSharedProperties properties = null;
+        try {
+            properties = TermuxAppSharedProperties.init(context);
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "Failed to initialize shared properties: " + e.getMessage());
+        }
 
         // Init app wide shell manager
-        TermuxShellManager shellManager = TermuxShellManager.init(context);
+        try {
+            TermuxShellManager shellManager = TermuxShellManager.init(context);
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "Failed to initialize shell manager: " + e.getMessage());
+        }
 
         // Set NightMode.APP_NIGHT_MODE
-        TermuxThemeUtils.setAppNightMode(properties.getNightMode());
+        try {
+            if (properties != null) {
+                TermuxThemeUtils.setAppNightMode(properties.getNightMode());
+            }
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "Failed to set night mode: " + e.getMessage());
+        }
 
         // Check and create termux files directory. If failed to access it like in case of secondary
         // user or external sd card installation, then don't run files directory related code
-        Error error = TermuxFileUtils.isTermuxFilesDirectoryAccessible(this, true, true);
-        boolean isTermuxFilesDirectoryAccessible = error == null;
+        Error error = null;
+        boolean isTermuxFilesDirectoryAccessible = false;
+        try {
+            error = TermuxFileUtils.isTermuxFilesDirectoryAccessible(this, true, true);
+            isTermuxFilesDirectoryAccessible = error == null;
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "Failed to check files directory accessibility: " + e.getMessage());
+        }
+        
         if (isTermuxFilesDirectoryAccessible) {
             Logger.logInfo(LOG_TAG, "Termux files directory is accessible");
 
-            error = TermuxFileUtils.isAppsTermuxAppDirectoryAccessible(true, true);
-            if (error != null) {
-                Logger.logErrorExtended(LOG_TAG, "Create apps/termux-app directory failed\n" + error);
-                return;
-            }
+            try {
+                error = TermuxFileUtils.isAppsTermuxAppDirectoryAccessible(true, true);
+                if (error != null) {
+                    Logger.logErrorExtended(LOG_TAG, "Create apps/termux-app directory failed\n" + error);
+                    return;
+                }
 
-            // Setup termux-am-socket server
-            TermuxAmSocketServer.setupTermuxAmSocketServer(context);
+                // Setup termux-am-socket server
+                TermuxAmSocketServer.setupTermuxAmSocketServer(context);
+            } catch (Exception e) {
+                Logger.logError(LOG_TAG, "Failed to setup app directory or socket server: " + e.getMessage());
+            }
         } else {
             Logger.logErrorExtended(LOG_TAG, "Termux files directory is not accessible\n" + error);
         }
 
         // Init TermuxShellEnvironment constants and caches after everything has been setup including termux-am-socket server
-        TermuxShellEnvironment.init(this);
+        try {
+            TermuxShellEnvironment.init(this);
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "Failed to initialize shell environment: " + e.getMessage());
+        }
 
         if (isTermuxFilesDirectoryAccessible) {
-            TermuxShellEnvironment.writeEnvironmentToFile(this);
+            try {
+                TermuxShellEnvironment.writeEnvironmentToFile(this);
+            } catch (Exception e) {
+                Logger.logError(LOG_TAG, "Failed to write environment to file: " + e.getMessage());
+            }
         }
     }
 

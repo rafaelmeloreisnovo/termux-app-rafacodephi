@@ -184,17 +184,30 @@ public class TermuxTerminalViewClient extends TermuxTerminalViewClientBase {
 
     @Override
     public void onSingleTapUp(MotionEvent e) {
-        TerminalEmulator term = mActivity.getCurrentSession().getEmulator();
+        // Defensive null check to prevent NullPointerException
+        TerminalSession currentSession = mActivity.getCurrentSession();
+        if (currentSession == null) {
+            Logger.logWarn(LOG_TAG, "onSingleTapUp: currentSession is null, ignoring tap");
+            return;
+        }
+        
+        TerminalEmulator term = currentSession.getEmulator();
+        if (term == null) {
+            Logger.logWarn(LOG_TAG, "onSingleTapUp: emulator is null, ignoring tap");
+            return;
+        }
 
         if (mActivity.getProperties().shouldOpenTerminalTranscriptURLOnClick()) {
             int[] columnAndRow = mActivity.getTerminalView().getColumnAndRow(e, true);
-            String wordAtTap = term.getScreen().getWordAtLocation(columnAndRow[0], columnAndRow[1]);
-            LinkedHashSet<CharSequence> urlSet = TermuxUrlUtils.extractUrls(wordAtTap);
+            if (term.getScreen() != null) {
+                String wordAtTap = term.getScreen().getWordAtLocation(columnAndRow[0], columnAndRow[1]);
+                LinkedHashSet<CharSequence> urlSet = TermuxUrlUtils.extractUrls(wordAtTap);
 
-            if (!urlSet.isEmpty()) {
-                String url = (String) urlSet.iterator().next();
-                ShareUtils.openUrl(mActivity, url);
-                return;
+                if (!urlSet.isEmpty()) {
+                    String url = (String) urlSet.iterator().next();
+                    ShareUtils.openUrl(mActivity, url);
+                    return;
+                }
             }
         }
 

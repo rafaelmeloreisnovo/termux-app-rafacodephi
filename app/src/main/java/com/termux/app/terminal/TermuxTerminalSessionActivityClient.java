@@ -76,7 +76,10 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
 
         // The current terminal session may have changed while being away, force
         // a refresh of the displayed terminal.
-        mActivity.getTerminalView().onScreenUpdated();
+        // Defensive null check to prevent NullPointerException
+        if (mActivity.getTerminalView() != null) {
+            mActivity.getTerminalView().onScreenUpdated();
+        }
     }
 
     /**
@@ -192,8 +195,14 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
         if (!mActivity.isVisible()) return;
 
         String text = ShareUtils.getTextStringFromClipboardIfSet(mActivity, true);
-        if (text != null)
-            mActivity.getTerminalView().mEmulator.paste(text);
+        if (text != null) {
+            // Defensive null check to prevent NullPointerException
+            if (mActivity.getTerminalView() != null && mActivity.getTerminalView().mEmulator != null) {
+                mActivity.getTerminalView().mEmulator.paste(text);
+            } else {
+                Logger.logWarn(LOG_TAG, "onPasteTextFromClipboard: TerminalView or emulator is null, cannot paste");
+            }
+        }
     }
 
     @Override
@@ -505,7 +514,7 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
             File fontFile = TermuxConstants.TERMUX_FONT_FILE;
 
             final Properties props = new Properties();
-            if (colorsFile.isFile()) {
+            if (colorsFile != null && colorsFile.isFile()) {
                 try (InputStream in = new FileInputStream(colorsFile)) {
                     props.load(in);
                 }
@@ -513,13 +522,16 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
 
             TerminalColors.COLOR_SCHEME.updateWith(props);
             TerminalSession session = mActivity.getCurrentSession();
-            if (session != null && session.getEmulator() != null) {
+            if (session != null && session.getEmulator() != null && session.getEmulator().mColors != null) {
                 session.getEmulator().mColors.reset();
             }
             updateBackgroundColor();
 
-            final Typeface newTypeface = (fontFile.exists() && fontFile.length() > 0) ? Typeface.createFromFile(fontFile) : Typeface.MONOSPACE;
-            mActivity.getTerminalView().setTypeface(newTypeface);
+            final Typeface newTypeface = (fontFile != null && fontFile.exists() && fontFile.length() > 0) ? Typeface.createFromFile(fontFile) : Typeface.MONOSPACE;
+            // Defensive null check
+            if (mActivity.getTerminalView() != null) {
+                mActivity.getTerminalView().setTypeface(newTypeface);
+            }
         } catch (Exception e) {
             Logger.logStackTraceWithMessage(LOG_TAG, "Error in checkForFontAndColors()", e);
         }

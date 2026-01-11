@@ -238,6 +238,9 @@ public final class TerminalSession extends TerminalOutput {
                 Os.kill(mShellPid, OsConstants.SIGKILL);
             } catch (ErrnoException e) {
                 Logger.logWarn(mClient, LOG_TAG, "Failed sending SIGKILL: " + e.getMessage());
+            } catch (Exception e) {
+                // Catch any unexpected exceptions to prevent crashes
+                Logger.logWarn(mClient, LOG_TAG, "Unexpected error sending SIGKILL: " + e.getMessage());
             }
         }
     }
@@ -250,9 +253,23 @@ public final class TerminalSession extends TerminalOutput {
         }
 
         // Stop the reader and writer threads, and close the I/O streams
-        mTerminalToProcessIOQueue.close();
-        mProcessToTerminalIOQueue.close();
-        JNI.close(mTerminalFileDescriptor);
+        try {
+            mTerminalToProcessIOQueue.close();
+        } catch (Exception e) {
+            Logger.logWarn(mClient, LOG_TAG, "Error closing terminal to process queue: " + e.getMessage());
+        }
+        
+        try {
+            mProcessToTerminalIOQueue.close();
+        } catch (Exception e) {
+            Logger.logWarn(mClient, LOG_TAG, "Error closing process to terminal queue: " + e.getMessage());
+        }
+        
+        try {
+            JNI.close(mTerminalFileDescriptor);
+        } catch (Exception e) {
+            Logger.logWarn(mClient, LOG_TAG, "Error closing terminal file descriptor: " + e.getMessage());
+        }
     }
 
     @Override

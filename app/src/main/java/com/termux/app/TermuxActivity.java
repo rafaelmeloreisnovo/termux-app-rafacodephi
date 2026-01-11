@@ -1024,11 +1024,27 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         intentFilter.addAction(TERMUX_ACTIVITY.ACTION_RELOAD_STYLE);
         intentFilter.addAction(TERMUX_ACTIVITY.ACTION_REQUEST_PERMISSIONS);
 
-        registerReceiver(mTermuxActivityBroadcastReceiver, intentFilter);
+        try {
+            // Use RECEIVER_NOT_EXPORTED for Android 14+ (API 34+) to comply with security requirements
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                registerReceiver(mTermuxActivityBroadcastReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                registerReceiver(mTermuxActivityBroadcastReceiver, intentFilter);
+            }
+        } catch (Exception e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to register broadcast receiver", e);
+        }
     }
 
     private void unregisterTermuxActivityBroadcastReceiver() {
-        unregisterReceiver(mTermuxActivityBroadcastReceiver);
+        try {
+            unregisterReceiver(mTermuxActivityBroadcastReceiver);
+        } catch (IllegalArgumentException e) {
+            // Receiver not registered, ignore
+            Logger.logWarn(LOG_TAG, "Broadcast receiver was not registered, ignoring unregister");
+        } catch (Exception e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to unregister broadcast receiver", e);
+        }
     }
 
     private void fixTermuxActivityBroadcastReceiverIntent(Intent intent) {
