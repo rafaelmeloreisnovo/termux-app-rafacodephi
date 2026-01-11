@@ -20,17 +20,24 @@
 
 name: Android 15 ARM64 Build
 
+# =============================================================================
+# NOTICE: This workflow is now part of the RAFAELIA unified pipeline.
+# Direct triggers are disabled to prevent duplicate builds.
+# The main pipeline is: rafaelia_pipeline.yml
+# =============================================================================
+
 on:
-  push:
-    branches:
-      - master
-      - main
-      - 'android-15/**'
-      - 'arm64/**'
-  pull_request:
-    branches:
-      - master
-      - main
+  # Disabled direct triggers - use rafaelia_pipeline.yml instead
+  # push:
+  #   branches:
+  #     - master
+  #     - main
+  #     - 'android-15/**'
+  #     - 'arm64/**'
+  # pull_request:
+  #   branches:
+  #     - master
+  #     - main
   workflow_dispatch:
     inputs:
       build_type:
@@ -54,9 +61,10 @@ on:
         options:
           - apt-android-7
           - apt-android-5
-  schedule:
-    # Daily build at 03:00 UTC for continuous integration
-    - cron: '0 3 * * *'
+  # Disabled schedule - unified pipeline handles scheduling
+  # schedule:
+  #   # Daily build at 03:00 UTC for continuous integration
+  #   - cron: '0 3 * * *'
 
 # Environment variables for quality traceability
 env:

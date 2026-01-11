@@ -1,14 +1,27 @@
 name: Unit tests
 
+# =============================================================================
+# NOTICE: This workflow is now part of the RAFAELIA unified pipeline.
+# Direct triggers are disabled to prevent duplicate builds.
+# The main pipeline is: rafaelia_pipeline.yml
+# =============================================================================
+
 on:
-  push:
-    branches:
-      - master
-      - android-10
-  pull_request:
-    branches:
-      - master
-      - android-10
+  # Disabled direct triggers - use rafaelia_pipeline.yml instead
+  # push:
+  #   branches:
+  #     - master
+  #     - android-10
+  # pull_request:
+  #   branches:
+  #     - master
+  #     - android-10
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual test run'
+        required: false
+        type: string
 
 jobs:
   testing:

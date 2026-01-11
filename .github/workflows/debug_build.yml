@@ -1,13 +1,26 @@
 name: Build
 
+# =============================================================================
+# NOTICE: This workflow is now part of the RAFAELIA unified pipeline.
+# Direct triggers are disabled to prevent duplicate builds.
+# The main pipeline is: rafaelia_pipeline.yml
+# =============================================================================
+
 on:
-  push:
-    branches:
-      - master
-      - 'github-releases/**'
-  pull_request:
-    branches:
-      - master
+  # Disabled direct triggers - use rafaelia_pipeline.yml instead
+  # push:
+  #   branches:
+  #     - master
+  #     - 'github-releases/**'
+  # pull_request:
+  #   branches:
+  #     - master
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual build'
+        required: true
+        type: string
 
 jobs:
   build:
