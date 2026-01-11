@@ -285,6 +285,12 @@ final class TermuxInstaller {
                 try {
                     Error error;
                     File storageDir = TermuxConstants.TERMUX_STORAGE_HOME_DIR;
+                    
+                    // Defensive null check for storage directory
+                    if (storageDir == null) {
+                        Logger.logError(LOG_TAG, "TERMUX_STORAGE_HOME_DIR is null");
+                        return;
+                    }
 
                     error = FileUtils.clearDirectory("~/storage", storageDir.getAbsolutePath());
                     if (error != null) {
@@ -300,32 +306,32 @@ final class TermuxInstaller {
 
                     // Get primary storage root "/storage/emulated/0" symlink
                     File sharedDir = Environment.getExternalStorageDirectory();
-                    Os.symlink(sharedDir.getAbsolutePath(), new File(storageDir, "shared").getAbsolutePath());
+                    createSymlinkSafely(LOG_TAG, sharedDir, storageDir, "shared");
 
                     File documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
-                    Os.symlink(documentsDir.getAbsolutePath(), new File(storageDir, "documents").getAbsolutePath());
+                    createSymlinkSafely(LOG_TAG, documentsDir, storageDir, "documents");
 
                     File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                    Os.symlink(downloadsDir.getAbsolutePath(), new File(storageDir, "downloads").getAbsolutePath());
+                    createSymlinkSafely(LOG_TAG, downloadsDir, storageDir, "downloads");
 
                     File dcimDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
-                    Os.symlink(dcimDir.getAbsolutePath(), new File(storageDir, "dcim").getAbsolutePath());
+                    createSymlinkSafely(LOG_TAG, dcimDir, storageDir, "dcim");
 
                     File picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-                    Os.symlink(picturesDir.getAbsolutePath(), new File(storageDir, "pictures").getAbsolutePath());
+                    createSymlinkSafely(LOG_TAG, picturesDir, storageDir, "pictures");
 
                     File musicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC);
-                    Os.symlink(musicDir.getAbsolutePath(), new File(storageDir, "music").getAbsolutePath());
+                    createSymlinkSafely(LOG_TAG, musicDir, storageDir, "music");
 
                     File moviesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
-                    Os.symlink(moviesDir.getAbsolutePath(), new File(storageDir, "movies").getAbsolutePath());
+                    createSymlinkSafely(LOG_TAG, moviesDir, storageDir, "movies");
 
                     File podcastsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PODCASTS);
-                    Os.symlink(podcastsDir.getAbsolutePath(), new File(storageDir, "podcasts").getAbsolutePath());
+                    createSymlinkSafely(LOG_TAG, podcastsDir, storageDir, "podcasts");
 
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
                         File audiobooksDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_AUDIOBOOKS);
-                        Os.symlink(audiobooksDir.getAbsolutePath(), new File(storageDir, "audiobooks").getAbsolutePath());
+                        createSymlinkSafely(LOG_TAG, audiobooksDir, storageDir, "audiobooks");
                     }
 
                     // Dir 0 should ideally be for primary storage
@@ -369,6 +375,28 @@ final class TermuxInstaller {
                 }
             }
         }.start();
+    }
+
+    /**
+     * Safely create a symlink with proper error handling.
+     * Prevents crashes from null directories or symlink creation failures.
+     *
+     * @param logTag Log tag for error messages
+     * @param sourceDir Source directory to link from
+     * @param storageDir Parent storage directory
+     * @param linkName Name of the symlink to create
+     */
+    private static void createSymlinkSafely(String logTag, File sourceDir, File storageDir, String linkName) {
+        try {
+            if (sourceDir == null) {
+                Logger.logWarn(logTag, "Source directory for " + linkName + " symlink is null, skipping");
+                return;
+            }
+            Os.symlink(sourceDir.getAbsolutePath(), new File(storageDir, linkName).getAbsolutePath());
+        } catch (Exception e) {
+            Logger.logWarn(logTag, "Failed to create " + linkName + " symlink: " + e.getMessage());
+            // Continue without failing - individual symlink failures shouldn't stop the whole process
+        }
     }
 
     private static Error ensureDirectoryExists(File directory) {
