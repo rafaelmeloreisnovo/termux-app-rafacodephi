@@ -36,6 +36,15 @@ public class PathTreatmentUtils {
     /** Maximum symlink resolution depth to prevent infinite loops */
     private static final int MAX_SYMLINK_DEPTH = 40;
 
+    /** Maximum path length for logging before truncation */
+    private static final int MAX_LOG_PATH_LENGTH = 200;
+
+    /** Length of path prefix to keep when truncating */
+    private static final int LOG_PATH_PREFIX_LENGTH = 100;
+
+    /** Length of path suffix to keep when truncating */
+    private static final int LOG_PATH_SUFFIX_LENGTH = 97;
+
     /** Pattern to detect path traversal attempts */
     private static final Pattern PATH_TRAVERSAL_PATTERN = Pattern.compile(
         "(^|[/\\\\])\\.\\.([/\\\\]|$)|" +  // Detect "../" or "..\"
@@ -303,7 +312,8 @@ public class PathTreatmentUtils {
             int depth) throws IOException {
 
         if (depth > MAX_SYMLINK_DEPTH) {
-            throw new IOException("Maximum symlink depth exceeded (" + MAX_SYMLINK_DEPTH + "). Possible symlink loop.");
+            throw new IOException(
+                String.format("Maximum symlink depth exceeded (%d). Possible symlink loop.", MAX_SYMLINK_DEPTH));
         }
 
         String absolutePath = file.getAbsolutePath();
@@ -327,8 +337,8 @@ public class PathTreatmentUtils {
     }
 
     /**
-     * Normalize a path by removing redundant separators and resolving . and ..
-     * Does NOT follow symlinks.
+     * Normalize a path by removing redundant separators.
+     * Does NOT follow symlinks or resolve . and .. (use canonical path for that).
      *
      * @param path The path to normalize
      * @return The normalized path, or null if path is null
@@ -345,10 +355,6 @@ public class PathTreatmentUtils {
             path = path.substring(0, path.length() - 1);
         }
 
-        // Handle ./
-        path = path.replaceAll("(^|/)\\.(/|$)", "$1$2");
-        path = path.replaceAll("/+", "/");
-
         return path;
     }
 
@@ -364,8 +370,9 @@ public class PathTreatmentUtils {
         if (path.isEmpty()) return "<empty>";
 
         // Truncate very long paths
-        if (path.length() > 200) {
-            path = path.substring(0, 100) + "..." + path.substring(path.length() - 97);
+        if (path.length() > MAX_LOG_PATH_LENGTH) {
+            path = path.substring(0, LOG_PATH_PREFIX_LENGTH) + "..." +
+                   path.substring(path.length() - LOG_PATH_SUFFIX_LENGTH);
         }
 
         // Replace null bytes with visible representation

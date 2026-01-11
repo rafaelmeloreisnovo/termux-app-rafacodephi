@@ -202,8 +202,8 @@ public class TermuxQualityManager {
             for (int i = 0; i < executionCommand.arguments.length; i++) {
                 String arg = executionCommand.arguments[i];
                 if (arg != null && PathTreatmentUtils.containsPathTraversal(arg)) {
-                    // Only error if it looks like a path
-                    if (arg.startsWith("/") || arg.startsWith("./") || arg.startsWith("../")) {
+                    // Only error if it looks like a path (starts with path-like prefix)
+                    if (looksLikePath(arg)) {
                         recordViolation(ErrorCategory.TRAVERSAL, "Potential path traversal in argument",
                             "Arg " + i + ": " + PathTreatmentUtils.sanitizeForLogging(arg),
                             ISO9001Errno.ERRNO_PATH_TRAVERSAL_DETECTED.getCode());
@@ -311,9 +311,8 @@ public class TermuxQualityManager {
             @Nullable String context,
             int errorCode) {
 
-        // Update error counts
-        Integer count = errorCounts.get(category);
-        errorCounts.put(category, (count == null ? 0 : count) + 1);
+        // Update error counts using getOrDefault for cleaner code
+        errorCounts.put(category, errorCounts.getOrDefault(category, 0) + 1);
 
         // Add to recent violations
         QualityViolation violation = new QualityViolation(category, message, context, errorCode);
@@ -332,6 +331,17 @@ public class TermuxQualityManager {
             Logger.logError(LOG_TAG, "CRITICAL: " + category.getDescription() +
                 " - " + message + " (Code: " + errorCode + ")");
         }
+    }
+
+    /**
+     * Check if a string looks like a path (starts with common path prefixes).
+     *
+     * @param str The string to check
+     * @return true if it looks like a path
+     */
+    private static boolean looksLikePath(@Nullable String str) {
+        if (str == null || str.isEmpty()) return false;
+        return str.startsWith("/") || str.startsWith("./") || str.startsWith("../");
     }
 
     /**
@@ -431,15 +441,16 @@ public class TermuxQualityManager {
     }
 
     /**
-     * Validate process kill signal handling.
+     * Create and record an error for a process kill signal.
+     * Records the signal as a quality violation and returns an error for reporting.
      *
      * @param pid The process ID
      * @param signal The signal name (e.g., "SIGKILL")
      * @param processName The process name
-     * @return Error if kill operation should be logged, null for success
+     * @return Error object representing the signal event
      */
     @NonNull
-    public static Error recordKillSignal(int pid, @NonNull String signal, @Nullable String processName) {
+    public static Error createAndRecordKillSignalError(int pid, @NonNull String signal, @Nullable String processName) {
         ErrorCategory category = signal.equals("SIGKILL") ? ErrorCategory.KILL : ErrorCategory.SIGNAL;
 
         String message = String.format("Signal %s sent to PID %d (%s)",
