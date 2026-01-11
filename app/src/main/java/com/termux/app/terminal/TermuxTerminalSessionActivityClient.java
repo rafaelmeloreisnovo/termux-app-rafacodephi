@@ -28,6 +28,7 @@ import com.termux.shared.termux.settings.properties.TermuxPropertyConstants;
 import com.termux.shared.termux.terminal.io.BellHandler;
 import com.termux.shared.logger.Logger;
 import com.termux.terminal.TerminalColors;
+import com.termux.terminal.TerminalEmulator;
 import com.termux.terminal.TerminalSession;
 import com.termux.terminal.TerminalSessionClient;
 import com.termux.terminal.TextStyle;
@@ -522,8 +523,11 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
 
             TerminalColors.COLOR_SCHEME.updateWith(props);
             TerminalSession session = mActivity.getCurrentSession();
-            if (session != null && session.getEmulator() != null && session.getEmulator().mColors != null) {
-                session.getEmulator().mColors.reset();
+            if (session != null) {
+                TerminalEmulator emulator = session.getEmulator();
+                if (emulator != null && emulator.mColors != null) {
+                    emulator.mColors.reset();
+                }
             }
             updateBackgroundColor();
 

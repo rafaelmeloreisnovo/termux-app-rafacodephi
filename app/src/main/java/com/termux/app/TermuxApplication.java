@@ -73,7 +73,7 @@ public class TermuxApplication extends Application {
 
         // Init app wide shell manager
         try {
-            TermuxShellManager shellManager = TermuxShellManager.init(context);
+            TermuxShellManager.init(context);
         } catch (Exception e) {
             Logger.logError(LOG_TAG, "Failed to initialize shell manager: " + e.getMessage());
         }
