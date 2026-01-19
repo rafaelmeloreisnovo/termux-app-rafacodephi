@@ -605,9 +605,11 @@ EOF
 ################################################################################
 ensure_dependencies() {
     log "INFO" "Checking build dependencies..."
-    
+
     local missing_deps=()
-    
+    local package_manager=""
+    local sudo_prefix=""
+
     # Check for compiler
     if ! command -v clang &> /dev/null; then
         log "WARN" "Clang not found - will install"
@@ -616,28 +618,66 @@ ensure_dependencies() {
         local clang_version="$(clang --version | head -n1)"
         log "DEBUG" "Found: ${clang_version}"
     fi
-    
+
     # Install missing dependencies
     if [[ ${#missing_deps[@]} -gt 0 ]]; then
         log "INFO" "Installing dependencies: ${missing_deps[*]}"
-        
+
         # Detect package manager
         if command -v pkg &> /dev/null; then
-            pkg update -y || log "WARN" "Failed to update package database"
-            for dep in "${missing_deps[@]}"; do
-                pkg install -y "${dep}" || log "ERROR" "Failed to install ${dep}"
-            done
+            package_manager="pkg"
         elif command -v apt-get &> /dev/null; then
-            sudo apt-get update -y
-            for dep in "${missing_deps[@]}"; do
-                sudo apt-get install -y "${dep}"
-            done
+            package_manager="apt-get"
         else
             log "FATAL" "No supported package manager found (pkg, apt-get)"
             return 1
         fi
+
+        if [[ "${package_manager}" == "apt-get" ]]; then
+            if [[ "$(id -u)" -eq 0 ]]; then
+                sudo_prefix=""
+            elif command -v sudo &> /dev/null; then
+                sudo_prefix="sudo"
+            else
+                log "FATAL" "apt-get found but sudo is unavailable; run as root to install dependencies"
+                return 1
+            fi
+        fi
+
+        if [[ "${package_manager}" == "pkg" ]]; then
+            if ! pkg update -y; then
+                log "WARN" "Failed to update package database"
+            fi
+        else
+            if ! ${sudo_prefix} apt-get update -y; then
+                log "FATAL" "Failed to update package database via apt-get"
+                return 1
+            fi
+        fi
+
+        for dep in "${missing_deps[@]}"; do
+            if [[ "${package_manager}" == "pkg" ]]; then
+                if ! pkg install -y "${dep}"; then
+                    log "FATAL" "Failed to install ${dep}"
+                    return 1
+                fi
+            else
+                if ! ${sudo_prefix} apt-get install -y "${dep}"; then
+                    log "FATAL" "Failed to install ${dep}"
+                    return 1
+                fi
+            fi
+        done
+
+        # Verify dependencies after installation
+        for dep in "${missing_deps[@]}"; do
+            if ! command -v "${dep}" &> /dev/null; then
+                log "FATAL" "Dependency still missing after install: ${dep}"
+                return 1
+            fi
+        done
     fi
-    
+
     log "INFO" "All dependencies satisfied"
 }
 
