@@ -311,6 +311,17 @@ jobs:
             exit 1
           fi
 
+          echo ""
+          echo "Validating ARM64 debug APK output..."
+          APK_BASENAME_PREFIX="termux-app_$APK_VERSION_TAG"
+          if ! test -f "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_arm64-v8a.apk"; then
+            echo "❌ Expected APK not found: ${APK_BASENAME_PREFIX}_arm64-v8a.apk"
+            echo "Available files:"
+            ls -la "$APK_DIR_PATH"
+            exit 1
+          fi
+          echo "✅ ARM64 debug APK found: ${APK_BASENAME_PREFIX}_arm64-v8a.apk"
+
       - name: "📦 Upload ARM64 Debug APK"
         uses: actions/upload-artifact@v4
         with:
@@ -388,6 +399,15 @@ jobs:
             exit 1
           fi
 
+          echo ""
+          echo "Validating ARM64 release APK output..."
+          if ! ls "$APK_DIR_PATH"/*.apk 1>/dev/null 2>&1; then
+            echo "❌ No release APKs found in $APK_DIR_PATH"
+            ls -la "$APK_DIR_PATH"
+            exit 1
+          fi
+          echo "✅ Release APK(s) detected in $APK_DIR_PATH"
+
       - name: "📦 Upload ARM64 Release APK"
         uses: actions/upload-artifact@v4
         with:
@@ -462,13 +482,21 @@ jobs:
           
           echo ""
           echo "Validating APKs..."
+          MISSING_APKS=0
           for abi in universal arm64-v8a armeabi-v7a x86_64 x86; do
             if test -f "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_$abi.apk"; then
               echo "✓ Found: ${APK_BASENAME_PREFIX}_$abi.apk"
             else
-              echo "⚠ Missing: ${APK_BASENAME_PREFIX}_$abi.apk"
+              echo "❌ Missing: ${APK_BASENAME_PREFIX}_$abi.apk"
+              MISSING_APKS=1
             fi
           done
+          
+          if [ "$MISSING_APKS" -ne 0 ]; then
+            echo ""
+            echo "❌ One or more APKs were not generated."
+            exit 1
+          fi
           
           echo ""
           echo "Generating checksums..."
