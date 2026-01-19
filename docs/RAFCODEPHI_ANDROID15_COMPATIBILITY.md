@@ -8,6 +8,20 @@
 - ✅ **Version**: 0.118.0-rafacodephi
 - ✅ **ApplicationId**: Configurado corretamente no `app/build.gradle`
 
+### Package Name e Identificadores (Termux Oficial)
+- ✅ **Package Name**: `com.termux`
+- ✅ **App Name**: `Termux`
+- ✅ **ApplicationId**: `com.termux`
+
+### Authorities e Providers (Termux Oficial)
+- ✅ **Documents Provider**: `com.termux.documents`
+- ✅ **Files Provider**: `com.termux.files`
+- ✅ **Startup Provider**: `com.termux.androidx-startup`
+
+### Permissions (Termux Oficial)
+- ✅ **RUN_COMMAND Permission**: `com.termux.permission.RUN_COMMAND`
+- ✅ **RUN_COMMAND Action**: `com.termux.RUN_COMMAND`
+
 ### Authorities e Providers
 - ✅ **Documents Provider**: `com.termux.rafacodephi.documents`
 - ✅ **Files Provider**: `com.termux.rafacodephi.files`
