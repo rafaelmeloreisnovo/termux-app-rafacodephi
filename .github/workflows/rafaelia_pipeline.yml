@@ -107,7 +107,7 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -148,7 +148,7 @@ jobs:
           echo "✅ Quality gate PASSED"
 
       - name: "✅ Validate Gradle Wrapper"
-        uses: gradle/actions/wrapper-validation@v5
+        uses: gradle/actions/wrapper-validation@v3
 
       - name: "📋 Extract Version Information"
         id: version
@@ -206,10 +206,10 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: "☕ Setup Java"
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
@@ -264,10 +264,10 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: "☕ Setup Java"
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
@@ -312,7 +312,7 @@ jobs:
           fi
 
       - name: "📦 Upload ARM64 Debug APK"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: termux-arm64-debug-${{ matrix.variant }}-${{ env.APK_VERSION_TAG }}
           path: |
@@ -344,10 +344,10 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: "☕ Setup Java"
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
@@ -389,7 +389,7 @@ jobs:
           fi
 
       - name: "📦 Upload ARM64 Release APK"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: termux-arm64-release-${{ matrix.variant }}-${{ env.APK_VERSION_TAG }}
           path: |
@@ -421,10 +421,10 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: "☕ Setup Java"
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
@@ -482,7 +482,7 @@ jobs:
           echo "✅ Full debug build completed"
 
       - name: "📦 Upload Universal APK"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_universal
           path: |
@@ -490,7 +490,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload ARM64-v8a APK"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_arm64-v8a
           path: |
@@ -498,7 +498,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload ARMv7a APK"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_armeabi-v7a
           path: |
@@ -506,7 +506,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload x86_64 APK"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_x86_64
           path: |
@@ -514,7 +514,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload x86 APK"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_x86
           path: |
@@ -522,7 +522,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload Checksums"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_sha256sums
           path: ${{ env.APK_DIR_PATH }}/sha256sums.txt
@@ -541,10 +541,10 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: "☕ Setup Java"
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
@@ -562,7 +562,7 @@ jobs:
           echo "✅ Unit tests completed"
 
       - name: "📊 Upload Test Results"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
@@ -588,10 +588,10 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: "☕ Setup Java"
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
@@ -629,7 +629,7 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: "📊 Generate Quality Report"
         run: |

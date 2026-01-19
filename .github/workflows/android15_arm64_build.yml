@@ -93,7 +93,7 @@ jobs:
     
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -151,10 +151,10 @@ jobs:
 
     steps:
       - name: "📥 Phase 1: Clone Repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: "☕ Phase 2: Setup Java ${{ env.JAVA_VERSION }}"
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
@@ -262,7 +262,7 @@ jobs:
           ls -la $APK_DIR_PATH/ 2>/dev/null || echo "Build directory not found"
 
       - name: "📦 Phase 6: Upload ARM64 APK Artifact"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: termux-rafacodephi-arm64-android15-${{ env.APK_VERSION_TAG }}
           path: |
@@ -282,10 +282,10 @@ jobs:
     
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: "☕ Setup Java"
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
