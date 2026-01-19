@@ -36,6 +36,8 @@ readonly BUILD_TYPE="${BUILD_TYPE:-release}"  # Aspect 23: Debug vs Release buil
 readonly ENABLE_LTO="${ENABLE_LTO:-1}"        # Aspect 25: Link-time optimization
 readonly ENABLE_PROFILE="${ENABLE_PROFILE:-0}" # Aspect 13: Performance profiling
 readonly ENABLE_SANITIZERS="${ENABLE_SANITIZERS:-0}" # Aspect 6: Memory safety checks
+readonly FOOTPRINT_MODE="${FOOTPRINT_MODE:-auto}" # auto/1/0: size optimization preference
+readonly HARDWARE_TUNE="${HARDWARE_TUNE:-1}" # auto-detect cache/CPU details
 readonly PARALLEL_JOBS_MAX=32
 PARALLEL_JOBS_RAW="${PARALLEL_JOBS:-$(nproc 2>/dev/null || echo 4)}"
 if [[ ! "${PARALLEL_JOBS_RAW}" =~ ^[0-9]+$ ]]; then
@@ -48,6 +50,15 @@ PARALLEL_JOBS="${PARALLEL_JOBS_RAW}"
 if (( PARALLEL_JOBS_RAW > PARALLEL_JOBS_MAX )); then
     PARALLEL_JOBS="${PARALLEL_JOBS_MAX}"
 fi
+FOOTPRINT_MODE_RESOLVED=0
+
+# Hardware metadata (auto-detected when available)
+HW_CPU_MODEL="unknown"
+HW_CACHE_L1D_KB=0
+HW_CACHE_L1I_KB=0
+HW_CACHE_L2_KB=0
+HW_CACHE_L3_KB=0
+HW_CACHE_LINE_BYTES=64
 
 # Runtime variables
 BACKUP_DIR=""  # Stores backup directory path if created
@@ -192,6 +203,144 @@ validate_environment() {
     esac
 }
 
+parse_cache_size_kb() {
+    local size="$1"
+    local normalized="${size^^}"
+    if [[ "${normalized}" =~ ^([0-9]+)K$ ]]; then
+        echo "${BASH_REMATCH[1]}"
+    elif [[ "${normalized}" =~ ^([0-9]+)M$ ]]; then
+        echo "$((BASH_REMATCH[1] * 1024))"
+    else
+        echo 0
+    fi
+}
+
+detect_hardware_caps() {
+    if [[ "${HARDWARE_TUNE}" != "1" ]]; then
+        log "DEBUG" "Hardware auto-detection disabled"
+        return 0
+    fi
+
+    log "INFO" "Detecting hardware cache and CPU capabilities..."
+
+    if [[ -r /proc/cpuinfo ]]; then
+        HW_CPU_MODEL="$(awk -F: '/model name|Hardware|Processor/ {gsub(/^[ \t]+/, "", $2); print $2; exit}' /proc/cpuinfo)"
+        if [[ -z "${HW_CPU_MODEL}" ]]; then
+            HW_CPU_MODEL="unknown"
+        fi
+    fi
+
+    if [[ -d /sys/devices/system/cpu/cpu0/cache ]]; then
+        local index_dir
+        for index_dir in /sys/devices/system/cpu/cpu0/cache/index*; do
+            [[ -d "${index_dir}" ]] || continue
+            local level type size
+            level="$(cat "${index_dir}/level" 2>/dev/null || echo "")"
+            type="$(cat "${index_dir}/type" 2>/dev/null || echo "")"
+            size="$(cat "${index_dir}/size" 2>/dev/null || echo "")"
+
+            local size_kb
+            size_kb="$(parse_cache_size_kb "${size}")"
+
+            case "${level}:${type}" in
+                1:Data)
+                    HW_CACHE_L1D_KB="${size_kb}"
+                    ;;
+                1:Instruction)
+                    HW_CACHE_L1I_KB="${size_kb}"
+                    ;;
+                2:Unified)
+                    HW_CACHE_L2_KB="${size_kb}"
+                    ;;
+                3:Unified)
+                    HW_CACHE_L3_KB="${size_kb}"
+                    ;;
+            esac
+
+            if [[ -r "${index_dir}/coherency_line_size" ]]; then
+                local line_size
+                line_size="$(cat "${index_dir}/coherency_line_size" 2>/dev/null || echo "")"
+                if [[ "${line_size}" =~ ^[0-9]+$ && "${line_size}" -gt 0 ]]; then
+                    HW_CACHE_LINE_BYTES="${line_size}"
+                fi
+            fi
+        done
+    fi
+
+    log "INFO" "CPU: ${HW_CPU_MODEL}"
+    log "INFO" "Cache: L1d=${HW_CACHE_L1D_KB}KB L1i=${HW_CACHE_L1I_KB}KB L2=${HW_CACHE_L2_KB}KB L3=${HW_CACHE_L3_KB}KB line=${HW_CACHE_LINE_BYTES}B"
+}
+
+################################################################################
+# ASPECT 4.1: Predictive Failure Guardrails - Crash and limit avoidance
+################################################################################
+preflight_guardrails() {
+    log "INFO" "Running preflight guardrails..."
+
+    ensure_safe_path "${WORKDIR}"
+
+    local workdir_parent
+    workdir_parent="$(dirname "${WORKDIR}")"
+
+    if [[ -d "${WORKDIR}" ]]; then
+        if [[ ! -w "${WORKDIR}" ]]; then
+            log "FATAL" "Work directory is not writable: ${WORKDIR}"
+            return 1
+        fi
+    else
+        if [[ ! -w "${workdir_parent}" ]]; then
+            log "FATAL" "Cannot create work directory under: ${workdir_parent}"
+            return 1
+        fi
+    fi
+
+    if (( PARALLEL_JOBS_RAW > PARALLEL_JOBS_MAX )); then
+        log "WARN" "Capping parallel jobs to ${PARALLEL_JOBS_MAX} to avoid >32 child processes"
+    fi
+
+    local max_procs
+    max_procs="$(ulimit -u 2>/dev/null || echo "")"
+    if [[ "${max_procs}" =~ ^[0-9]+$ && "${max_procs}" -gt 0 ]]; then
+        if (( PARALLEL_JOBS > max_procs )); then
+            log "WARN" "Process limit (${max_procs}) below requested parallel jobs; reducing"
+            PARALLEL_JOBS="${max_procs}"
+        fi
+    fi
+
+    if command -v df &> /dev/null; then
+        local available_kb
+        available_kb="$(df -Pk "${workdir_parent}" | awk 'NR==2 {print $4}')"
+        if [[ "${available_kb}" =~ ^[0-9]+$ && "${available_kb}" -lt 102400 ]]; then
+            log "WARN" "Low disk space detected (${available_kb} KB available)"
+        fi
+    fi
+
+    case "${FOOTPRINT_MODE}" in
+        1|true|TRUE|yes|YES)
+            FOOTPRINT_MODE_RESOLVED=1
+            ;;
+        0|false|FALSE|no|NO)
+            FOOTPRINT_MODE_RESOLVED=0
+            ;;
+        auto|AUTO)
+            if [[ -r /proc/meminfo ]]; then
+                local mem_total_kb
+                mem_total_kb="$(awk '/MemTotal/ {print $2}' /proc/meminfo)"
+                if [[ "${mem_total_kb}" =~ ^[0-9]+$ && "${mem_total_kb}" -lt 2097152 ]]; then
+                    FOOTPRINT_MODE_RESOLVED=1
+                    log "INFO" "Auto footprint mode enabled (MemTotal ${mem_total_kb} KB)"
+                fi
+            fi
+            ;;
+    esac
+
+    if [[ "${FOOTPRINT_MODE_RESOLVED}" == "1" ]]; then
+        log "INFO" "Footprint tuning enabled"
+    else
+        log "DEBUG" "Footprint tuning disabled"
+    fi
+}
+
 ################################################################################
 # ASPECT 4.1: Predictive Failure Guardrails - Crash and limit avoidance
 ################################################################################
@@ -269,7 +418,12 @@ get_compiler_flags() {
         flags="-O0 -g3 -DDEBUG"  # No optimization, full debug info
         log "DEBUG" "Using debug build configuration" >&2
     else
-        flags="-O3 -DNDEBUG"  # Maximum optimization, no debug
+        if [[ "${FOOTPRINT_MODE_RESOLVED}" == "1" ]]; then
+            flags="-Os -DNDEBUG -ffunction-sections -fdata-sections"
+            log "INFO" "Footprint mode enabled (size-optimized release)" >&2
+        else
+            flags="-O3 -DNDEBUG"  # Maximum optimization, no debug
+        fi
         
         # Aspect 25: Link-time optimization
         if [[ "${ENABLE_LTO}" == "1" ]]; then
@@ -336,6 +490,23 @@ get_build_metadata() {
     printf -- '-DGIT_HASH=\"%s\" -DGIT_BRANCH=\"%s\" -DBUILD_DATE=\"%s\"' "${git_hash}" "${git_branch}" "${build_date}"
 }
 
+get_hardware_metadata() {
+    local cpu_model="${HW_CPU_MODEL//\"/}"
+    if [[ -z "${cpu_model}" ]]; then
+        cpu_model="unknown"
+    fi
+    printf -- '-DHW_CPU_MODEL=\"%s\" -DHW_CACHE_L1D_KB=%s -DHW_CACHE_L1I_KB=%s -DHW_CACHE_L2_KB=%s -DHW_CACHE_L3_KB=%s -DCACHE_LINE_BYTES=%s' \
+        "${cpu_model}" "${HW_CACHE_L1D_KB}" "${HW_CACHE_L1I_KB}" "${HW_CACHE_L2_KB}" "${HW_CACHE_L3_KB}" "${HW_CACHE_LINE_BYTES}"
+}
+
+get_linker_flags() {
+    local flags=""
+    if [[ "${FOOTPRINT_MODE_RESOLVED}" == "1" && "${BUILD_TYPE}" == "release" ]]; then
+        flags="-Wl,--gc-sections -Wl,--as-needed -Wl,-O1"
+    fi
+    echo "${flags}"
+}
+
 ################################################################################
 # ASPECT 15: Code Documentation - Well-documented source generation
 ################################################################################
@@ -395,13 +566,46 @@ generate_source_code() {
 #endif
 
 /*============================================================================
+ * Hardware Cache Metadata - Auto-detected at build time
+ *===========================================================================*/
+#ifndef HW_CPU_MODEL
+#define HW_CPU_MODEL "unknown"
+#endif
+
+#ifndef HW_CACHE_L1D_KB
+#define HW_CACHE_L1D_KB 0
+#endif
+
+#ifndef HW_CACHE_L1I_KB
+#define HW_CACHE_L1I_KB 0
+#endif
+
+#ifndef HW_CACHE_L2_KB
+#define HW_CACHE_L2_KB 0
+#endif
+
+#ifndef HW_CACHE_L3_KB
+#define HW_CACHE_L3_KB 0
+#endif
+
+#ifndef CACHE_LINE_BYTES
+#define CACHE_LINE_BYTES 64
+#endif
+
+#if CACHE_LINE_BYTES < 16
+#define CACHE_LINE_ALIGN 16
+#else
+#define CACHE_LINE_ALIGN CACHE_LINE_BYTES
+#endif
+
+/*============================================================================
  * Core Data Structures - Memory-aligned for SIMD operations
  *===========================================================================*/
-typedef struct __attribute__((aligned(16))) {
-    float m[16];  // 4x4 matrix, 16-byte aligned for SIMD
+typedef struct __attribute__((aligned(CACHE_LINE_ALIGN))) {
+    float m[16];  // 4x4 matrix, cache-line aligned for SIMD/cache efficiency
 } Mat4x4;
 
-typedef struct __attribute__((aligned(16))) {
+typedef struct __attribute__((aligned(CACHE_LINE_ALIGN))) {
     float x, y, z, w;
 } Vec4;
 
@@ -431,6 +635,22 @@ void raf_print(const char *s) {
     const char *p = s;
     while (*p) p++;
     sys_write(1, s, p - s);
+}
+
+static void raf_print_u32(uint32_t value) {
+    char buffer[16];
+    int idx = 0;
+    if (value == 0) {
+        buffer[idx++] = '0';
+    } else {
+        while (value > 0 && idx < 15) {
+            buffer[idx++] = (char)('0' + (value % 10));
+            value /= 10;
+        }
+    }
+    while (idx-- > 0) {
+        sys_write(1, &buffer[idx], 1);
+    }
 }
 
 /*============================================================================
@@ -596,6 +816,19 @@ int main(void) {
     raf_print(" | Date: ");
     raf_print(BUILD_DATE);
     raf_print("\n");
+    raf_print("  CPU: ");
+    raf_print(HW_CPU_MODEL);
+    raf_print(" | Cache L1d/L1i/L2/L3 (KB): ");
+    raf_print_u32(HW_CACHE_L1D_KB);
+    raf_print("/");
+    raf_print_u32(HW_CACHE_L1I_KB);
+    raf_print("/");
+    raf_print_u32(HW_CACHE_L2_KB);
+    raf_print("/");
+    raf_print_u32(HW_CACHE_L3_KB);
+    raf_print(" | Line: ");
+    raf_print_u32(CACHE_LINE_BYTES);
+    raf_print("B\n");
     raf_print("================================================================================\n");
     
     report_progress("INIT", 10);
@@ -815,12 +1048,17 @@ compile_binary() {
     
     local compiler_flags="$(get_compiler_flags)"
     local metadata_flags="$(get_build_metadata)"
+    local hardware_flags="$(get_hardware_metadata)"
+    local linker_flags="$(get_linker_flags)"
     local output_binary="${BUILD_DIR}/${BINARY_NAME}"
     
     # Display compilation command
     log "DEBUG" "Compiler: clang"
     log "DEBUG" "Flags: ${compiler_flags}"
     log "DEBUG" "Metadata: ${metadata_flags}"
+    if [[ -n "${linker_flags}" ]]; then
+        log "DEBUG" "Linker flags: ${linker_flags}"
+    fi
     
     # Aspect 27: Environment Isolation - Use clean environment
     env -i \
@@ -831,6 +1069,8 @@ compile_binary() {
         -std=c11 \
         ${compiler_flags} \
         ${metadata_flags} \
+        ${hardware_flags} \
+        ${linker_flags} \
         -static \
         -o "${output_binary}" \
         "${SOURCE_DIR}/${SOURCE_FILE}" \
@@ -1057,6 +1297,9 @@ main() {
     # Aspect 3: Input validation
     validate_environment
     preflight_guardrails
+
+    # Hardware metadata detection (cache/CPU)
+    detect_hardware_caps
     
     # Create directory structure
     create_directory_structure
