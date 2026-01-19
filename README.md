@@ -65,6 +65,11 @@ Without this fix, apps crash with SIGSEGV on startup. **This fork is patched and
 - ✅ **Zero Collisions**: Unique authorities, permissions, and data directories
 - ✅ **Bare-Metal**: NEON/SIMD optimized native code with pthread support
 
+### RMR Low-Level Module (C/ASM)
+- ✅ **Low-level utilities**: Deterministic helpers implemented in C with ASM-backed primitives where possible (RMR module)
+- ✅ **No legacy abstractions**: JNI only as a thin bridge to native primitives
+- ✅ **Termux packages alignment**: The package ecosystem remains defined by [termux/termux-packages](https://github.com/termux/termux-packages)
+
 ### Quick Start
 
 ```bash
