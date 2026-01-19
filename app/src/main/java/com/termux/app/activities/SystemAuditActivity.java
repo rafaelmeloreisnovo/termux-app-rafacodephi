@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 
 import com.termux.R;
+import com.termux.lowlevel.BareMetal;
 import com.termux.shared.activities.ReportActivity;
 import com.termux.shared.activity.media.AppCompatActivityUtils;
 import com.termux.shared.file.FileUtils;
@@ -52,6 +53,11 @@ import java.util.Locale;
 public class SystemAuditActivity extends AppCompatActivity {
     
     private static final String LOG_TAG = "SystemAuditActivity";
+    private static final int CAP_NEON = 1 << 0;
+    private static final int CAP_AVX = 1 << 1;
+    private static final int CAP_AVX2 = 1 << 2;
+    private static final int CAP_SSE2 = 1 << 3;
+    private static final int CAP_SSE42 = 1 << 4;
     
     private LinearLayout contentLayout;
     private StringBuilder auditReport;
@@ -183,7 +189,20 @@ public class SystemAuditActivity extends AppCompatActivity {
             sb.append(abi).append(" ");
         }
         sb.append("\n");
+        sb.append("   • CPU Model: ").append(getCpuModel()).append("\n");
         sb.append("   • 64-bit Support: ").append(is64Bit() ? "✅ Yes" : "❌ No").append("\n\n");
+        
+        // Bare-metal Hardware Detection
+        sb.append("🧬 Bare-metal Detection:\n");
+        if (BareMetal.isLoaded()) {
+            sb.append("   • Native Arch: ").append(getBareMetalArchitecture()).append("\n");
+            sb.append("   • SIMD: ").append(formatSimdCaps(getBareMetalCapabilities())).append("\n");
+            sb.append("   • Fast Memory Ops: ✅ Enabled\n\n");
+        } else {
+            sb.append("   • Native Library: ⚠️ Unavailable\n");
+            sb.append("   • SIMD: Unknown\n");
+            sb.append("   • Fast Memory Ops: ⚠️ Disabled\n\n");
+        }
         
         // Memory Info
         ActivityManager.MemoryInfo memInfo = new ActivityManager.MemoryInfo();
@@ -516,6 +535,16 @@ public class SystemAuditActivity extends AppCompatActivity {
         sb.append("   • Total Memory: ").append(runtime.totalMemory() / (1024 * 1024)).append(" MB\n");
         sb.append("   • Free Memory: ").append(runtime.freeMemory() / (1024 * 1024)).append(" MB\n\n");
         
+        // Footprint & Efficiency
+        ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        sb.append("📦 Footprint & Efficiency:\n");
+        if (activityManager != null) {
+            sb.append("   • Heap Class: ").append(activityManager.getMemoryClass()).append(" MB\n");
+            sb.append("   • Large Heap Class: ").append(activityManager.getLargeMemoryClass()).append(" MB\n");
+        }
+        sb.append("   • Memory Pressure: ").append(memInfo.lowMemory ? "⚠️ High" : "✅ Normal").append("\n");
+        sb.append("   • Footprint Strategy: ").append(memInfo.lowMemory ? "Reduce buffers & scrollback" : "Balanced").append("\n\n");
+        
         // Build Optimizations
         sb.append("🔧 Build Optimizations:\n");
         sb.append("   • Native Code: ✅ NDK optimized\n");
@@ -589,6 +618,55 @@ public class SystemAuditActivity extends AppCompatActivity {
             // Default to 4KB if can't detect
         }
         return 4096;
+    }
+    
+    private String getCpuModel() {
+        String[] keys = {"Hardware", "model name", "Processor", "Model", "CPU architecture"};
+        try (BufferedReader reader = new BufferedReader(new FileReader("/proc/cpuinfo"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                for (String key : keys) {
+                    if (line.startsWith(key)) {
+                        String[] parts = line.split(":", 2);
+                        if (parts.length == 2) {
+                            return parts[1].trim();
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            return "Unknown";
+        }
+        return "Unknown";
+    }
+    
+    private String getBareMetalArchitecture() {
+        try {
+            return BareMetal.getArchitecture();
+        } catch (UnsatisfiedLinkError e) {
+            return "Unavailable";
+        }
+    }
+    
+    private int getBareMetalCapabilities() {
+        try {
+            return BareMetal.getCapabilities();
+        } catch (UnsatisfiedLinkError e) {
+            return 0;
+        }
+    }
+    
+    private String formatSimdCaps(int caps) {
+        StringBuilder sb = new StringBuilder();
+        if ((caps & CAP_NEON) != 0) sb.append("NEON ");
+        if ((caps & CAP_AVX) != 0) sb.append("AVX ");
+        if ((caps & CAP_AVX2) != 0) sb.append("AVX2 ");
+        if ((caps & CAP_SSE2) != 0) sb.append("SSE2 ");
+        if ((caps & CAP_SSE42) != 0) sb.append("SSE4.2 ");
+        if (sb.length() == 0) {
+            return "None";
+        }
+        return sb.toString().trim();
     }
     
     private boolean isBatteryOptimizationDisabled() {
