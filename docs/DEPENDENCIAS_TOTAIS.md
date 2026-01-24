@@ -185,6 +185,16 @@ Os repositórios externos **explicitamente referenciados** pela documentação p
 
 ---
 
-## 10. Conclusão
+## 10. Diretriz de Integração (Low-Level)
+
+Integrações adicionais devem respeitar o perfil **low-level** do projeto:
+
+- Preferência por código nativo C/ASM e chamadas diretas, evitando camadas de abstração desnecessárias.
+- Estruturas e variáveis tratadas como **matrizes/arrays**, mantendo organização determinística e previsível.
+- Dependências externas devem ser justificadas e registradas neste inventário.
+
+---
+
+## 11. Conclusão
 
 Esta consolidação garante **rastreabilidade total** das dependências internas (módulos Gradle), externas (artefatos Maven/Jitpack) e das ligações explícitas com outros repositórios essenciais ao ecossistema Termux.
