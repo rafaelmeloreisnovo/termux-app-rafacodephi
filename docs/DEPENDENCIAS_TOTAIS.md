@@ -185,7 +185,27 @@ Os repositórios externos **explicitamente referenciados** pela documentação p
 
 ---
 
-## 10. Diretriz de Integração (Low-Level)
+## 10. Arquivos com Referências aos Repositórios
+
+Arquivos no repositório que **contêm referências explícitas** aos links acima:
+
+- `ASSINATURA_AUTORIA.md`
+- `CONTRIBUTORS.md`
+- `DIFERENCAS_FORK.md`
+- `DOCUMENTACAO.md`
+- `IMPLEMENTACAO_BAREMETAL.md`
+- `IMPLEMENTATION_COMPLETE.md`
+- `LICENSE.md`
+- `LEIA-ME-DOCUMENTACAO.md`
+- `README.md`
+- `SECURITY.md`
+- `docs/en/index.md`
+- `docs/LOWLEVEL_MIGRATION.md`
+- `docs/LOWLEVEL_SUMMARY.md`
+
+---
+
+## 11. Diretriz de Integração (Low-Level)
 
 Integrações adicionais devem respeitar o perfil **low-level** do projeto:
 
@@ -195,6 +215,6 @@ Integrações adicionais devem respeitar o perfil **low-level** do projeto:
 
 ---
 
-## 11. Conclusão
+## 12. Conclusão
 
 Esta consolidação garante **rastreabilidade total** das dependências internas (módulos Gradle), externas (artefatos Maven/Jitpack) e das ligações explícitas com outros repositórios essenciais ao ecossistema Termux.
