@@ -367,6 +367,17 @@ public class BareMetal {
             matrixGetData(handle, data);
             return data;
         }
+
+        /**
+         * Fill the provided array with matrix data (row-major order).
+         * Reuses caller-provided buffer to avoid allocations on hot paths.
+         */
+        public void getDataInto(float[] data) {
+            if (data.length < rows * cols) {
+                throw new IllegalArgumentException("Data array too small");
+            }
+            matrixGetData(handle, data);
+        }
         
         /**
          * Set matrix data from flat array (row-major order)
@@ -411,7 +422,7 @@ public class BareMetal {
         }
         
         /* Matrix algebra */
-        
+
         public Matrix multiply(Matrix other) {
             if (this.cols != other.rows) {
                 throw new IllegalArgumentException("Matrix dimensions incompatible for multiplication");
@@ -420,7 +431,20 @@ public class BareMetal {
             matrixMultiply(this.handle, other.handle, result.handle);
             return result;
         }
-        
+
+        /**
+         * Multiply matrices into an existing output matrix to avoid allocations.
+         */
+        public void multiplyInto(Matrix other, Matrix output) {
+            if (this.cols != other.rows) {
+                throw new IllegalArgumentException("Matrix dimensions incompatible for multiplication");
+            }
+            if (output.rows != this.rows || output.cols != other.cols) {
+                throw new IllegalArgumentException("Output matrix dimensions incompatible for multiplication result");
+            }
+            matrixMultiply(this.handle, other.handle, output.handle);
+        }
+
         public Matrix add(Matrix other) {
             if (this.rows != other.rows || this.cols != other.cols) {
                 throw new IllegalArgumentException("Matrix dimensions must match for addition");
@@ -429,7 +453,20 @@ public class BareMetal {
             matrixAdd(this.handle, other.handle, result.handle);
             return result;
         }
-        
+
+        /**
+         * Add matrices into an existing output matrix to avoid allocations.
+         */
+        public void addInto(Matrix other, Matrix output) {
+            if (this.rows != other.rows || this.cols != other.cols) {
+                throw new IllegalArgumentException("Matrix dimensions must match for addition");
+            }
+            if (output.rows != this.rows || output.cols != this.cols) {
+                throw new IllegalArgumentException("Output matrix dimensions incompatible for addition result");
+            }
+            matrixAdd(this.handle, other.handle, output.handle);
+        }
+
         public Matrix subtract(Matrix other) {
             if (this.rows != other.rows || this.cols != other.cols) {
                 throw new IllegalArgumentException("Matrix dimensions must match for subtraction");
@@ -438,11 +475,34 @@ public class BareMetal {
             matrixSubtract(this.handle, other.handle, result.handle);
             return result;
         }
-        
+
+        /**
+         * Subtract matrices into an existing output matrix to avoid allocations.
+         */
+        public void subtractInto(Matrix other, Matrix output) {
+            if (this.rows != other.rows || this.cols != other.cols) {
+                throw new IllegalArgumentException("Matrix dimensions must match for subtraction");
+            }
+            if (output.rows != this.rows || output.cols != this.cols) {
+                throw new IllegalArgumentException("Output matrix dimensions incompatible for subtraction result");
+            }
+            matrixSubtract(this.handle, other.handle, output.handle);
+        }
+
         public Matrix transpose() {
             Matrix result = new Matrix(this.cols, this.rows);
             matrixTranspose(this.handle, result.handle);
             return result;
+        }
+
+        /**
+         * Transpose into an existing output matrix to avoid allocations.
+         */
+        public void transposeInto(Matrix output) {
+            if (output.rows != this.cols || output.cols != this.rows) {
+                throw new IllegalArgumentException("Output matrix dimensions incompatible for transpose");
+            }
+            matrixTranspose(this.handle, output.handle);
         }
         
         /**
@@ -461,6 +521,21 @@ public class BareMetal {
             }
             return result;
         }
+
+        /**
+         * Invert matrix into an existing output matrix to avoid allocations.
+         * @return true on success, false if singular
+         */
+        public boolean invertInto(Matrix output) {
+            if (this.rows != this.cols) {
+                throw new IllegalArgumentException("Only square matrices can be inverted");
+            }
+            if (output.rows != this.rows || output.cols != this.cols) {
+                throw new IllegalArgumentException("Output matrix dimensions incompatible for inversion");
+            }
+            int status = matrixInvert(this.handle, output.handle);
+            return status == 0;
+        }
         
         /**
          * Solve linear system Ax = b
@@ -477,6 +552,21 @@ public class BareMetal {
                 return null;  // Singular matrix
             }
             return x;
+        }
+
+        /**
+         * Solve linear system Ax = b into a provided solution buffer to avoid allocations.
+         * @return true on success, false if singular
+         */
+        public boolean solveInto(float[] b, float[] x) {
+            if (b.length != this.rows) {
+                throw new IllegalArgumentException("Vector b size must match matrix rows");
+            }
+            if (x.length < this.cols) {
+                throw new IllegalArgumentException("Solution buffer too small");
+            }
+            int status = matrixSolveLinear(this.handle, b, x);
+            return status == 0;
         }
         
         @Override
