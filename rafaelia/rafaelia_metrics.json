@@ -1,0 +1,47 @@
+{
+    "meta": {
+        "N": 100,
+        "total_cells": 1000000,
+        "iters": 500,
+        "time": 30.908458471298218,
+        "iops": 16176801.585375182,
+        "entropy": -0.0,
+        "events": 8100619,
+        "omega": -0.0
+    },
+    "hardware": {
+        "os": "posix",
+        "arch": "aarch64",
+        "release": "5.15.178-android13-8-gabf75819a85e-ab569"
+    },
+    "compliance": [
+        {
+            "ts": "2025-12-04T20:33:20.695154",
+            "phase": "INIT",
+            "msg": "Governance Engine Started",
+            "compliance_ref": "ISO-27001",
+            "status": "VALIDATED"
+        },
+        {
+            "ts": "2025-12-04T20:33:20.731463",
+            "phase": "CHECK",
+            "msg": "Constraint Verified: Input-Validation",
+            "compliance_ref": "Input-Validation",
+            "status": "VALIDATED"
+        },
+        {
+            "ts": "2025-12-04T20:33:20.914031",
+            "phase": "CHECK",
+            "msg": "Constraint Verified: IEEE-754",
+            "compliance_ref": "IEEE-754",
+            "status": "VALIDATED"
+        },
+        {
+            "ts": "2025-12-04T20:33:20.914700",
+            "phase": "MATH",
+            "msg": "LUTs Generated (64KB)",
+            "compliance_ref": "ISO-25010",
+            "status": "VALIDATED"
+        }
+    ]
+}

@@ -1,0 +1,14 @@
+# Contributor: @librehat
+TERMUX_PKG_HOMEPAGE=https://github.com/google/flatbuffers
+TERMUX_PKG_DESCRIPTION="Memory Efficient Serialization Library"
+TERMUX_PKG_LICENSE="Apache-2.0"
+TERMUX_PKG_MAINTAINER="@termux"
+TERMUX_PKG_VERSION="25.12.19"
+TERMUX_PKG_SRCURL=https://github.com/google/flatbuffers/archive/refs/tags/v${TERMUX_PKG_VERSION}.tar.gz
+TERMUX_PKG_SHA256=f81c3162b1046fe8b84b9a0dbdd383e24fdbcf88583b9cb6028f90d04d90696a
+TERMUX_PKG_AUTO_UPDATE=true
+TERMUX_PKG_DEPENDS="libc++"
+TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
+-DFLATBUFFERS_BUILD_SHAREDLIB=ON
+-DFLATBUFFERS_BUILD_TESTS=OFF
+"

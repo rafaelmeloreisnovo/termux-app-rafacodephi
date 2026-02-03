@@ -1,0 +1,18 @@
+# Minimal 'human dev' baseline for Termux host
+ git
+ clang
+ llvm
+ lld
+ binutils
+ make
+ cmake
+ ninja
+ pkg-config
+ python
+ jq
+ file
+ ripgrep
+ gdb
+ strace
+ proot
+ proot-distro

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# RAFAELIA :: launcher (Termux host vs proot-distro)
+set -euo pipefail
+MODE="${1:-help}"; shift || true
+case "$MODE" in
+  host)
+    exec "$@"
+    ;;
+  debian)
+    exec proot-distro login debian --shared-tmp -- "$@"
+    ;;
+  ubuntu)
+    exec proot-distro login ubuntu --shared-tmp -- "$@"
+    ;;
+  *)
+    echo "usage:";
+    echo "  rafaelia_env/bin/rafx host   <cmd...>     # Termux";
+    echo "  rafaelia_env/bin/rafx debian <cmd...>     # Debian (proot)";
+    echo "  rafaelia_env/bin/rafx ubuntu <cmd...>     # Ubuntu (proot)";
+    exit 2
+    ;;
+ esac

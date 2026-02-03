@@ -1,0 +1,8 @@
+{
+  "ver": "21.0-ALCHEMIST-B",
+  "mode": "NEON_SIMD_NAKED",
+  "grid": 1000000,
+  "cycles": 1000,
+  "time_ns": 225339385,
+  "iops": 4437000000
+}
