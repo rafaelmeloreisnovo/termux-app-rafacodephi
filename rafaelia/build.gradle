@@ -1,55 +1,55 @@
 plugins {
-    id 'com.android.library'
+  id 'com.android.library'
 }
 
 android {
-    namespace "com.termux.rafaelia"
+  namespace "com.termux.rafaelia"
+  
+  compileSdkVersion project.properties.compileSdkVersion.toInteger()
+  ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
+
+  defaultConfig {
+    minSdkVersion project.properties.minSdkVersion.toInteger()
+    targetSdkVersion project.properties.targetSdkVersion.toInteger()
     
-    compileSdkVersion project.properties.compileSdkVersion.toInteger()
-    ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
-
-    defaultConfig {
-        minSdkVersion project.properties.minSdkVersion.toInteger()
-        targetSdkVersion project.properties.targetSdkVersion.toInteger()
-        
-        externalNativeBuild {
-            ndkBuild {
-                cFlags "-std=c11", "-Wall", "-Wextra", "-Werror", "-Os", "-fno-stack-protector", "-Wl,--gc-sections"
-            }
-        }
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-    }
-
     externalNativeBuild {
-        ndkBuild {
-            path "src/main/cpp/Android.mk"
-        }
+      ndkBuild {
+        cFlags "-std=c11", "-Wall", "-Wextra", "-Werror", "-Os", "-fno-stack-protector"
+      }
     }
 
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
+    testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+  }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-        }
+  externalNativeBuild {
+    ndkBuild {
+      path "src/main/cpp/Android.mk"
     }
+  }
 
-    testOptions {
-        unitTests {
-            returnDefaultValues = true
-            all {
-                // Enable unit tests - tests that require native libraries
-                // will be mocked or skipped via @Ignore annotations
-                enabled = true
-            }
-        }
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
     }
+  }
+
+  testOptions {
+    unitTests {
+      returnDefaultValues = true
+      all {
+        // Enable unit tests - tests that require native libraries
+        // will be mocked or skipped via @Ignore annotations
+        enabled = true
+      }
+    }
+  }
 }
 
 dependencies {
-    testImplementation 'junit:junit:4.13.2'
+  testImplementation 'junit:junit:4.13.2'
 }
