@@ -102,9 +102,9 @@ u32 RmR_exec_host_termux(const u8 *name, u32 len, raf_exec_result_t *out){
   const char *prefix_a = "/data/data/com.termux/files/usr/bin/";
   const char *prefix_b = "/system/bin/";
   const char *prefix_c = "/system/xbin/";
-  u32 prefix_a_len = 39u;
-  u32 prefix_b_len = 12u;
-  u32 prefix_c_len = 13u;
+  u32 prefix_a_len = (u32)(sizeof("/data/data/com.termux/files/usr/bin/") - 1u);
+  u32 prefix_b_len = (u32)(sizeof("/system/bin/") - 1u);
+  u32 prefix_c_len = (u32)(sizeof("/system/xbin/") - 1u);
   long pid = RmR_syscall0(RMR_NR_VFORK);
   if(pid == 0){
     argv[0] = (const char*)name;
