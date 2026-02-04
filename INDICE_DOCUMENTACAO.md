@@ -62,9 +62,10 @@ Este documento serve como índice mestre de toda a documentação do projeto Ter
 |-----------|-----------|--------------|------------|
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Solução de problemas comuns | Usuários | ⭐⭐ Importante |
 | [VALIDATION_COMMANDS.md](VALIDATION_COMMANDS.md) | Comandos de validação | Desenvolvedores | ⭐ Referência |
-| [SUMMARY.md](SUMMARY.md) | Resumo final de implementação | Todos | ⭐ Referência |
-| [RESUMO_FINAL.md](RESUMO_FINAL.md) | Resumo das mudanças (Target SDK 28) | Desenvolvedores | ⭐ Referência |
-| [IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md) | Status de implementação | Desenvolvedores | ⭐ Referência |
+| [docs/STATUS.md](docs/STATUS.md) | Status oficial e consolidado | Desenvolvedores | ⭐⭐ Importante |
+| [SUMMARY.md](SUMMARY.md) | Resumo final de implementação (legado) | Todos | ⭐ Referência |
+| [RESUMO_FINAL.md](RESUMO_FINAL.md) | Resumo das mudanças (Target SDK 28) (legado) | Desenvolvedores | ⭐ Referência |
+| [IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md) | Status de implementação (legado) | Desenvolvedores | ⭐ Referência |
 
 ### Análise e Comparação
 
@@ -98,6 +99,7 @@ Este documento serve como índice mestre de toda a documentação do projeto Ter
 | [docs/RAFAELIA_PROTOCOL_IMPROVEMENTS.md](docs/RAFAELIA_PROTOCOL_IMPROVEMENTS.md) | Melhorias do protocolo | Desenvolvedores |
 | [docs/IMPLEMENTATION_SUMMARY_RAFAELIA_IMPROVEMENTS.md](docs/IMPLEMENTATION_SUMMARY_RAFAELIA_IMPROVEMENTS.md) | Resumo de melhorias | Desenvolvedores |
 | [docs/DEPENDENCIAS_TOTAIS.md](docs/DEPENDENCIAS_TOTAIS.md) | Inventário completo de dependências e repositórios | Desenvolvedores |
+| [docs/STATUS.md](docs/STATUS.md) | Status oficial e consolidado | Desenvolvedores |
 
 ### Subdiretório `/docs/rafaelia/`
 

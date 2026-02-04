@@ -22,7 +22,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
-import com.termux.R;
+import com.termux.rafacodephi.R;
 import com.termux.shared.activity.media.AppCompatActivityUtils;
 import com.termux.shared.termux.TermuxConstants;
 import com.termux.shared.theme.NightMode;

@@ -10,7 +10,7 @@ import android.system.Os;
 import android.util.Pair;
 import android.view.WindowManager;
 
-import com.termux.R;
+import com.termux.rafacodephi.R;
 import com.termux.shared.file.FileUtils;
 import com.termux.shared.termux.crash.TermuxCrashUtils;
 import com.termux.shared.termux.file.TermuxFileUtils;
@@ -208,6 +208,13 @@ final class TermuxInstaller {
                         throw new RuntimeException("No SYMLINKS.txt encountered");
                     for (Pair<String, String> symlink : symlinks) {
                         Os.symlink(symlink.first, symlink.second);
+                    }
+
+                    if (!FileUtils.fileExists(TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/sh", false)) {
+                        throw new RuntimeException("Bootstrap missing required shell: " + TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/sh");
+                    }
+                    if (!FileUtils.fileExists(TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/pkg", false)) {
+                        throw new RuntimeException("Bootstrap missing required package manager: " + TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/pkg");
                     }
 
                     Logger.logInfo(LOG_TAG, "Moving termux prefix staging to prefix directory.");

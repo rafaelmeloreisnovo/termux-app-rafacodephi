@@ -27,7 +27,8 @@ public class TermuxBootstrap {
     public static void setTermuxPackageManagerAndVariant(@Nullable String packageVariantName) {
         TERMUX_APP_PACKAGE_VARIANT = PackageVariant.variantOf(packageVariantName);
         if (TERMUX_APP_PACKAGE_VARIANT == null) {
-            throw new RuntimeException("Unsupported TERMUX_APP_PACKAGE_VARIANT \"" + packageVariantName + "\"");
+            Logger.logError(LOG_TAG, "Unsupported TERMUX_APP_PACKAGE_VARIANT \"" + packageVariantName + "\". Falling back to \"apt-android-7\".");
+            TERMUX_APP_PACKAGE_VARIANT = PackageVariant.APT_ANDROID_7;
         }
 
         Logger.logVerbose(LOG_TAG, "Set TERMUX_APP_PACKAGE_VARIANT to \"" + TERMUX_APP_PACKAGE_VARIANT + "\"");
@@ -37,7 +38,8 @@ public class TermuxBootstrap {
         String packageManagerName = (index == -1) ? null : packageVariantName.substring(0, index);
         TERMUX_APP_PACKAGE_MANAGER = PackageManager.managerOf(packageManagerName);
         if (TERMUX_APP_PACKAGE_MANAGER == null) {
-            throw new RuntimeException("Unsupported TERMUX_APP_PACKAGE_MANAGER \"" + packageManagerName + "\" with variant \"" + packageVariantName + "\"");
+            Logger.logError(LOG_TAG, "Unsupported TERMUX_APP_PACKAGE_MANAGER \"" + packageManagerName + "\" with variant \"" + packageVariantName + "\". Falling back to \"apt\".");
+            TERMUX_APP_PACKAGE_MANAGER = PackageManager.APT;
         }
 
         Logger.logVerbose(LOG_TAG, "Set TERMUX_APP_PACKAGE_MANAGER to \"" + TERMUX_APP_PACKAGE_MANAGER + "\"");

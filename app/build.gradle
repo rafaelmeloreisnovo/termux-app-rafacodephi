@@ -10,10 +10,11 @@ ext {
     // by replacing $PREFIX since app code is dependant on the variant used to build the APK.
     // Currently supported values are: [ "apt-android-7" "apt-android-5" ]
     packageVariant = System.getenv("TERMUX_PACKAGE_VARIANT") ?: "apt-android-7" // Default: "apt-android-7"
+    bootstrapBaseUrl = System.getenv("TERMUX_BOOTSTRAP_BASE_URL")
 }
 
 android {
-    namespace "com.termux"
+    namespace "com.termux.rafacodephi"
 
     compileSdkVersion project.properties.compileSdkVersion.toInteger()
     ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
@@ -65,15 +66,6 @@ android {
         }
     }
 
-    signingConfigs {
-        debug {
-            storeFile file('testkey_untrusted.jks')
-            keyAlias 'alias'
-            storePassword 'xrj45yWGLbsO7W0v'
-            keyPassword 'xrj45yWGLbsO7W0v'
-        }
-    }
-
     buildTypes {
         release {
             minifyEnabled true
@@ -82,7 +74,6 @@ android {
         }
 
         debug {
-            signingConfig signingConfigs.debug
         }
     }
 
@@ -171,6 +162,11 @@ def validateVersionName(String versionName) {
 
 def downloadBootstrap(String arch, String expectedChecksum, String version) {
     def digest = java.security.MessageDigest.getInstance("SHA-256")
+    def baseUrl = project.ext.bootstrapBaseUrl
+    if (!baseUrl) {
+        throw new GradleException("TERMUX_BOOTSTRAP_BASE_URL is not set. Provide a bootstrap mirror that matches the " +
+            "applicationId and includes BOOTSTRAP_INFO metadata.")
+    }
 
     def localUrl = "src/main/cpp/bootstrap-" + arch + ".zip"
     def file = new File(projectDir, localUrl)
@@ -192,7 +188,7 @@ def downloadBootstrap(String arch, String expectedChecksum, String version) {
         }
     }
 
-    def remoteUrl = "https://github.com/termux/termux-packages/releases/download/bootstrap-" + version + "/bootstrap-" + arch + ".zip"
+    def remoteUrl = baseUrl + "/bootstrap-" + version + "/bootstrap-" + arch + ".zip"
     logger.quiet("Downloading " + remoteUrl + " ...")
 
     file.parentFile.mkdirs()
@@ -241,9 +237,67 @@ task downloadBootstraps() {
     }
 }
 
+def requiredBootstrapMetadata(File file, String expectedPackageName) {
+    def zipFile = new java.util.zip.ZipFile(file)
+    try {
+        def entry = zipFile.getEntry("BOOTSTRAP_INFO")
+        if (entry == null) {
+            throw new GradleException("Missing BOOTSTRAP_INFO in " + file.name +
+                ". Build a bootstrap that records TERMUX_PACKAGE_NAME and TERMUX_PAGE_SIZE.")
+        }
+
+        def text = zipFile.getInputStream(entry).getText("UTF-8")
+        def metadata = [:]
+        text.eachLine { line ->
+            def trimmed = line.trim()
+            if (!trimmed || trimmed.startsWith("#") || !trimmed.contains("=")) return
+            def parts = trimmed.split("=", 2)
+            metadata[parts[0].trim()] = parts[1].trim()
+        }
+
+        def packageName = metadata["TERMUX_PACKAGE_NAME"]
+        if (packageName != expectedPackageName) {
+            throw new GradleException("BOOTSTRAP_INFO TERMUX_PACKAGE_NAME mismatch in " + file.name +
+                ": expected \"" + expectedPackageName + "\", got \"" + packageName + "\"")
+        }
+
+        def pageSize = metadata["TERMUX_PAGE_SIZE"]
+        if (pageSize != "16384") {
+            throw new GradleException("BOOTSTRAP_INFO TERMUX_PAGE_SIZE mismatch in " + file.name +
+                ": expected \"16384\", got \"" + pageSize + "\"")
+        }
+    } finally {
+        zipFile.close()
+    }
+}
+
+task verifyBootstraps {
+    description = 'Validates that local bootstrap archives exist and match expected metadata'
+    group = 'verification'
+
+    doLast {
+        def expectedPackageName = android.defaultConfig.applicationId
+        def arches = ["aarch64", "arm", "i686", "x86_64"]
+        def missing = []
+        arches.each { arch ->
+            def file = new File(projectDir, "src/main/cpp/bootstrap-" + arch + ".zip")
+            if (!file.exists()) {
+                missing.add(file.path)
+            } else {
+                requiredBootstrapMetadata(file, expectedPackageName)
+            }
+        }
+
+        if (!missing.isEmpty()) {
+            throw new GradleException("Missing local bootstrap archives:\n - " + missing.join("\n - ") +
+                "\nProvide bootstraps built for \"" + expectedPackageName + "\" in app/src/main/cpp.")
+        }
+    }
+}
+
 afterEvaluate {
     android.applicationVariants.all { variant ->
-        variant.javaCompileProvider.get().dependsOn(downloadBootstraps)
+        variant.javaCompileProvider.get().dependsOn(verifyBootstraps)
     }
 }
 

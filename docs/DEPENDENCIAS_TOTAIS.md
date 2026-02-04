@@ -78,11 +78,12 @@ coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.2"
 
 **Dependência externa de bootstrap (Termux packages)**:
 
-O bootstrap é baixado diretamente de releases do repositório oficial de pacotes do Termux:
+O build exige bootstraps locais (em `app/src/main/cpp/bootstrap-<arch>.zip`) gerados para
+`com.termux.rafacodephi` e com `BOOTSTRAP_INFO` (incluindo `TERMUX_PACKAGE_NAME` e `TERMUX_PAGE_SIZE=16384`).
+O download automático não é executado durante o build para permitir builds offline e reprodutíveis.
 
-```
-https://github.com/termux/termux-packages/releases/download/bootstrap-<version>/bootstrap-<arch>.zip
-```
+Quando necessário, o download pode ser feito manualmente apontando `TERMUX_BOOTSTRAP_BASE_URL` para
+um repositório que hospede os bootstraps corretos.
 
 ---
 

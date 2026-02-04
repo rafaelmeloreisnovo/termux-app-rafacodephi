@@ -15,25 +15,20 @@ from nacl import public, encoding
 
 
 SERVICE_NAME = "rafaelia_github_pat"
-CREDENTIALS_FILE = Path.home() / ".github_pat_rafaelia.json"
 
 
 def save_credentials(username: str, token: str):
     """
     Grava usuário e PAT de forma razoavelmente segura.
     1) Se keyring disponível: usa o keyring do sistema.
-    2) Caso contrário, grava em arquivo com permissão 600.
+    2) Caso contrário, não persiste em disco.
     """
     if keyring is not None:
         keyring.set_password(SERVICE_NAME, "github_username", username)
         keyring.set_password(SERVICE_NAME, "github_pat", token)
         print("Credenciais salvas no keyring do sistema.")
     else:
-        data = {"username": username, "token": token}
-        with open(CREDENTIALS_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f)
-        os.chmod(CREDENTIALS_FILE, 0o600)
-        print(f"Credenciais salvas em {CREDENTIALS_FILE} com permissão 600.")
+        print("Keyring indisponível. As credenciais não serão persistidas em disco.")
 
 
 def load_credentials():
@@ -49,16 +44,6 @@ def load_credentials():
             token = keyring.get_password(SERVICE_NAME, "github_pat")
         except Exception:
             pass
-
-    if not username or not token:
-        if CREDENTIALS_FILE.exists():
-            try:
-                with open(CREDENTIALS_FILE, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                username = data.get("username")
-                token = data.get("token")
-            except Exception:
-                pass
 
     if not username or not token:
         print("=== Configuração inicial do GitHub PAT ===")

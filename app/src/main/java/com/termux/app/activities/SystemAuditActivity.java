@@ -15,7 +15,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 
-import com.termux.R;
+import com.termux.rafacodephi.R;
 import com.termux.lowlevel.BareMetal;
 import com.termux.shared.activities.ReportActivity;
 import com.termux.shared.activity.media.AppCompatActivityUtils;
