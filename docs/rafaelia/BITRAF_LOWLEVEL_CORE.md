@@ -21,3 +21,23 @@ Este documento registra as extensões de baixo nível aplicadas ao núcleo BITRA
 ## Observações de build
 - O núcleo permanece freestanding-friendly (sem libc).
 - As funções utilitárias são internas e não dependem de pacotes do ambiente.
+
+## Emulador determinístico de ferramentas Termux
+- Núcleo autoral com comandos determinísticos (help/echo/pkg/uname/stat) sem dependências externas.
+- Mantém execução previsível com tabela estática de pacotes e parsing mínimo por tokens.
+
+## Registro determinístico de ferramentas principais
+- Registro com IDs estáveis de ferramentas essenciais (shell, coreutils, rede, build) para módulos autorais.
+- Cada entrada usa hash fixo, classe e versão, evitando copiar código externo.
+
+## Licenças e referências
+- Termux Packages: https://github.com/termux/termux-packages (licenças variam por pacote; manter referência por pacote usado).
+- Este repositório: manter créditos/autoria próprios nos módulos determinísticos adicionados.
+
+## Catálogo determinístico (absorção de pacotes)
+- Núcleo que recebe lista textual de pacotes (um por linha) e gera IDs determinísticos sem libc.
+- Permite absorver listas do termux-packages sem copiar código, mantendo apenas identificação autoral.
+
+## Tabela determinística de pacotes (gerada)
+- Tabela estática de IDs (hash + tamanho do nome) gerada a partir do diretório `packages/` do termux-packages.
+- Não replica código nem receitas; apenas identifica pacotes com IDs autorais e reprodutíveis.
