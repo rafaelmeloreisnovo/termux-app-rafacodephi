@@ -41,3 +41,14 @@ Este documento registra as extensões de baixo nível aplicadas ao núcleo BITRA
 ## Tabela determinística de pacotes (gerada)
 - Tabela estática de IDs (hash + tamanho do nome) gerada a partir do diretório `packages/` do termux-packages.
 - Não replica código nem receitas; apenas identifica pacotes com IDs autorais e reprodutíveis.
+
+## Shell + 100 ferramentas essenciais (toolset determinístico)
+- Tabela fixa com shell e 100 utilitários/serviços mais usados (inclui wine e libreoffice).
+- Flags por categoria (shell/sistema/rede/build/linguagem/app/lib) para seleção determinística.
+- Emulador reconhece `pkg exec <nome>` e execução direta por nome, sem libc.
+- Hook de execução real opcional via callback para acoplar binários funcionais quando disponíveis.
+- Backend low-level real com syscall direto (vfork/execve/wait4) via `RmR_emul_bind_termux_exec`.
+## Shell + 50 ferramentas essenciais (bitraf-storage)
+- Tabela fixa com shell e 50 utilitários/serviços mais usados (inclui wine e libreoffice).
+- Armazenamento em ring buffer minimalista (bitraf-like) para limite lógico com menor uso físico.
+- Balanceamento por barra de sessões: pesos normalizados por configuração em estrutura única.

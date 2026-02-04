@@ -3,6 +3,8 @@
 */
 
 #include "raf_termux_emul.h"
+#include "raf_termux_toolset.h"
+#include "raf_termux_exec.h"
 
 static u32 RmR_write(const struct RAF_EMU_IO *io, const u8 *buf, u32 len){
   if(io && io->write) return io->write(io->ctx, buf, len);
@@ -39,35 +41,73 @@ static void RmR_write_literal(const struct RAF_EMU_IO *io, const char *lit){
   (void)RmR_write(io, p, len);
 }
 
-static u32 RmR_hash_token(const u8 *buf, u32 len){
-  u32 h = 2166136261u;
-  for(u32 i=0u;i<len;i++){
-    h ^= (u32)buf[i];
-    h *= 16777619u;
+static void RmR_write_u32(const struct RAF_EMU_IO *io, u32 v){
+  u8 buf[10];
+  u32 n = 0u;
+  if(v == 0u){
+    buf[n++] = (u8)'0';
+  } else {
+    u8 tmp[10];
+    u32 t = 0u;
+    while(v > 0u && t < 10u){
+      tmp[t++] = (u8)('0' + (v % 10u));
+      v /= 10u;
+    }
+    while(t > 0u) buf[n++] = tmp[--t];
   }
-  return h;
+  (void)RmR_write(io, buf, n);
 }
 
 void RmR_emul_init(raf_termux_emu_t *emu, const struct RAF_EMU_IO *io, u32 arch_id, u8 bus_bits){
   if(!emu) return;
+  RmR_toolset_init();
   emu->io = *io;
+  emu->exec.exec = 0;
+  emu->exec.ctx = 0;
   emu->arch_id = arch_id;
   emu->bus_bits = bus_bits;
   emu->_pad0 = 0u;
   emu->seed = 0xB17RAFu;
   emu->last_status = 0u;
-  emu->package_count = 6u;
-  emu->packages[0] = RmR_hash_token((const u8*)"coreutils", 9u);
-  emu->packages[1] = RmR_hash_token((const u8*)"curl", 4u);
-  emu->packages[2] = RmR_hash_token((const u8*)"openssl", 7u);
-  emu->packages[3] = RmR_hash_token((const u8*)"busybox", 7u);
-  emu->packages[4] = RmR_hash_token((const u8*)"vim", 3u);
-  emu->packages[5] = RmR_hash_token((const u8*)"git", 3u);
+  emu->package_count = 0u;
+  {
+    u32 count = RmR_toolset_count();
+    for(u32 i=0u;i<count && i<128u;i++){
+      emu->packages[i] = RmR_toolset_id_at(i);
+      emu->package_count++;
+    }
+  }
+}
+
+void RmR_emul_bind_exec(raf_termux_emu_t *emu, const struct RAF_EMU_EXEC *ex){
+  if(!emu) return;
+  if(ex){
+    emu->exec = *ex;
+  } else {
+    emu->exec.exec = 0;
+    emu->exec.ctx = 0;
+  }
+}
+
+static u32 RmR_emul_termux_exec_cb(void *ctx, const u8 *name, u32 len){
+  raf_exec_result_t out;
+  (void)ctx;
+  return RmR_exec_host_termux(name, len, &out);
+}
+
+u32 RmR_emul_bind_termux_exec(raf_termux_emu_t *emu){
+  struct RAF_EMU_EXEC ex;
+  if(!emu) return 1u;
+  ex.exec = RmR_emul_termux_exec_cb;
+  ex.ctx = 0;
+  emu->exec = ex;
+  return 0u;
 }
 
 static void RmR_emit_help(const struct RAF_EMU_IO *io){
   RmR_write_literal(io, "raf_termux_emu: comandos: help, echo, pkg, uname, stat\n");
-  RmR_write_literal(io, "pkg list | pkg install <nome>\n");
+  RmR_write_literal(io, "pkg list | pkg install <nome> | pkg exec <nome>\n");
+  RmR_write_literal(io, "tools list | tools info <nome>\n");
 }
 
 static void RmR_emit_uname(const raf_termux_emu_t *emu){
@@ -89,75 +129,122 @@ static void RmR_emit_uname(const raf_termux_emu_t *emu){
 static void RmR_emit_stat(const raf_termux_emu_t *emu){
   const struct RAF_EMU_IO *io = &emu->io;
   RmR_write_literal(io, "status=");
-  {
-    u32 v = emu->last_status;
-    u8 buf[10];
-    u32 n = 0u;
-    if(v == 0u){
-      buf[n++] = (u8)'0';
-    } else {
-      u8 tmp[10];
-      u32 t = 0u;
-      while(v > 0u && t < 10u){
-        tmp[t++] = (u8)('0' + (v % 10u));
-        v /= 10u;
-      }
-      while(t > 0u) buf[n++] = tmp[--t];
-    }
-    (void)RmR_write(io, buf, n);
-  }
+  RmR_write_u32(io, emu->last_status);
   RmR_write_literal(io, " pkg=");
-  {
-    u32 v = emu->package_count;
-    u8 buf[10];
-    u32 n = 0u;
-    if(v == 0u){
-      buf[n++] = (u8)'0';
-    } else {
-      u8 tmp[10];
-      u32 t = 0u;
-      while(v > 0u && t < 10u){
-        tmp[t++] = (u8)('0' + (v % 10u));
-        v /= 10u;
-      }
-      while(t > 0u) buf[n++] = tmp[--t];
-    }
-    (void)RmR_write(io, buf, n);
-  }
+  RmR_write_u32(io, emu->package_count);
+  RmR_write_literal(io, " tools=");
+  RmR_write_u32(io, RmR_toolset_count());
   RmR_write_literal(io, "\n");
+}
+
+static u8 RmR_tool_name_by_id(u32 id, const char **name, u32 *len){
+  u32 count = RmR_toolset_count();
+  for(u32 i=0u;i<count;i++){
+    if(RmR_toolset_id_at(i) == id){
+      if(name) *name = RmR_toolset_name_at(i, len);
+      return 1u;
+    }
+  }
+  return 0u;
 }
 
 static void RmR_emit_pkg_list(const raf_termux_emu_t *emu){
   const struct RAF_EMU_IO *io = &emu->io;
   for(u32 i=0u;i<emu->package_count;i++){
     u32 v = emu->packages[i];
-    u8 buf[10];
-    u32 n = 0u;
-    if(v == 0u){
-      buf[n++] = (u8)'0';
-    } else {
-      u8 tmp[10];
-      u32 t = 0u;
-      while(v > 0u && t < 10u){
-        tmp[t++] = (u8)('0' + (v % 10u));
-        v /= 10u;
-      }
-      while(t > 0u) buf[n++] = tmp[--t];
+    const char *name = 0;
+    u32 name_len = 0u;
+    if(RmR_tool_name_by_id(v, &name, &name_len) && name){
+      (void)RmR_write(io, (const u8*)name, name_len);
+      RmR_write_literal(io, " ");
     }
-    (void)RmR_write(io, buf, n);
+    RmR_write_u32(io, v);
     RmR_write_literal(io, "\n");
   }
 }
 
+static void RmR_emit_tool_list(const raf_termux_emu_t *emu){
+  const struct RAF_EMU_IO *io = &emu->io;
+  u32 count = RmR_toolset_count();
+  for(u32 i=0u;i<count;i++){
+    u32 name_len = 0u;
+    const char *name = RmR_toolset_name_at(i, &name_len);
+    if(name && name_len){
+      (void)RmR_write(io, (const u8*)name, name_len);
+      RmR_write_literal(io, "\n");
+    }
+  }
+  (void)emu;
+}
+
+static void RmR_emit_tool_info(const raf_termux_emu_t *emu, const u8 *name, u32 name_len){
+  u32 idx = 0u;
+  if(!RmR_toolset_find(name, name_len, &idx)){
+    RmR_write_literal(&emu->io, "noent\n");
+    return;
+  }
+  {
+    u32 nlen = 0u;
+    const char *nm = RmR_toolset_name_at(idx, &nlen);
+    if(nm){
+      RmR_write_literal(&emu->io, "name=");
+      (void)RmR_write(&emu->io, (const u8*)nm, nlen);
+      RmR_write_literal(&emu->io, " id=");
+      RmR_write_u32(&emu->io, RmR_toolset_id_at(idx));
+      RmR_write_literal(&emu->io, " flags=");
+      RmR_write_u32(&emu->io, (u32)RmR_toolset_flags_at(idx));
+      RmR_write_literal(&emu->io, "\n");
+    }
+  }
+}
+
+static u32 RmR_emit_tool_run(raf_termux_emu_t *emu, u32 idx){
+  u32 name_len = 0u;
+  const char *name = RmR_toolset_name_at(idx, &name_len);
+  if(!name) return 1u;
+  if(emu->exec.exec){
+    u32 st = emu->exec.exec(emu->exec.ctx, (const u8*)name, name_len);
+    emu->last_status = st;
+    return st;
+  }
+  RmR_write_literal(&emu->io, "run ");
+  (void)RmR_write(&emu->io, (const u8*)name, name_len);
+  RmR_write_literal(&emu->io, " id=");
+  RmR_write_u32(&emu->io, RmR_toolset_id_at(idx));
+  RmR_write_literal(&emu->io, "\n");
+  emu->last_status = 0u;
+  return 0u;
+}
+
+static u8 RmR_pkg_has(const raf_termux_emu_t *emu, u32 id){
+  for(u32 i=0u;i<emu->package_count;i++){
+    if(emu->packages[i] == id) return 1u;
+  }
+  return 0u;
+}
+
 static void RmR_pkg_install(raf_termux_emu_t *emu, const u8 *name, u32 name_len){
-  u32 h = RmR_hash_token(name, name_len);
-  if(emu->package_count < 16u){
-    emu->packages[emu->package_count++] = h;
-    emu->last_status = 0u;
-    RmR_write_literal(&emu->io, "ok\n");
-  } else {
-    emu->last_status = 2u;
-    RmR_write_literal(&emu->io, "full\n");
+  u32 idx = 0u;
+  if(!RmR_toolset_find(name, name_len, &idx)){
+    emu->last_status = 1u;
+    RmR_write_literal(&emu->io, "noent\n");
+    return;
+  }
+  {
+    u32 id = RmR_toolset_id_at(idx);
+    if(RmR_pkg_has(emu, id)){
+      emu->last_status = 0u;
+      RmR_write_literal(&emu->io, "ok\n");
+      return;
+    }
+    if(emu->package_count < 128u){
+      emu->packages[emu->package_count++] = id;
+      emu->last_status = 0u;
+      RmR_write_literal(&emu->io, "ok\n");
+    } else {
+      emu->last_status = 2u;
+      RmR_write_literal(&emu->io, "full\n");
+    }
   }
 }
 
@@ -170,6 +257,17 @@ u32 RmR_emul_exec(raf_termux_emu_t *emu, const u8 *cmd, u32 len){
   pos = RmR_skip_space(cmd, len, pos + t0_len);
   u32 t1_len = RmR_token_len(cmd, len, pos);
   const u8 *t1 = (t1_len > 0u) ? &cmd[pos] : (const u8*)0;
+
+  if((RmR_str_eq_n(t0, t0_len, (const u8*)"sh", 2u) || RmR_str_eq_n(t0, t0_len, (const u8*)"bash", 4u))
+     && t1 && RmR_str_eq_n(t1, t1_len, (const u8*)"-c", 2u)){
+    pos = RmR_skip_space(cmd, len, pos + t1_len);
+    if(pos >= len){
+      emu->last_status = 1u;
+      RmR_write_literal(&emu->io, "missing\n");
+      return 1u;
+    }
+    return RmR_emul_exec(emu, &cmd[pos], len - pos);
+  }
 
   if(RmR_str_eq_n(t0, t0_len, (const u8*)"help", 4u)){
     RmR_emit_help(&emu->io);
@@ -201,6 +299,24 @@ u32 RmR_emul_exec(raf_termux_emu_t *emu, const u8 *cmd, u32 len){
       emu->last_status = 0u;
       return 0u;
     }
+    if(t1 && RmR_str_eq_n(t1, t1_len, (const u8*)"exec", 4u)){
+      pos = RmR_skip_space(cmd, len, pos + t1_len);
+      u32 name_len = RmR_token_len(cmd, len, pos);
+      if(name_len == 0u){
+        emu->last_status = 1u;
+        RmR_write_literal(&emu->io, "missing\n");
+        return 1u;
+      }
+      {
+        u32 idx = 0u;
+        if(!RmR_toolset_find(&cmd[pos], name_len, &idx)){
+          emu->last_status = 1u;
+          RmR_write_literal(&emu->io, "noent\n");
+          return 1u;
+        }
+        return RmR_emit_tool_run(emu, idx);
+      }
+    }
     if(t1 && RmR_str_eq_n(t1, t1_len, (const u8*)"install", 7u)){
       pos = RmR_skip_space(cmd, len, pos + t1_len);
       u32 name_len = RmR_token_len(cmd, len, pos);
@@ -215,6 +331,36 @@ u32 RmR_emul_exec(raf_termux_emu_t *emu, const u8 *cmd, u32 len){
     emu->last_status = 1u;
     RmR_write_literal(&emu->io, "pkg?\n");
     return 1u;
+  }
+
+  if(RmR_str_eq_n(t0, t0_len, (const u8*)"tools", 5u)){
+    if(t1 && RmR_str_eq_n(t1, t1_len, (const u8*)"list", 4u)){
+      RmR_emit_tool_list(emu);
+      emu->last_status = 0u;
+      return 0u;
+    }
+    if(t1 && RmR_str_eq_n(t1, t1_len, (const u8*)"info", 4u)){
+      pos = RmR_skip_space(cmd, len, pos + t1_len);
+      u32 name_len = RmR_token_len(cmd, len, pos);
+      if(name_len == 0u){
+        emu->last_status = 1u;
+        RmR_write_literal(&emu->io, "missing\n");
+        return 1u;
+      }
+      RmR_emit_tool_info(emu, &cmd[pos], name_len);
+      emu->last_status = 0u;
+      return 0u;
+    }
+    emu->last_status = 1u;
+    RmR_write_literal(&emu->io, "tools?\n");
+    return 1u;
+  }
+
+  {
+    u32 idx = 0u;
+    if(RmR_toolset_find(t0, t0_len, &idx)){
+      return RmR_emit_tool_run(emu, idx);
+    }
   }
 
   emu->last_status = 127u;
