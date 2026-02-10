@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=aptly
+id=0x781f5da7
+name_len=5
+version=1.6.2
+homepage=https://www.aptly.info
+description=A Swiss Army knife for Debian repository management
+source=termux/termux-packages
+path=packages/aptly/build.sh

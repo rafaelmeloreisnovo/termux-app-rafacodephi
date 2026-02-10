@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fff
+id=0xb3095351
+name_len=3
+version=2.2
+homepage=https://github.com/dylanaraps/fff
+description=A simple file manager written in bash
+source=termux/termux-packages
+path=packages/fff/build.sh

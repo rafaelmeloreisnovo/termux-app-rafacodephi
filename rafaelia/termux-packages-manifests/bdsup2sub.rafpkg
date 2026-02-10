@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bdsup2sub
+id=0xa83d748d
+name_len=9
+version=4.0.1
+homepage=https://github.com/mjuhasz/BDSup2Sub
+description=A subtitle conversion tool for image based stream formats
+source=termux/termux-packages
+path=packages/bdsup2sub/build.sh

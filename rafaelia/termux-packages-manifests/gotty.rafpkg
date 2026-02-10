@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gotty
+id=0x46eb7646
+name_len=5
+version=1.6.0
+homepage=https://github.com/sorenisanerd/gotty
+description=Share your terminal as a web application
+source=termux/termux-packages
+path=packages/gotty/build.sh

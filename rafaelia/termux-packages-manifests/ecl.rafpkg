@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ecl
+id=0x8072c1cf
+name_len=3
+version=24.5.10
+homepage=https://common-lisp.net/project/ecl/
+description=ECL (Embeddable Common Lisp) is an interpreter of the Common Lisp language
+source=termux/termux-packages
+path=packages/ecl/build.sh

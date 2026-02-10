@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cloneit
+id=0x0491075f
+name_len=7
+version=${_COMMIT_DATE//./}
+homepage=https://github.com/alok8bb/cloneit
+description=A cli tool to download specific GitHub directories or files
+source=termux/termux-packages
+path=packages/cloneit/build.sh

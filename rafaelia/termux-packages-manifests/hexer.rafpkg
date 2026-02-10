@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hexer
+id=0x515a311d
+name_len=5
+version=1.0.7
+homepage=https://devel.ringlet.net/editors/hexer/
+description=A multi-buffer editor for binary files for Unix-like systems that displays its buffer(s) as a hex dump
+source=termux/termux-packages
+path=packages/hexer/build.sh

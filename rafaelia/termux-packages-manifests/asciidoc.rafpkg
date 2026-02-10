@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=asciidoc
+id=0x03c3377e
+name_len=8
+version=10.2.1
+homepage=https://asciidoc.org
+description=Text document format for short documents, articles, books and UNIX man pages.
+source=termux/termux-packages
+path=packages/asciidoc/build.sh

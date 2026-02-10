@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=distcc
+id=0x6a30c127
+name_len=6
+version=3.4
+homepage=http://distcc.org/
+description=Distributed C/C++ compiler
+source=termux/termux-packages
+path=packages/distcc/build.sh

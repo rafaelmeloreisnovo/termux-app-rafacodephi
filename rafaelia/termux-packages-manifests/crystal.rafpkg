@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=crystal
+id=0x4594fdc9
+name_len=7
+version=1.19.1
+homepage=https://crystal-lang.org
+description=Fast and statically typed, compiled language with Ruby-like syntax
+source=termux/termux-packages
+path=packages/crystal/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hexedit
+id=0x743d6fe6
+name_len=7
+version=1.6
+homepage=http://rigaux.org/hexedit.html
+description=view and edit files in hexadecimal or in ASCII
+source=termux/termux-packages
+path=packages/hexedit/build.sh

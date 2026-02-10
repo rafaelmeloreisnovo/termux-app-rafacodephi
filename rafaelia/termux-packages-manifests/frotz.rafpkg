@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=frotz
+id=0xd76ac190
+name_len=5
+version=2.55
+homepage=https://gitlab.com/DavidGriffith/frotz
+description=Interpreter for Infocom and other Z-machine interactive fiction (IF) games
+source=termux/termux-packages
+path=packages/frotz/build.sh

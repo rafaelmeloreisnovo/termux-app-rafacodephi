@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jless
+id=0x53699780
+name_len=5
+version=0.9.0
+homepage=https://jless.io
+description=A command-line JSON viewer designed for reading, exploring, and searching through JSON data.
+source=termux/termux-packages
+path=packages/jless/build.sh

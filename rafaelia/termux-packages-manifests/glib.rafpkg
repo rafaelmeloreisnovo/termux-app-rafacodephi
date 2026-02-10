@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=glib
+id=0x7f475355
+name_len=4
+version=2.86.3
+homepage=https://developer.gnome.org/glib/
+description=Library providing core building blocks for libraries and applications written in C
+source=termux/termux-packages
+path=packages/glib/build.sh

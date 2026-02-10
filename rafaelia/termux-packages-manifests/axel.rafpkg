@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=axel
+id=0x74364655
+name_len=4
+version=2.17.14
+homepage=https://github.com/axel-download-accelerator/axel
+description=light command line download accelerator
+source=termux/termux-packages
+path=packages/axel/build.sh

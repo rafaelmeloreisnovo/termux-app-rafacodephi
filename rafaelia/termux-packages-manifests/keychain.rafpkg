@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=keychain
+id=0xafa1de55
+name_len=8
+version=2.9.8
+homepage=https://www.funtoo.org/Keychain
+description=keychain ssh-agent front-end
+source=termux/termux-packages
+path=packages/keychain/build.sh

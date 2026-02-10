@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=curseofwar
+id=0x2cac0652
+name_len=10
+version=1.3.0
+homepage=http://a-nikolaev.github.io/curseofwar/
+description=Fast-paced action strategy game focusing on high-level strategic planning
+source=termux/termux-packages
+path=packages/curseofwar/build.sh

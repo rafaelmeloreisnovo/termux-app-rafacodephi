@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gping
+id=0x07460d5e
+name_len=5
+version=1.20.1
+homepage=https://github.com/orf/gping
+description=Ping, but with a graph
+source=termux/termux-packages
+path=packages/gping/build.sh

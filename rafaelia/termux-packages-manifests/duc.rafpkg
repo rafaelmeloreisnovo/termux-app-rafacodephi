@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=duc
+id=0xe23109c3
+name_len=3
+version=1.4.6
+homepage=http://duc.zevv.nl/
+description=High-performance disk usage analyzer
+source=termux/termux-packages
+path=packages/duc/build.sh

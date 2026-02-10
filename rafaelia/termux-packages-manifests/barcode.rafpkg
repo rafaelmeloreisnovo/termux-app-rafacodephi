@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=barcode
+id=0x2811fd57
+name_len=7
+version=0.99
+homepage=https://www.gnu.org/software/barcode/
+description=Tool to convert text strings to printed bars
+source=termux/termux-packages
+path=packages/barcode/build.sh

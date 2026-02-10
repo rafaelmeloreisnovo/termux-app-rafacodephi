@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jove
+id=0xbdd537df
+name_len=4
+version=4.17.5.3
+homepage=https://directory.fsf.org/wiki/Jove
+description=Jove is a compact, powerful, Emacs-style text-editor.
+source=termux/termux-packages
+path=packages/jove/build.sh

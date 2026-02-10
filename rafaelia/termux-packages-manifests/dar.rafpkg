@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dar
+id=0xd94f10ac
+name_len=3
+version=2.8.3
+homepage=http://dar.linux.free.fr/
+description=A full featured command-line backup tool, short for Disk ARchive
+source=termux/termux-packages
+path=packages/dar/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fdroidcl
+id=0x47b694e2
+name_len=8
+version=0.8.1
+homepage=https://github.com/mvdan/fdroidcl
+description=F-Droid client
+source=termux/termux-packages
+path=packages/fdroidcl/build.sh

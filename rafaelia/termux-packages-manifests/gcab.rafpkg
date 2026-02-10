@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gcab
+id=0x6435ac08
+name_len=4
+version=1.6
+homepage=https://gitlab.gnome.org/GNOME/gcab
+description=GObject library to create cabinet files
+source=termux/termux-packages
+path=packages/gcab/build.sh

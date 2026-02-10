@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gpac
+id=0xa12b8c8e
+name_len=4
+version=2.4.0
+homepage=https://gpac.wp.imt.fr/
+description=An open-source multimedia framework focused on modularity and standards compliance
+source=termux/termux-packages
+path=packages/gpac/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jcal
+id=0xe27da8d7
+name_len=4
+version=0.5.1
+homepage=http://nongnu.org/jcal
+description=UNIX-cal-like tool to display Jalali (Persian/Iranian) calendar
+source=termux/termux-packages
+path=packages/jcal/build.sh

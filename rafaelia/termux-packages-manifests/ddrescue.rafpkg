@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ddrescue
+id=0x0f96091c
+name_len=8
+version=1.30
+homepage=https://www.gnu.org/software/ddrescue/
+description=GNU data recovery tool
+source=termux/termux-packages
+path=packages/ddrescue/build.sh

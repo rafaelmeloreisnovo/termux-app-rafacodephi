@@ -103,8 +103,8 @@ static const char *g_tool_names[RAF_TOOLSET_MAX] = {
   "libc++",
   "libc++-dev",
   "libandroid-support",
-  "wine",
-  "libreoffice"
+  "debootstrap",
+  "qemu-user-static"
 };
 
 static const u16 g_tool_lens[RAF_TOOLSET_MAX] = {
@@ -117,7 +117,7 @@ static const u16 g_tool_lens[RAF_TOOLSET_MAX] = {
   6u, 13u, 7u, 7u, 7u, 7u, 7u, 8u, 12u, 9u,
   9u, 8u, 8u, 7u, 4u, 8u, 10u, 8u, 5u, 7u,
   6u, 11u, 3u, 10u, 11u, 10u, 18u, 15u, 13u, 14u,
-  5u, 12u, 3u, 11u, 4u, 6u, 10u, 18u, 4u, 11u
+  5u, 12u, 3u, 11u, 4u, 6u, 10u, 18u, 11u, 16u
 };
 
 static const u16 g_tool_flags[RAF_TOOLSET_MAX] = {
@@ -219,8 +219,8 @@ static const u16 g_tool_flags[RAF_TOOLSET_MAX] = {
   RAF_TOOL_FLAG_LIB,
   RAF_TOOL_FLAG_LIB,
   RAF_TOOL_FLAG_LIB,
-  RAF_TOOL_FLAG_APP,
-  RAF_TOOL_FLAG_APP
+  RAF_TOOL_FLAG_SYSTEM,
+  RAF_TOOL_FLAG_SYSTEM
 };
 
 static u32 g_tool_ids[RAF_TOOLSET_MAX];
@@ -252,26 +252,31 @@ void RmR_toolset_init(void){
 }
 
 u32 RmR_toolset_count(void){
+  RmR_toolset_init();
   return RAF_TOOLSET_MAX;
 }
 
 const char *RmR_toolset_name_at(u32 idx, u32 *len){
+  RmR_toolset_init();
   if(idx >= RAF_TOOLSET_MAX) return (const char*)0;
   if(len) *len = (u32)g_tool_lens[idx];
   return g_tool_names[idx];
 }
 
 u16 RmR_toolset_flags_at(u32 idx){
+  RmR_toolset_init();
   if(idx >= RAF_TOOLSET_MAX) return 0u;
   return g_tool_flags[idx];
 }
 
 u32 RmR_toolset_id_at(u32 idx){
+  RmR_toolset_init();
   if(idx >= RAF_TOOLSET_MAX) return 0u;
   return g_tool_ids[idx];
 }
 
 u32 RmR_toolset_find(const u8 *name, u32 len, u32 *out_idx){
+  RmR_toolset_init();
   if(!name || len == 0u) return 0u;
   for(u32 i=0u;i<RAF_TOOLSET_MAX;i++){
     if(RmR_str_eq_n(name, len, (const u8*)g_tool_names[i], (u32)g_tool_lens[i])){

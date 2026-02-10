@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bitlbee
+id=0xbdef1f40
+name_len=7
+version=3.6-1
+homepage=https://www.bitlbee.org/
+description=An IRC to other chat networks gateway
+source=termux/termux-packages
+path=packages/bitlbee/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=frei0r-plugins
+id=0x92821340
+name_len=14
+version=2.5.1
+homepage=https://www.dyne.org/software/frei0r/
+description=Minimalistic plugin API for video effects
+source=termux/termux-packages
+path=packages/frei0r-plugins/build.sh

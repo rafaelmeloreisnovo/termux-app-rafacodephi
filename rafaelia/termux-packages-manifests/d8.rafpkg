@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=d8
+id=0x911d2211
+name_len=2
+version=33.0.1
+homepage=https://developer.android.com/studio/command-line/d8
+description=DEX bytecode compiler from Android SDK
+source=termux/termux-packages
+path=packages/d8/build.sh

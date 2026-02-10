@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=autojump
+id=0xb26875de
+name_len=8
+version=22.5.3
+homepage=https://github.com/wting/autojump
+description=A faster way to navigate your filesystem
+source=termux/termux-packages
+path=packages/autojump/build.sh

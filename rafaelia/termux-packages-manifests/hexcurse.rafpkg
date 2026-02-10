@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hexcurse
+id=0x45ac18dc
+name_len=8
+version=1.60.0
+homepage=https://github.com/LonnyGomes/hexcurse
+description=Console hexeditor
+source=termux/termux-packages
+path=packages/hexcurse/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hunspell-nl
+id=0xc5ab290f
+name_len=11
+version=2013.07.22
+homepage=https://www.opentaal.org/
+description=Dutch dictionary for hunspell
+source=termux/termux-packages
+path=packages/hunspell-nl/build.sh

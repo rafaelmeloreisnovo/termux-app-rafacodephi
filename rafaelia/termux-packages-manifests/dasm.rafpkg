@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dasm
+id=0xfc79d716
+name_len=4
+version=2.20.14.1
+homepage=https://dasm-dillon.sourceforge.io/
+description=Macro assembler with support for several 8-bit microprocessors
+source=termux/termux-packages
+path=packages/dasm/build.sh

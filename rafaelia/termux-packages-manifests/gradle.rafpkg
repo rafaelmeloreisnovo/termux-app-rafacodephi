@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gradle
+id=0xa7ce4d7e
+name_len=6
+version=1:9.3.1
+homepage=https://gradle.org/
+description=Powerful build system for the JVM
+source=termux/termux-packages
+path=packages/gradle/build.sh

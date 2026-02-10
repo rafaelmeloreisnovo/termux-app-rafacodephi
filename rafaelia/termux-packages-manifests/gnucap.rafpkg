@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gnucap
+id=0x55d4deb5
+name_len=6
+version=20210107
+homepage=https://www.gnu.org/software/gnucap/gnucap.html
+description=The Gnu Circuit Analysis Package
+source=termux/termux-packages
+path=packages/gnucap/build.sh

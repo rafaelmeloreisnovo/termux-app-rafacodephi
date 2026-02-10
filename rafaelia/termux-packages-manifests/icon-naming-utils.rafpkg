@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=icon-naming-utils
+id=0x6e7413ab
+name_len=17
+version=0.8.90
+homepage=http://tango.freedesktop.org/
+description=Maps the new names of icons for Tango to the legacy names used by the GNOME and KDE desktops
+source=termux/termux-packages
+path=packages/icon-naming-utils/build.sh

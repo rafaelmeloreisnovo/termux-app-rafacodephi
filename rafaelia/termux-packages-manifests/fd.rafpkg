@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fd
+id=0x6922f347
+name_len=2
+version=10.3.0
+homepage=https://github.com/sharkdp/fd
+description=Simple, fast and user-friendly alternative to find
+source=termux/termux-packages
+path=packages/fd/build.sh

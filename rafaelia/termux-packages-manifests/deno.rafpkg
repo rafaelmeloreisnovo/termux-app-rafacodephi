@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=deno
+id=0x8ef64711
+name_len=4
+version=1:2.6.8
+homepage=https://deno.land/
+description=A modern runtime for JavaScript and TypeScript
+source=termux/termux-packages
+path=packages/deno/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dx
+id=0x511cbd51
+name_len=2
+version=1:1.16
+homepage=http://developer.android.com/tools/help/index.html
+description=Command which takes in Java class files and converts them to format executable by Dalvik VM
+source=termux/termux-packages
+path=packages/dx/build.sh

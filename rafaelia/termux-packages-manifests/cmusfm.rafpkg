@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cmusfm
+id=0xf3134d78
+name_len=6
+version=0.5.0
+homepage=https://github.com/Arkq/cmusfm
+description=Last.fm standalone scrobbler for the cmus music player
+source=termux/termux-packages
+path=packages/cmusfm/build.sh

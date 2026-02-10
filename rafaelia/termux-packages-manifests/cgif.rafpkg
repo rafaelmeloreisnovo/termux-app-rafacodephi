@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cgif
+id=0x8113397c
+name_len=4
+version=0.5.1
+homepage=https://github.com/dloebl/cgif
+description=A fast and lightweight GIF encoding library
+source=termux/termux-packages
+path=packages/cgif/build.sh

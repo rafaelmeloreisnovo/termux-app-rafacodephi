@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=keybase
+id=0x7f6cc479
+name_len=7
+version=6.5.2
+homepage=https://keybase.io
+description=Key directory that maps social media identities to encryption keys
+source=termux/termux-packages
+path=packages/keybase/build.sh

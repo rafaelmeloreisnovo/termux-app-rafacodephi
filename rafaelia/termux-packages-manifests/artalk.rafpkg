@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=artalk
+id=0x73fdf8a4
+name_len=6
+version=2.9.1
+homepage=https://artalk.js.org/
+description=A self-hosted comment system
+source=termux/termux-packages
+path=packages/artalk/build.sh

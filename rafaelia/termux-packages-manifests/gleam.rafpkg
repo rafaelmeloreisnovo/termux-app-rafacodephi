@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gleam
+id=0x27006997
+name_len=5
+version=1.14.0
+homepage=https://gleam.run
+description=A friendly language for building type-safe, scalable systems!
+source=termux/termux-packages
+path=packages/gleam/build.sh

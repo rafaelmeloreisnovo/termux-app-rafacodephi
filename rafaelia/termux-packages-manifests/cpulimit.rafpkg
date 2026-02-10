@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cpulimit
+id=0x33cf95f8
+name_len=8
+version=0.2
+homepage=https://github.com/opsengine/cpulimit
+description=CPU usage limiter
+source=termux/termux-packages
+path=packages/cpulimit/build.sh

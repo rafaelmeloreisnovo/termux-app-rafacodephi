@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=aichat
+id=0xe48a2881
+name_len=6
+version=0.30.0
+homepage=https://github.com/sigoden/aichat
+description=A powerful chatgpt cli
+source=termux/termux-packages
+path=packages/aichat/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=blueprint-compiler
+id=0xca1ed16a
+name_len=18
+version=0.19.0
+homepage=https://gnome.pages.gitlab.gnome.org/blueprint-compiler/
+description=Markup language for GTK user interfaces
+source=termux/termux-packages
+path=packages/blueprint-compiler/build.sh

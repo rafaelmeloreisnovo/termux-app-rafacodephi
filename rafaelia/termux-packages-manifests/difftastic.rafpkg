@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=difftastic
+id=0x10a2ee6a
+name_len=10
+version=0.67.0
+homepage=https://github.com/Wilfred/difftastic
+description=difft: A structural diff that understands syntax
+source=termux/termux-packages
+path=packages/difftastic/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=lastpass-cli
+id=0x551ec567
+name_len=12
+version=1.6.1
+homepage=https://lastpass.com/
+description=LastPass command line interface tool
+source=termux/termux-packages
+path=packages/lastpass-cli/build.sh

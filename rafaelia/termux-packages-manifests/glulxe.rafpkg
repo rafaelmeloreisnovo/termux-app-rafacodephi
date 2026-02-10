@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=glulxe
+id=0x9a324178
+name_len=6
+version=(0.6.1
+homepage=https://www.eblong.com/zarf/glulx/
+description=Interpreter for the Glulx portable VM for interactive fiction (IF) games
+source=termux/termux-packages
+path=packages/glulxe/build.sh

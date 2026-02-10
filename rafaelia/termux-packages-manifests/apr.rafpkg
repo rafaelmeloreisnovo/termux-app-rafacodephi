@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=apr
+id=0x216a8652
+name_len=3
+version=1.7.6
+homepage=https://apr.apache.org/
+description=Apache Portable Runtime Library
+source=termux/termux-packages
+path=packages/apr/build.sh

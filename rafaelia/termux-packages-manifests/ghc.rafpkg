@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ghc
+id=0x41285feb
+name_len=3
+version=9.12.2
+homepage=https://www.haskell.org/ghc/
+description=The Glasgow Haskell Compiler
+source=termux/termux-packages
+path=packages/ghc/build.sh

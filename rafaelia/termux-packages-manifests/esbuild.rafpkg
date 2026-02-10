@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=esbuild
+id=0xc81d5097
+name_len=7
+version=0.27.3
+homepage=https://esbuild.github.io/
+description=An extremely fast JavaScript bundler
+source=termux/termux-packages
+path=packages/esbuild/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jp2a
+id=0xd55ec5da
+name_len=4
+version=1.3.3
+homepage=https://github.com/Talinx/jp2a/
+description=A simple JPEG to ASCII converter
+source=termux/termux-packages
+path=packages/jp2a/build.sh

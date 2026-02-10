@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=groff
+id=0x7f98fd41
+name_len=5
+version=1.23.0
+homepage=https://www.gnu.org/software/groff/
+description=typesetting system that reads plain text mixed with formatting commands and produces formatted output
+source=termux/termux-packages
+path=packages/groff/build.sh

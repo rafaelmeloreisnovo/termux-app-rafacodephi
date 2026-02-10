@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=k2pdfopt
+id=0x0774e32f
+name_len=8
+version=2.55
+homepage=https://www.willus.com/k2pdfopt/
+description=A tool that optimizes PDF files for viewing on mobile readers
+source=termux/termux-packages
+path=packages/k2pdfopt/build.sh

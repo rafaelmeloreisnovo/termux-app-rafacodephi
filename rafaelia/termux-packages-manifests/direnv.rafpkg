@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=direnv
+id=0x6405cb93
+name_len=6
+version=2.37.1
+homepage=https://github.com/direnv/direnv
+description=Environment switcher for shell
+source=termux/termux-packages
+path=packages/direnv/build.sh

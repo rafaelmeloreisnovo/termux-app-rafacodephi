@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gst-python
+id=0x893be096
+name_len=10
+version=1.28.0
+homepage=https://gstreamer.freedesktop.org/
+description=Python bindings for GStreamer
+source=termux/termux-packages
+path=packages/gst-python/build.sh

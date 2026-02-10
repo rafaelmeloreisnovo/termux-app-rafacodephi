@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gron
+id=0xa5828da5
+name_len=4
+version=0.7.1
+homepage=https://github.com/tomnomnom/gron
+description=Transforms JSON into discrete assignments
+source=termux/termux-packages
+path=packages/gron/build.sh

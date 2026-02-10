@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=assimp
+id=0x8bbcfcd4
+name_len=6
+version=6.0.4
+homepage=https://assimp.sourceforge.net/index.html
+description=Library to import various well-known 3D model formats in an uniform manner
+source=termux/termux-packages
+path=packages/assimp/build.sh

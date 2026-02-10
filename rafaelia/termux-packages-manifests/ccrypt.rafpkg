@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ccrypt
+id=0xefc435ea
+name_len=6
+version=1.11
+homepage=https://ccrypt.sourceforge.net/
+description=Secure encryption and decryption of files and streams utility
+source=termux/termux-packages
+path=packages/ccrypt/build.sh

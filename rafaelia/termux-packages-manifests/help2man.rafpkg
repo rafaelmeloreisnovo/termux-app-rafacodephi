@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=help2man
+id=0xb6bfc0ec
+name_len=8
+version=1.49.3
+homepage=https://www.gnu.org/software/help2man/
+description=Conversion tool to create man files
+source=termux/termux-packages
+path=packages/help2man/build.sh

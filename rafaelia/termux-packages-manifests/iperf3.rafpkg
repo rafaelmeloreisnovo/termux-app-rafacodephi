@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=iperf3
+id=0xc345c00c
+name_len=6
+version=3.20
+homepage=https://github.com/esnet/iperf
+description=TCP, UDP, and SCTP network bandwidth measurement tool
+source=termux/termux-packages
+path=packages/iperf3/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=apkeep
+id=0xb43188d5
+name_len=6
+version=0.18.0
+homepage=https://github.com/EFForg/apkeep
+description=A command-line tool for downloading APK files from various sources
+source=termux/termux-packages
+path=packages/apkeep/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hunspell-en-us
+id=0x2b6d4271
+name_len=14
+version=20240129
+homepage=https://hunspell.github.io
+description=American english dictionary for hunspell
+source=termux/termux-packages
+path=packages/hunspell-en-us/build.sh

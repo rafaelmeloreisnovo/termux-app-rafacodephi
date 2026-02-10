@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gobject-introspection
+id=0xa16cd85f
+name_len=21
+version=1.86.0
+homepage=https://gi.readthedocs.io/
+description=Uniform machine readable API
+source=termux/termux-packages
+path=packages/gobject-introspection/build.sh

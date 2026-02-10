@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=kakoune
+id=0x4dbaafe3
+name_len=7
+version=2025.06.03
+homepage=https://kakoune.org/
+description=Code editor heavily inspired by Vim
+source=termux/termux-packages
+path=packages/kakoune/build.sh

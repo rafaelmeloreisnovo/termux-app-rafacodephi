@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=lexter
+id=0x8bd20271
+name_len=6
+version=1.0.3
+homepage=https://www.kyne.au/~mark/software/lexter.php
+description=A real-time word puzzle for text terminals
+source=termux/termux-packages
+path=packages/lexter/build.sh

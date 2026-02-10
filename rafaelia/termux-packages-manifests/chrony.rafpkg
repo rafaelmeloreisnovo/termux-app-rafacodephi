@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=chrony
+id=0x2c1fa60c
+name_len=6
+version=4.8
+homepage=https://chrony-project.org/
+description=chrony is an implementation of the Network Time Protocol (NTP)
+source=termux/termux-packages
+path=packages/chrony/build.sh

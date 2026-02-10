@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cups-pdf
+id=0xaf89148b
+name_len=8
+version=3.0.1
+homepage=https://www.cups-pdf.de/
+description=CUPS PDF backend
+source=termux/termux-packages
+path=packages/cups-pdf/build.sh

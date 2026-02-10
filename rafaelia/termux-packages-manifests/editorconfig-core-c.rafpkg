@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=editorconfig-core-c
+id=0x57037622
+name_len=19
+version=0.12.10
+homepage=https://editorconfig.org/
+description=EditorConfig core code written in C (for use by plugins supporting EditorConfig parsing)
+source=termux/termux-packages
+path=packages/editorconfig-core-c/build.sh

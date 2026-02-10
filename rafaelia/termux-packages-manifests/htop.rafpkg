@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=htop
+id=0xbf79ff36
+name_len=4
+version=3.4.1
+homepage=https://htop.dev/
+description=Interactive process viewer for Linux
+source=termux/termux-packages
+path=packages/htop/build.sh

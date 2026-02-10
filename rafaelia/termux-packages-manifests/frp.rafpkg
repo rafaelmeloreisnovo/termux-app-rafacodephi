@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=frp
+id=0xacd7ad13
+name_len=3
+version=0.67.0
+homepage=https://github.com/fatedier/frp
+description=A fast reverse proxy to expose a local server behind a NAT or firewall to the internet
+source=termux/termux-packages
+path=packages/frp/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=b3sum
+id=0xafc06ebd
+name_len=5
+version=1.8.3
+homepage=https://github.com/BLAKE3-team/BLAKE3/tree/master/b3sum
+description=A command line utility for calculating BLAKE3 hashes, similar to Coreutils tools like b2sum or md5sum
+source=termux/termux-packages
+path=packages/b3sum/build.sh

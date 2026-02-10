@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=amfora
+id=0xa6fe3f35
+name_len=6
+version=1.11.0
+homepage=https://github.com/makew0rld/amfora
+description=Aims to be the best looking Gemini client
+source=termux/termux-packages
+path=packages/amfora/build.sh

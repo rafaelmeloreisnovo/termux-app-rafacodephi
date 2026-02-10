@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=doctest
+id=0xc74c21d5
+name_len=7
+version=2.4.12
+homepage=https://github.com/doctest/doctest
+description=The fastest feature-rich C++11/14/17/20 single-header testing framework
+source=termux/termux-packages
+path=packages/doctest/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=aspell-es
+id=0x1b3392cd
+name_len=9
+version=2:1.11-2
+homepage=http://aspell.net/
+description=Spanish dictionary for aspell
+source=termux/termux-packages
+path=packages/aspell-es/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=irssi
+id=0xe589a91b
+name_len=5
+version=1.4.5
+homepage=https://irssi.org/
+description=Terminal based IRC client
+source=termux/termux-packages
+path=packages/irssi/build.sh

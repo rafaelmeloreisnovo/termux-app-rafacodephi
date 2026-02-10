@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=json-c
+id=0x27903beb
+name_len=6
+version=0.18
+homepage=https://github.com/json-c/json-c/wiki
+description=A JSON implementation in C
+source=termux/termux-packages
+path=packages/json-c/build.sh

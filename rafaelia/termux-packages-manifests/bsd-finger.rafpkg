@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bsd-finger
+id=0x6e14f2e4
+name_len=10
+version=0.17
+homepage=https://packages.debian.org/sid/source/bsd-finger
+description=User information lookup program
+source=termux/termux-packages
+path=packages/bsd-finger/build.sh

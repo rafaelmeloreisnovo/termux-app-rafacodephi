@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=choose
+id=0x46ff9c40
+name_len=6
+version=1.3.7
+homepage=https://github.com/theryangeary/choose
+description=A human-friendly and fast alternative to cut and (sometimes) awk
+source=termux/termux-packages
+path=packages/choose/build.sh

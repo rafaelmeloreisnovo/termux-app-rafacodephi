@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=geographiclib
+id=0x1f36fbfd
+name_len=13
+version=2.7
+homepage=https://geographiclib.sourceforge.io
+description=Utilities and C++ library to solve some geodesic problems
+source=termux/termux-packages
+path=packages/geographiclib/build.sh

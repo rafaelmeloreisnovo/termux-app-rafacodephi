@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=alembic
+id=0x2a178da4
+name_len=7
+version=1.8.10
+homepage=https://alembic.io
+description=A framework for sharing scene data that includes a C++ lib, a file format and client plugin
+source=termux/termux-packages
+path=packages/alembic/build.sh

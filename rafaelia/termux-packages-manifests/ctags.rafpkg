@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ctags
+id=0xcb0129db
+name_len=5
+version=2:6.2.1
+homepage=https://ctags.io/
+description=Universal ctags: Source code index builder
+source=termux/termux-packages
+path=packages/ctags/build.sh

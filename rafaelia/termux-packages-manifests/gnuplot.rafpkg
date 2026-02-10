@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gnuplot
+id=0x8784f548
+name_len=7
+version=6.0.4
+homepage=http://gnuplot.info/
+description=Command-line driven graphing utility
+source=termux/termux-packages
+path=packages/gnuplot/build.sh

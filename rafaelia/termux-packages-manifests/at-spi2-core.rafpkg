@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=at-spi2-core
+id=0x6368ee81
+name_len=12
+version=2.58.3
+homepage=https://wiki.gnome.org/Accessibility
+description=Assistive Technology Service Provider Interface (AT-SPI)
+source=termux/termux-packages
+path=packages/at-spi2-core/build.sh

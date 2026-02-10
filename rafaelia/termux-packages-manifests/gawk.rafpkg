@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gawk
+id=0x40636bc7
+name_len=4
+version=5.3.1
+homepage=https://www.gnu.org/software/gawk/
+description=Programming language designed for text processing
+source=termux/termux-packages
+path=packages/gawk/build.sh

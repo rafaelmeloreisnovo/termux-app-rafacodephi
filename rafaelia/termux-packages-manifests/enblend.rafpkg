@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=enblend
+id=0x318f6211
+name_len=7
+version=4.2.0p20161007
+homepage=https://enblend.sourceforge.net/
+description=A tool for compositing images using a Burt&Adelson multiresolution spline
+source=termux/termux-packages
+path=packages/enblend/build.sh

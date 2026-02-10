@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=eja
+id=0x8f84228d
+name_len=3
+version=18.4.19
+homepage=https://github.com/eja/eja
+description=eja micro web server
+source=termux/termux-packages
+path=packages/eja/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=attr
+id=0x10a838b2
+name_len=4
+version=2.5.2
+homepage=http://savannah.nongnu.org/projects/attr/
+description=Utilities for manipulating filesystem extended attributes
+source=termux/termux-packages
+path=packages/attr/build.sh

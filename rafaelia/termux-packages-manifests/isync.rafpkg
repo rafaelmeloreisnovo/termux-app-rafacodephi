@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=isync
+id=0x7ddf1a87
+name_len=5
+version=1.5.1
+homepage=http://isync.sourceforge.net
+description=IMAP and MailDir mailbox synchronizer
+source=termux/termux-packages
+path=packages/isync/build.sh

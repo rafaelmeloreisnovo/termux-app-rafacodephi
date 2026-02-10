@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=id3lib
+id=0x83600560
+name_len=6
+version=3.8.3
+homepage=https://id3lib.sourceforge.net/
+description=A software library for manipulating ID3v1/v1.1 and ID3v2 tags
+source=termux/termux-packages
+path=packages/id3lib/build.sh

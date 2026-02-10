@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=crowbook
+id=0x3f8170d3
+name_len=8
+version=0.17.0
+homepage=https://github.com/crowdagger/crowbook
+description=Allows you to write a book in Markdown without worrying about formatting or typography
+source=termux/termux-packages
+path=packages/crowbook/build.sh

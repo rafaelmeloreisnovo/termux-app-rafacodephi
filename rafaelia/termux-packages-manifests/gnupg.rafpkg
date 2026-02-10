@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gnupg
+id=0x80364986
+name_len=5
+version=2.5.17
+homepage=https://www.gnupg.org/
+description=Implementation of the OpenPGP standard for encrypting and signing data and communication
+source=termux/termux-packages
+path=packages/gnupg/build.sh

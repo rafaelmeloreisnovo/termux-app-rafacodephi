@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=csh
+id=0x0e474901
+name_len=3
+version=20110502
+homepage=https://packages.debian.org/sid/csh
+description=C Shell with process control from 3BSD
+source=termux/termux-packages
+path=packages/csh/build.sh

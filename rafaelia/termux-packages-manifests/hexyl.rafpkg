@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hexyl
+id=0x33648f3f
+name_len=5
+version=0.16.0
+homepage=https://github.com/sharkdp/hexyl
+description=A command-line hex viewer
+source=termux/termux-packages
+path=packages/hexyl/build.sh

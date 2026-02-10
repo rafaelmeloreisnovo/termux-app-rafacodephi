@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=git-extras
+id=0x675c9e19
+name_len=10
+version=7.4.0
+homepage=https://github.com/tj/git-extras
+description=Little git extras.
+source=termux/termux-packages
+path=packages/git-extras/build.sh

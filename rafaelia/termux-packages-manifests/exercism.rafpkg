@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=exercism
+id=0xed670d63
+name_len=8
+version=3.5.8
+homepage=https://github.com/exercism/cli/
+description=A Go based command line tool for exercism.io
+source=termux/termux-packages
+path=packages/exercism/build.sh

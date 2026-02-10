@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=aubio
+id=0x72f918bb
+name_len=5
+version=0.4.9
+homepage=https://aubio.org/
+description=A library to label music and sounds
+source=termux/termux-packages
+path=packages/aubio/build.sh

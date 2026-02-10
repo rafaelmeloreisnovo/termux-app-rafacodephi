@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fsmon
+id=0x34c23ff4
+name_len=5
+version=1.8.8
+homepage=https://github.com/nowsecure/fsmon
+description=Filesystem monitor with fanotify and inotify backends
+source=termux/termux-packages
+path=packages/fsmon/build.sh

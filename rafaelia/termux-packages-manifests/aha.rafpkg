@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=aha
+id=0x202fed97
+name_len=3
+version=0.5.1
+homepage=https://github.com/theZiz/aha
+description=Converts ANSI escape sequences of a unix terminal to HTML code
+source=termux/termux-packages
+path=packages/aha/build.sh

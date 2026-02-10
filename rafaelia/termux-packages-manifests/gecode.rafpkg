@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gecode
+id=0x58aeb7f0
+name_len=6
+version=6.2.0
+homepage=https://github.com/Gecode/gecode
+description=Generic Constraint Development Environment
+source=termux/termux-packages
+path=packages/gecode/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=kiwix-tools
+id=0xc7d65b25
+name_len=11
+version=3.8.1
+homepage=https://github.com/kiwix/kiwix-tools
+description=A collection of Kiwix related command line tools
+source=termux/termux-packages
+path=packages/kiwix-tools/build.sh

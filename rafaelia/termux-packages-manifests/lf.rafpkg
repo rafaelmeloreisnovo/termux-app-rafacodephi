@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=lf
+id=0x4b31ce97
+name_len=2
+version=41
+homepage=https://github.com/gokcehan/lf
+description=Terminal file manager
+source=termux/termux-packages
+path=packages/lf/build.sh

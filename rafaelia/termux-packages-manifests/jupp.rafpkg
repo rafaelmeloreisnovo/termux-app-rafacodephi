@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jupp
+id=0x991ef258
+name_len=4
+version=3.1jupp41
+homepage=http://www.mirbsd.org/jupp.htm
+description=User friendly full screen text editor
+source=termux/termux-packages
+path=packages/jupp/build.sh

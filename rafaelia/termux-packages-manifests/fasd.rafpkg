@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fasd
+id=0xf293e97f
+name_len=4
+version=2.0.0
+homepage=https://github.com/whjvenyl/fasd
+description=To fastly access files and folders
+source=termux/termux-packages
+path=packages/fasd/build.sh

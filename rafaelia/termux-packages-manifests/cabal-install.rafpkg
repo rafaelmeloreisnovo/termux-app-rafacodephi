@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cabal-install
+id=0x655c9c1a
+name_len=13
+version=3.14.1.1
+homepage=https://www.haskell.org/cabal/
+description=The command-line interface for Haskell-Cabal and Hackage
+source=termux/termux-packages
+path=packages/cabal-install/build.sh

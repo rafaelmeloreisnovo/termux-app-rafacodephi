@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=faust
+id=0xbd1dbfd8
+name_len=5
+version=2.83.1
+homepage=https://github.com/grame-cncm/faust
+description=A functional programming language for signal processing and sound synthesis
+source=termux/termux-packages
+path=packages/faust/build.sh

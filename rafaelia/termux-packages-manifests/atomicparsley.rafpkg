@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=atomicparsley
+id=0x65b13e8e
+name_len=13
+version=1:20240608.083822.1ed9031
+homepage=https://github.com/wez/atomicparsley
+description=Read, parse and set metadata of MPEG-4 and 3gp files
+source=termux/termux-packages
+path=packages/atomicparsley/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ldd
+id=0x5e6d589b
+name_len=3
+version=0.3
+homepage=https://github.com/termux/termux-packages
+description=Fake ldd command
+source=termux/termux-packages
+path=packages/ldd/build.sh

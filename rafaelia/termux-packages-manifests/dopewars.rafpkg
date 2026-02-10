@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dopewars
+id=0xf417a23c
+name_len=8
+version=1.6.2
+homepage=https://dopewars.sourceforge.io
+description=Drug-dealing game set in streets of New York City
+source=termux/termux-packages
+path=packages/dopewars/build.sh

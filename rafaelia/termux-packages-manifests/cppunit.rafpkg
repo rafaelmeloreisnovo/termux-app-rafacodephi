@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cppunit
+id=0xc54a3b44
+name_len=7
+version=1.15.1
+homepage=https://www.freedesktop.org/wiki/Software/cppunit
+description=A C++ unit testing framework
+source=termux/termux-packages
+path=packages/cppunit/build.sh

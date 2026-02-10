@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=buf
+id=0x72d58be2
+name_len=3
+version=1.65.0
+homepage=https://buf.build
+description=A new way of working with Protocol Buffers
+source=termux/termux-packages
+path=packages/buf/build.sh

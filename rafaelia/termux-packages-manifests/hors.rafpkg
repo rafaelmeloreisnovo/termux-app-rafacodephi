@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hors
+id=0xc4fc87e7
+name_len=4
+version=0.8.2
+homepage=https://github.com/WindSoilder/hors
+description=Instant coding answers via the command line (howdoi in rust)
+source=termux/termux-packages
+path=packages/hors/build.sh

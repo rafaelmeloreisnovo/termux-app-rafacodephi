@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hunspell
+id=0x66f62612
+name_len=8
+version=1.7.2
+homepage=https://hunspell.github.io
+description=Spell checker
+source=termux/termux-packages
+path=packages/hunspell/build.sh

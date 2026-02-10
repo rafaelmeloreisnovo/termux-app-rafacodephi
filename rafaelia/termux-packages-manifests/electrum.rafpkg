@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=electrum
+id=0xf7bde250
+name_len=8
+version=4.5.8
+homepage=https://electrum.org
+description=Electrum is a lightweight Bitcoin wallet
+source=termux/termux-packages
+path=packages/electrum/build.sh

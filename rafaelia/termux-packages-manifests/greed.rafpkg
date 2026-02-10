@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=greed
+id=0x0b1dfc7a
+name_len=5
+version=4.3
+homepage=http://www.catb.org/~esr/greed/
+description=Game where you try to eat as much as possible of the board before munching yourself into a corner
+source=termux/termux-packages
+path=packages/greed/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=byacc
+id=0x348a6fc5
+name_len=5
+version=20241231
+homepage=https://invisible-island.net/byacc/
+description=byacc is generally conceded to be the best yacc variant available
+source=termux/termux-packages
+path=packages/byacc/build.sh

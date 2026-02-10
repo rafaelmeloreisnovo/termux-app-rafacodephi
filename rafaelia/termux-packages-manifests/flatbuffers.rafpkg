@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=flatbuffers
+id=0x00afc975
+name_len=11
+version=25.12.19-2026-02-06-03fffb2
+homepage=https://github.com/google/flatbuffers
+description=Memory Efficient Serialization Library
+source=termux/termux-packages
+path=packages/flatbuffers/build.sh

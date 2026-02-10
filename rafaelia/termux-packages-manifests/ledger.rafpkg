@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ledger
+id=0xee7c1c8c
+name_len=6
+version=3.4.1
+homepage=https://www.ledger-cli.org
+description=Powerful, double-entry accounting system
+source=termux/termux-packages
+path=packages/ledger/build.sh

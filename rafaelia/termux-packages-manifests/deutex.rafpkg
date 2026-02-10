@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=deutex
+id=0x1c30b14e
+name_len=6
+version=5.2.3
+homepage=https://github.com/Doom-Utils/deutex/
+description=WAD composer for Doom, Heretic, Hexen, and Strife
+source=termux/termux-packages
+path=packages/deutex/build.sh

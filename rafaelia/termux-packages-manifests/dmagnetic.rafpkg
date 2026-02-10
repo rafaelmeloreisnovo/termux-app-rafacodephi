@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dmagnetic
+id=0xa2f82075
+name_len=9
+version=0.37
+homepage=https://dettus.net/dMagnetic
+description=Interpreter for classic text adventure games and interactive fiction
+source=termux/termux-packages
+path=packages/dmagnetic/build.sh

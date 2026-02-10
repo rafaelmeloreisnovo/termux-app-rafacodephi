@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=apache-orc
+id=0xbd4680cc
+name_len=10
+version=2.2.2
+homepage=https://orc.apache.org/
+description=Columnar storage for Hadoop workloads
+source=termux/termux-packages
+path=packages/apache-orc/build.sh

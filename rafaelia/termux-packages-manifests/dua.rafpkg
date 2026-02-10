@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dua
+id=0xe4310ce9
+name_len=3
+version=2.33.0
+homepage=https://github.com/Byron/dua-cli
+description=View disk space usage and delete unwanted data, fast
+source=termux/termux-packages
+path=packages/dua/build.sh

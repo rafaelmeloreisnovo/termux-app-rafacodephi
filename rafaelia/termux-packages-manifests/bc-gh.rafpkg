@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bc-gh
+id=0x05d1ea82
+name_len=5
+version=7.0.3
+homepage=https://git.gavinhoward.com/gavin/bc
+description=Unix dc and POSIX bc with GNU and BSD extensions
+source=termux/termux-packages
+path=packages/bc-gh/build.sh

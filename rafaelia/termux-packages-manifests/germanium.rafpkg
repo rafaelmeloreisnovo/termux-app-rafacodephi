@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=germanium
+id=0xcb085d24
+name_len=9
+version=1.2.3
+homepage=https://github.com/matsuyoshi30/germanium
+description=Generate image from source code
+source=termux/termux-packages
+path=packages/germanium/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cups
+id=0x91b49f34
+name_len=4
+version=2.4.16
+homepage=https://www.cups.org/
+description=Common UNIX Printing System
+source=termux/termux-packages
+path=packages/cups/build.sh

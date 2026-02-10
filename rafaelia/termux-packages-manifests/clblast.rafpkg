@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=clblast
+id=0xd4d2bd88
+name_len=7
+version=1.6.3
+homepage=https://github.com/CNugteren/CLBlast
+description=Tuned OpenCL BLAS
+source=termux/termux-packages
+path=packages/clblast/build.sh

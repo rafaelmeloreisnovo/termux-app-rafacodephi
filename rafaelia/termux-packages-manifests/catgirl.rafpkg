@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=catgirl
+id=0xb31d0b15
+name_len=7
+version=2.2a
+homepage=https://git.causal.agency/catgirl
+description=A TLS-only terminal IRC client
+source=termux/termux-packages
+path=packages/catgirl/build.sh

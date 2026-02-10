@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=grap
+id=0xb39aa895
+name_len=4
+version=1.49
+homepage=https://www.lunabase.org/~faber/Vault/software/grap/
+description=Language for typesetting graphs
+source=termux/termux-packages
+path=packages/grap/build.sh

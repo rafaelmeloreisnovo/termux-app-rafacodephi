@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=biboumi
+id=0x90e3bd58
+name_len=7
+version=9.0
+homepage=https://biboumi.louiz.org/
+description=An XMPP gateway that connects to IRC servers and translates between the two protocols
+source=termux/termux-packages
+path=packages/biboumi/build.sh

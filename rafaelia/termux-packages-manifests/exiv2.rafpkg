@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=exiv2
+id=0x733be097
+name_len=5
+version=2:0.28.7
+homepage=https://exiv2.org/
+description=Exif, Iptc and XMP metadata manipulation library and tools
+source=termux/termux-packages
+path=packages/exiv2/build.sh

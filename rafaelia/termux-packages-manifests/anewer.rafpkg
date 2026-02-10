@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=anewer
+id=0xc24f769d
+name_len=6
+version=0.1.6
+homepage=https://github.com/ysf/anewer
+description=Append lines from stdin to a file if these lines do not present in that file (aHash-based uniq)
+source=termux/termux-packages
+path=packages/anewer/build.sh

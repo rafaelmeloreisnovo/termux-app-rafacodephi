@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cmocka
+id=0xef70a987
+name_len=6
+version=2.0.2
+homepage=https://cmocka.org/
+description=cmocka is an unit testing framework for C
+source=termux/termux-packages
+path=packages/cmocka/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bison
+id=0x900c5a40
+name_len=5
+version=3.8.2
+homepage=https://www.gnu.org/software/bison/
+description=General-purpose parser generator
+source=termux/termux-packages
+path=packages/bison/build.sh

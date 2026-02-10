@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=imgflo
+id=0x0ba298e3
+name_len=6
+version=0.4.2
+homepage=https://github.com/imgflo/imgflo
+description=HTTP image processing server & Flowhub.io compatible runtime
+source=termux/termux-packages
+path=packages/imgflo/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cadaver
+id=0xb10cd42b
+name_len=7
+version=0.28
+homepage=https://notroj.github.io/cadaver/
+description=A command-line WebDAV client for Unix
+source=termux/termux-packages
+path=packages/cadaver/build.sh

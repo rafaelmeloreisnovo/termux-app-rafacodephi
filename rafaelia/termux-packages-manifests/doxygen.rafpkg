@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=doxygen
+id=0x11558123
+name_len=7
+version=1.16.1
+homepage=http://www.doxygen.org
+description=A documentation system for C++, C, Java, IDL and PHP
+source=termux/termux-packages
+path=packages/doxygen/build.sh

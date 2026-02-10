@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cointop
+id=0x60f71baf
+name_len=7
+version=1.6.10
+homepage=https://cointop.sh/
+description=A fast and lightweight interactive terminal based UI application for tracking cryptocurrencies
+source=termux/termux-packages
+path=packages/cointop/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=apt
+id=0x1b6a7ce0
+name_len=3
+version=2.8.1
+homepage=https://packages.debian.org/apt
+description=Front-end for the dpkg package manager
+source=termux/termux-packages
+path=packages/apt/build.sh

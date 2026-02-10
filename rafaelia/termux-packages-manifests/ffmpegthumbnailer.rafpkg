@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ffmpegthumbnailer
+id=0xad4d8ac3
+name_len=17
+version=2.2.3-p${_COMMIT_DATE}
+homepage=https://github.com/dirkvdb/ffmpegthumbnailer
+description=Lightweight video thumbnailer that can be used by file managers
+source=termux/termux-packages
+path=packages/ffmpegthumbnailer/build.sh

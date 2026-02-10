@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=lhasa
+id=0x3cbbb6e0
+name_len=5
+version=0.5.0
+homepage=https://lhasa.soulsphere.org/
+description=LHA compressor/decompressor
+source=termux/termux-packages
+path=packages/lhasa/build.sh

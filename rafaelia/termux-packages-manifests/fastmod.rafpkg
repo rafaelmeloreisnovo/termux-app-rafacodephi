@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fastmod
+id=0x0ab0355d
+name_len=7
+version=0.4.4
+homepage=https://github.com/facebookincubator/fastmod
+description=Regex-based code refactoring utility
+source=termux/termux-packages
+path=packages/fastmod/build.sh

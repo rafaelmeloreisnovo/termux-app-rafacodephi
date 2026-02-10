@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=glow
+id=0x6a3827bc
+name_len=4
+version=2.1.1
+homepage=https://github.com/charmbracelet/glow
+description=Render markdown on the CLI, with pizzazz!
+source=termux/termux-packages
+path=packages/glow/build.sh

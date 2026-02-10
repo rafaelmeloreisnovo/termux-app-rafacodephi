@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=k9s
+id=0x6abe29ae
+name_len=3
+version=0.50.18
+homepage=https://k9scli.io
+description=Kubernetes CLI To Manage Your Clusters In Style!
+source=termux/termux-packages
+path=packages/k9s/build.sh

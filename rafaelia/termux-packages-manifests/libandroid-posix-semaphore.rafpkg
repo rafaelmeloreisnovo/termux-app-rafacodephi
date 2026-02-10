@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=libandroid-posix-semaphore
+id=0xe3191296
+name_len=26
+version=0.1
+homepage=https://man7.org/linux/man-pages/man7/sem_overview.7.html
+description=Shared library for the posix semaphore system function
+source=termux/termux-packages
+path=packages/libandroid-posix-semaphore/build.sh

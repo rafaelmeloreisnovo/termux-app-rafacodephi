@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=frobtads
+id=0x98762ee6
+name_len=8
+version=2.0
+homepage=http://www.tads.org/frobtads.htm
+description=TADS is a free authoring system for writing your own Interactive Fiction
+source=termux/termux-packages
+path=packages/frobtads/build.sh

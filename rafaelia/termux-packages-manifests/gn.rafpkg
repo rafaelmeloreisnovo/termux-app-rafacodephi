@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gn
+id=0x412075b8
+name_len=2
+version=${_COMMIT_DATE//./}
+homepage=https://gn.googlesource.com/gn
+description=Meta-build system that generates build files for Ninja
+source=termux/termux-packages
+path=packages/gn/build.sh

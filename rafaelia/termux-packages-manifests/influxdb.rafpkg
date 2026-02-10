@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=influxdb
+id=0xc29df89f
+name_len=8
+version=${_GIT_BRANCH}.10
+homepage=https://www.influxdata.com/
+description=An open source time series database with no external dependencies
+source=termux/termux-packages
+path=packages/influxdb/build.sh

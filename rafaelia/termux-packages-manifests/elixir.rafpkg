@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=elixir
+id=0x483cfa2a
+name_len=6
+version=1.19.5
+homepage=https://elixir-lang.org/
+description=Elixir is a dynamic, functional language designed for building scalable and maintainable applications
+source=termux/termux-packages
+path=packages/elixir/build.sh

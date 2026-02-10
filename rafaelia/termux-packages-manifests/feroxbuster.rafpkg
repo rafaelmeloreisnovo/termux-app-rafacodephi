@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=feroxbuster
+id=0x93aaf8f4
+name_len=11
+version=2.13.1
+homepage=https://github.com/epi052/feroxbuster
+description=A fast, simple, recursive content discovery tool written in Rust
+source=termux/termux-packages
+path=packages/feroxbuster/build.sh

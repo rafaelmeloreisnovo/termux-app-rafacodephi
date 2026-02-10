@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=getconf
+id=0x2da55339
+name_len=7
+version=0.6
+homepage=https://github.com/termux/getconf
+description=Utility to print configuration values
+source=termux/termux-packages
+path=packages/getconf/build.sh

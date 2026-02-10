@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hcl
+id=0x06b92710
+name_len=3
+version=2.24.0
+homepage=https://github.com/hashicorp/hcl
+description=A toolkit for creating structured configuration languages
+source=termux/termux-packages
+path=packages/hcl/build.sh

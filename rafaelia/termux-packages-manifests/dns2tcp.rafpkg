@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dns2tcp
+id=0xd2f3f311
+name_len=7
+version=0.5.2
+homepage=https://github.com/alex-sector/dns2tcp
+description=dns2tcp is a tool for relaying TCP connections over DNS
+source=termux/termux-packages
+path=packages/dns2tcp/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=broot
+id=0x1a81ea65
+name_len=5
+version=1.55.0
+homepage=https://github.com/Canop/broot
+description=A better way to navigate directories
+source=termux/termux-packages
+path=packages/broot/build.sh

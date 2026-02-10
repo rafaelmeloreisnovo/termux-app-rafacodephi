@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bed
+id=0x50ae46ec
+name_len=3
+version=0.2.8
+homepage=https://github.com/itchyny/bed
+description=Binary editor written in GO
+source=termux/termux-packages
+path=packages/bed/build.sh

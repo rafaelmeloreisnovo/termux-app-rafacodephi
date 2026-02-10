@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gettext
+id=0x6b6fcb70
+name_len=7
+version=1.0
+homepage=https://www.gnu.org/software/gettext/
+description=GNU Internationalization utilities
+source=termux/termux-packages
+path=packages/gettext/build.sh

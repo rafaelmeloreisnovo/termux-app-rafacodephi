@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=inotify-tools
+id=0x35279c3b
+name_len=13
+version=4.25.9.0
+homepage=https://github.com/rvoicilas/inotify-tools/wiki
+description=Programs providing a simple interface to inotify
+source=termux/termux-packages
+path=packages/inotify-tools/build.sh

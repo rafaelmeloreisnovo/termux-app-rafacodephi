@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hoedown
+id=0x0f16e8e3
+name_len=7
+version=3.0.7
+homepage=https://github.com/hoedown/hoedown
+description=Hoedown is a revived fork of Sundown, the Markdown parser based on the original code of the Upskirt library
+source=termux/termux-packages
+path=packages/hoedown/build.sh

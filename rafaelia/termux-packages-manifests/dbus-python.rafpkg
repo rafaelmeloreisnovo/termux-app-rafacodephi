@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dbus-python
+id=0x1b58d1cc
+name_len=11
+version=1.4.0
+homepage=https://dbus.freedesktop.org/doc/dbus-python/
+description=Python bindings for D-Bus
+source=termux/termux-packages
+path=packages/dbus-python/build.sh

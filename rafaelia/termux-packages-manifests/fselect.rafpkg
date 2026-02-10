@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fselect
+id=0x274d0f01
+name_len=7
+version=0.9.2
+homepage=https://fselect.rocks/
+description=Find files with SQL-like queries
+source=termux/termux-packages
+path=packages/fselect/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=check
+id=0xb3711c47
+name_len=5
+version=0.15.2
+homepage=https://libcheck.github.io/check
+description=A unit testing framework for C
+source=termux/termux-packages
+path=packages/check/build.sh

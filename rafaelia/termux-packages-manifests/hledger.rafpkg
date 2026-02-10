@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hledger
+id=0x093401be
+name_len=7
+version=1.43.2
+homepage=https://hledger.org/
+description=Robust, friendly, fast plain text accounting software. (CLI only)
+source=termux/termux-packages
+path=packages/hledger/build.sh

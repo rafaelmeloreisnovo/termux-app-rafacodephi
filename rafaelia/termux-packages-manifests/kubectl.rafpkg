@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=kubectl
+id=0xe84ff609
+name_len=7
+version=1.35.0
+homepage=https://kubernetes.io/
+description=Kubernetes.io client binary
+source=termux/termux-packages
+path=packages/kubectl/build.sh

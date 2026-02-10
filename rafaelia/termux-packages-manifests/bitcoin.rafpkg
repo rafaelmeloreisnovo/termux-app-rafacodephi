@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bitcoin
+id=0x55f7427d
+name_len=7
+version=30.2
+homepage=https://bitcoincore.org/
+description=Bitcoin Core
+source=termux/termux-packages
+path=packages/bitcoin/build.sh

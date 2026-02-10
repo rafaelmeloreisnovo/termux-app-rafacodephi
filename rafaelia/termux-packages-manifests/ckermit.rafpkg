@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ckermit
+id=0x98a1fdb2
+name_len=7
+version=9.0.302
+homepage=https://www.kermitproject.org/ckermit.html
+description=A combined network and serial communication software package
+source=termux/termux-packages
+path=packages/ckermit/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=diff-so-fancy
+id=0x21c23cb7
+name_len=13
+version=1.4.4
+homepage=https://github.com/so-fancy/diff-so-fancy
+description=Good-lookin' diffs. Actually... nah... The best-lookin' diffs
+source=termux/termux-packages
+path=packages/diff-so-fancy/build.sh

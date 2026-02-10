@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cppi
+id=0x550e1db1
+name_len=4
+version=1.18
+homepage=https://www.gnu.org/software/cppi/
+description=Indents C preprocessor directives to reflect their nesting, among other regularizations
+source=termux/termux-packages
+path=packages/cppi/build.sh

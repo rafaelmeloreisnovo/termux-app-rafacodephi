@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cscope
+id=0x725d9f06
+name_len=6
+version=15.9
+homepage=https://cscope.sourceforge.net/
+description=A developers tool for browsing program code
+source=termux/termux-packages
+path=packages/cscope/build.sh

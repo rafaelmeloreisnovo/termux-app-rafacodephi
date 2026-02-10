@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=libacl
+id=0xc10e8570
+name_len=6
+version=2.3.2
+homepage=http://savannah.nongnu.org/projects/acl
+description=Access control list shared library
+source=termux/termux-packages
+path=packages/libacl/build.sh

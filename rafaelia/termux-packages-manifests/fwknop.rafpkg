@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fwknop
+id=0xb4ae2958
+name_len=6
+version=2.6.11
+homepage=https://www.cipherdyne.org/fwknop/
+description=fwknop: Single Packet Authorization > Port Knocking
+source=termux/termux-packages
+path=packages/fwknop/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gopass
+id=0xfe572f8e
+name_len=6
+version=1.16.1
+homepage=https://github.com/gopasspw/gopass
+description=The slightly more awesome standard unix password manager for teams
+source=termux/termux-packages
+path=packages/gopass/build.sh

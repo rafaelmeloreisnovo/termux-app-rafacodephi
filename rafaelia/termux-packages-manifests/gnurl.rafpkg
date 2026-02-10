@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gnurl
+id=0xab321009
+name_len=5
+version=7.72.0
+homepage=https://gnunet.org/en/gnurl.html
+description=Fork of libcurl, which is mostly for GNUnet
+source=termux/termux-packages
+path=packages/gnurl/build.sh

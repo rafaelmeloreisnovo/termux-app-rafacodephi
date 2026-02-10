@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=groovy
+id=0x4a3ab40f
+name_len=6
+version=4.0.26
+homepage=https://groovy-lang.org/
+description=A powerful multi-faceted programming language for the JVM platform
+source=termux/termux-packages
+path=packages/groovy/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=lesspipe
+id=0xe76ce6a4
+name_len=8
+version=2.22
+homepage=http://www-zeuthen.desy.de/~friebel/unix/lesspipe.html
+description=An input filter for the pager less
+source=termux/termux-packages
+path=packages/lesspipe/build.sh

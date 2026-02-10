@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=id3v2
+id=0xea50f5ad
+name_len=5
+version=0.1.12
+homepage=https://id3v2.sourceforge.net/
+description=A command line id3v2 tag editor
+source=termux/termux-packages
+path=packages/id3v2/build.sh

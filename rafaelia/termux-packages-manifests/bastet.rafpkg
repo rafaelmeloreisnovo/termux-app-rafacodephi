@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bastet
+id=0x6c5ef5ea
+name_len=6
+version=0.43.2
+homepage=http://fph.altervista.org/prog/bastet.html
+description=Tetris clone with 'bastard' block-choosing AI
+source=termux/termux-packages
+path=packages/bastet/build.sh

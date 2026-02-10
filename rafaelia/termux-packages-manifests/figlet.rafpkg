@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=figlet
+id=0x01cb83ca
+name_len=6
+version=2.2.5
+homepage=http://www.figlet.org/
+description=Program for making large letters out of ordinary text
+source=termux/termux-packages
+path=packages/figlet/build.sh

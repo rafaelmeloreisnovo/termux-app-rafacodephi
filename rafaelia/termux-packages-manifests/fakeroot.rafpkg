@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fakeroot
+id=0xa5a4c1a4
+name_len=8
+version=1.37.2
+homepage=https://packages.qa.debian.org/f/fakeroot.html
+description=Tool for simulating superuser privileges (with tcp ipc)
+source=termux/termux-packages
+path=packages/fakeroot/build.sh

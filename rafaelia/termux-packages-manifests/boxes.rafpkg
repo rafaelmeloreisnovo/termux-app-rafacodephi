@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=boxes
+id=0x514c98f2
+name_len=5
+version=2.3.1
+homepage=https://boxes.thomasjensen.com/
+description=A command line filter program which draws ASCII art boxes around your input text
+source=termux/termux-packages
+path=packages/boxes/build.sh

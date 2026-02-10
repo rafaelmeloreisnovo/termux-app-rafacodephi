@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jbig2dec
+id=0x988776ff
+name_len=8
+version=0.20
+homepage=https://jbig2dec.com/
+description=Decoder implementation of the JBIG2 image compression format
+source=termux/termux-packages
+path=packages/jbig2dec/build.sh

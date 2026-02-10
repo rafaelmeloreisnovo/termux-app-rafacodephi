@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=botan3
+id=0x0efc679e
+name_len=6
+version=3.10.0
+homepage=https://botan.randombit.net/
+description=Crypto and TLS for Modern C++
+source=termux/termux-packages
+path=packages/botan3/build.sh

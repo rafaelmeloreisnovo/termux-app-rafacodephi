@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gifsicle
+id=0xb6a01475
+name_len=8
+version=1.96
+homepage=https://www.lcdf.org/gifsicle/
+description=Tool for creating, editing, and getting information about GIF images and animations
+source=termux/termux-packages
+path=packages/gifsicle/build.sh

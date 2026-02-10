@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=doge
+id=0x22e23104
+name_len=4
+version=0.2.8
+homepage=https://github.com/Dj-Codeman/dog_community
+description=A command-line DNS client
+source=termux/termux-packages
+path=packages/doge/build.sh

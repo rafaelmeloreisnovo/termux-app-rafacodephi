@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=helix
+id=0x62ac1687
+name_len=5
+version=25.07.1
+homepage=https://helix-editor.com/
+description=A post-modern modal text editor written in rust
+source=termux/termux-packages
+path=packages/helix/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gzip
+id=0x1a451735
+name_len=4
+version=1.14
+homepage=https://www.gnu.org/software/gzip/
+description=Standard GNU file compression utilities
+source=termux/termux-packages
+path=packages/gzip/build.sh

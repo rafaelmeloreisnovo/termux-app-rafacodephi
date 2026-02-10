@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cavez-of-phear
+id=0x2df33549
+name_len=14
+version=0.6.2
+homepage=https://github.com/AMDmi3/cavezofphear
+description=A Boulder Dash like game for consoles/terminals
+source=termux/termux-packages
+path=packages/cavez-of-phear/build.sh

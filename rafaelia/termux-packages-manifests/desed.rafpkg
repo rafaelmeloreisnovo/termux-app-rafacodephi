@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=desed
+id=0xa5c8ae42
+name_len=5
+version=1.2.2
+homepage=https://github.com/SoptikHa2/desed
+description=Demystifies and debugs your sed scripts
+source=termux/termux-packages
+path=packages/desed/build.sh

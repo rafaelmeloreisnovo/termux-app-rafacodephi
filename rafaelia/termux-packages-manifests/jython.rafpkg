@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jython
+id=0x1d0466e9
+name_len=6
+version=2.7.4
+homepage=https://www.jython.org/
+description=Python for the Java Platform
+source=termux/termux-packages
+path=packages/jython/build.sh

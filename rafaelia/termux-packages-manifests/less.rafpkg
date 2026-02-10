@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=less
+id=0x216b57b8
+name_len=4
+version=692
+homepage=https://www.greenwoodsoftware.com/less/
+description=Terminal pager program used to view the contents of a text file one screen at a time
+source=termux/termux-packages
+path=packages/less/build.sh

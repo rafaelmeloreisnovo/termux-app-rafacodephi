@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=asciidoctor
+id=0xb8d8e0e3
+name_len=11
+version=2.0.26
+homepage=https://asciidoctor.org/
+description=An implementation of AsciiDoc in Ruby
+source=termux/termux-packages
+path=packages/asciidoctor/build.sh

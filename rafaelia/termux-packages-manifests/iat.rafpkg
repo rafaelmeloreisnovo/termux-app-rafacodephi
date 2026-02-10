@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=iat
+id=0x97dcb591
+name_len=3
+version=0.1.7
+homepage=http://iat.berlios.de/
+description=Iso9660 Analyzer Tool
+source=termux/termux-packages
+path=packages/iat/build.sh

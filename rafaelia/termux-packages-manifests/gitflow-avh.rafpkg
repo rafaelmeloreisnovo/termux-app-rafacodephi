@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gitflow-avh
+id=0xf3abb3ab
+name_len=11
+version=1.12.3
+homepage=https://github.com/petervanderdoes/gitflow/
+description=Extend git with Vincent Driessen's branching model. The AVH Edition adds more functionality.
+source=termux/termux-packages
+path=packages/gitflow-avh/build.sh

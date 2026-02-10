@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fftw
+id=0x0dd09044
+name_len=4
+version=3.3.10
+homepage=http://www.fftw.org/
+description=Library for computing the Discrete Fourier Transform (DFT) in one or more dimensions
+source=termux/termux-packages
+path=packages/fftw/build.sh

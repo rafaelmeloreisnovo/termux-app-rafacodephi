@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bash
+id=0x3adc901f
+name_len=4
+version=5.3.9
+homepage=https://www.gnu.org/software/bash/
+description=A sh-compatible shell that incorporates useful features from the Korn shell (ksh) and C shell (csh)
+source=termux/termux-packages
+path=packages/bash/build.sh

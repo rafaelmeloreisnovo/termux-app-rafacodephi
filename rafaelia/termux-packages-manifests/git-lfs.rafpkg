@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=git-lfs
+id=0x84f21ba5
+name_len=7
+version=3.7.1
+homepage=https://git-lfs.github.com/
+description=Git extension for versioning large files
+source=termux/termux-packages
+path=packages/git-lfs/build.sh

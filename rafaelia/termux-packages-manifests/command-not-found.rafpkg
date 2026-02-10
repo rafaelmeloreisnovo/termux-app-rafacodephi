@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=command-not-found
+id=0x44f58687
+name_len=17
+version=3.2
+homepage=https://github.com/termux/command-not-found
+description=Suggest installation of packages in interactive shell sessions
+source=termux/termux-packages
+path=packages/command-not-found/build.sh

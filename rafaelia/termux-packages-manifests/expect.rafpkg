@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=expect
+id=0x96da6b58
+name_len=6
+version=5.45.4
+homepage=https://core.tcl.tk/expect/index
+description=Tool for automating interactive terminal applications
+source=termux/termux-packages
+path=packages/expect/build.sh

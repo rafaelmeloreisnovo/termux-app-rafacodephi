@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dex2jar
+id=0x33a28669
+name_len=7
+version=2.4
+homepage=https://github.com/pxb1988/dex2jar
+description=Tools to work with android .dex and java .class files
+source=termux/termux-packages
+path=packages/dex2jar/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=graphviz
+id=0x00e3f94c
+name_len=8
+version=14.1.2
+homepage=https://www.graphviz.org/
+description=Rich set of graph drawing tools
+source=termux/termux-packages
+path=packages/graphviz/build.sh

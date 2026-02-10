@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bc
+id=0x3e2ba9f2
+name_len=2
+version=1.08.2
+homepage=https://www.gnu.org/software/bc/
+description=Arbitrary precision numeric processing language
+source=termux/termux-packages
+path=packages/bc/build.sh

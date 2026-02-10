@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=indent
+id=0x16ff7dbb
+name_len=6
+version=2.2.13
+homepage=https://www.gnu.org/software/indent/
+description=C language source code formatting program
+source=termux/termux-packages
+path=packages/indent/build.sh

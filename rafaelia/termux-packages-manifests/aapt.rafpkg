@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=aapt
+id=0x5dc677a3
+name_len=4
+version=${_TAG_VERSION}.${_TAG_REVISION}
+homepage=https://elinux.org/Android_aapt
+description=Android Asset Packaging Tool
+source=termux/termux-packages
+path=packages/aapt/build.sh

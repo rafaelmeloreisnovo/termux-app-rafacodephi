@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=go-musicfox
+id=0x77be7612
+name_len=11
+version=4.7.2
+homepage=https://github.com/go-musicfox/go-musicfox
+description=A netease music player in terminal.
+source=termux/termux-packages
+path=packages/go-musicfox/build.sh

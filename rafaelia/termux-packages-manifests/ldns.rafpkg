@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ldns
+id=0x8e13eaae
+name_len=4
+version=1.8.4
+homepage=https://www.nlnetlabs.nl/projects/ldns/
+description=Library for simplifying DNS programming and supporting recent and experimental RFCs
+source=termux/termux-packages
+path=packages/ldns/build.sh

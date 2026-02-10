@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=docopt
+id=0x53279daa
+name_len=6
+version=0.6.3
+homepage=http://docopt.org
+description=Command line arguments parser for C++11 and later
+source=termux/termux-packages
+path=packages/docopt/build.sh

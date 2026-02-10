@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dmtx-utils
+id=0x4f718f4a
+name_len=10
+version=0.7.6
+homepage=https://github.com/dmtx/dmtx-utils
+description=A command line interface for libdmtx
+source=termux/termux-packages
+path=packages/dmtx-utils/build.sh

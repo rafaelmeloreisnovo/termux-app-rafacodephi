@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=electric-fence
+id=0xd2007d52
+name_len=14
+version=2.2.7
+homepage=https://elinux.org/Electric_Fence
+description=Electric Fence (eFence) malloc memory debugger
+source=termux/termux-packages
+path=packages/electric-fence/build.sh

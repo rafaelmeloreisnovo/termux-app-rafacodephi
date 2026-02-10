@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=brogue
+id=0x55680a0d
+name_len=6
+version=1.15
+homepage=https://sites.google.com/site/broguegame/
+description=Roguelike dungeon crawling game (community edition)
+source=termux/termux-packages
+path=packages/brogue/build.sh

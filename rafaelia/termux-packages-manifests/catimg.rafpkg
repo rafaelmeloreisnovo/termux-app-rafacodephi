@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=catimg
+id=0x1ad3a506
+name_len=6
+version=2.8.0
+homepage=https://posva.net/shell/retro/bash/2013/05/27/catimg
+description=Renders images in the terminal
+source=termux/termux-packages
+path=packages/catimg/build.sh

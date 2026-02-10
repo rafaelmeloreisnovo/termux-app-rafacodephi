@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gotop
+id=0x45b18922
+name_len=5
+version=4.2.0
+homepage=https://github.com/xxxserxxx/gotop
+description=A terminal based graphical activity monitor inspired by gtop and vtop
+source=termux/termux-packages
+path=packages/gotop/build.sh

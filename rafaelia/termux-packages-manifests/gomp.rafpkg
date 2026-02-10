@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gomp
+id=0xfa64af06
+name_len=4
+version=2023.02.02
+homepage=https://aditya-k2.github.io/gomp/
+description=MPD client inspired by ncmpcpp with builtin cover-art view and LastFM integration
+source=termux/termux-packages
+path=packages/gomp/build.sh

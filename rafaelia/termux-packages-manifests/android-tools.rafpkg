@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=android-tools
+id=0x951cbe8a
+name_len=13
+version=35.0.2
+homepage=https://developer.android.com/
+description=Android platform tools
+source=termux/termux-packages
+path=packages/android-tools/build.sh

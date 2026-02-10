@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=capstone
+id=0x0b300438
+name_len=8
+version=5.0.6
+homepage=https://www.capstone-engine.org/
+description=Lightweight multi-platform, multi-architecture disassembly framework
+source=termux/termux-packages
+path=packages/capstone/build.sh

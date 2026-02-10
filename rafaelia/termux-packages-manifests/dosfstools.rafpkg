@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dosfstools
+id=0x6dc7d6d1
+name_len=10
+version=4.2
+homepage=https://github.com/dosfstools/dosfstools
+description=DOS file system utilities
+source=termux/termux-packages
+path=packages/dosfstools/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gdu
+id=0x470a5449
+name_len=3
+version=5.32.0
+homepage=https://github.com/dundee/gdu
+description=Fast disk usage analyzer with console interface written in Go
+source=termux/termux-packages
+path=packages/gdu/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dbus
+id=0x71eceb63
+name_len=4
+version=1.16.2
+homepage=https://dbus.freedesktop.org
+description=Freedesktop.org message bus system
+source=termux/termux-packages
+path=packages/dbus/build.sh

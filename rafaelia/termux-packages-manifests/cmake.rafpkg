@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cmake
+id=0x6be07ca8
+name_len=5
+version=4.2.3
+homepage=https://cmake.org/
+description=Family of tools designed to build, test and package software
+source=termux/termux-packages
+path=packages/cmake/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ices
+id=0xcb27e689
+name_len=4
+version=2.0.3
+homepage=https://icecast.org/ices/
+description=IceS is a source client for the Icecast streaming server.
+source=termux/termux-packages
+path=packages/ices/build.sh

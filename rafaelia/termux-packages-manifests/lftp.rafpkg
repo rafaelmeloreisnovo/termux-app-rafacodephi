@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=lftp
+id=0xb3cbbd8b
+name_len=4
+version=4.9.2
+homepage=https://lftp.tech/
+description=FTP/HTTP client and file transfer program
+source=termux/termux-packages
+path=packages/lftp/build.sh

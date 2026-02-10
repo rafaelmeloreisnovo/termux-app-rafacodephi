@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=docbook-xsl
+id=0xf498442a
+name_len=11
+version=1.79.2
+homepage=https://docbook.org/
+description=XML stylesheets for Docbook-xml transformations
+source=termux/termux-packages
+path=packages/docbook-xsl/build.sh

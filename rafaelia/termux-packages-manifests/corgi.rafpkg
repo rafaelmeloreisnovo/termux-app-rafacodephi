@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=corgi
+id=0x868cb423
+name_len=5
+version=0.2.4
+homepage=https://github.com/DrakeW/corgi
+description=CLI workflow manager
+source=termux/termux-packages
+path=packages/corgi/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=angle-android
+id=0x04c917ee
+name_len=13
+version=2.1.$_COMMIT_POSISION-${_COMMIT:0:8}
+homepage=https://chromium.googlesource.com/angle/angle
+description=A conformant OpenGL ES implementation for Windows, Mac, Linux, iOS and Android
+source=termux/termux-packages
+path=packages/angle-android/build.sh

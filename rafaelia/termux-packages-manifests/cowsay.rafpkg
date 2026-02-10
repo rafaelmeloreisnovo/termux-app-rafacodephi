@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cowsay
+id=0xbcd8db43
+name_len=6
+version=3.8.4
+homepage=https://cowsay.diamonds/
+description=Program which generates ASCII pictures of a cow with a message
+source=termux/termux-packages
+path=packages/cowsay/build.sh

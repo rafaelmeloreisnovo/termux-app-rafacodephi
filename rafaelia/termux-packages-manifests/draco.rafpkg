@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=draco
+id=0xb08349a0
+name_len=5
+version=1.5.7
+homepage=https://google.github.io/draco/
+description=Library for compressing and decompressing 3D geometric meshes and point clouds
+source=termux/termux-packages
+path=packages/draco/build.sh

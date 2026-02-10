@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=argp
+id=0xa00aabf5
+name_len=4
+version=1.5.0
+homepage=https://github.com/argp-standalone/argp-standalone
+description=Standalone version of arguments parsing functions from GLIBC
+source=termux/termux-packages
+path=packages/argp/build.sh

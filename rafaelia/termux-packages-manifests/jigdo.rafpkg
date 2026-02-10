@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jigdo
+id=0xb217fa30
+name_len=5
+version=0.8.2
+homepage=http://atterer.org/jigdo/
+description=Distribute large images by sending and receiving the files that make them up
+source=termux/termux-packages
+path=packages/jigdo/build.sh

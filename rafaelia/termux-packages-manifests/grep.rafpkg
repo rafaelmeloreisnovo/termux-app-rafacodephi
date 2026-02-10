@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=grep
+id=0xbb9027d1
+name_len=4
+version=3.12
+homepage=https://www.gnu.org/software/grep/
+description=Command which searches one or more input files for lines containing a match to a specified pattern
+source=termux/termux-packages
+path=packages/grep/build.sh

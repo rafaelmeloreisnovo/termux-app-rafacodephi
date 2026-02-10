@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=kotlin
+id=0x9d8cf0ec
+name_len=6
+version=2.3.10
+homepage=https://kotlinlang.org/
+description=The Kotlin Programming Language
+source=termux/termux-packages
+path=packages/kotlin/build.sh

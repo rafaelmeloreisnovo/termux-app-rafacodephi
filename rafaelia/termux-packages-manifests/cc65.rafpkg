@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cc65
+id=0x915ac74e
+name_len=4
+version=2.19
+homepage=https://cc65.github.io/
+description=A free compiler for 6502 based system
+source=termux/termux-packages
+path=packages/cc65/build.sh

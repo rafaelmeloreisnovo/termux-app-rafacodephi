@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=asm-lsp
+id=0x7d6c6572
+name_len=7
+version=0.10.1
+homepage=https://github.com/bergercookie/asm-lsp
+description=language server for NASM/GAS/GO assembly
+source=termux/termux-packages
+path=packages/asm-lsp/build.sh

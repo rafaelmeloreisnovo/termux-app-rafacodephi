@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ipcalc
+id=0x34e36e61
+name_len=6
+version=0.51
+homepage=http://jodies.de/ipcalc
+description=Calculates IP broadcast, network, Cisco wildcard mask, and host ranges
+source=termux/termux-packages
+path=packages/ipcalc/build.sh

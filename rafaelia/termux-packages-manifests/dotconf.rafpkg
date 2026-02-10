@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dotconf
+id=0x1fd8fee6
+name_len=7
+version=1.4.1
+homepage=https://github.com/williamh/dotconf
+description=dot.conf configuration file parser
+source=termux/termux-packages
+path=packages/dotconf/build.sh

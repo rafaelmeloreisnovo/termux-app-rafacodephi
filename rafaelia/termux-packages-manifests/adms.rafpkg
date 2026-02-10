@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=adms
+id=0x51c63114
+name_len=4
+version=2.3.7
+homepage=https://github.com/qucs/adms
+description=A code generator for the Verilog-AMS language
+source=termux/termux-packages
+path=packages/adms/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=crawl
+id=0x1e565680
+name_len=5
+version=0.33.1
+homepage=https://crawl.develz.org/
+description=Roguelike adventure through dungeons filled with dangerous monsters
+source=termux/termux-packages
+path=packages/crawl/build.sh

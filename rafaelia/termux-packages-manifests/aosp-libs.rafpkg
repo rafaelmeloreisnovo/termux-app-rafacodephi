@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=aosp-libs
+id=0x5877e06d
+name_len=9
+version=9.0.0-r76
+homepage=https://source.android.com/
+description=bionic libc, libicuuc, liblzma, zlib, and boringssl for package builder and termux-docker
+source=termux/termux-packages
+path=packages/aosp-libs/build.sh

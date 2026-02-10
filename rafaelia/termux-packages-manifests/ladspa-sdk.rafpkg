@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ladspa-sdk
+id=0x3c508375
+name_len=10
+version=1.17
+homepage=https://www.ladspa.org/
+description=Linux Audio Developer's Simple Plugin API
+source=termux/termux-packages
+path=packages/ladspa-sdk/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fribidi
+id=0xdde1957e
+name_len=7
+version=1.0.16
+homepage=https://github.com/fribidi/fribidi/
+description=Implementation of the Unicode Bidirectional Algorithm
+source=termux/termux-packages
+path=packages/fribidi/build.sh

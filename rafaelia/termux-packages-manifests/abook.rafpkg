@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=abook
+id=0xb632a181
+name_len=5
+version=0.6.2
+homepage=http://abook.sourceforge.net/
+description=Abook is a text-based addressbook program designed to use with mutt mail client
+source=termux/termux-packages
+path=packages/abook/build.sh

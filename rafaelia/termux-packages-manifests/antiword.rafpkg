@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=antiword
+id=0xe6d746b5
+name_len=8
+version=0.37
+homepage=https://en.m.wikipedia.org/wiki/Antiword
+description=A free MS Word reader
+source=termux/termux-packages
+path=packages/antiword/build.sh

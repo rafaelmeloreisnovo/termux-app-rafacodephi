@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=calc
+id=0xbcf192d4
+name_len=4
+version=2.16.1.2
+homepage=http://www.isthe.com/chongo/tech/comp/calc/
+description=Arbitrary precision console calculator
+source=termux/termux-packages
+path=packages/calc/build.sh

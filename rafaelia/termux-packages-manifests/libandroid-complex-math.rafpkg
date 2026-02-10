@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=libandroid-complex-math
+id=0xa1f24c3f
+name_len=23
+version=0.2
+homepage=https://android.googlesource.com/platform/bionic/+/refs/heads/master/libm/upstream-netbsd/lib/libm/complex
+description=A shared library providing libm complex math functions
+source=termux/termux-packages
+path=packages/libandroid-complex-math/build.sh

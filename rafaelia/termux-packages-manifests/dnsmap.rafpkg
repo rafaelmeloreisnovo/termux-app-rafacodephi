@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dnsmap
+id=0x92cdac02
+name_len=6
+version=0.36
+homepage=https://github.com/resurrecting-open-source-projects/dnsmap
+description=Subdomain Bruteforcing Tool
+source=termux/termux-packages
+path=packages/dnsmap/build.sh

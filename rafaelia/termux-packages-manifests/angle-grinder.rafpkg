@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=angle-grinder
+id=0x72eb13b4
+name_len=13
+version=0.19.6
+homepage=https://github.com/rcoh/angle-grinder
+description=Slice and dice logs on the command line
+source=termux/termux-packages
+path=packages/angle-grinder/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=aspell-fr
+id=0x0c3bc9f5
+name_len=9
+version=2:0.50-3
+homepage=http://aspell.net/
+description=French dictionary for aspell
+source=termux/termux-packages
+path=packages/aspell-fr/build.sh

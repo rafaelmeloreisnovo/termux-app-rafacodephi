@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=apr-util
+id=0x1df1f291
+name_len=8
+version=1.6.3
+homepage=https://apr.apache.org/
+description=Apache Portable Runtime Utility Library
+source=termux/termux-packages
+path=packages/apr-util/build.sh

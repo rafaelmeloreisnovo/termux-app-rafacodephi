@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gobang
+id=0x96b22cd5
+name_len=6
+version=0.1.0-alpha.5
+homepage=https://github.com/TaKO8Ki/gobang
+description=A cross-platform TUI database management tool written in Rust
+source=termux/termux-packages
+path=packages/gobang/build.sh

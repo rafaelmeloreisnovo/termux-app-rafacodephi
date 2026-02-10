@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dropbear
+id=0x89d973f2
+name_len=8
+version=2025.88
+homepage=https://matt.ucc.asn.au/dropbear/dropbear.html
+description=Small SSH server and client
+source=termux/termux-packages
+path=packages/dropbear/build.sh

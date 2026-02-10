@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=antibody
+id=0x82d38dbd
+name_len=8
+version=6.1.1
+homepage=https://github.com/getantibody/antibody
+description=The fastest shell plugin manager
+source=termux/termux-packages
+path=packages/antibody/build.sh

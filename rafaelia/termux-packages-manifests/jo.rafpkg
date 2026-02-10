@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jo
+id=0x623f6a56
+name_len=2
+version=1.9
+homepage=https://jpmens.net/2016/03/05/a-shell-command-to-create-json-jo/
+description=JSON output from a shell
+source=termux/termux-packages
+path=packages/jo/build.sh

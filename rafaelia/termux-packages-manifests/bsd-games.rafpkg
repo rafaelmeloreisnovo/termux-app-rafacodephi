@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bsd-games
+id=0x2e968b64
+name_len=9
+version=1:3.3
+homepage=https://www.polyomino.org.uk/computer/software/bsd-games/
+description=Classic text mode games from UNIX folklore
+source=termux/termux-packages
+path=packages/bsd-games/build.sh

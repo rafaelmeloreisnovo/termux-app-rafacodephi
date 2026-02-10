@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ca-certificates
+id=0x36f64460
+name_len=15
+version=1:2025.12.02
+homepage=https://curl.se/docs/caextract.html
+description=Common CA certificates
+source=termux/termux-packages
+path=packages/ca-certificates/build.sh

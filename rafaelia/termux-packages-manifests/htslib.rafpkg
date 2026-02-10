@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=htslib
+id=0x842d0d3d
+name_len=6
+version=1.23
+homepage=https://github.com/samtools/htslib
+description=C library for high-throughput sequencing data formats
+source=termux/termux-packages
+path=packages/htslib/build.sh

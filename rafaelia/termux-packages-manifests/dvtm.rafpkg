@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dvtm
+id=0x70bb72d4
+name_len=4
+version=0.15
+homepage=https://github.com/martanne/dvtm
+description=Terminal tiling window manager
+source=termux/termux-packages
+path=packages/dvtm/build.sh

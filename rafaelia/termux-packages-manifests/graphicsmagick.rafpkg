@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=graphicsmagick
+id=0x7b390260
+name_len=14
+version=1.3.46
+homepage=http://www.graphicsmagick.org/
+description=Collection of image processing tools
+source=termux/termux-packages
+path=packages/graphicsmagick/build.sh

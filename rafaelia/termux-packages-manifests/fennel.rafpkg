@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fennel
+id=0xb3448729
+name_len=6
+version=1.6.1
+homepage=https://fennel-lang.org
+description=A Lisp that compiles to Lua
+source=termux/termux-packages
+path=packages/fennel/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=aria2
+id=0xfb62789e
+name_len=5
+version=1.37.0
+homepage=https://aria2.github.io
+description=Download utility supporting HTTP/HTTPS, FTP, BitTorrent and Metalink
+source=termux/termux-packages
+path=packages/aria2/build.sh

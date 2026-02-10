@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=icoutils
+id=0x6cf5353b
+name_len=8
+version=0.32.3
+homepage=https://www.nongnu.org/icoutils/
+description=Extracts and converts images in MS Windows(R) icon and cursor files
+source=termux/termux-packages
+path=packages/icoutils/build.sh

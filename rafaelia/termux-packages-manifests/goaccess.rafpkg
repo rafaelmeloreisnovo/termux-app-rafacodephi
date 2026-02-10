@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=goaccess
+id=0x8fdafae1
+name_len=8
+version=1.9.4
+homepage=https://goaccess.io
+description=An open source real-time web log analyzer and interactive viewer
+source=termux/termux-packages
+path=packages/goaccess/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jackett
+id=0x752cebfd
+name_len=7
+version=0.24.1074
+homepage=https://github.com/jackett/jackett
+description=API Support for your favorite torrent trackers
+source=termux/termux-packages
+path=packages/jackett/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hz
+id=0x573adbd7
+name_len=2
+version=0.10.4
+homepage=https://www.cloudwego.io
+description=A high-performance and strong-extensibility Go HTTP framework that helps developers build microservices
+source=termux/termux-packages
+path=packages/hz/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=arj
+id=0x316f1cb0
+name_len=3
+version=3.10.22
+homepage=https://arj.sourceforge.net/
+description=Open-source version of arj archiver
+source=termux/termux-packages
+path=packages/arj/build.sh

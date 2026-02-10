@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ffsend
+id=0x25389707
+name_len=6
+version=0.2.77
+homepage=https://gitlab.com/timvisee/ffsend
+description=A fully featured Firefox Send client
+source=termux/termux-packages
+path=packages/ffsend/build.sh

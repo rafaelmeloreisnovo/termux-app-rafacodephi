@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=diffstat
+id=0x5208cdb0
+name_len=8
+version=1.68
+homepage=https://invisible-island.net/diffstat/diffstat.html
+description=Displays a histogram of changes to a file
+source=termux/termux-packages
+path=packages/diffstat/build.sh

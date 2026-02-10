@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jack
+id=0x2e53cc9a
+name_len=4
+version=0.0.1
+homepage=https://github.com/termux/termux-packages
+description=A metapackage that provides JACK Audio Connection Kit
+source=termux/termux-packages
+path=packages/jack/build.sh

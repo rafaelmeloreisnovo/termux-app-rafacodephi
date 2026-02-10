@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dtach
+id=0x3096b8af
+name_len=5
+version=0.9
+homepage=https://dtach.sourceforge.net/
+description=Emulates the detach feature of screen
+source=termux/termux-packages
+path=packages/dtach/build.sh

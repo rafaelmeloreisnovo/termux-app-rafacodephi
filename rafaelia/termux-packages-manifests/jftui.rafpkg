@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jftui
+id=0x4ab475c5
+name_len=5
+version=0.7.5
+homepage=https://github.com/Aanok/jftui
+description=jftui is a minimalistic, lightweight C99 command line client for the open source Jellyfin media server.
+source=termux/termux-packages
+path=packages/jftui/build.sh

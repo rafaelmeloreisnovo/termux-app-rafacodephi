@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=et
+id=0x471a6efc
+name_len=2
+version=6.2.11
+homepage=https://eternalterminal.dev
+description=A remote shell that automatically reconnects without interrupting the session
+source=termux/termux-packages
+path=packages/et/build.sh

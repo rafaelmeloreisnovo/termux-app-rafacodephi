@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cppcheck
+id=0x153d7642
+name_len=8
+version=2.19.1
+homepage=https://github.com/danmar/cppcheck
+description=tool for static C/C++ code analysis
+source=termux/termux-packages
+path=packages/cppcheck/build.sh

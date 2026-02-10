@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=boinc
+id=0x73650e46
+name_len=5
+version=8.2.8
+homepage=https://boinc.berkeley.edu/
+description=Open-source software for volunteer computing
+source=termux/termux-packages
+path=packages/boinc/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=agate
+id=0x980bdf6b
+name_len=5
+version=3.3.20
+homepage=https://github.com/mbrubeck/agate
+description=Very simple server for the Gemini hypertext protocol
+source=termux/termux-packages
+path=packages/agate/build.sh

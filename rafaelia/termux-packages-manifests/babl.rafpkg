@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=babl
+id=0x38b1abf2
+name_len=4
+version=0.1.122
+homepage=https://gegl.org/babl/
+description=Dynamic pixel format translation library
+source=termux/termux-packages
+path=packages/babl/build.sh

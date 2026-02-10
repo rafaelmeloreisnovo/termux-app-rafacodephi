@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=harfbuzz
+id=0x9b74178f
+name_len=8
+version=12.3.2
+homepage=https://www.freedesktop.org/wiki/Software/HarfBuzz/
+description=OpenType text shaping engine
+source=termux/termux-packages
+path=packages/harfbuzz/build.sh

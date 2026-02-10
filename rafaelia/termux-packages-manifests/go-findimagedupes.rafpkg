@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=go-findimagedupes
+id=0x387aed0f
+name_len=17
+version=2023.01.29
+homepage=https://gitlab.com/opennota/findimagedupes
+description=Find visually similar or duplicate images
+source=termux/termux-packages
+path=packages/go-findimagedupes/build.sh

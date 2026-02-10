@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=httrack
+id=0xd2f59250
+name_len=7
+version=3.49.6
+homepage=http://www.httrack.com
+description=It allows you to download a World Wide Web site from the Internet
+source=termux/termux-packages
+path=packages/httrack/build.sh

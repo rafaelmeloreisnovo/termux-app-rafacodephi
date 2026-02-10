@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=googletest
+id=0xd026326e
+name_len=10
+version=1.17.0
+homepage=https://github.com/google/googletest
+description=Google C++ testing framework
+source=termux/termux-packages
+path=packages/googletest/build.sh

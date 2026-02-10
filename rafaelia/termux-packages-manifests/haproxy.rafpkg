@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=haproxy
+id=0xc14ff7fe
+name_len=7
+version=3.3.2
+homepage=https://www.haproxy.org/
+description=The Reliable, High Performance TCP/HTTP Load Balancer
+source=termux/termux-packages
+path=packages/haproxy/build.sh

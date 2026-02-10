@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ccache
+id=0x200d62d0
+name_len=6
+version=4.12.3
+homepage=https://ccache.samba.org
+description=Compiler cache for fast recompilation of C/C++ code
+source=termux/termux-packages
+path=packages/ccache/build.sh

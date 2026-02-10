@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hunspell-ru
+id=0xbcf1d268
+name_len=11
+version=20210731
+homepage=https://hunspell.github.io
+description=Russian dictionary for hunspell
+source=termux/termux-packages
+path=packages/hunspell-ru/build.sh

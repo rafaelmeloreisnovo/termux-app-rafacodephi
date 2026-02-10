@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=edbrowse
+id=0x347fb5ae
+name_len=8
+version=3.8.15
+homepage=https://edbrowse.org/
+description=Line based editor, browser, and mail client
+source=termux/termux-packages
+path=packages/edbrowse/build.sh

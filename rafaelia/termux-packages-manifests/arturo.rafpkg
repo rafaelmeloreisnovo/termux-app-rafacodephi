@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=arturo
+id=0xf2125b06
+name_len=6
+version=0.9.83
+homepage=https://arturo-lang.io
+description=Simple, expressive & portable programming language for efficient scripting
+source=termux/termux-packages
+path=packages/arturo/build.sh

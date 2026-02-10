@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=clifm
+id=0x568b6af0
+name_len=5
+version=1.27.1
+homepage=https://github.com/leo-arch/clifm
+description=The shell-like, command line terminal file manager: simple, fast, extensible, and lightweight as hell
+source=termux/termux-packages
+path=packages/clifm/build.sh

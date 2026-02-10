@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=convertlit
+id=0xb031bda1
+name_len=10
+version=1.8
+homepage=http://www.convertlit.com/
+description=An extractor/converter for .LIT eBooks
+source=termux/termux-packages
+path=packages/convertlit/build.sh

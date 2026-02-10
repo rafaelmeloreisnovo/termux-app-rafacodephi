@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gojq
+id=0xfb57e4a6
+name_len=4
+version=0.12.18
+homepage=https://github.com/itchyny/gojq
+description=Pure Go implementation of jq
+source=termux/termux-packages
+path=packages/gojq/build.sh

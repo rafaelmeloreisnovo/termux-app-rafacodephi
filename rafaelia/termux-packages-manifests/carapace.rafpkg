@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=carapace
+id=0x0d5e7e3f
+name_len=8
+version=1.6.2
+homepage=https://carapace.sh/
+description=Multi-shell multi-command argument completer
+source=termux/termux-packages
+path=packages/carapace/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=emacs
+id=0x6f6d9160
+name_len=5
+version=30.2
+homepage=https://www.gnu.org/software/emacs/
+description=Extensible, customizable text editor-and more
+source=termux/termux-packages
+path=packages/emacs/build.sh

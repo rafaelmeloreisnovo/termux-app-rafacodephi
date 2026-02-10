@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dotnet-host
+id=0xff550f3c
+name_len=11
+version=9.0
+homepage=https://dotnet.microsoft.com/en-us/
+description=A metapackage for .NET Host
+source=termux/termux-packages
+path=packages/dotnet-host/build.sh

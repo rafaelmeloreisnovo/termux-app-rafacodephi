@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ecj
+id=0x7e72bea9
+name_len=3
+version=1:${_VERSION}
+homepage=https://www.eclipse.org/jdt/core/
+description=Eclipse Compiler for Java
+source=termux/termux-packages
+path=packages/ecj/build.sh

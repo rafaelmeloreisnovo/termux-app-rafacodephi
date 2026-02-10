@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dirb
+id=0x5c5e2642
+name_len=4
+version=2.22
+homepage=https://dirb.sourceforge.net/
+description=Web Directory Fuzzer
+source=termux/termux-packages
+path=packages/dirb/build.sh

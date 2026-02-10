@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=liba52
+id=0x6e4313fc
+name_len=6
+version=0.8.0
+homepage=http://liba52.sourceforge.net/
+description=A free library for decoding ATSC A/52 streams
+source=termux/termux-packages
+path=packages/liba52/build.sh

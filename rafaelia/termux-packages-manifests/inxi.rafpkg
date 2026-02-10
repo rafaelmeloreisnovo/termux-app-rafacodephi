@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=inxi
+id=0x2d88a9a1
+name_len=4
+version=3.3.40-1
+homepage=https://smxi.org/site/about.htm#inxi
+description=Full featured CLI system information tool
+source=termux/termux-packages
+path=packages/inxi/build.sh

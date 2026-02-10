@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=glm
+id=0x5f1e01c9
+name_len=3
+version=1.0.1
+homepage=https://glm.g-truc.net/
+description=C++ mathematics library for graphics software based on the GLSL specifications
+source=termux/termux-packages
+path=packages/glm/build.sh

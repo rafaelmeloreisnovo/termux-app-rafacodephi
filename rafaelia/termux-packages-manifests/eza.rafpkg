@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=eza
+id=0x6faaff9d
+name_len=3
+version=0.23.4
+homepage=https://github.com/eza-community/eza
+description=A modern replacement for ls
+source=termux/termux-packages
+path=packages/eza/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gap
+id=0x481721cf
+name_len=3
+version=4.15.1
+homepage=https://www.gap-system.org/
+description=GAP is a system for computational discrete algebra, with particular emphasis on Computational Group Theory
+source=termux/termux-packages
+path=packages/gap/build.sh

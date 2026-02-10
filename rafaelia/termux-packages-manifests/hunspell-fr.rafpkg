@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hunspell-fr
+id=0xabc01ad9
+name_len=11
+version=20221031
+homepage=https://hunspell.github.io
+description=French dictionary for hunspell
+source=termux/termux-packages
+path=packages/hunspell-fr/build.sh

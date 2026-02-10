@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jql
+id=0xbfc4f618
+name_len=3
+version=8.0.10
+homepage=https://github.com/yamafaktory/jql
+description=A JSON Query Language CLI tool
+source=termux/termux-packages
+path=packages/jql/build.sh

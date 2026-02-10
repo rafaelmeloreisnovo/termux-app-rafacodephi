@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=freecolor
+id=0xc247f8ba
+name_len=9
+version=0.9.3
+homepage=http://rkeene.org/oss/freecolor/
+description=Freecolor is a replacement for Linux that displays free memory graphically
+source=termux/termux-packages
+path=packages/freecolor/build.sh

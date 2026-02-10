@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gopher
+id=0xd0ac6e28
+name_len=6
+version=3.0.17.3
+homepage=gopher://gopher.quux.org/1/devel/gopher
+description=University of Minnesota gopher
+source=termux/termux-packages
+path=packages/gopher/build.sh

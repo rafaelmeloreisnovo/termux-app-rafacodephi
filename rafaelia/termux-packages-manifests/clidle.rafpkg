@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=clidle
+id=0xd974e38c
+name_len=6
+version=2022.05.25
+homepage=https://github.com/ajeetdsouza/clidle
+description=Play Wordle over SSH
+source=termux/termux-packages
+path=packages/clidle/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=libandroid-selinux
+id=0xe48b5938
+name_len=18
+version=14.0.0.11
+homepage=https://selinuxproject.org
+description=Android fork of libselinux, an SELinux userland library
+source=termux/termux-packages
+path=packages/libandroid-selinux/build.sh

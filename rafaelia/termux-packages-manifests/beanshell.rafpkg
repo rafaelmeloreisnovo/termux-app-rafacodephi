@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=beanshell
+id=0x83a174fb
+name_len=9
+version=2.1.1
+homepage=https://github.com/beanshell/beanshell
+description=Small, free, embeddable, source level Java interpreter with object based scripting language features written in Java
+source=termux/termux-packages
+path=packages/beanshell/build.sh

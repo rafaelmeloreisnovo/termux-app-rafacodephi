@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ani-cli
+id=0xba16c8a2
+name_len=7
+version=4.10
+homepage=https://github.com/pystardust/ani-cli
+description=A cli to browse and watch anime
+source=termux/termux-packages
+path=packages/ani-cli/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=console-bridge
+id=0x26859250
+name_len=14
+version=1.0.2
+homepage=https://github.com/ros/console_bridge
+description=A ROS-independent package for logging that seamlessly pipes into rosconsole/rosout for ROS-dependent packages
+source=termux/termux-packages
+path=packages/console-bridge/build.sh

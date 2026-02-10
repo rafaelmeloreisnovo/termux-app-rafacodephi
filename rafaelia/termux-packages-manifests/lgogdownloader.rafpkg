@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=lgogdownloader
+id=0x2fa9cc45
+name_len=14
+version=3.18
+homepage=https://sites.google.com/site/gogdownloader/
+description=Open source downloader to GOG.com for Linux users using the same API as the official GOGDownloader
+source=termux/termux-packages
+path=packages/lgogdownloader/build.sh

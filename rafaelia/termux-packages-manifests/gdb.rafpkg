@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gdb
+id=0x380a3cac
+name_len=3
+version=16.3
+homepage=https://www.gnu.org/software/gdb/
+description=The standard GNU Debugger that runs on many Unix-like systems and works for many programming languages
+source=termux/termux-packages
+path=packages/gdb/build.sh

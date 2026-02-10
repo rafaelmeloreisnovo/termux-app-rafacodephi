@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=innoextract
+id=0x00ddba06
+name_len=11
+version=1.9
+homepage=https://constexpr.org/innoextract/
+description=A tool to unpack installers created by Inno Setup
+source=termux/termux-packages
+path=packages/innoextract/build.sh

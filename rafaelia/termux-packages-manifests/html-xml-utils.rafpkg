@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=html-xml-utils
+id=0xe55bb134
+name_len=14
+version=8.7
+homepage=https://www.w3.org/Tools/HTML-XML-utils/
+description=A number of simple utilities for manipulating HTML and XML files
+source=termux/termux-packages
+path=packages/html-xml-utils/build.sh

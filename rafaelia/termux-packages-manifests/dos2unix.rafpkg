@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dos2unix
+id=0x6695d753
+name_len=8
+version=7.5.2
+homepage=https://waterlan.home.xs4all.nl/dos2unix.html
+description=Converts between DOS and Unix text files
+source=termux/termux-packages
+path=packages/dos2unix/build.sh

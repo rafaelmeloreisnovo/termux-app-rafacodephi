@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=autoconf-archive
+id=0xf776d733
+name_len=16
+version=2024.10.16
+homepage=https://www.gnu.org/software/autoconf-archive/
+description=A collection of freely re-usable Autoconf macros
+source=termux/termux-packages
+path=packages/autoconf-archive/build.sh

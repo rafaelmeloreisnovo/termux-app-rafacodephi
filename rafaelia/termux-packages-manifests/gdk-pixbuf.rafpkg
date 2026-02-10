@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gdk-pixbuf
+id=0xd59f4edc
+name_len=10
+version=2.44.5
+homepage=https://wiki.gnome.org/Projects/GdkPixbuf
+description=Library for image loading and manipulation
+source=termux/termux-packages
+path=packages/gdk-pixbuf/build.sh

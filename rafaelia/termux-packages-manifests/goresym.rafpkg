@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=goresym
+id=0x1d935fa1
+name_len=7
+version=3.1.2
+homepage=https://github.com/mandiant/GoReSym
+description=Go symbol recovery tool
+source=termux/termux-packages
+path=packages/goresym/build.sh

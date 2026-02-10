@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=arpack-ng
+id=0x220319e1
+name_len=9
+version=2:3.9.1
+homepage=https://github.com/opencollab/arpack-ng
+description=Collection of Fortran77 subroutines designed to solve large scale eigenvalue problems.
+source=termux/termux-packages
+path=packages/arpack-ng/build.sh

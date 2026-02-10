@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=eigen
+id=0xf0deda07
+name_len=5
+version=3.4.0
+homepage=http://eigen.tuxfamily.org
+description=Eigen is a C++ template library for linear algebra: matrices, vectors, numerical solvers, and related algorithms
+source=termux/termux-packages
+path=packages/eigen/build.sh

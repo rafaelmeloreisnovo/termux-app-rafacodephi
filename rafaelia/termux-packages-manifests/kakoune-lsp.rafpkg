@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=kakoune-lsp
+id=0x232609b9
+name_len=11
+version=19.0.1
+homepage=https://github.com/kakoune-lsp/kakoune-lsp
+description=Language Server Protocol Client for the Kakoune editor
+source=termux/termux-packages
+path=packages/kakoune-lsp/build.sh

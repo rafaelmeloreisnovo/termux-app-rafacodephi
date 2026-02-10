@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=imlib2
+id=0xa6cdac80
+name_len=6
+version=1.12.6
+homepage=https://sourceforge.net/projects/enlightenment/
+description=Library that does image file loading and saving as well as rendering, manipulation, arbitrary polygon support
+source=termux/termux-packages
+path=packages/imlib2/build.sh

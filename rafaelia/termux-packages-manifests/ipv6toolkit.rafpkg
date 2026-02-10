@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ipv6toolkit
+id=0x2fce3c36
+name_len=11
+version=2022.09.30
+homepage=https://www.si6networks.com/research/tools/ipv6toolkit/
+description=SI6 Networks IPv6 Toolkit
+source=termux/termux-packages
+path=packages/ipv6toolkit/build.sh

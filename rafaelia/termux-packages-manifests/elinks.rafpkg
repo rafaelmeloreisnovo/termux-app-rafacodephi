@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=elinks
+id=0x70fdd359
+name_len=6
+version=0.19.1
+homepage=https://github.com/rkd77/elinks
+description=Full-Featured Text WWW Browser
+source=termux/termux-packages
+path=packages/elinks/build.sh

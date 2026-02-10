@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=glib-networking
+id=0x77a3d902
+name_len=15
+version=2.80.1
+homepage=https://gitlab.gnome.org/GNOME/glib-networking
+description=Network-related giomodules for glib
+source=termux/termux-packages
+path=packages/glib-networking/build.sh

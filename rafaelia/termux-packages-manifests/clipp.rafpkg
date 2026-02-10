@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=clipp
+id=0x4fa364d1
+name_len=5
+version=1.2.3
+homepage=https://github.com/muellan/clipp
+description=Command line interfaces for modern C++
+source=termux/termux-packages
+path=packages/clipp/build.sh

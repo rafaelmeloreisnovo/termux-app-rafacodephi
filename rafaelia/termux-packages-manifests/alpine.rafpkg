@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=alpine
+id=0x7d538dde
+name_len=6
+version=2.26
+homepage=http://alpine.x10host.com/
+description=Fast, easy to use email client
+source=termux/termux-packages
+path=packages/alpine/build.sh

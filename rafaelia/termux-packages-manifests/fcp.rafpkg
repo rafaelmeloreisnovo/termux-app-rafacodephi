@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fcp
+id=0xc6fe39da
+name_len=3
+version=0.2.1
+homepage=https://github.com/Svetlitski/fcp
+description=A significantly faster alternative to the classic Unix cp(1) command
+source=termux/termux-packages
+path=packages/fcp/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dcraw
+id=0xdfbc2ef6
+name_len=5
+version=9.28.0
+homepage=https://www.dechifro.org/dcraw/
+description=Raw digital camera images decoding utility
+source=termux/termux-packages
+path=packages/dcraw/build.sh

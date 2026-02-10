@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=iwyu
+id=0xe8b475ff
+name_len=4
+version=0.25
+homepage=https://include-what-you-use.org/
+description=A tool to analyze #includes in C and C++ source files
+source=termux/termux-packages
+path=packages/iwyu/build.sh

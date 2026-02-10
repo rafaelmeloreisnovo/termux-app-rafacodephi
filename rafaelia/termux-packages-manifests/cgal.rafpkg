@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cgal
+id=0x6b283192
+name_len=4
+version=6.1.1
+homepage=https://www.cgal.org/
+description=Computational Geometry Algorithms Library
+source=termux/termux-packages
+path=packages/cgal/build.sh

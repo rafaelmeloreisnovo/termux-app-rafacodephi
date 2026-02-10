@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hwdata
+id=0xe2213568
+name_len=6
+version=0.404
+homepage=https://github.com/vcrhonek/hwdata
+description=Database of hardware identification and configuration data
+source=termux/termux-packages
+path=packages/hwdata/build.sh

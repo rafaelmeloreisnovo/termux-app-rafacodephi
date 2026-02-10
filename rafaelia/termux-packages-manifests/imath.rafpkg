@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=imath
+id=0xae2c5d42
+name_len=5
+version=3.2.2
+homepage=https://imath.readthedocs.io/
+description=Library for vector/matrix and math operations, plus the half type
+source=termux/termux-packages
+path=packages/imath/build.sh

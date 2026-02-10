@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gengetopt
+id=0x4fa97164
+name_len=9
+version=2.23
+homepage=https://www.gnu.org/software/gengetopt/
+description=gengetopt is a tool to write command line option parsing code for C programs
+source=termux/termux-packages
+path=packages/gengetopt/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gpsbabel
+id=0xf66c5f55
+name_len=8
+version=1.4.4
+homepage=https://www.gpsbabel.org/
+description=GPS file conversion plus transfer to/from GPS units
+source=termux/termux-packages
+path=packages/gpsbabel/build.sh

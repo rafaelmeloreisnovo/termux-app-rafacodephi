@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=flex
+id=0xcae02ff2
+name_len=4
+version=2.6.4
+homepage=https://github.com/westes/flex
+description=Fast lexical analyser generator
+source=termux/termux-packages
+path=packages/flex/build.sh

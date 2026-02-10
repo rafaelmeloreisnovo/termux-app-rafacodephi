@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=chezmoi
+id=0xbf320178
+name_len=7
+version=2.69.3
+homepage=https://chezmoi.io
+description=Manage your dotfiles across multiple machines
+source=termux/termux-packages
+path=packages/chezmoi/build.sh

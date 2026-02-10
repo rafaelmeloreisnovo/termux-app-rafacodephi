@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=avra
+id=0xf8c7d96f
+name_len=4
+version=1.4.2
+homepage=https://github.com/Ro5bert/avra
+description=Assember for the Atmel AVR microcontroller family
+source=termux/termux-packages
+path=packages/avra/build.sh

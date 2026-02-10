@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gnuski
+id=0x7afa2124
+name_len=6
+version=0.3
+homepage=https://sourceforge.net/projects/gnuski/
+description=Open source clone of Skifree, the old Windows game
+source=termux/termux-packages
+path=packages/gnuski/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hcloud
+id=0xf2238e44
+name_len=6
+version=1.61.0
+homepage=https://github.com/hetznercloud/cli
+description=Hetzner Cloud command line client
+source=termux/termux-packages
+path=packages/hcloud/build.sh

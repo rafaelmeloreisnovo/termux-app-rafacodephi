@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=chntpw
+id=0x4ad92969
+name_len=6
+version=140201
+homepage=https://pogostick.net/~pnh/ntpasswd/
+description=Offline Windows NT Password & Registry Editor
+source=termux/termux-packages
+path=packages/chntpw/build.sh

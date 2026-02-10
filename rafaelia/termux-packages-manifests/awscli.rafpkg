@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=awscli
+id=0xab044050
+name_len=6
+version=2.33.18
+homepage=https://aws.amazon.com/cli
+description=Universal Command Line Interface for Amazon Web Services
+source=termux/termux-packages
+path=packages/awscli/build.sh

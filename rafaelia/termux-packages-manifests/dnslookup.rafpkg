@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dnslookup
+id=0x34dcbc82
+name_len=9
+version=1.11.2
+homepage=https://github.com/ameshkov/dnslookup
+description=Simple command line utility to make DNS lookups. Supports all known DNS protocols: plain DNS, DoH, DoT, DoQ, DNSCrypt.
+source=termux/termux-packages
+path=packages/dnslookup/build.sh

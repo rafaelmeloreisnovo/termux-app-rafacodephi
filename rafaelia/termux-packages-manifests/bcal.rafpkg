@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bcal
+id=0x0fddfddf
+name_len=4
+version=2.4
+homepage=https://github.com/jarun/bcal
+description=Command-line utility for storage conversions and calculations
+source=termux/termux-packages
+path=packages/bcal/build.sh

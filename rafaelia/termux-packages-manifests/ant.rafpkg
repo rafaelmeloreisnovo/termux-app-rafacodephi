@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ant
+id=0x1f29dbd6
+name_len=3
+version=1.10.15
+homepage=https://ant.apache.org/
+description=Java based build tool like make
+source=termux/termux-packages
+path=packages/ant/build.sh

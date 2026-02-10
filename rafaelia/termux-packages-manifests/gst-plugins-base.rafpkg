@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gst-plugins-base
+id=0x26f56fee
+name_len=16
+version=1.28.0
+homepage=https://gstreamer.freedesktop.org/
+description=GStreamer base plug-ins
+source=termux/termux-packages
+path=packages/gst-plugins-base/build.sh

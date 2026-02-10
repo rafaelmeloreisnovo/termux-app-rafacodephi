@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ansifilter
+id=0xa277b92c
+name_len=10
+version=2.22
+homepage=http://www.andre-simon.de/doku/ansifilter/en/ansifilter.php
+description=Strip or convert ANSI codes into HTML, (La)Tex, RTF, or BBCode
+source=termux/termux-packages
+path=packages/ansifilter/build.sh

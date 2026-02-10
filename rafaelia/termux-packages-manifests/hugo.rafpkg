@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hugo
+id=0x6d8eb0d4
+name_len=4
+version=0.155.3
+homepage=https://gohugo.io/
+description=A fast and flexible static site generator
+source=termux/termux-packages
+path=packages/hugo/build.sh

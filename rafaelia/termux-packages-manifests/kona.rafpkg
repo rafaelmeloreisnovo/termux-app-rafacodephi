@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=kona
+id=0x9125bfe6
+name_len=4
+version=20211225
+homepage=https://github.com/kevinlawler/kona
+description=Open-source implementation of the APL-like K programming language
+source=termux/termux-packages
+path=packages/kona/build.sh

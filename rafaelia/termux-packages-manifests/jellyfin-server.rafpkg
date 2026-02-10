@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jellyfin-server
+id=0xf0605cf0
+name_len=15
+version=(
+homepage=https://jellyfin.org
+description=A free media system for organizing and streaming media (server)
+source=termux/termux-packages
+path=packages/jellyfin-server/build.sh

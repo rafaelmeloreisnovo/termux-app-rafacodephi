@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fontconfig
+id=0x7e0bae3e
+name_len=10
+version=2.17.1
+homepage=https://www.freedesktop.org/wiki/Software/fontconfig/
+description=Library for configuring and customizing font access
+source=termux/termux-packages
+path=packages/fontconfig/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gegl
+id=0x89161fc2
+name_len=4
+version=0.4.66
+homepage=https://gegl.org/
+description=Data flow based image processing framework
+source=termux/termux-packages
+path=packages/gegl/build.sh

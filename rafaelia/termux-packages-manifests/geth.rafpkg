@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=geth
+id=0x8eeb482d
+name_len=4
+version=1.16.8
+homepage=https://geth.ethereum.org/
+description=Go implementation of the Ethereum protocol
+source=termux/termux-packages
+path=packages/geth/build.sh

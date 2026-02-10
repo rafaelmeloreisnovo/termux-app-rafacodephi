@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hub
+id=0xe48d64ec
+name_len=3
+version=2.14.2
+homepage=https://hub.github.com/
+description=Command-line wrapper for git that makes you better at GitHub
+source=termux/termux-packages
+path=packages/hub/build.sh

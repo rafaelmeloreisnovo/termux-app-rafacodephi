@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=at
+id=0x57251588
+name_len=2
+version=3.2.5
+homepage=https://salsa.debian.org/debian/at
+description=AT and batch delayed command scheduling utility and daemon
+source=termux/termux-packages
+path=packages/at/build.sh

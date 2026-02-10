@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=helm-ls
+id=0xdcbd2c39
+name_len=7
+version=0.5.4
+homepage=https://github.com/mrjosh/helm-ls
+description=Language server for Helm
+source=termux/termux-packages
+path=packages/helm-ls/build.sh

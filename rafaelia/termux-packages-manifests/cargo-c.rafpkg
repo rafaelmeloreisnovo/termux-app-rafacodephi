@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cargo-c
+id=0xf2a9a5e7
+name_len=7
+version=0.10.20
+homepage=https://github.com/lu-zero/cargo-c
+description=Cargo C-ABI helpers
+source=termux/termux-packages
+path=packages/cargo-c/build.sh

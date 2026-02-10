@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=coinor-cbc
+id=0x6b314042
+name_len=10
+version=2.10.12
+homepage=https://github.com/coin-or/Cbc
+description=An open-source mixed integer linear programming solver
+source=termux/termux-packages
+path=packages/coinor-cbc/build.sh

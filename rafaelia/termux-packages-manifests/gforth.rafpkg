@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gforth
+id=0x2011e5f9
+name_len=6
+version=0.7.3
+homepage=https://www.gnu.org/software/gforth/
+description=The Forth implementation of the GNU project
+source=termux/termux-packages
+path=packages/gforth/build.sh

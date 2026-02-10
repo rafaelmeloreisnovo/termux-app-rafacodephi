@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=boinctui
+id=0xd993b0b0
+name_len=8
+version=2.7.2
+homepage=https://sourceforge.net/projects/boinctui/
+description=curses based manager for Boinc client
+source=termux/termux-packages
+path=packages/boinctui/build.sh

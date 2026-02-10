@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=2ping
+id=0x575564b9
+name_len=5
+version=4.5.1
+homepage=https://www.finnie.org/software/2ping/
+description=A bi-directional ping utility
+source=termux/termux-packages
+path=packages/2ping/build.sh

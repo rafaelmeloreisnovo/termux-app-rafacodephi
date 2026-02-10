@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=lfortran
+id=0x880a1853
+name_len=8
+version=0.60.0
+homepage=https://lfortran.org/
+description=A modern open-source interactive Fortran compiler
+source=termux/termux-packages
+path=packages/lfortran/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jack-example-tools
+id=0x6821f607
+name_len=18
+version=4
+homepage=https://jackaudio.org/
+description=Official JACK example clients and tools
+source=termux/termux-packages
+path=packages/jack-example-tools/build.sh

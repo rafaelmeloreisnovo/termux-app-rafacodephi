@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=catdoc
+id=0x684c2333
+name_len=6
+version=0.95
+homepage=http://www.wagner.pp.ru/~vitus/software/catdoc/
+description=Program which reads MS-Word file and prints readable ASCII text to stdout
+source=termux/termux-packages
+path=packages/catdoc/build.sh

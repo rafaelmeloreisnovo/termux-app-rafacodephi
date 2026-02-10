@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=discount
+id=0x127e5c5e
+name_len=8
+version=3.0.1.2
+homepage=https://www.pell.portland.or.us/~orc/Code/discount/
+description=Markdown implementation written in C
+source=termux/termux-packages
+path=packages/discount/build.sh

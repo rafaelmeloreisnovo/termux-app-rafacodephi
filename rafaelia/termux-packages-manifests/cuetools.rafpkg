@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cuetools
+id=0xe985e58b
+name_len=8
+version=1.4.1
+homepage=https://github.com/svend/cuetools
+description=A set of utilities for working with Cue Sheet (cue) and Table of Contents (toc) files
+source=termux/termux-packages
+path=packages/cuetools/build.sh

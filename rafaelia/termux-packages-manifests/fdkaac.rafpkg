@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fdkaac
+id=0xbc167ddb
+name_len=6
+version=1.0.6
+homepage=https://github.com/nu774/fdkaac
+description=command line encoder frontend for libfdk-aac
+source=termux/termux-packages
+path=packages/fdkaac/build.sh

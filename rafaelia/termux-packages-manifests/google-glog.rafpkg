@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=google-glog
+id=0x736d8848
+name_len=11
+version=0.7.1
+homepage=https://github.com/google/glog
+description=Logging library for C++
+source=termux/termux-packages
+path=packages/google-glog/build.sh

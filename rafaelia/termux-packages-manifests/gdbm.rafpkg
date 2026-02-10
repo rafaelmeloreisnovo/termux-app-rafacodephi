@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gdbm
+id=0xf91da3d3
+name_len=4
+version=1.26
+homepage=https://www.gnu.org.ua/software/gdbm/
+description=Library of database functions that use extensible hashing
+source=termux/termux-packages
+path=packages/gdbm/build.sh

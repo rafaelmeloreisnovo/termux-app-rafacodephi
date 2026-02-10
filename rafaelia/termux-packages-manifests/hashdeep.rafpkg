@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hashdeep
+id=0xe3f18623
+name_len=8
+version=4.4
+homepage=https://md5deep.sourceforge.net/
+description=Programs to compute hashsums of arbitrary number of files recursively
+source=termux/termux-packages
+path=packages/hashdeep/build.sh

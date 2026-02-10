@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=atomvm
+id=0xd7b01f85
+name_len=6
+version=1:0.6.6
+homepage=https://github.com/bettio/AtomVM
+description=The minimal Erlang VM implementation
+source=termux/termux-packages
+path=packages/atomvm/build.sh

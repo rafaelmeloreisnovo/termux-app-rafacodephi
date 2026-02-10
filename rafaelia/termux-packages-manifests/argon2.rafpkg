@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=argon2
+id=0xe264ce90
+name_len=6
+version=20190702
+homepage=https://github.com/P-H-C/phc-winner-argon2
+description=A password-hashing function (reference C implementation)
+source=termux/termux-packages
+path=packages/argon2/build.sh

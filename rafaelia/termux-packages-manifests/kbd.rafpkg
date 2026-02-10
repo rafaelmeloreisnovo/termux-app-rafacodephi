@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=kbd
+id=0x7b049d34
+name_len=3
+version=2.9.0
+homepage=https://kbd-project.org/
+description=KBD's showkey utility for examining keycodes
+source=termux/termux-packages
+path=packages/kbd/build.sh

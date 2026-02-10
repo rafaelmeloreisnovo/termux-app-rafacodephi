@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=kainjow-mustache
+id=0x57c54a5b
+name_len=16
+version=4.1
+homepage=https://github.com/kainjow/Mustache
+description=Mustache implementation for modern C++
+source=termux/termux-packages
+path=packages/kainjow-mustache/build.sh

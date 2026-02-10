@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=colm
+id=0xf144e814
+name_len=4
+version=0.14.7
+homepage=https://www.colm.net/open-source/colm/
+description=COmputer Language Machinery
+source=termux/termux-packages
+path=packages/colm/build.sh

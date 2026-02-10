@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=exiftool
+id=0x7923f829
+name_len=8
+version=13.50
+homepage=https://exiftool.org/
+description=Utility for reading, writing and editing meta information in a wide variety of files.
+source=termux/termux-packages
+path=packages/exiftool/build.sh

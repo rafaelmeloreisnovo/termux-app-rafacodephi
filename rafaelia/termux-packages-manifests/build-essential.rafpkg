@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=build-essential
+id=0xa12e5dfe
+name_len=15
+version=4.1
+homepage=https://github.com/termux/termux-packages
+description=A metapackage that installs essential development tools
+source=termux/termux-packages
+path=packages/build-essential/build.sh

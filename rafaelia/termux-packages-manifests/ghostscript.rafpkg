@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ghostscript
+id=0xd976a1d3
+name_len=11
+version=10.05.1
+homepage=https://www.ghostscript.com/
+description=Interpreter for the PostScript language and for PDF
+source=termux/termux-packages
+path=packages/ghostscript/build.sh

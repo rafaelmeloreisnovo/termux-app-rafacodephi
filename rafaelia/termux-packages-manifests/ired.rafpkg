@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ired
+id=0x21a075d3
+name_len=4
+version=0.6
+homepage=https://github.com/radare/ired
+description=Minimalist hexadecimal editor
+source=termux/termux-packages
+path=packages/ired/build.sh

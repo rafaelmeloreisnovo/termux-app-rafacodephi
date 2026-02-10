@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=enscript
+id=0x03b653a1
+name_len=8
+version=1.6.6
+homepage=https://www.gnu.org/software/enscript/
+description=Enscript converts ASCII text files to PostScript, HTML, RTF, ANSI and overstrikes
+source=termux/termux-packages
+path=packages/enscript/build.sh

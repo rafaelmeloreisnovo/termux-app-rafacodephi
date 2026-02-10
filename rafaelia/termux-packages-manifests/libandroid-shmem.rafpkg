@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=libandroid-shmem
+id=0x641b62ea
+name_len=16
+version=0.7
+homepage=https://github.com/termux/libandroid-shmem
+description=System V shared memory emulation on Android using ashmem
+source=termux/termux-packages
+path=packages/libandroid-shmem/build.sh

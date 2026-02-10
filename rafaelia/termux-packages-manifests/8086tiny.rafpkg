@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=8086tiny
+id=0xadebb3e5
+name_len=8
+version=1.25
+homepage=https://github.com/adriancable/8086tiny
+description=A PC XT-compatible emulator/virtual machine
+source=termux/termux-packages
+path=packages/8086tiny/build.sh

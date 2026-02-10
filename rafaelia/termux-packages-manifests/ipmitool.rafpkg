@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ipmitool
+id=0xeb2c2cb8
+name_len=8
+version=1.8.19
+homepage=https://github.com/ipmitool/ipmitool
+description=Command-line interface to IPMI-enabled devices
+source=termux/termux-packages
+path=packages/ipmitool/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cjson
+id=0xaf16b94c
+name_len=5
+version=1.7.19
+homepage=https://github.com/DaveGamble/cJSON
+description=Ultralightweight JSON parser in ANSI C
+source=termux/termux-packages
+path=packages/cjson/build.sh

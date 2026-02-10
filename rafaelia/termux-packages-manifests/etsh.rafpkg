@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=etsh
+id=0x31a6092f
+name_len=4
+version=5.4.0
+homepage=https://etsh.nl
+description=An enhanced, backward-compatible port of Thompson Shell
+source=termux/termux-packages
+path=packages/etsh/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=binaryen
+id=0xdaac38ef
+name_len=8
+version=125
+homepage=https://github.com/WebAssembly/binaryen
+description=Binaryen is a compiler and toolchain infrastructure library for WebAssembly
+source=termux/termux-packages
+path=packages/binaryen/build.sh

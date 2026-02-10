@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dwarves
+id=0x5f1a197b
+name_len=7
+version=1.31
+homepage=https://git.kernel.org/cgit/devel/pahole/pahole.git/
+description=Pahole and other DWARF utils
+source=termux/termux-packages
+path=packages/dwarves/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gexiv2
+id=0xafc4c10e
+name_len=6
+version=0.14.6
+homepage=https://wiki.gnome.org/Projects/gexiv2
+description=A GObject-based Exiv2 wrapper
+source=termux/termux-packages
+path=packages/gexiv2/build.sh

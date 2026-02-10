@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=glibc-repo
+id=0xb936d465
+name_len=10
+version=1.0
+homepage=https://github.com/termux/glibc-packages
+description=A package repository containing glibc-based programs and libraries
+source=termux/termux-packages
+path=packages/glibc-repo/build.sh

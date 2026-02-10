@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=0verkill
+id=0x7baf4038
+name_len=8
+version=1:0.16
+homepage=https://github.com/hackndev/0verkill
+description=Bloody 2D action deathmatch-like game in ASCII-ART
+source=termux/termux-packages
+path=packages/0verkill/build.sh

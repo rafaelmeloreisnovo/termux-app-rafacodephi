@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=graphene
+id=0xb2f2a867
+name_len=8
+version=${_MAJOR_VERSION}.8
+homepage=https://ebassi.github.io/graphene/
+description=A thin layer of graphic data types
+source=termux/termux-packages
+path=packages/graphene/build.sh

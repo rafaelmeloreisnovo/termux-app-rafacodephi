@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dte
+id=0xc434ac20
+name_len=3
+version=1.11.1
+homepage=https://craigbarnes.gitlab.io/dte/
+description=A small, configurable console text editor
+source=termux/termux-packages
+path=packages/dte/build.sh

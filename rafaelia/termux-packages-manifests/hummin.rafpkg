@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hummin
+id=0x6ea5cc8b
+name_len=6
+version=2021.05.18
+homepage=https://trantor.is/
+description=Command line client for the imperial library of trantor
+source=termux/termux-packages
+path=packages/hummin/build.sh

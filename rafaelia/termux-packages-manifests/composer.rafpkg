@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=composer
+id=0x8a35b313
+name_len=8
+version=2.9.5
+homepage=https://getcomposer.org/
+description=Dependency Manager for PHP
+source=termux/termux-packages
+path=packages/composer/build.sh

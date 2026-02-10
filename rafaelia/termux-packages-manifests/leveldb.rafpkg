@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=leveldb
+id=0x8e00641b
+name_len=7
+version=1.23
+homepage=https://github.com/google/leveldb
+description=Fast key-value storage library
+source=termux/termux-packages
+path=packages/leveldb/build.sh

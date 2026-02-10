@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=6tunnel
+id=0xda4d003b
+name_len=7
+version=0.14
+homepage=https://github.com/wojtekka/6tunnel
+description=Allows you to use services provided by IPv6 hosts with IPv4-only applications and vice-versa
+source=termux/termux-packages
+path=packages/6tunnel/build.sh

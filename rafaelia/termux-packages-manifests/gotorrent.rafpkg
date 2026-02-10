@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gotorrent
+id=0xcc4b63e7
+name_len=9
+version=0.1.2
+homepage=https://github.com/ismaelpadilla/gotorrent
+description=TUI for searching torrents
+source=termux/termux-packages
+path=packages/gotorrent/build.sh

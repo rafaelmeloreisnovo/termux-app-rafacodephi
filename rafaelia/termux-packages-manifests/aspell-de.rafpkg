@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=aspell-de
+id=0x2935e76e
+name_len=9
+version=1:20161207.7.0
+homepage=http://aspell.net/
+description=German dictionary for aspell
+source=termux/termux-packages
+path=packages/aspell-de/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cava
+id=0x9b3204a4
+name_len=4
+version=0.10.7
+homepage=https://github.com/karlstav/cava
+description=Console-based Audio Visualizer. Works with MPD and Pulseaudio
+source=termux/termux-packages
+path=packages/cava/build.sh

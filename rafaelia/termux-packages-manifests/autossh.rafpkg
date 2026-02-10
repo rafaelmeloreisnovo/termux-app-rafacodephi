@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=autossh
+id=0xa2de9b64
+name_len=7
+version=1.4g
+homepage=https://www.harding.motd.ca/autossh/
+description=Automatically restart SSH sessions and tunnels
+source=termux/termux-packages
+path=packages/autossh/build.sh

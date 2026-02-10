@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bat
+id=0x70b773a8
+name_len=3
+version=0.26.1
+homepage=https://github.com/sharkdp/bat
+description=A cat(1) clone with wings
+source=termux/termux-packages
+path=packages/bat/build.sh

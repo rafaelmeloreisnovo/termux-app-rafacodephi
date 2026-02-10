@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dust
+id=0xca0b3ba5
+name_len=4
+version=1.2.4
+homepage=https://github.com/bootandy/dust
+description=A more intuitive version of du in rust
+source=termux/termux-packages
+path=packages/dust/build.sh

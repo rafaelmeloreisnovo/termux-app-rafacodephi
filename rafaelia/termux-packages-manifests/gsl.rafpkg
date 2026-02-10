@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gsl
+id=0x4039a779
+name_len=3
+version=2.8
+homepage=https://www.gnu.org/software/gsl/
+description=GNU Scientific Library (GSL) providing a wide range of mathematical routines
+source=termux/termux-packages
+path=packages/gsl/build.sh

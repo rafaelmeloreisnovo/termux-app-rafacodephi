@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=glpk
+id=0x5e2fc613
+name_len=4
+version=5.0
+homepage=https://www.gnu.org/software/glpk/
+description=GNU Linear Programming Kit: solve LP, MIP and other problems
+source=termux/termux-packages
+path=packages/glpk/build.sh

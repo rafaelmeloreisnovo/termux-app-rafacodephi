@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jbig2enc
+id=0x3c5a3bb7
+name_len=8
+version=2023.01.08
+homepage=https://github.com/agl/jbig2enc
+description=An encoder for JBIG2
+source=termux/termux-packages
+path=packages/jbig2enc/build.sh

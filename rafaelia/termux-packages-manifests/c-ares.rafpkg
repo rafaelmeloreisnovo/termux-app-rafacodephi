@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=c-ares
+id=0x40c33102
+name_len=6
+version=1.34.6
+homepage=https://c-ares.org/
+description=Library for asynchronous DNS requests (including name resolves)
+source=termux/termux-packages
+path=packages/c-ares/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=game-music-emu
+id=0x33dba4b1
+name_len=14
+version=0.6.4
+homepage=https://bitbucket.org/mpyne/game-music-emu/wiki/Home
+description=A collection of video game music file emulators
+source=termux/termux-packages
+path=packages/game-music-emu/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gmic
+id=0xd2b15631
+name_len=4
+version=3.6.6
+homepage=https://gmic.eu
+description=Full-featured framework for image processing
+source=termux/termux-packages
+path=packages/gmic/build.sh

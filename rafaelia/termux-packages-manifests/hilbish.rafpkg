@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hilbish
+id=0x1e0b17a0
+name_len=7
+version=(
+homepage=https://rosettea.github.io/Hilbish/
+description=The Moon-powered shell! A comfy and extensible shell for Lua fans!
+source=termux/termux-packages
+path=packages/hilbish/build.sh

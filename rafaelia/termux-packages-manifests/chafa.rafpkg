@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=chafa
+id=0x33c73920
+name_len=5
+version=1.18.1
+homepage=https://hpjansson.org/chafa/
+description=Image-to-text converter supporting a wide range of symbols, etc.
+source=termux/termux-packages
+path=packages/chafa/build.sh

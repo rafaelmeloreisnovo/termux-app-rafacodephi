@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hfsutils
+id=0x915256cd
+name_len=8
+version=3.2.6
+homepage=https://www.mars.org/home/rob/proj/hfs/
+description=Tool for manipulating HFS images
+source=termux/termux-packages
+path=packages/hfsutils/build.sh

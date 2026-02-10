@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ccextractor
+id=0xe988811d
+name_len=11
+version=0.94
+homepage=https://ccextractor.org/
+description=A tool used to produce subtitles for TV recordings
+source=termux/termux-packages
+path=packages/ccextractor/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=kubo
+id=0xcabac2d6
+name_len=4
+version=0.39.0
+homepage=https://ipfs.io/
+description=A peer-to-peer hypermedia distribution protocol
+source=termux/termux-packages
+path=packages/kubo/build.sh

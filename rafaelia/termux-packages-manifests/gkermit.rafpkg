@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gkermit
+id=0xf33ac76e
+name_len=7
+version=2.01
+homepage=http://www.columbia.edu/kermit/gkermit.html
+description=Simple, Portable, Free File Transfer Software for UNIX
+source=termux/termux-packages
+path=packages/gkermit/build.sh

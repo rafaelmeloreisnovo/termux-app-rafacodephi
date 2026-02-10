@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=grex
+id=0xb3901b39
+name_len=4
+version=1.4.6
+homepage=https://github.com/pemistahl/grex
+description=Simplifies the task of creating regular expressions
+source=termux/termux-packages
+path=packages/grex/build.sh

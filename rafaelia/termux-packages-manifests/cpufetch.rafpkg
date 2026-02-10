@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cpufetch
+id=0xe3e0c0a7
+name_len=8
+version=1.07
+homepage=https://github.com/Dr-Noob/cpufetch
+description=Simple yet fancy CPU architecture fetching tool
+source=termux/termux-packages
+path=packages/cpufetch/build.sh

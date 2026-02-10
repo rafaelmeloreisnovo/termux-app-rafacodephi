@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=e2tools
+id=0x15f00b09
+name_len=7
+version=0.1.2
+homepage=https://github.com/e2tools/e2tools
+description=mtools analogue for ext2/3 filesystems
+source=termux/termux-packages
+path=packages/e2tools/build.sh

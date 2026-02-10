@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=geoip2-database
+id=0x71e8cb67
+name_len=15
+version=20191221
+homepage=https://dev.maxmind.com/geoip/geoip2/geolite2/
+description=GeoLite2 IP geolocation databases compiled by MaxMind
+source=termux/termux-packages
+path=packages/geoip2-database/build.sh

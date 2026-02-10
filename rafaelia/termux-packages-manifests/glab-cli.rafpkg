@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=glab-cli
+id=0xae858ee2
+name_len=8
+version=1.82.0
+homepage=https://gitlab.com/gitlab-org/cli
+description=A GitLab CLI tool bringing GitLab to your command line
+source=termux/termux-packages
+path=packages/glab-cli/build.sh

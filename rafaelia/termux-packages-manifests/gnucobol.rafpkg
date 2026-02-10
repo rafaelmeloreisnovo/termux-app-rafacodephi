@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gnucobol
+id=0x2deae102
+name_len=8
+version=3.2
+homepage=https://gnucobol.sourceforge.io/
+description=A free/libre COBOL compiler
+source=termux/termux-packages
+path=packages/gnucobol/build.sh

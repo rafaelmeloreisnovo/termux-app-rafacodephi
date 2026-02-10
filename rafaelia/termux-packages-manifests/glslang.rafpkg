@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=glslang
+id=0x07dee1b7
+name_len=7
+version=16.2.0
+homepage=https://github.com/KhronosGroup/glslang
+description=OpenGL and OpenGL ES shader front end and validator
+source=termux/termux-packages
+path=packages/glslang/build.sh

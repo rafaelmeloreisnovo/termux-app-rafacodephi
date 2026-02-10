@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=darkhttpd
+id=0xd4f80a53
+name_len=9
+version=1.17
+homepage=https://unix4lyfe.org/darkhttpd
+description=A simple webserver, implemented in a single .c file.
+source=termux/termux-packages
+path=packages/darkhttpd/build.sh

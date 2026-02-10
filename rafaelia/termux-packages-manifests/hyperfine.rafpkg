@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hyperfine
+id=0x591a6a59
+name_len=9
+version=1.20.0
+homepage=https://github.com/sharkdp/hyperfine
+description=A command-line benchmarking tool
+source=termux/termux-packages
+path=packages/hyperfine/build.sh

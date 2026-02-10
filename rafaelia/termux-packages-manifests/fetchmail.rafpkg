@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fetchmail
+id=0x7d83d2ac
+name_len=9
+version=6.6.2
+homepage=https://www.fetchmail.info/
+description=A remote-mail retrieval utility
+source=termux/termux-packages
+path=packages/fetchmail/build.sh

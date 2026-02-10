@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dnstop
+id=0xbb74c0ff
+name_len=6
+version=2022.10.19
+homepage=https://github.com/measurement-factory/dnstop
+description=A libpcap application that displays various tables of DNS traffic on your network
+source=termux/termux-packages
+path=packages/dnstop/build.sh

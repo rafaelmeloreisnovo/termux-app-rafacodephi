@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ffmpeg
+id=0x1b873b98
+name_len=6
+version=8.0.1
+homepage=https://ffmpeg.org
+description=Tools and libraries to manipulate a wide range of multimedia formats and protocols
+source=termux/termux-packages
+path=packages/ffmpeg/build.sh

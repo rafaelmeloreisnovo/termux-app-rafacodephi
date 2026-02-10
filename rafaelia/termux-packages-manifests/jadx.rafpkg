@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jadx
+id=0x134258f8
+name_len=4
+version=1.5.3
+homepage=https://github.com/skylot/jadx
+description=Dex to Java decompiler
+source=termux/termux-packages
+path=packages/jadx/build.sh

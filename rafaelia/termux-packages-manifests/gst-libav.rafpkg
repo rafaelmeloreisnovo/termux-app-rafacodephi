@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gst-libav
+id=0x84f54fa0
+name_len=9
+version=1.28.0
+homepage=https://gstreamer.freedesktop.org/modules/gst-libav.html
+description=GStreamer Libav plug-in contains one plugin with a set of elements using the Libav library code
+source=termux/termux-packages
+path=packages/gst-libav/build.sh

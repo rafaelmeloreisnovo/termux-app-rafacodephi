@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gh
+id=0x47207f2a
+name_len=2
+version=2.86.0
+homepage=https://cli.github.com/
+description=GitHub’s official command line tool
+source=termux/termux-packages
+path=packages/gh/build.sh

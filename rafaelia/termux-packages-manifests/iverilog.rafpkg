@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=iverilog
+id=0xd952c28a
+name_len=8
+version=12.0
+homepage=http://iverilog.icarus.com/
+description=Icarus Verilog compiler and simulation tool
+source=termux/termux-packages
+path=packages/iverilog/build.sh

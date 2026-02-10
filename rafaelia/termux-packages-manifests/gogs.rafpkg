@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gogs
+id=0x0173c495
+name_len=4
+version=0.14.1
+homepage=https://gogs.io
+description=A painless self-hosted Git service
+source=termux/termux-packages
+path=packages/gogs/build.sh

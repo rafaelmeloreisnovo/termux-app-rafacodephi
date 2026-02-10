@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=hstr
+id=0x39e8110e
+name_len=4
+version=3.1
+homepage=https://github.com/dvorka/hstr
+description=Shell history suggest box for bash and zsh
+source=termux/termux-packages
+path=packages/hstr/build.sh

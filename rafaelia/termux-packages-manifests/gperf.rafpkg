@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gperf
+id=0x63779229
+name_len=5
+version=3.3
+homepage=https://www.gnu.org/software/gperf
+description=A perfect hash function generator
+source=termux/termux-packages
+path=packages/gperf/build.sh

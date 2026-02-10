@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dnscontrol
+id=0x3af3efc1
+name_len=10
+version=4.33.1
+homepage=https://github.com/StackExchange/dnscontrol
+description=Infrastructure as code for DNS!
+source=termux/termux-packages
+path=packages/dnscontrol/build.sh

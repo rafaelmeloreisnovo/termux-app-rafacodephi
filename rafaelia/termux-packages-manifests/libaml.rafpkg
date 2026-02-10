@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=libaml
+id=0xa51d63e6
+name_len=6
+version=1.0.0
+homepage=https://github.com/any1/aml
+description=Andri's Main Loop library
+source=termux/termux-packages
+path=packages/libaml/build.sh

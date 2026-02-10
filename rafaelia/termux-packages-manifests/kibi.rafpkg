@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=kibi
+id=0xbc1e41f8
+name_len=4
+version=0.3.3
+homepage=https://github.com/ilai-deutel/kibi
+description=A tiny terminal text editor, written in Rust
+source=termux/termux-packages
+path=packages/kibi/build.sh

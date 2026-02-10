@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fdm
+id=0xac04cb1e
+name_len=3
+version=2.2
+homepage=https://github.com/nicm/fdm
+description=A program designed to fetch mail from POP3 or IMAP servers, or receive local mail from stdin, and deliver it in various ways
+source=termux/termux-packages
+path=packages/fdm/build.sh

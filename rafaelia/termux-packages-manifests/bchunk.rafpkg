@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bchunk
+id=0x2f5fc862
+name_len=6
+version=1.2.2
+homepage=http://he.fi/bchunk/
+description=Tool to convert .bin + .cue files to .iso files
+source=termux/termux-packages
+path=packages/bchunk/build.sh

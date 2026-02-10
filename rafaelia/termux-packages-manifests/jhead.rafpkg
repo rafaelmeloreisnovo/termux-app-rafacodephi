@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jhead
+id=0x4b6c1b6b
+name_len=5
+version=3.08
+homepage=http://www.sentex.net/~mwandel/jhead/
+description=Exif Jpeg header manipulation tool
+source=termux/termux-packages
+path=packages/jhead/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=discordo
+id=0x8d308ce0
+name_len=8
+version=2025.08.06
+homepage=https://github.com/ayntgl/discordo
+description=A lightweight, secure, and feature-rich Discord terminal client
+source=termux/termux-packages
+path=packages/discordo/build.sh

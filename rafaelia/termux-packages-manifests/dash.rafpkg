@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dash
+id=0x0179def5
+name_len=4
+version=0.5.12
+homepage=http://gondor.apana.org.au/~herbert/dash/
+description=Small POSIX-compliant implementation of /bin/sh
+source=termux/termux-packages
+path=packages/dash/build.sh

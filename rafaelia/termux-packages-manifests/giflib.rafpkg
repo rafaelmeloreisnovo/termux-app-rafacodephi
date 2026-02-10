@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=giflib
+id=0x1d3f1168
+name_len=6
+version=5.2.2
+homepage=https://giflib.sourceforge.net/
+description=A library for reading and writing gif images
+source=termux/termux-packages
+path=packages/giflib/build.sh

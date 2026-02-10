@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dnote
+id=0xa3fd6473
+name_len=5
+version=1:0.16.0
+homepage=https://www.getdnote.com/
+description=A simple command line notebook for programmers
+source=termux/termux-packages
+path=packages/dnote/build.sh

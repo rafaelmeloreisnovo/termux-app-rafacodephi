@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gdrive-downloader
+id=0x0cf1a1e2
+name_len=17
+version=1:1.1
+homepage=https://github.com/Akianonymus/gdrive-downloader
+description=Download a gdrive folder or file easily, shell ftw
+source=termux/termux-packages
+path=packages/gdrive-downloader/build.sh

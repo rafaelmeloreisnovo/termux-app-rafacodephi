@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=calcurse
+id=0x13cf901f
+name_len=8
+version=4.8.2
+homepage=https://calcurse.org/
+description=calcurse is a calendar and scheduling application for the command line
+source=termux/termux-packages
+path=packages/calcurse/build.sh

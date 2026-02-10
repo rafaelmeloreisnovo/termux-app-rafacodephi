@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ada
+id=0x38390dbb
+name_len=3
+version=3.4.2
+homepage=https://github.com/ada-url/ada
+description=WHATWG-compliant and fast URL parser written in modern C++
+source=termux/termux-packages
+path=packages/ada/build.sh

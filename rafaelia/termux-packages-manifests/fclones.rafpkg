@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fclones
+id=0xd667bca7
+name_len=7
+version=0.35.0
+homepage=https://github.com/pkolaczk/fclones
+description=Efficient Duplicate File Finder
+source=termux/termux-packages
+path=packages/fclones/build.sh

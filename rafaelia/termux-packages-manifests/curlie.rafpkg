@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=curlie
+id=0x05c26fe9
+name_len=6
+version=1.8.2
+homepage=https://curlie.io/
+description=The power of curl, the ease of use of httpie
+source=termux/termux-packages
+path=packages/curlie/build.sh

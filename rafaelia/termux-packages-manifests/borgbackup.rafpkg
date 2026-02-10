@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=borgbackup
+id=0x726f5b4b
+name_len=10
+version=1.4.3
+homepage=https://www.borgbackup.org/
+description=Deduplicating and compressing backup program
+source=termux/termux-packages
+path=packages/borgbackup/build.sh

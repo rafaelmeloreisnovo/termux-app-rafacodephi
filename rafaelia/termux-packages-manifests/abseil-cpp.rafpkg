@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=abseil-cpp
+id=0x85af1ba7
+name_len=10
+version=20250814.1
+homepage=https://abseil.io/
+description=Abseil C++ Common Libraries
+source=termux/termux-packages
+path=packages/abseil-cpp/build.sh

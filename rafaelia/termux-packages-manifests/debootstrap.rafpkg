@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=debootstrap
+id=0x3eff6218
+name_len=11
+version=1.0.142
+homepage=https://wiki.debian.org/Debootstrap
+description=Bootstrap a basic Debian system
+source=termux/termux-packages
+path=packages/debootstrap/build.sh

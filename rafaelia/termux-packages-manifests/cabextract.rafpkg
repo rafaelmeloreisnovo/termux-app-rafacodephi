@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cabextract
+id=0xdd69276a
+name_len=10
+version=1.11
+homepage=https://www.cabextract.org.uk/
+description=A program to extract Microsoft cabinet (.CAB) files
+source=termux/termux-packages
+path=packages/cabextract/build.sh

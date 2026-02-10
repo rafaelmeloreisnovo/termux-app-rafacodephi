@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=frogcomposband
+id=0x58e7ce4d
+name_len=14
+version=7.1.salmiak
+homepage=https://github.com/sulkasormi/frogcomposband/
+description=Open world Angband variant with many additions
+source=termux/termux-packages
+path=packages/frogcomposband/build.sh

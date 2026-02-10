@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dtc
+id=0xca34b592
+name_len=3
+version=1.7.2
+homepage=https://git.kernel.org/pub/scm/utils/dtc/dtc
+description=Device Tree Compiler
+source=termux/termux-packages
+path=packages/dtc/build.sh

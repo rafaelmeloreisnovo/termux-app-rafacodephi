@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=ciso
+id=0x17bc423b
+name_len=4
+version=1.0.2
+homepage=https://github.com/jamie/ciso
+description=PSP ISO compression tool
+source=termux/termux-packages
+path=packages/ciso/build.sh

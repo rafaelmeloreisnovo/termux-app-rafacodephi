@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=flang
+id=0x9851ad91
+name_len=5
+version=21.1.8
+homepage=https://flang.llvm.org/
+description=LLVM's Fortran frontend
+source=termux/termux-packages
+path=packages/flang/build.sh

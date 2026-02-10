@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jsoncpp
+id=0x9db0b7c0
+name_len=7
+version=1.9.6
+homepage=https://github.com/open-source-parsers/jsoncpp
+description=C++ library for interacting with JSON
+source=termux/termux-packages
+path=packages/jsoncpp/build.sh

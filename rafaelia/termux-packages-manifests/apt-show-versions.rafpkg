@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=apt-show-versions
+id=0xf31c0bcc
+name_len=17
+version=0.22.16
+homepage=https://salsa.debian.org/debian/apt-show-versions
+description=Lists available package versions with distribution
+source=termux/termux-packages
+path=packages/apt-show-versions/build.sh

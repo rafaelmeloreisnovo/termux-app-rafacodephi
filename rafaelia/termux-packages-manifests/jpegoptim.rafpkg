@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=jpegoptim
+id=0xa0771f4a
+name_len=9
+version=1.5.6
+homepage=https://www.kokkonen.net/tjko/projects.html
+description=JPEG optimizer that recompresses image files to a smaller size, without losing any information
+source=termux/termux-packages
+path=packages/jpegoptim/build.sh

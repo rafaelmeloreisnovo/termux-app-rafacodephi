@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dnglab
+id=0xb52e1067
+name_len=6
+version=0.7.1
+homepage=https://github.com/dnglab/dnglab
+description=Camera RAW to DNG file format converter
+source=termux/termux-packages
+path=packages/dnglab/build.sh

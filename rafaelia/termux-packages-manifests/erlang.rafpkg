@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=erlang
+id=0x0544f88a
+name_len=6
+version=28.3.1
+homepage=https://www.erlang.org/
+description=General-purpose concurrent functional programming language
+source=termux/termux-packages
+path=packages/erlang/build.sh

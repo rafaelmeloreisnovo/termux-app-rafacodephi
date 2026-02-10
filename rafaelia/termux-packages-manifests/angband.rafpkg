@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=angband
+id=0xe1b6cdf4
+name_len=7
+version=4.2.6
+homepage=https://rephial.org/
+description=Dungeon exploration adventure game
+source=termux/termux-packages
+path=packages/angband/build.sh

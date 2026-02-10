@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dpkg
+id=0x91ad2963
+name_len=4
+version=1.22.6
+homepage=https://packages.debian.org/dpkg
+description=Debian package management system
+source=termux/termux-packages
+path=packages/dpkg/build.sh

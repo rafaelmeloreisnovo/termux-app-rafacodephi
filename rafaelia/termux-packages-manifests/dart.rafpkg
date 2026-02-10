@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dart
+id=0xef778408
+name_len=4
+version=3.11.0
+homepage=https://dart.dev/
+description=Dart is a general-purpose programming language
+source=termux/termux-packages
+path=packages/dart/build.sh

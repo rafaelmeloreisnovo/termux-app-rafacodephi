@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=krb5
+id=0x8a6c98b1
+name_len=4
+version=1.22.2
+homepage=https://web.mit.edu/kerberos
+description=The Kerberos network authentication system
+source=termux/termux-packages
+path=packages/krb5/build.sh

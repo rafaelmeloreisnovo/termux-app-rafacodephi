@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gpgme
+id=0x8b9af089
+name_len=5
+version=2.0.1
+homepage=https://www.gnupg.org/related_software/gpgme/
+description=Library designed to make access to GnuPG easier
+source=termux/termux-packages
+path=packages/gpgme/build.sh

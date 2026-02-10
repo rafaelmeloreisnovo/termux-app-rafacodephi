@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=heyu
+id=0x3155c278
+name_len=4
+version=1:2.10.3
+homepage=https://www.heyu.org/
+description=Program for remotely controlling lights and appliances
+source=termux/termux-packages
+path=packages/heyu/build.sh

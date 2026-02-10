@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fatsort
+id=0xd1a72fb0
+name_len=7
+version=1.6.5.640
+homepage=https://fatsort.sourceforge.io/
+description=A C utility that sorts FAT12, FAT16, FAT32 and exFAT partitions
+source=termux/termux-packages
+path=packages/fatsort/build.sh

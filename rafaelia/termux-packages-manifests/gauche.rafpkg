@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gauche
+id=0x54b72842
+name_len=6
+version=0.9.15
+homepage=https://practical-scheme.net/gauche/
+description=An R7RS Scheme implementation developed to be a handy script interpreter
+source=termux/termux-packages
+path=packages/gauche/build.sh

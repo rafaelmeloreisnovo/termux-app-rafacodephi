@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=gnunet
+id=0x80fa26ea
+name_len=6
+version=0.26.2
+homepage=https://gnunet.org
+description=A framework for secure peer-to-peer networking
+source=termux/termux-packages
+path=packages/gnunet/build.sh

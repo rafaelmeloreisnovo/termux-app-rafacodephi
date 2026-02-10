@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=algernon
+id=0x7f46d551
+name_len=8
+version=1.17.5
+homepage=https://algernon.roboticoverlords.org/
+description=Small self-contained web server with Lua, Markdown, QUIC, Redis and PostgreSQL support
+source=termux/termux-packages
+path=packages/algernon/build.sh

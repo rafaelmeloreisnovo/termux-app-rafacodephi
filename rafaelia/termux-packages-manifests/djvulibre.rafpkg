@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=djvulibre
+id=0xdec45400
+name_len=9
+version=3.5.29
+homepage=https://djvu.sourceforge.net/
+description=Suite to create, manipulate and view DjVu ('déjà vu') documents
+source=termux/termux-packages
+path=packages/djvulibre/build.sh

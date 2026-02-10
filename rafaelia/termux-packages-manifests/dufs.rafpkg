@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dufs
+id=0xdb39219d
+name_len=4
+version=0.45.0
+homepage=https://github.com/sigoden/dufs
+description=A file server that supports static serving, uploading, searching, accessing control, webdav...
+source=termux/termux-packages
+path=packages/dufs/build.sh

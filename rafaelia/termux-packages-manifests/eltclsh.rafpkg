@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=eltclsh
+id=0x68c2d304
+name_len=7
+version=1.20
+homepage=https://homepages.laas.fr/mallet/soft/shell/eltclsh
+description=Interactive shell for TCL programming language
+source=termux/termux-packages
+path=packages/eltclsh/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=alsa-utils
+id=0x53909808
+name_len=10
+version=1.2.15.2
+homepage=https://www.alsa-project.org
+description=The Advanced Linux Sound Architecture (ALSA) - utils
+source=termux/termux-packages
+path=packages/alsa-utils/build.sh

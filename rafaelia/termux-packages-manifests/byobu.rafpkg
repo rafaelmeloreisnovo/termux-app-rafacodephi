@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=byobu
+id=0xdbfe24e4
+name_len=5
+version=6.13
+homepage=https://www.byobu.org/
+description=Byobu is a GPLv3 open source text-based window manager and terminal multiplexer
+source=termux/termux-packages
+path=packages/byobu/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=exhale
+id=0xed832398
+name_len=6
+version=1.2.2RC+really1.2.2
+homepage=https://gitlab.com/ecodis/exhale
+description=Open source xHE-AAC encoder
+source=termux/termux-packages
+path=packages/exhale/build.sh

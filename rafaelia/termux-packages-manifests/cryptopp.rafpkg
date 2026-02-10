@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cryptopp
+id=0x9331bf30
+name_len=8
+version=8.9.0
+homepage=https://www.cryptopp.com/
+description=A free C++ class library of cryptographic schemes
+source=termux/termux-packages
+path=packages/cryptopp/build.sh

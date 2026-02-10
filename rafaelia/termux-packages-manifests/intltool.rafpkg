@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=intltool
+id=0xe3fb4920
+name_len=8
+version=0.51.0
+homepage=https://launchpad.net/intltool
+description=The internationalization tool collection
+source=termux/termux-packages
+path=packages/intltool/build.sh

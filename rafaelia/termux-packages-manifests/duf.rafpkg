@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=duf
+id=0xe5310e7c
+name_len=3
+version=0.9.1
+homepage=https://github.com/muesli/duf
+description=Disk usage/free utility
+source=termux/termux-packages
+path=packages/duf/build.sh

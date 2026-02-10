@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=geckodriver
+id=0x363ec5ce
+name_len=11
+version=0.36.0
+homepage=https://github.com/mozilla/geckodriver
+description=Proxy for using W3C WebDriver-compatible clients to interact with Gecko-based browsers
+source=termux/termux-packages
+path=packages/geckodriver/build.sh

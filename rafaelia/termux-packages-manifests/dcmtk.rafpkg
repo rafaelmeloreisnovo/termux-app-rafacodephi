@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dcmtk
+id=0x502b0ca6
+name_len=5
+version=3.6.9
+homepage=https://dicom.offis.de/dcmtk
+description=A collection of libraries and applications implementing large parts the DICOM standard
+source=termux/termux-packages
+path=packages/dcmtk/build.sh

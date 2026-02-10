@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=clinfo
+id=0x755e6422
+name_len=6
+version=3.0.25.02.14
+homepage=https://github.com/Oblomov/clinfo
+description=Print all known information about all available OpenCL platforms and devices in the system
+source=termux/termux-packages
+path=packages/clinfo/build.sh

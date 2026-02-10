@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=cmark
+id=0x41f183ab
+name_len=5
+version=0.31.1
+homepage=https://github.com/commonmark/cmark
+description=CommonMark parsing and rendering program
+source=termux/termux-packages
+path=packages/cmark/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bmon
+id=0x0d82b2e1
+name_len=4
+version=4.0
+homepage=https://github.com/tgraf/bmon
+description=Bandwidth monitor and rate estimator
+source=termux/termux-packages
+path=packages/bmon/build.sh

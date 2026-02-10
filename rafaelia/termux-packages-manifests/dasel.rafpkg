@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=dasel
+id=0xcde18a66
+name_len=5
+version=3.2.1
+homepage=https://github.com/TomWright/dasel
+description=Select, put and delete data from JSON, TOML, YAML, XML and CSV files with a single utility
+source=termux/termux-packages
+path=packages/dasel/build.sh

@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=lexbor
+id=0x35392621
+name_len=6
+version=2.6.0
+homepage=https://lexbor.com
+description=Fast embeddable web browser engine written in C with no dependencies
+source=termux/termux-packages
+path=packages/lexbor/build.sh

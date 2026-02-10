@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=file
+id=0xaaea5743
+name_len=4
+version=5.46
+homepage=https://darwinsys.com/file/
+description=Command-line tool that tells you in words what kind of data a file contains
+source=termux/termux-packages
+path=packages/file/build.sh

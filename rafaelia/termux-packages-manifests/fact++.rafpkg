@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=fact++
+id=0xbcfbb5f5
+name_len=6
+version=1.6.5
+homepage=https://bitbucket.org/dtsarkov/factplusplus
+description=Re-implementation of the well-known FaCT Description Logic (DL) Reasoner
+source=termux/termux-packages
+path=packages/fact++/build.sh
