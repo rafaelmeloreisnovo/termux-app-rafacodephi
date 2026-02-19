@@ -167,11 +167,12 @@ def downloadBootstrap(String arch, String expectedChecksum, String version) {
     def file = new File(projectDir, localUrl)
     if (file.exists()) {
         def buffer = new byte[8192]
-        def input = new FileInputStream(file)
-        while (true) {
-            def readBytes = input.read(buffer)
-            if (readBytes < 0) break
-            digest.update(buffer, 0, readBytes)
+        new FileInputStream(file).withCloseable { input ->
+            while (true) {
+                def readBytes = input.read(buffer)
+                if (readBytes < 0) break
+                digest.update(buffer, 0, readBytes)
+            }
         }
         def checksum = new BigInteger(1, digest.digest()).toString(16)
         while (checksum.length() < 64) { checksum = "0" + checksum }
@@ -181,6 +182,11 @@ def downloadBootstrap(String arch, String expectedChecksum, String version) {
             logger.quiet("Deleting old local file with wrong hash: " + localUrl + ": expected: " + expectedChecksum + ", actual: " + checksum)
             file.delete()
         }
+
+        // Reset hash state before validating a newly downloaded file. Without this,
+        // stale local bytes contaminate checksum validation and bootstrap download can
+        // fail permanently after a single corrupted/incomplete file.
+        digest.reset()
     }
 
     def remoteUrl = baseUrl + "/bootstrap-" + version + "/bootstrap-" + arch + ".zip"
