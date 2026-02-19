@@ -40,6 +40,7 @@ public class BareMetal {
     
     /**
      * Get CPU capabilities bitmask
+     * Returns runtime-detected bits when available, otherwise compile-time fallback bits.
      * @return Bitmask of capabilities (NEON, AVX, SSE, etc.)
      */
     public static native int getCapabilities();
@@ -74,6 +75,28 @@ public class BareMetal {
         return (getCapabilities() & 0x02) != 0;
     }
     
+    public static final class CapabilitiesDetail {
+        public final int effective;
+        public final int runtime;
+        public final int binary;
+        public final boolean runtimeValid;
+
+        private CapabilitiesDetail(int effective, int runtime, int binary, boolean runtimeValid) {
+            this.effective = effective;
+            this.runtime = runtime;
+            this.binary = binary;
+            this.runtimeValid = runtimeValid;
+        }
+    }
+
+    public static CapabilitiesDetail getCapabilitiesDetailParsed() {
+        int[] raw = getCapabilitiesDetail();
+        if (raw == null || raw.length < 4) {
+            return new CapabilitiesDetail(getCapabilities(), 0, getCapabilities(), false);
+        }
+        return new CapabilitiesDetail(raw[0], raw[1], raw[2], raw[3] != 0);
+    }
+
     /* ========================================================================
      * Vector Operations - Optimized for SIMD
      * ====================================================================== */

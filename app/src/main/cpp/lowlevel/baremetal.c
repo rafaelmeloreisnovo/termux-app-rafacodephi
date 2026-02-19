@@ -71,30 +71,249 @@
 #define LOGD(...)
 #endif
 
+
+/* ============================================================================
+ * Runtime architecture detection (HWCAP/CPUID)
+ * ========================================================================== */
+
+typedef struct {
+    uint32_t caps_runtime;
+    uint32_t caps_binary;
+    int runtime_valid;
+    int initialized;
+} arch_caps_rt_t;
+
+static arch_caps_rt_t g_arch_caps = {0, 0, 0, 0};
+
+static uint32_t get_binary_caps(void) {
+    uint32_t caps = 0;
+
+    #if HAS_NEON
+    caps |= CAP_NEON;
+    #endif
+
+    #if defined(__ARM_NEON) || defined(__ARM_NEON__)
+    caps |= CAP_ASIMD;
+    #endif
+
+    #if HAS_AVX2
+    caps |= CAP_AVX2;
+    #endif
+
+    #if HAS_AVX
+    caps |= CAP_AVX;
+    #endif
+
+    #if HAS_SSE42
+    caps |= CAP_SSE42;
+    #endif
+
+    #if HAS_SSE2
+    caps |= CAP_SSE2;
+    #endif
+
+    #if defined(__SSE__)
+    caps |= CAP_SSE;
+    #endif
+
+    return caps;
+}
+
+#if defined(__linux__) && (defined(__aarch64__) || defined(__arm__) || defined(__arm64__))
+typedef struct {
+    unsigned long a_type;
+    unsigned long a_val;
+} auxv_ent_t;
+
+#ifndef AT_HWCAP
+#define AT_HWCAP 16
+#endif
+
+#ifndef AT_HWCAP2
+#define AT_HWCAP2 26
+#endif
+
+#ifndef HWCAP_ASIMD
+#define HWCAP_ASIMD (1UL << 1)
+#endif
+
+#ifndef HWCAP_SVE
+#define HWCAP_SVE (1UL << 22)
+#endif
+
+#ifndef HWCAP2_SVE2
+#define HWCAP2_SVE2 (1UL << 1)
+#endif
+
+#ifndef HWCAP_NEON
+#define HWCAP_NEON (1UL << 12)
+#endif
+
+static int read_auxv_hwcap(unsigned long* hwcap, unsigned long* hwcap2) {
+    int fd = open("/proc/self/auxv", O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
+        return 0;
+    }
+
+    auxv_ent_t ent;
+    int got = 0;
+    *hwcap = 0;
+    *hwcap2 = 0;
+
+    while (read(fd, &ent, sizeof(ent)) == (ssize_t)sizeof(ent)) {
+        if (ent.a_type == 0) break;
+        if (ent.a_type == AT_HWCAP) {
+            *hwcap = ent.a_val;
+            got |= 1;
+        } else if (ent.a_type == AT_HWCAP2) {
+            *hwcap2 = ent.a_val;
+            got |= 2;
+        }
+    }
+
+    close(fd);
+    return (got & 1) != 0;
+}
+
+static uint32_t detect_runtime_caps_arm(int* valid) {
+    unsigned long hwcap = 0;
+    unsigned long hwcap2 = 0;
+    if (!read_auxv_hwcap(&hwcap, &hwcap2)) {
+        *valid = 0;
+        return 0;
+    }
+
+    uint32_t caps = 0;
+    #if defined(__aarch64__) || defined(__arm64__)
+    if (hwcap & HWCAP_ASIMD) {
+        caps |= CAP_NEON;
+        caps |= CAP_ASIMD;
+    }
+    #else
+    if (hwcap & HWCAP_NEON) {
+        caps |= CAP_NEON;
+    }
+    #endif
+    if (hwcap & HWCAP_SVE) {
+        caps |= CAP_SVE;
+    }
+    if (hwcap2 & HWCAP2_SVE2) {
+        caps |= CAP_SVE2;
+    }
+
+    *valid = 1;
+    return caps;
+}
+#endif
+
+#if defined(__i386__) || defined(__x86_64__) || defined(__amd64__)
+static void cpuid_query(uint32_t leaf, uint32_t subleaf,
+                        uint32_t* eax, uint32_t* ebx, uint32_t* ecx, uint32_t* edx) {
+    uint32_t a, b, c, d;
+    #if defined(__i386__) && defined(__PIC__)
+    __asm__ volatile(
+        "xchgl %%ebx, %1\n\t"
+        "cpuid\n\t"
+        "xchgl %%ebx, %1\n\t"
+        : "=a"(a), "=&r"(b), "=c"(c), "=d"(d)
+        : "0"(leaf), "2"(subleaf));
+    #else
+    __asm__ volatile(
+        "cpuid"
+        : "=a"(a), "=b"(b), "=c"(c), "=d"(d)
+        : "0"(leaf), "2"(subleaf));
+    #endif
+    *eax = a;
+    *ebx = b;
+    *ecx = c;
+    *edx = d;
+}
+
+static uint64_t xgetbv_query(uint32_t xcr) {
+    uint32_t eax, edx;
+    __asm__ volatile("xgetbv" : "=a"(eax), "=d"(edx) : "c"(xcr));
+    return ((uint64_t)edx << 32) | eax;
+}
+
+static uint32_t detect_runtime_caps_x86(int* valid) {
+    uint32_t eax = 0, ebx = 0, ecx = 0, edx = 0;
+    cpuid_query(0, 0, &eax, &ebx, &ecx, &edx);
+    if (eax == 0) {
+        *valid = 0;
+        return 0;
+    }
+
+    uint32_t max_leaf = eax;
+    uint32_t caps = 0;
+
+    cpuid_query(1, 0, &eax, &ebx, &ecx, &edx);
+    if (edx & (1u << 25)) caps |= CAP_SSE;
+    if (edx & (1u << 26)) caps |= CAP_SSE2;
+    if (ecx & (1u << 20)) caps |= CAP_SSE42;
+
+    int avx_hw = 0;
+    if ((ecx & (1u << 27)) && (ecx & (1u << 28))) {
+        uint64_t xcr0 = xgetbv_query(0);
+        avx_hw = ((xcr0 & 0x6u) == 0x6u);
+        if (avx_hw) {
+            caps |= CAP_AVX;
+        }
+    }
+
+    if (max_leaf >= 7) {
+        cpuid_query(7, 0, &eax, &ebx, &ecx, &edx);
+        if (avx_hw && (ebx & (1u << 5))) {
+            caps |= CAP_AVX2;
+        }
+    }
+
+    *valid = 1;
+    return caps;
+}
+#endif
+
+static void init_runtime_caps_once(void) {
+    if (g_arch_caps.initialized) {
+        return;
+    }
+
+    g_arch_caps.caps_binary = get_binary_caps();
+    g_arch_caps.caps_runtime = 0;
+    g_arch_caps.runtime_valid = 0;
+
+    #if defined(__linux__) && (defined(__aarch64__) || defined(__arm__) || defined(__arm64__))
+    g_arch_caps.caps_runtime = detect_runtime_caps_arm(&g_arch_caps.runtime_valid);
+    #elif defined(__i386__) || defined(__x86_64__) || defined(__amd64__)
+    g_arch_caps.caps_runtime = detect_runtime_caps_x86(&g_arch_caps.runtime_valid);
+    #endif
+
+    g_arch_caps.initialized = 1;
+}
+
 /* ============================================================================
  * Vector Operations - Optimized for each architecture
  * ========================================================================== */
 
 void vop_add(const float* a, const float* b, float* r, uint32_t n) {
-    #if HAS_NEON
-    /* ARM NEON optimization */
-    uint32_t i;
-    for (i = 0; i + 4 <= n; i += 4) {
-        __builtin_prefetch(a + i + 8);
-        __builtin_prefetch(b + i + 8);
-        for (uint32_t j = 0; j < 4; j++) {
-            r[i + j] = a[i + j] + b[i + j];
+    if (!a || !b || !r || n == 0) return;
+
+#if defined(HAS_BM_NEON_ASM)
+    if (bm_can_use_neon_asm()) {
+        const uint32_t step = bm_simd_step_f32();
+        const uint32_t simd_n = n - (n % step);
+        if (simd_n != 0) {
+            bm_vadd_neon(a, b, r, simd_n);
         }
+        for (uint32_t i = simd_n; i < n; i++) {
+            r[i] = a[i] + b[i];
+        }
+        return;
     }
-    for (; i < n; i++) {
-        r[i] = a[i] + b[i];
-    }
-    #else
-    /* Generic implementation */
+#endif
+
     for (uint32_t i = 0; i < n; i++) {
         r[i] = a[i] + b[i];
     }
-    #endif
 }
 
 void vop_sub(const float* a, const float* b, float* r, uint32_t n) {
@@ -155,26 +374,27 @@ float vop_max(const float* a, uint32_t n) {
 }
 
 float vop_dot(const float* a, const float* b, uint32_t n) {
+    if (!a || !b || n == 0) return 0.0f;
+
+#if defined(HAS_BM_NEON_ASM)
+    if (bm_can_use_neon_asm()) {
+        const uint32_t step = bm_simd_step_f32();
+        const uint32_t simd_n = n - (n % step);
+        float s = 0.0f;
+        if (simd_n != 0) {
+            s = bm_dot_neon(a, b, simd_n);
+        }
+        for (uint32_t i = simd_n; i < n; i++) {
+            s += a[i] * b[i];
+        }
+        return s;
+    }
+#endif
+
     float s = 0.0f;
-    
-    #if HAS_NEON
-    /* Unroll loop for better performance */
-    uint32_t i;
-    for (i = 0; i + 4 <= n; i += 4) {
-        s += a[i] * b[i];
-        s += a[i+1] * b[i+1];
-        s += a[i+2] * b[i+2];
-        s += a[i+3] * b[i+3];
-    }
-    for (; i < n; i++) {
-        s += a[i] * b[i];
-    }
-    #else
     for (uint32_t i = 0; i < n; i++) {
         s += a[i] * b[i];
     }
-    #endif
-    
     return s;
 }
 
@@ -662,23 +882,39 @@ float fm_log(float x) {
  * ========================================================================== */
 
 void* bmem_cpy(void* d, const void* s, size_t n) {
+    if (!d || !s || n == 0) return d;
+
     char* pd = (char*)d;
     const char* ps = (const char*)s;
-    
-    #if defined(__ARM_ARCH_7A__) || defined(__aarch64__)
-    /* Align and use word copies for better performance */
-    while (n >= 4 && ((uintptr_t)pd & 3) == 0) {
-        *((uint32_t*)pd) = *((const uint32_t*)ps);
-        pd += 4;
-        ps += 4;
-        n -= 4;
+
+#if defined(HAS_BM_NEON_ASM)
+    if (bm_can_use_neon_asm()) {
+        const size_t step = bm_simd_step_u8();
+        while (n != 0 && ((((uintptr_t)pd & (step - 1u)) != 0u) || (((uintptr_t)ps & (step - 1u)) != 0u))) {
+            *pd++ = *ps++;
+            n--;
+        }
+
+        const size_t simd_n = n - (n % step);
+        if (simd_n != 0) {
+            bm_memcpy_neon(pd, ps, simd_n);
+            pd += simd_n;
+            ps += simd_n;
+            n -= simd_n;
+        }
+
+        while (n != 0) {
+            *pd++ = *ps++;
+            n--;
+        }
+        return d;
     }
-    #endif
-    
-    while (n--) {
+#endif
+
+    while (n != 0) {
         *pd++ = *ps++;
+        n--;
     }
-    
     return d;
 }
 
@@ -900,29 +1136,33 @@ void get_hw_profile(hw_profile_t* p) {
 }
 
 uint32_t get_arch_caps(void) {
-    uint32_t caps = 0;
-    
-    #ifdef HAS_NEON
-    caps |= CAP_NEON;
-    #endif
-    
-    #ifdef HAS_AVX2
-    caps |= CAP_AVX2;
-    #endif
-    
-    #ifdef HAS_AVX
-    caps |= CAP_AVX;
-    #endif
-    
-    #ifdef HAS_SSE42
-    caps |= CAP_SSE42;
-    #endif
-    
-    #ifdef HAS_SSE2
-    caps |= CAP_SSE2;
-    #endif
-    
-    LOGD("Architecture: %s, Capabilities: 0x%08x", ARCH_NAME, caps);
-    
+    init_runtime_caps_once();
+
+    const uint32_t caps = g_arch_caps.runtime_valid
+        ? g_arch_caps.caps_runtime
+        : g_arch_caps.caps_binary;
+
+    LOGD("Architecture: %s, RuntimeValid: %d, RuntimeCaps: 0x%08x, BinaryCaps: 0x%08x, EffectiveCaps: 0x%08x",
+         ARCH_NAME,
+         g_arch_caps.runtime_valid,
+         g_arch_caps.caps_runtime,
+         g_arch_caps.caps_binary,
+         caps);
+
     return caps;
+}
+
+uint32_t get_arch_runtime_caps(void) {
+    init_runtime_caps_once();
+    return g_arch_caps.caps_runtime;
+}
+
+uint32_t get_arch_binary_caps(void) {
+    init_runtime_caps_once();
+    return g_arch_caps.caps_binary;
+}
+
+int get_arch_runtime_caps_valid(void) {
+    init_runtime_caps_once();
+    return g_arch_caps.runtime_valid;
 }

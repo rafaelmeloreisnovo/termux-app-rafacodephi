@@ -51,6 +51,10 @@
     #define HAS_NEON 1
 #endif
 
+#if defined(__arm__) || defined(__aarch64__)
+    #define HAS_BM_NEON_ASM 1
+#endif
+
 #if defined(__AVX2__)
     #define HAS_AVX2 1
 #elif defined(__AVX__)
@@ -80,6 +84,13 @@ float vop_min(const float* a, uint32_t n);
 float vop_max(const float* a, uint32_t n);
 float vop_dot(const float* a, const float* b, uint32_t n);
 float vop_norm(const float* a, uint32_t n);
+
+/* ASM kernels (runtime-dispatched when available) */
+#if defined(HAS_BM_NEON_ASM)
+extern float bm_dot_neon(const float* a, const float* b, uint32_t n);
+extern void bm_vadd_neon(const float* a, const float* b, float* r, uint32_t n);
+extern void* bm_memcpy_neon(void* d, const void* s, size_t n);
+#endif
 
 /* Matrix operations - deterministic mathematics */
 mx_t* mx_create(uint32_t r, uint32_t c);
@@ -126,6 +137,9 @@ char* bstr_cpy(char* d, const char* s);
 /* Architecture info */
 const char* get_arch_name(void);
 uint32_t get_arch_caps(void);
+uint32_t get_arch_runtime_caps(void);
+uint32_t get_arch_binary_caps(void);
+int get_arch_runtime_caps_valid(void);
 
 typedef struct {
     char abi[24];
@@ -146,6 +160,10 @@ void get_hw_profile(hw_profile_t* p);
 #define CAP_AVX2     (1 << 2)
 #define CAP_SSE2     (1 << 3)
 #define CAP_SSE42    (1 << 4)
+#define CAP_ASIMD    (1 << 5)
+#define CAP_SVE      (1 << 6)
+#define CAP_SVE2     (1 << 7)
+#define CAP_SSE      (1 << 8)
 
 /* User-space accessibility flags */
 #define HW_ACCESS_HAS_ABI               (1u << 0)
