@@ -126,6 +126,9 @@ char* bstr_cpy(char* d, const char* s);
 /* Architecture info */
 const char* get_arch_name(void);
 uint32_t get_arch_caps(void);
+uint32_t get_arch_runtime_caps(void);
+uint32_t get_arch_binary_caps(void);
+int get_arch_runtime_caps_valid(void);
 
 /* Capability flags */
 #define CAP_NEON     (1 << 0)
@@ -133,5 +136,9 @@ uint32_t get_arch_caps(void);
 #define CAP_AVX2     (1 << 2)
 #define CAP_SSE2     (1 << 3)
 #define CAP_SSE42    (1 << 4)
+#define CAP_ASIMD    (1 << 5)
+#define CAP_SVE      (1 << 6)
+#define CAP_SVE2     (1 << 7)
+#define CAP_SSE      (1 << 8)
 
 #endif /* TERMUX_BAREMETAL_H */

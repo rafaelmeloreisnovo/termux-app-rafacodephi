@@ -32,6 +32,24 @@ Java_com_termux_lowlevel_BareMetal_getCapabilities(JNIEnv *env, jclass clazz) {
     return (jint)get_arch_caps();
 }
 
+JNIEXPORT jintArray JNICALL
+Java_com_termux_lowlevel_BareMetal_getCapabilitiesDetail(JNIEnv *env, jclass clazz) {
+    (void)clazz;
+
+    jint payload[4];
+    payload[0] = (jint)get_arch_caps();
+    payload[1] = (jint)get_arch_runtime_caps();
+    payload[2] = (jint)get_arch_binary_caps();
+    payload[3] = (jint)get_arch_runtime_caps_valid();
+
+    jintArray arr = (*env)->NewIntArray(env, 4);
+    if (!arr) {
+        return NULL;
+    }
+    (*env)->SetIntArrayRegion(env, arr, 0, 4, payload);
+    return arr;
+}
+
 /* ============================================================================
  * Vector Operations
  * ========================================================================== */
@@ -384,6 +402,7 @@ static JNINativeMethod methods[] = {
     /* Architecture */
     {"getArchitecture", "()Ljava/lang/String;", (void*)Java_com_termux_lowlevel_BareMetal_getArchitecture},
     {"getCapabilities", "()I", (void*)Java_com_termux_lowlevel_BareMetal_getCapabilities},
+    {"getCapabilitiesDetail", "()[I", (void*)Java_com_termux_lowlevel_BareMetal_getCapabilitiesDetail},
     
     /* Vector ops */
     {"vectorDot", "([F[F)F", (void*)Java_com_termux_lowlevel_BareMetal_vectorDot},

@@ -122,6 +122,38 @@ The native library is compiled with:
 - **NEON**: Enabled for ARM architectures
 - **No Stack Protector**: `-fno-stack-protector` for bare-metal approach
 
+
+## Capability Bitmask and Source
+
+`get_arch_caps()` now returns **runtime hardware detection** when available, and only falls back to compile-time macros when runtime probing fails.
+
+| Bit | Flag | Runtime source | Fallback source |
+|-----|------|----------------|-----------------|
+| `1 << 0` | `CAP_NEON` | ARM `AT_HWCAP` (`HWCAP_NEON` on ARM32, `HWCAP_ASIMD` on ARM64) | `HAS_NEON` |
+| `1 << 1` | `CAP_AVX` | x86/x86_64 `CPUID.(EAX=1):ECX[28]` + `XGETBV` OS state | `HAS_AVX` |
+| `1 << 2` | `CAP_AVX2` | x86/x86_64 `CPUID.(EAX=7,ECX=0):EBX[5]` + AVX precondition | `HAS_AVX2` |
+| `1 << 3` | `CAP_SSE2` | x86/x86_64 `CPUID.(EAX=1):EDX[26]` | `HAS_SSE2` |
+| `1 << 4` | `CAP_SSE42` | x86/x86_64 `CPUID.(EAX=1):ECX[20]` | `HAS_SSE42` |
+| `1 << 5` | `CAP_ASIMD` | ARM64 `AT_HWCAP` (`HWCAP_ASIMD`) | `__ARM_NEON/__ARM_NEON__` |
+| `1 << 6` | `CAP_SVE` | ARM64 `AT_HWCAP` (`HWCAP_SVE`) | none |
+| `1 << 7` | `CAP_SVE2` | ARM64 `AT_HWCAP2` (`HWCAP2_SVE2`) | none |
+| `1 << 8` | `CAP_SSE` | x86/x86_64 `CPUID.(EAX=1):EDX[25]` | `__SSE__` |
+
+### Runtime probing implementation
+
+- **ARM on Android/Linux**: direct read of `/proc/self/auxv` for `AT_HWCAP` and `AT_HWCAP2`.
+- **x86/x86_64**: inline assembly `cpuid` and `xgetbv` (no external libraries).
+- Results are cached once in a static runtime struct and reused for all subsequent calls.
+
+### JNI detail payload
+
+`BareMetal.getCapabilitiesDetail()` returns `int[4]`:
+
+- `[0]`: effective caps (`get_arch_caps()`, runtime if valid else fallback)
+- `[1]`: runtime detected caps
+- `[2]`: compile-time binary caps
+- `[3]`: runtime detection valid (`1`) / fallback in use (`0`)
+
 ## Architecture Support
 
 | Architecture | Support | SIMD | Optimizations |
