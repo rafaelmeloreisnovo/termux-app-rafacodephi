@@ -86,14 +86,27 @@ Java_com_termux_lowlevel_BareMetal_vectorAdd(JNIEnv *env, jclass clazz,
                                                jfloatArray a, jfloatArray b,
                                                jfloatArray result) {
     (void)clazz;
-    jsize len = (*env)->GetArrayLength(env, a);
+    jsize len_a = (*env)->GetArrayLength(env, a);
+    jsize len_b = (*env)->GetArrayLength(env, b);
+    jsize len_r = (*env)->GetArrayLength(env, result);
+
+    if (len_a != len_b || len_a != len_r) {
+        LOGE("Vector dimensions mismatch: a=%d b=%d result=%d", len_a, len_b, len_r);
+        jclass illegal_arg = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
+        if (illegal_arg) {
+            (*env)->ThrowNew(env, illegal_arg,
+                             "Vector dimensions mismatch: arrays must have equal length");
+            (*env)->DeleteLocalRef(env, illegal_arg);
+        }
+        return;
+    }
     
     jfloat *pa = (*env)->GetPrimitiveArrayCritical(env, a, NULL);
     jfloat *pb = (*env)->GetPrimitiveArrayCritical(env, b, NULL);
     jfloat *pr = (*env)->GetPrimitiveArrayCritical(env, result, NULL);
     
     if (pa && pb && pr) {
-        vop_add(pa, pb, pr, len);
+        vop_add(pa, pb, pr, len_a);
     }
     
     if (pa) (*env)->ReleasePrimitiveArrayCritical(env, a, pa, JNI_ABORT);
