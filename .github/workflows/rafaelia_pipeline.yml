@@ -312,7 +312,7 @@ jobs:
           fi
 
       - name: "📦 Upload ARM64 Debug APK"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: termux-arm64-debug-${{ matrix.variant }}-${{ env.APK_VERSION_TAG }}
           path: |
@@ -389,7 +389,7 @@ jobs:
           fi
 
       - name: "📦 Upload ARM64 Release APK"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: termux-arm64-release-${{ matrix.variant }}-${{ env.APK_VERSION_TAG }}
           path: |
@@ -482,7 +482,7 @@ jobs:
           echo "✅ Full debug build completed"
 
       - name: "📦 Upload Universal APK"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_universal
           path: |
@@ -490,7 +490,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload ARM64-v8a APK"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_arm64-v8a
           path: |
@@ -498,7 +498,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload ARMv7a APK"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_armeabi-v7a
           path: |
@@ -506,7 +506,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload x86_64 APK"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_x86_64
           path: |
@@ -514,7 +514,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload x86 APK"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_x86
           path: |
@@ -522,7 +522,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload Checksums"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_sha256sums
           path: ${{ env.APK_DIR_PATH }}/sha256sums.txt
@@ -562,7 +562,7 @@ jobs:
           echo "✅ Unit tests completed"
 
       - name: "📊 Upload Test Results"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results
