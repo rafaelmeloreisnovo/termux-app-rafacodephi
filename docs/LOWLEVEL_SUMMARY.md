@@ -221,7 +221,7 @@ VA_min = (Space ⊕ Features ⊕ Pairing ⊕ InvarianceTests ⊕ OutputSpec)
 pair(v_i, v_j) => {
     cos(v_i, v_j),      // Cosine similarity
     ||v_i - v_j||,      // Euclidean distance
-    ΔH                  // Delta H (placeholder)
+    ΔH = H(v_i) - H(v_j) // Delta de entropia
 }
 ```
 

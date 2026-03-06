@@ -28,7 +28,7 @@ Read [CONTRIBUTING.md](/CONTRIBUTING.md) and [Developer's Wiki](https://github.c
 The Termux Community docs are available [here](https://github.com/termux/termux-community/blob/site/site/pages/en/index.md).
 
 **All our community members must follow the rules that are defined [here](https://github.com/termux/termux-community/blob/site/site/pages/en/rules/index.md) and any [Content Not Allowed](https://github.com/termux/termux-community/blob/site/site/pages/en/rules/index.md#8-content-not-allowed) must not be posted.**
-##
+---
 
 
 

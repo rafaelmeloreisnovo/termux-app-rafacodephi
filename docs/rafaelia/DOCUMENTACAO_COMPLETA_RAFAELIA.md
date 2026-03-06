@@ -2832,9 +2832,9 @@ Este documento apresentou uma visão completa e navegável do sistema **RAFAELIA
 
 ### Contato
 
-- **Website**: [instituto-rafael.org](https://instituto-rafael.org) (placeholder)
+- **Website**: [instituto-rafael.org](https://instituto-rafael.org)
 - **GitHub**: [instituto-Rafael/termux-app-rafacodephi](https://github.com/instituto-Rafael/termux-app-rafacodephi)
-- **Email**: contato@instituto-rafael.org (placeholder)
+- **Email**: contato@instituto-rafael.org
 
 ---
 
