@@ -399,7 +399,7 @@ jobs:
 | Métrica | Alvo | Atual |
 |---------|------|-------|
 | Build Time | < 10 min | ~7 min |
-| Test Coverage | > 60% | TBD |
+| Test Coverage | > 60% | N/A (baseline em definição) |
 | Lint Errors | 0 | 0 |
 | Security Issues | 0 | 0 |
 

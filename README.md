@@ -111,7 +111,7 @@ adb install app/build/outputs/apk/debug/termux-app_apt-android-7-debug_universal
 - [Forking](#forking)
 - [Sponsors and Funders](#sponsors-and-funders)
 - [Acknowledgments and Attribution](#acknowledgments-and-attribution)
-##
+---
 
 
 
@@ -125,7 +125,7 @@ The core [Termux](https://github.com/termux/termux-app) app comes with the follo
 - [Termux:Styling](https://github.com/termux/termux-styling)
 - [Termux:Tasker](https://github.com/termux/termux-tasker)
 - [Termux:Widget](https://github.com/termux/termux-widget)
-##
+---
 
 
 
@@ -213,7 +213,7 @@ To uninstall Termux completely, you must uninstall **any and all existing Termux
 Go to `Android Settings` -> `Applications` and then look for those apps. You can also use the search feature if it’s available on your device and search `termux` in the applications list.
 
 Even if you think you have not installed any of the plugins, it's strongly suggested to go through the application list in Android settings and double-check.
-##
+---
 
 
 
@@ -280,7 +280,7 @@ The main ones are the following.
 - Android Terminal Emulator: Android terminal app which Termux terminal handling is based on. Inactive. [Source](https://github.com/jackpal/Android-Terminal-Emulator).
 </details>
 
-##
+---
 
 
 
@@ -302,7 +302,7 @@ Users must post complete report (optionally without sensitive info) when reporti
 - `Normal` - Start logging error, warn and info messages and stacktraces.
 - `Debug` - Start logging debug messages.
 - `Verbose` - Start logging verbose messages.
-##
+---
 
 
 
@@ -336,7 +336,7 @@ Commit messages **must** use the [Conventional Commits](https://www.conventional
 - **Removed** for now removed features.
 - **Fixed** for any bug fixes.
 - **Security** in case of vulnerabilities.
-##
+---
 
 
 
@@ -346,7 +346,7 @@ Commit messages **must** use the [Conventional Commits](https://www.conventional
 - You also need to recompile bootstrap zip for the new package name. Check [building bootstrap](https://github.com/termux/termux-packages/wiki/For-maintainers#build-bootstrap-archives), [here](https://github.com/termux/termux-app/issues/1983) and [here](https://github.com/termux/termux-app/issues/2081#issuecomment-865280111).
 - Currently, not all plugins use `TermuxConstants` from `termux-shared` library and have hardcoded `com.termux` values and will need to be manually patched.
 - If forking termux plugins, check [Forking and Local Development](https://github.com/termux/termux-app/wiki/Termux-Libraries#forking-and-local-development) for info on how to use termux libraries for plugins.
-##
+---
 
 
 
@@ -375,7 +375,7 @@ Commit messages **must** use the [Conventional Commits](https://www.conventional
 [<img alt="Warp" width="25%" src="https://github.com/warpdotdev/brand-assets/blob/640dffd347439bbcb535321ab36b7281cf4446c0/Github/Sponsor/Warp-Github-LG-03.png" />](https://www.warp.dev/?utm_source=github&utm_medium=readme&utm_campaign=termux)  
 [*Warp, built for coding with multiple AI agents*](https://www.warp.dev/?utm_source=github&utm_medium=readme&utm_campaign=termux)
 
-##
+---
 
 ## Acknowledgments and Attribution
 
