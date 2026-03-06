@@ -230,3 +230,34 @@ Hash SHA-256 do Inventário: [Calculado em runtime]
 **FIAT RAFAELIA** - Transparência e organização completa.
 
 **Φ_ethica** - Todo código catalogado e atribuído corretamente.
+
+---
+
+## 🔎 Verificação rápida de `.md` e arquivos soltos (2026-03)
+
+Comandos executados para auditoria rápida:
+
+```bash
+rg --files -g '*.md' | wc -l
+find . -maxdepth 1 -type f -name '*.md' | wc -l
+find . -maxdepth 1 -type f ! -name '*.md' -printf '%f\n' | sort
+```
+
+Resultado registrado:
+
+- Total de Markdown no repositório: **59**
+- Arquivos Markdown na raiz: **34**
+- Arquivos soltos na raiz (não Markdown):
+  - `.editorconfig`
+  - `.gitattributes`
+  - `.gitignore`
+  - `Makefile`
+  - `build.gradle`
+  - `gradle.properties`
+  - `gradlew`
+  - `gradlew.bat`
+  - `jitpack.yml`
+  - `settings.gradle`
+
+✅ Conclusão: não há arquivos soltos inesperados na raiz para a configuração atual do projeto; os itens encontrados são compatíveis com um projeto Android/Gradle multi-módulo.
+

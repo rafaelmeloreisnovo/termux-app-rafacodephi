@@ -94,6 +94,8 @@ adb install app/build/outputs/apk/debug/termux-app_apt-android-7-debug_universal
 - 📝 [Changes and Patch](./docs/MUDANCAS_ANDROID15.md) - Detailed changelog
 - ⚙️ [Bare-Metal Implementation](./IMPLEMENTACAO_BAREMETAL.md) - Native code optimizations
 - 📖 [Complete Documentation](./DOCUMENTACAO.md) - Full technical documentation
+- 🧩 [Total Dependencies Inventory](./docs/DEPENDENCIAS_TOTAIS.md) - Consolidated Gradle/modules dependencies
+- 🗂️ [Loose Files Inventory](./ARQUIVOS_SOLTOS_INVENTARIO.md) - Audit of `.md` and root loose files
 
 ***
 

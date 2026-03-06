@@ -62,6 +62,7 @@ Este documento serve como índice mestre de toda a documentação do projeto Ter
 |-----------|-----------|--------------|------------|
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Solução de problemas comuns | Usuários | ⭐⭐ Importante |
 | [VALIDATION_COMMANDS.md](VALIDATION_COMMANDS.md) | Comandos de validação | Desenvolvedores | ⭐ Referência |
+| [ARQUIVOS_SOLTOS_INVENTARIO.md](ARQUIVOS_SOLTOS_INVENTARIO.md) | Inventário de `.md` e arquivos soltos | Desenvolvedores | ⭐ Referência |
 | [docs/STATUS.md](docs/STATUS.md) | Status oficial e consolidado | Desenvolvedores | ⭐⭐ Importante |
 | [SUMMARY.md](SUMMARY.md) | Resumo final de implementação (legado) | Todos | ⭐ Referência |
 | [RESUMO_FINAL.md](RESUMO_FINAL.md) | Resumo das mudanças (Target SDK 28) (legado) | Desenvolvedores | ⭐ Referência |

@@ -219,3 +219,20 @@ Integrações adicionais devem respeitar o perfil **low-level** do projeto:
 ## 12. Conclusão
 
 Esta consolidação garante **rastreabilidade total** das dependências internas (módulos Gradle), externas (artefatos Maven/Jitpack) e das ligações explícitas com outros repositórios essenciais ao ecossistema Termux.
+
+---
+
+## 13. Verificação Operacional (2026-03)
+
+Validação executada localmente para garantir que o inventário de dependências está versionado no repositório e consistente com os `build.gradle`:
+
+```bash
+rg -n "^(\s*)(implementation|api|testImplementation|androidTestImplementation|coreLibraryDesugaring|classpath)\s" --glob "**/build.gradle"
+```
+
+Resultado: **OK** (dependências encontradas em `build.gradle`, `app/build.gradle`, `termux-shared/build.gradle`, `terminal-view/build.gradle`, `terminal-emulator/build.gradle`, `rafaelia/build.gradle` e `rmr/build.gradle`).
+
+### Observação de ambiente
+
+A execução de tasks Gradle que exigem Android SDK falha sem `local.properties`/`ANDROID_HOME` configurado, portanto a verificação desta rodada foi feita por inspeção estática dos arquivos versionados.
+
