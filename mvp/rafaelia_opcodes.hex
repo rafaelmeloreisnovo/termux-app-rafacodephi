@@ -229,8 +229,8 @@ AUTHORSHIP_CHECKSUM:
 METADATA:
     ; Versão (1.0 = 0x0100) - 2 bytes little-endian
     db 00h, 01h
-    ; Timestamp Unix (placeholder) - 4 bytes
-    db 00h, 00h, 00h, 00h
+    ; Timestamp Unix (política: build time UTC) - 4 bytes little-endian
+    db 6Ch, 27h, B0h, 69h  ; Timestamp Unix = 1773152108 (2026-03-10T14:15:08Z, build UTC)
     ; Autor hash (SHA-256 truncado dos primeiros 8 bytes)
     ; "instituto-Rafael" -> primeiros 8 bytes do hash
     db 49h, 4Eh, 53h, 54h, 2Dh, 52h, 41h, 46h

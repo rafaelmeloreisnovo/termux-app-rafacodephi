@@ -67,6 +67,25 @@ Representação hexadecimal de:
 
 ---
 
+### Política de Timestamp em `METADATA`
+
+- **Política adotada**: `build time UTC` (epoch Unix no momento da geração/atualização).
+- Atualize o campo de timestamp com:
+
+```bash
+./scripts/mvp_metadata_timestamp.sh update
+```
+
+- Valide que o timestamp não ficou como placeholder zerado com:
+
+```bash
+./scripts/mvp_metadata_timestamp.sh validate
+```
+
+> Se `mvp/rafaelia_opcodes.hex` for regenerado por automação, inclua o comando `update` na etapa de geração para evitar commits com `00000000`.
+
+---
+
 ## 🔐 Proteção de Autoria
 
 ### Assinatura Embedded

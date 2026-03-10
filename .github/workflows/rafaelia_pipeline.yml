@@ -150,6 +150,11 @@ jobs:
       - name: "✅ Validate Gradle Wrapper"
         uses: gradle/actions/wrapper-validation@v5
 
+      - name: "🕒 Validate MVP Metadata Timestamp"
+        run: |
+          ./scripts/mvp_metadata_timestamp.sh validate
+
+
       - name: "📋 Extract Version Information"
         id: version
         run: |
