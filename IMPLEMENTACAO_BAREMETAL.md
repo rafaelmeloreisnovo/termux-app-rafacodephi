@@ -313,3 +313,30 @@ A implementação oferece:
 - **Tamanho**: 50 KB vs 5 MB de bibliotecas
 - **Portabilidade**: Funciona em todas arquiteturas Android
 - **Manutenibilidade**: Código limpo e bem documentado
+
+## Reprodução do checksum autoral (`mvp/rafaelia_opcodes.hex`)
+
+Escopo definido para cálculo determinístico:
+
+- Entrada: somente bytes declarados em diretivas `db` dentro de `mvp/rafaelia_opcodes.hex`.
+- Intervalo: do início do arquivo até imediatamente antes do rótulo `AUTHORSHIP_CHECKSUM:`.
+- Exclusões: comentários (`; ...`), labels, `equ` e qualquer diretiva não-`db`.
+- Agrupamento: words little-endian de 32 bits (4 bytes por grupo).
+- Último grupo incompleto: padding com `0x00`.
+- Redução final: XOR de todas as words de 32 bits.
+
+Script reprodutível:
+
+```bash
+python3 scripts/calc_mvp_authorship_checksum.py mvp/rafaelia_opcodes.hex
+```
+
+Saída esperada atual:
+
+```text
+FILE=mvp/rafaelia_opcodes.hex
+PAYLOAD_BYTES=139
+CHECKSUM_XOR32_GROUP4=0xF8F8DF32
+```
+
+Nota de semântica: o campo `AUTHORSHIP_CHECKSUM` no arquivo `.hex` mantém `db 52h, 41h, 46h, 41h` (`"RAFA"`) como assinatura ASCII autoral/ética. O checksum técnico acima (`0xF8F8DF32`) é um valor de integridade computado por XOR-32 em grupos de 4 bytes.

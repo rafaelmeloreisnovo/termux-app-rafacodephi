@@ -213,11 +213,15 @@ HEX_TABLE:
 ; ============================================================================
 ; CHECKSUM DE AUTORIA
 ; ============================================================================
-; Este checksum é calculado sobre todos os bytes de código e dados
-; para garantir integridade e autoria.
+; Checksum técnico do payload gerado por `db` (início do arquivo até ANTES de
+; AUTHORSHIP_CHECKSUM), ignorando comentários e diretivas não-binárias.
 ;
-; Algoritmo: XOR de todos os bytes em grupos de 4 (word)
-; Resultado esperado para este arquivo: 0xRAFA (placeholder)
+; Algoritmo: XOR de words little-endian de 32 bits (grupos de 4 bytes),
+; com padding 0x00 no último grupo incompleto.
+; Resultado esperado para este arquivo: 0xF8F8DF32
+;
+; Nota: AUTHORSHIP_CHECKSUM abaixo mantém assinatura ASCII "RAFA" (0x52414641)
+; como marcador autoral/ético, não como checksum técnico criptográfico.
 
 AUTHORSHIP_CHECKSUM:
     db 52h, 41h, 46h, 41h  ; "RAFA" - identificador de integridade
