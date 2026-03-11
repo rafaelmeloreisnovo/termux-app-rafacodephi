@@ -9,8 +9,23 @@
 #define RMR_NR_EXECVE 59
 #define RMR_NR_EXIT 60
 #define RMR_NR_WAIT4 61
+#elif defined(__i386__)
+#define RMR_NR_VFORK 190
+#define RMR_NR_EXECVE 11
+#define RMR_NR_EXIT 1
+#define RMR_NR_WAIT4 114
 #elif defined(__aarch64__)
 #define RMR_NR_VFORK 190
+#define RMR_NR_EXECVE 221
+#define RMR_NR_EXIT 93
+#define RMR_NR_WAIT4 260
+#elif defined(__arm__)
+#define RMR_NR_VFORK 190
+#define RMR_NR_EXECVE 11
+#define RMR_NR_EXIT 1
+#define RMR_NR_WAIT4 114
+#elif defined(__riscv)
+#define RMR_NR_VFORK 220
 #define RMR_NR_EXECVE 221
 #define RMR_NR_EXIT 93
 #define RMR_NR_WAIT4 260
@@ -73,6 +88,36 @@ static long RmR_syscall4(long n, long a, long b, long c, long d){
   __asm__ volatile("svc 0" : "+r"(x0) : "r"(x8), "r"(x1), "r"(x2), "r"(x3) : "memory");
   return x0;
 }
+#elif defined(__riscv)
+static long RmR_syscall0(long n){
+  register long a7 __asm__("a7") = n;
+  register long a0 __asm__("a0");
+  __asm__ volatile("ecall" : "=r"(a0) : "r"(a7) : "memory");
+  return a0;
+}
+static long RmR_syscall1(long n, long a){
+  register long a7 __asm__("a7") = n;
+  register long a0 __asm__("a0") = a;
+  __asm__ volatile("ecall" : "+r"(a0) : "r"(a7) : "memory");
+  return a0;
+}
+static long RmR_syscall3(long n, long a, long b, long c){
+  register long a7 __asm__("a7") = n;
+  register long a0 __asm__("a0") = a;
+  register long a1 __asm__("a1") = b;
+  register long a2 __asm__("a2") = c;
+  __asm__ volatile("ecall" : "+r"(a0) : "r"(a7), "r"(a1), "r"(a2) : "memory");
+  return a0;
+}
+static long RmR_syscall4(long n, long a, long b, long c, long d){
+  register long a7 __asm__("a7") = n;
+  register long a0 __asm__("a0") = a;
+  register long a1 __asm__("a1") = b;
+  register long a2 __asm__("a2") = c;
+  register long a3 __asm__("a3") = d;
+  __asm__ volatile("ecall" : "+r"(a0) : "r"(a7), "r"(a1), "r"(a2), "r"(a3) : "memory");
+  return a0;
+}
 #else
 static long RmR_syscall0(long n){ (void)n; return -1; }
 static long RmR_syscall1(long n, long a){ (void)n; (void)a; return -1; }
@@ -96,27 +141,32 @@ static long RmR_execve_try(const char *path, const char **argv){
 }
 
 u32 RmR_exec_host_termux(const u8 *name, u32 len, raf_exec_result_t *out){
-#if defined(__x86_64__) || defined(__aarch64__)
+#if defined(__x86_64__) || defined(__aarch64__) || defined(__i386__) || defined(__arm__) || defined(__riscv)
   char path[256];
   const char *argv[2];
-  const char *prefix_a = "/data/data/com.termux/files/usr/bin/";
-  const char *prefix_b = "/system/bin/";
-  const char *prefix_c = "/system/xbin/";
-  u32 prefix_a_len = (u32)(sizeof("/data/data/com.termux/files/usr/bin/") - 1u);
-  u32 prefix_b_len = (u32)(sizeof("/system/bin/") - 1u);
-  u32 prefix_c_len = (u32)(sizeof("/system/xbin/") - 1u);
+  const char *prefixes[6];
+  u32 prefix_lens[6];
+  u32 prefix_count = 0u;
+  prefixes[prefix_count] = "/data/data/com.termux.rafacodephi/files/usr/bin/";
+  prefix_lens[prefix_count++] = (u32)(sizeof("/data/data/com.termux.rafacodephi/files/usr/bin/") - 1u);
+  prefixes[prefix_count] = "/data/user/0/com.termux.rafacodephi/files/usr/bin/";
+  prefix_lens[prefix_count++] = (u32)(sizeof("/data/user/0/com.termux.rafacodephi/files/usr/bin/") - 1u);
+  prefixes[prefix_count] = "/data/data/com.termux/files/usr/bin/";
+  prefix_lens[prefix_count++] = (u32)(sizeof("/data/data/com.termux/files/usr/bin/") - 1u);
+  prefixes[prefix_count] = "/data/user/0/com.termux/files/usr/bin/";
+  prefix_lens[prefix_count++] = (u32)(sizeof("/data/user/0/com.termux/files/usr/bin/") - 1u);
+  prefixes[prefix_count] = "/system/bin/";
+  prefix_lens[prefix_count++] = (u32)(sizeof("/system/bin/") - 1u);
+  prefixes[prefix_count] = "/system/xbin/";
+  prefix_lens[prefix_count++] = (u32)(sizeof("/system/xbin/") - 1u);
   long pid = RmR_syscall0(RMR_NR_VFORK);
   if(pid == 0){
     argv[0] = (const char*)name;
     argv[1] = 0;
-    if(RmR_copy_path(prefix_a, prefix_a_len, name, len, path, 256u)){
-      (void)RmR_execve_try(path, argv);
-    }
-    if(RmR_copy_path(prefix_b, prefix_b_len, name, len, path, 256u)){
-      (void)RmR_execve_try(path, argv);
-    }
-    if(RmR_copy_path(prefix_c, prefix_c_len, name, len, path, 256u)){
-      (void)RmR_execve_try(path, argv);
+    for(u32 i = 0u; i < prefix_count; i++){
+      if(RmR_copy_path(prefixes[i], prefix_lens[i], name, len, path, 256u)){
+        (void)RmR_execve_try(path, argv);
+      }
     }
     (void)RmR_syscall1(RMR_NR_EXIT, 127);
   }
