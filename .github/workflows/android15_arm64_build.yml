@@ -93,7 +93,7 @@ jobs:
     
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -151,7 +151,7 @@ jobs:
 
     steps:
       - name: "📥 Phase 1: Clone Repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: "☕ Phase 2: Setup Java ${{ env.JAVA_VERSION }}"
         uses: actions/setup-java@v4
@@ -282,7 +282,7 @@ jobs:
     
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: "☕ Setup Java"
         uses: actions/setup-java@v4
