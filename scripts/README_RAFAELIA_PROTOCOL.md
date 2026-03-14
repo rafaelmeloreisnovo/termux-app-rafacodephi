@@ -100,6 +100,18 @@ PARALLEL_JOBS=16 ./scripts/rafaelia_protocol_improved.sh
 ENABLE_LTO=0 ./scripts/rafaelia_protocol_improved.sh
 ```
 
+## Sincronização determinística de pacotes Termux
+
+Use `scripts/sync_termux_packages.sh` com URL e revisão explícita (`tag`, `branch` ou `commit SHA`) para gerar `rafaelia/src/main/cpp/raf_termux_packages.c` de forma determinística.
+
+```bash
+# fixa uma tag do upstream
+./scripts/sync_termux_packages.sh https://github.com/termux/termux-packages.git v0.313
+
+# fixa um commit SHA específico
+./scripts/sync_termux_packages.sh https://github.com/termux/termux-packages.git 4a1f9f0a9c8df0f74f2e5fbd7e6b6b52b4d96f87
+```
+
 ## Output Structure
 
 After successful build:

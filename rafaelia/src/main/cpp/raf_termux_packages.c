@@ -1,5 +1,8 @@
 /* raf_termux_packages.c
    IDs deterministicos de pacotes Termux (sem libc, gerado)
+   source.url: https://github.com/termux/termux-packages.git
+   source.commit: 70f182678c76cb46d9a5d3d7a0926ed511887148
+   generated_at_utc: 2026-03-14T23:03:14Z
 */
 
 #include "raf_termux_packages.h"
@@ -94,13 +97,11 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0xbb9f4335u, 5u, 0u }, /* aview */
   { 0xf8c7d96fu, 4u, 0u }, /* avra */
   { 0xdc0bbf8du, 5u, 0u }, /* await */
-  { 0x81a8991cu, 11u, 0u }, /* awesomeshot */
   { 0xab044050u, 6u, 0u }, /* awscli */
   { 0x74364655u, 4u, 0u }, /* axel */
   { 0xafc06ebdu, 5u, 0u }, /* b3sum */
   { 0x38b1abf2u, 4u, 0u }, /* babl */
   { 0x1d923ca4u, 9u, 0u }, /* bacula-fd */
-  { 0xa4b73c38u, 12u, 0u }, /* badvpn-udpgw */
   { 0x2811fd57u, 7u, 0u }, /* barcode */
   { 0xf99695c8u, 9u, 0u }, /* base16384 */
   { 0x3adc901fu, 4u, 0u }, /* bash */
@@ -113,19 +114,18 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0x2f5fc862u, 6u, 0u }, /* bchunk */
   { 0xa83d748du, 9u, 0u }, /* bdsup2sub */
   { 0x83a174fbu, 9u, 0u }, /* beanshell */
+  { 0x8a524c53u, 4u, 0u }, /* bear */
   { 0x50ae46ecu, 3u, 0u }, /* bed */
   { 0x3fb3b273u, 5u, 0u }, /* bftpd */
   { 0xb51696f1u, 5u, 0u }, /* bgrep */
   { 0x90e3bd58u, 7u, 0u }, /* biboumi */
   { 0xdaac38efu, 8u, 0u }, /* binaryen */
-  { 0x8c4997d8u, 16u, 0u }, /* binutils-is-llvm */
-  { 0xd4a2ce16u, 13u, 0u }, /* binutils-libs */
+  { 0x526286bbu, 8u, 0u }, /* binutils */
   { 0x900c5a40u, 5u, 0u }, /* bison */
   { 0x55f7427du, 7u, 0u }, /* bitcoin */
   { 0xbdef1f40u, 7u, 0u }, /* bitlbee */
   { 0x462bb68au, 2u, 0u }, /* bk */
   { 0xb044c34du, 8u, 0u }, /* blackbox */
-  { 0x5c870651u, 5u, 0u }, /* blade */
   { 0x07617589u, 5u, 0u }, /* blink */
   { 0xdb0216d6u, 5u, 0u }, /* blogc */
   { 0xca1ed16au, 18u, 0u }, /* blueprint-compiler */
@@ -173,7 +173,7 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0x1ad3a506u, 6u, 0u }, /* catimg */
   { 0x9b3204a4u, 4u, 0u }, /* cava */
   { 0x2df33549u, 14u, 0u }, /* cavez-of-phear */
-  { 0x2bb31a16u, 8u, 0u }, /* cavif-rs */
+  { 0x21aa0edeu, 5u, 0u }, /* cavif */
   { 0x0bdb4e32u, 6u, 0u }, /* cboard */
   { 0xc60585acu, 7u, 0u }, /* cbonsai */
   { 0x915ac74eu, 4u, 0u }, /* cc65 */
@@ -200,7 +200,6 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0x98a1fdb2u, 7u, 0u }, /* ckermit */
   { 0x8dd3244bu, 6u, 0u }, /* clamav */
   { 0xd4d2bd88u, 7u, 0u }, /* clblast */
-  { 0x61c88b0du, 7u, 0u }, /* cliaoke */
   { 0xd974e38cu, 6u, 0u }, /* clidle */
   { 0x568b6af0u, 5u, 0u }, /* clifm */
   { 0x755e6422u, 6u, 0u }, /* clinfo */
@@ -315,6 +314,7 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0x6dc7d6d1u, 10u, 0u }, /* dosfstools */
   { 0x1fd8fee6u, 7u, 0u }, /* dotconf */
   { 0xff550f3cu, 11u, 0u }, /* dotnet-host */
+  { 0xe722b1e4u, 10u, 0u }, /* dotnet10.0 */
   { 0xb5b74a2fu, 9u, 0u }, /* dotnet8.0 */
   { 0x4f78b608u, 9u, 0u }, /* dotnet9.0 */
   { 0xf8f8bacfu, 17u, 0u }, /* double-conversion */
@@ -415,7 +415,6 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0x65de2de7u, 12u, 0u }, /* fresh-editor */
   { 0xdde1957eu, 7u, 0u }, /* fribidi */
   { 0x98762ee6u, 8u, 0u }, /* frobtads */
-  { 0x58e7ce4du, 14u, 0u }, /* frogcomposband */
   { 0xd76ac190u, 5u, 0u }, /* frotz */
   { 0xacd7ad13u, 3u, 0u }, /* frp */
   { 0x274d0f01u, 7u, 0u }, /* fselect */
@@ -537,6 +536,7 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0xa5828da5u, 4u, 0u }, /* gron */
   { 0x732edfd8u, 7u, 0u }, /* groonga */
   { 0x4a3ab40fu, 6u, 0u }, /* groovy */
+  { 0x0081e07eu, 7u, 0u }, /* grpcurl */
   { 0x4039a779u, 3u, 0u }, /* gsl */
   { 0x84f54fa0u, 9u, 0u }, /* gst-libav */
   { 0x505e11f6u, 15u, 0u }, /* gst-plugins-bad */
@@ -547,7 +547,6 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0x20db81a1u, 9u, 0u }, /* gstreamer */
   { 0xafa2a46du, 7u, 0u }, /* gtypist */
   { 0x91dd00d3u, 5u, 0u }, /* guile */
-  { 0xebd568dau, 7u, 0u }, /* guile18 */
   { 0x3b35226cu, 3u, 0u }, /* gum */
   { 0x0c888d21u, 12u, 0u }, /* gumbo-parser */
   { 0x10767a23u, 18u, 0u }, /* gweather-locations */
@@ -607,7 +606,6 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0xea50f5adu, 5u, 0u }, /* id3v2 */
   { 0xed04cf5eu, 11u, 0u }, /* imagemagick */
   { 0xae2c5d42u, 5u, 0u }, /* imath */
-  { 0x0ba298e3u, 6u, 0u }, /* imgflo */
   { 0xa6cdac80u, 6u, 0u }, /* imlib2 */
   { 0x16ff7dbbu, 6u, 0u }, /* indent */
   { 0x31294f08u, 9u, 0u }, /* inetutils */
@@ -720,6 +718,7 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0xbfe7746du, 6u, 0u }, /* libass */
   { 0xec3f85ffu, 9u, 0u }, /* libassuan */
   { 0x54faef0cu, 13u, 0u }, /* libatomic-ops */
+  { 0xda4d0078u, 7u, 0u }, /* libavif */
   { 0x37bcbcebu, 14u, 0u }, /* libbcprov-java */
   { 0x2ff362edu, 8u, 0u }, /* libblosc */
   { 0x5b24a50du, 9u, 0u }, /* libblosc2 */
@@ -747,7 +746,6 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0x272d978du, 14u, 0u }, /* libchromaprint */
   { 0x71271240u, 6u, 0u }, /* libclc */
   { 0x7e2726b7u, 6u, 0u }, /* libcln */
-  { 0xce6aa8c2u, 8u, 0u }, /* libcloog */
   { 0xc771a75fu, 7u, 0u }, /* libcoap */
   { 0x824e55c7u, 13u, 0u }, /* libcoinor-cgl */
   { 0x2f8d6028u, 13u, 0u }, /* libcoinor-osi */
@@ -850,7 +848,6 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0xc72f3c62u, 7u, 0u }, /* libinih */
   { 0x2f1335c9u, 12u, 0u }, /* libiniparser */
   { 0xf8a34b7bu, 8u, 0u }, /* libiodbc */
-  { 0x3a505cb8u, 6u, 0u }, /* libisl */
   { 0x24e60e34u, 10u, 0u }, /* libisoburn */
   { 0xb16ae332u, 8u, 0u }, /* libisofs */
   { 0xc230f8fcu, 8u, 0u }, /* libjanet */
@@ -937,7 +934,6 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0xbc5cf92bu, 7u, 0u }, /* libopus */
   { 0x90449f5du, 10u, 0u }, /* libopusenc */
   { 0x75b2bd36u, 6u, 0u }, /* liborc */
-  { 0x82b09316u, 6u, 0u }, /* libosl */
   { 0x2221e626u, 9u, 0u }, /* libosmium */
   { 0xecadb527u, 9u, 0u }, /* libosmpbf */
   { 0x6eb72f5fu, 6u, 0u }, /* libotr */
@@ -1551,6 +1547,7 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0x68750c21u, 12u, 0u }, /* python-numpy */
   { 0x86030adfu, 13u, 0u }, /* python-pillow */
   { 0xca17cb7bu, 10u, 0u }, /* python-pip */
+  { 0x808e308fu, 13u, 0u }, /* python-psutil */
   { 0xe4773ad5u, 20u, 0u }, /* python-pycryptodomex */
   { 0xcff6dbc7u, 13u, 0u }, /* python-pynvim */
   { 0x2c63320au, 15u, 0u }, /* python-sabyenc3 */
@@ -1573,7 +1570,7 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0x743c03ccu, 7u, 0u }, /* qrsspig */
   { 0x520137d1u, 11u, 0u }, /* qrupdate-ng */
   { 0x39876d36u, 13u, 0u }, /* quick-lint-js */
-  { 0xe8b0cf43u, 7u, 0u }, /* quickjs */
+  { 0x08ebb371u, 10u, 0u }, /* quickjs-ng */
   { 0xec467e5eu, 5u, 0u }, /* quilt */
   { 0x33860b85u, 15u, 0u }, /* rabbitmq-server */
   { 0x26406953u, 6u, 0u }, /* racket */
@@ -1584,7 +1581,6 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0xcedd3336u, 8u, 0u }, /* range-v3 */
   { 0x8867dfe0u, 6u, 0u }, /* ranger */
   { 0x7c1b3977u, 9u, 0u }, /* rapidjson */
-  { 0xe87f9a35u, 6u, 0u }, /* rappel */
   { 0x9d8381a4u, 4u, 0u }, /* ratt */
   { 0xcb20f214u, 9u, 0u }, /* ravencoin */
   { 0x3405b586u, 3u, 0u }, /* rbw */
@@ -1644,10 +1640,8 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0xc9e09744u, 13u, 0u }, /* rust-analyzer */
   { 0x14dd9e6du, 12u, 0u }, /* rust-bindgen */
   { 0x9c31f01eu, 8u, 0u }, /* rustscan */
-  { 0x4a545f46u, 2u, 0u }, /* rw */
   { 0xd584ca31u, 7u, 0u }, /* rxfetch */
   { 0xf2fa3f73u, 7u, 0u }, /* sabnzbd */
-  { 0x081dbe81u, 10u, 0u }, /* salty-chat */
   { 0x2465d7a1u, 5u, 0u }, /* samba */
   { 0xabca1ad5u, 8u, 0u }, /* samefile */
   { 0xdbef1585u, 7u, 0u }, /* samurai */
@@ -1696,7 +1690,6 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0xa993b362u, 8u, 0u }, /* simdjson */
   { 0x2ecbcbb4u, 4u, 0u }, /* simh */
   { 0x143c86ccu, 8u, 0u }, /* simulavr */
-  { 0xfddc8d73u, 9u, 0u }, /* simuwaerm */
   { 0x88ceb526u, 8u, 0u }, /* sing-box */
   { 0x3a0ffee1u, 5u, 0u }, /* skate */
   { 0x435215aau, 2u, 0u }, /* sl */
@@ -1706,7 +1699,6 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0x6fac698fu, 6u, 0u }, /* slides */
   { 0x30e7af50u, 7u, 0u }, /* slugify */
   { 0x9ba602eau, 9u, 0u }, /* smalltalk */
-  { 0xaff5e25bu, 5u, 0u }, /* snake */
   { 0x8edd3736u, 15u, 0u }, /* snapcast-server */
   { 0xcdffb6a1u, 6u, 0u }, /* snmptt */
   { 0x91fe08e7u, 9u, 0u }, /* snowflake */
@@ -1797,7 +1789,6 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0x7a30fa58u, 8u, 0u }, /* tectonic */
   { 0x6673533fu, 16u, 0u }, /* telegram-bot-api */
   { 0xa2f1debcu, 12u, 0u }, /* teleport-tsh */
-  { 0x3e70b289u, 9u, 0u }, /* tenki-php */
   { 0x9ace123fu, 4u, 0u }, /* tere */
   { 0x702011fau, 7u, 0u }, /* tergent */
   { 0xf07d8f4cu, 9u, 0u }, /* termimage */
@@ -1904,6 +1895,8 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0x75a5bd52u, 6u, 0u }, /* ttyrec */
   { 0x92323c27u, 4u, 0u }, /* tudo */
   { 0xf7b59e1fu, 8u, 0u }, /* tur-repo */
+  { 0xcf3f34fbu, 5u, 0u }, /* turbo */
+  { 0xb93d7846u, 9u, 0u }, /* turbopack */
   { 0xa728e122u, 3u, 0u }, /* tut */
   { 0x640167bau, 9u, 0u }, /* tvheadend */
   { 0xc9b81a38u, 6u, 0u }, /* tweego */
@@ -1935,7 +1928,6 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0x7246de7cu, 4u, 0u }, /* usql */
   { 0xec1645bbu, 7u, 0u }, /* utf8cpp */
   { 0xd6b8597eu, 8u, 0u }, /* utf8proc */
-  { 0xbd3d1758u, 9u, 0u }, /* utfdecode */
   { 0x50e62a0cu, 6u, 0u }, /* uthash */
   { 0xdcafb8f2u, 10u, 0u }, /* util-linux */
   { 0x379977ecu, 4u, 0u }, /* uucp */
@@ -1971,7 +1963,6 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0xab51fd5cu, 12u, 0u }, /* vorbis-tools */
   { 0x795b3b5eu, 3u, 0u }, /* vtm */
   { 0x76935773u, 6u, 0u }, /* vttest */
-  { 0xaf86b170u, 7u, 0u }, /* vtutils */
   { 0x2933615eu, 22u, 0u }, /* vulkan-extension-layer */
   { 0x15e42131u, 14u, 0u }, /* vulkan-headers */
   { 0xc8cfb7fbu, 10u, 0u }, /* vulkan-icd */
@@ -1999,6 +1990,7 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
   { 0x8bdb439cu, 18u, 0u }, /* webp-pixbuf-loader */
   { 0x78c9d73du, 8u, 0u }, /* websocat */
   { 0xb911077cu, 10u, 0u }, /* websocketd */
+  { 0xa9321833u, 9u, 0u }, /* webtunnel */
   { 0x408b3bc2u, 7u, 0u }, /* weechat */
   { 0x793bf408u, 17u, 0u }, /* weechat-matrix-rs */
   { 0xbb061f98u, 6u, 0u }, /* weggli */
@@ -2075,7 +2067,7 @@ static const raf_termux_pkg_id_t g_termux_pkgs[] = {
 
 static const raf_termux_pkg_table_t g_table = {
   g_termux_pkgs,
-  2066u,
+  2055u,
   2166136261u,
   0x52414650u
 };

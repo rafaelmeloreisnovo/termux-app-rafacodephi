@@ -10,17 +10,29 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 UPSTREAM_URL="${1:-https://github.com/termux/termux-packages.git}"
+UPSTREAM_REF="${2:-HEAD}"
+
+GEN_TS_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 printf '[sync] clone %s\n' "$UPSTREAM_URL"
-git clone --depth 1 "$UPSTREAM_URL" "$TMP_DIR/termux-packages" >/dev/null 2>&1
+git clone "$UPSTREAM_URL" "$TMP_DIR/termux-packages" >/dev/null 2>&1
+
+printf '[sync] checkout %s\n' "$UPSTREAM_REF"
+git -C "$TMP_DIR/termux-packages" checkout --detach "$UPSTREAM_REF" >/dev/null 2>&1
+
+RESOLVED_SHA="$(git -C "$TMP_DIR/termux-packages" rev-parse HEAD)"
+printf '[sync] commit %s\n' "$RESOLVED_SHA"
 
 printf '[sync] gerar tabela deterministica\n'
-python - "$TMP_DIR/termux-packages" "$OUT_C" <<'PY'
+python - "$TMP_DIR/termux-packages" "$OUT_C" "$UPSTREAM_URL" "$RESOLVED_SHA" "$GEN_TS_UTC" <<'PY'
 import sys
 from pathlib import Path
 
 repo = Path(sys.argv[1])
 out_c = Path(sys.argv[2])
+upstream_url = sys.argv[3]
+resolved_sha = sys.argv[4]
+generated_at_utc = sys.argv[5]
 
 pkg_dir = repo / "packages"
 names = sorted([p.name for p in pkg_dir.iterdir() if p.is_dir() and (p / "build.sh").exists()])
@@ -35,6 +47,9 @@ def fnv1a32(data: bytes) -> int:
 lines = []
 lines.append("/* raf_termux_packages.c")
 lines.append("   IDs deterministicos de pacotes Termux (sem libc, gerado)")
+lines.append(f"   source.url: {upstream_url}")
+lines.append(f"   source.commit: {resolved_sha}")
+lines.append(f"   generated_at_utc: {generated_at_utc}")
 lines.append("*/")
 lines.append("")
 lines.append("#include \"raf_termux_packages.h\"")
