@@ -13,7 +13,7 @@ printf '[export] clone %s\n' "$UPSTREAM_URL"
 git clone --depth 1 "$UPSTREAM_URL" "$TMP_DIR/termux-packages" >/dev/null 2>&1
 
 printf '[export] gerar manifests deterministicos (limit=%s)\n' "$LIMIT"
-python - "$TMP_DIR/termux-packages" "$OUT_DIR" "$LIMIT" "$UPSTREAM_URL" <<'PY'
+python - "$TMP_DIR/termux-packages" "$OUT_DIR" "$LIMIT" "$UPSTREAM_URL" "$ROOT_DIR/scripts" <<'PY'
 import sys
 from pathlib import Path
 
@@ -21,6 +21,10 @@ repo = Path(sys.argv[1])
 out = Path(sys.argv[2])
 limit = int(sys.argv[3])
 upstream_url = sys.argv[4]
+scripts_dir = Path(sys.argv[5])
+sys.path.insert(0, str(scripts_dir))
+
+from termux_build_parser import parse_build_sh
 
 pkg_dir = repo / "packages"
 pkgs = sorted([p for p in pkg_dir.iterdir() if p.is_dir() and (p / "build.sh").exists()], key=lambda p: p.name)
@@ -42,18 +46,11 @@ for f in out.glob('*.rafpkg'):
 for p in sel:
     name = p.name
     sh = p / 'build.sh'
-    raw = sh.read_text(encoding='utf-8', errors='ignore').splitlines()
-    version = ''
-    homepage = ''
-    desc = ''
-    for ln in raw:
-        t = ln.strip()
-        if t.startswith('TERMUX_PKG_VERSION=') and not version:
-            version = t.split('=',1)[1].strip().strip('"\'')
-        elif t.startswith('TERMUX_PKG_HOMEPAGE=') and not homepage:
-            homepage = t.split('=',1)[1].strip().strip('"\'')
-        elif t.startswith('TERMUX_PKG_DESCRIPTION=') and not desc:
-            desc = t.split('=',1)[1].strip().strip('"\'')
+    metadata = parse_build_sh(sh)
+    version = metadata['version']
+    homepage = metadata['homepage']
+    desc = metadata['description']
+
     hid = fnv1a32(name.encode('utf-8'))
     lines = [
         'seal=RAFPKG',
@@ -65,7 +62,11 @@ for p in sel:
         f'description={desc}',
         'source=termux/termux-packages',
         f'path=packages/{name}/build.sh',
+        f"parse_mode={metadata['parse_mode']}",
     ]
+    warnings = metadata.get('parse_warnings', [])
+    if warnings:
+        lines.append('parse_warnings=' + ';'.join(warnings))
     (out / f'{name}.rafpkg').write_text('\n'.join(lines) + '\n', encoding='utf-8')
 
 index = [
