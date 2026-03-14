@@ -83,6 +83,25 @@ adb install app/build/outputs/apk/debug/termux-app_apt-android-7-debug_universal
 ./scripts/diagnose.sh
 ```
 
+### Requisitos mínimos para scripts de sincronização/export
+
+Os scripts de metadados Termux desta fork não dependem mais de Python e usam um utilitário C autoral em `rafaelia/src/main/cpp/tools/`.
+
+- `bash`
+- `git`
+- `cc` (clang ou gcc com suporte a C99)
+- `sed` e `awk` (ferramentas POSIX usuais do sistema)
+
+Uso:
+
+```bash
+# Regerar rafaelia/src/main/cpp/raf_termux_packages.c via template determinístico
+./scripts/sync_termux_packages.sh
+
+# Exportar manifests .rafpkg e INDEX.rafidx
+./scripts/export_termux_package_manifests.sh
+```
+
 ### Documentation
 - 🔥 [**Android 16 Page Size Fix**](./ANDROID16_PAGE_SIZE_FIX.md) - **Critical fix for Android 15/16 stability**
 - 🚀 [**Boosters de Performance**](./BOOSTERS.md) - **6 tipos de boosters, detalhes técnicos, benchmarks**

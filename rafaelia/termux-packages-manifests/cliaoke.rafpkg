@@ -1,9 +1,0 @@
-seal=RAFPKG
-name=cliaoke
-id=0x61c88b0d
-name_len=7
-version=0.2.4
-homepage=https://github.com/jessfraz/cliaoke
-description=Command line karaoke
-source=termux/termux-packages
-path=packages/cliaoke/build.sh

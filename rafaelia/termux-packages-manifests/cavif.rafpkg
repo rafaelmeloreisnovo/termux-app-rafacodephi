@@ -1,9 +1,9 @@
 seal=RAFPKG
-name=cavif-rs
-id=0x2bb31a16
-name_len=8
+name=cavif
+id=0x21aa0ede
+name_len=5
 version=1.5.6
 homepage=https://lib.rs/cavif
 description=AVIF image creator in pure Rust
 source=termux/termux-packages
-path=packages/cavif-rs/build.sh
+path=packages/cavif/build.sh

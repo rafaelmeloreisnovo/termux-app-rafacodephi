@@ -1,9 +1,0 @@
-seal=RAFPKG
-name=blade
-id=0x5c870651
-name_len=5
-version=0.0.87
-homepage=https://bladelang.com/
-description=A simple, fast, clean and dynamic language
-source=termux/termux-packages
-path=packages/blade/build.sh

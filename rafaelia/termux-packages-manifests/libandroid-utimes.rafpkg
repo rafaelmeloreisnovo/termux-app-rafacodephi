@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=libandroid-utimes
+id=0x3b3ac2e5
+name_len=17
+version=0.4
+homepage=https://github.com/termux/libandroid-utimes
+description=futimes, futimesat and lutimes from bionic
+source=termux/termux-packages
+path=packages/libandroid-utimes/build.sh

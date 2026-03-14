@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=libandroid-sysv-semaphore
+id=0x29b03014
+name_len=25
+version=0.1
+homepage=https://android.googlesource.com/platform/bionic/+/refs/heads/master/libc/bionic/sys_sem.cpp
+description=A shared library providing System V semaphores
+source=termux/termux-packages
+path=packages/libandroid-sysv-semaphore/build.sh

@@ -1,9 +1,0 @@
-seal=RAFPKG
-name=guile18
-id=0xebd568da
-name_len=7
-version=1.8.8
-homepage=http://www.gnu.org/software/guile/
-description=Portable, embeddable Scheme implementation written in C. (legacy branch)
-source=termux/termux-packages
-path=packages/guile18/build.sh
