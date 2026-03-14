@@ -1,9 +1,0 @@
-seal=RAFPKG
-name=binutils-libs
-id=0xd4a2ce16
-name_len=13
-version=2.45.1
-homepage=https://www.gnu.org/software/binutils/
-description=GNU Binutils libraries
-source=termux/termux-packages
-path=packages/binutils-libs/build.sh

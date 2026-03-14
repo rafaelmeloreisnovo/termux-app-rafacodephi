@@ -1,9 +1,0 @@
-seal=RAFPKG
-name=binutils-is-llvm
-id=0x8c4997d8
-name_len=16
-version=0.3
-homepage=https://github.com/trentbuck/binutils-is-llvm
-description=Use llvm as binutils
-source=termux/termux-packages
-path=packages/binutils-is-llvm/build.sh

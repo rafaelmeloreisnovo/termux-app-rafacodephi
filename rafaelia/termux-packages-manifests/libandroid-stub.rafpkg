@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=libandroid-stub
+id=0x93932d06
+name_len=15
+version=29
+homepage=https://android.googlesource.com/platform/frameworks/base/+/main/native/android
+description=Stub libandroid.so for non-Android certified environment
+source=termux/termux-packages
+path=packages/libandroid-stub/build.sh

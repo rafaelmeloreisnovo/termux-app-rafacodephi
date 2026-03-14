@@ -1,9 +1,0 @@
-seal=RAFPKG
-name=badvpn-udpgw
-id=0xa4b73c38
-name_len=12
-version=1.999.130
-homepage=https://github.com/ambrop72/badvpn
-description=UDP gateway for BadVPN
-source=termux/termux-packages
-path=packages/badvpn-udpgw/build.sh

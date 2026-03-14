@@ -1,5 +1,5 @@
 seal=RAFINDEX
 upstream=https://github.com/termux/termux-packages.git
-total_upstream_packages=2066
+total_upstream_packages=2055
 exported_packages=700
 format=.rafpkg

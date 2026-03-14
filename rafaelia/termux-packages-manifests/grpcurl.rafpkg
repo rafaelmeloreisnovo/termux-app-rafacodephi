@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=grpcurl
+id=0x0081e07e
+name_len=7
+version=1.9.3
+homepage=https://github.com/fullstorydev/grpcurl
+description=Like cURL, but for gRPC: Command-line tool for interacting with gRPC servers
+source=termux/termux-packages
+path=packages/grpcurl/build.sh

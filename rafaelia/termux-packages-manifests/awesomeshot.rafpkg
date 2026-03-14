@@ -1,9 +1,0 @@
-seal=RAFPKG
-name=awesomeshot
-id=0x81a8991c
-name_len=11
-version=1.1.0
-homepage=https://github.com/mayTermux/awesomeshot
-description=A command-line screenshot tool written in bash
-source=termux/termux-packages
-path=packages/awesomeshot/build.sh

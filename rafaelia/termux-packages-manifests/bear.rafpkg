@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=bear
+id=0x8a524c53
+name_len=4
+version=4.0.3
+homepage=https://github.com/rizsotto/Bear
+description=Bear is a tool that generates a compilation database for clang tooling.
+source=termux/termux-packages
+path=packages/bear/build.sh

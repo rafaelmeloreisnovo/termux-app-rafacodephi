@@ -4,6 +4,6 @@ id=0x4800db50
 name_len=6
 version=0.9.0
 homepage=https://github.com/sharkdp/diskus
-description=A minimal, fast alternative to 'du -sh
+description=A minimal, fast alternative to 'du -sh'
 source=termux/termux-packages
 path=packages/diskus/build.sh

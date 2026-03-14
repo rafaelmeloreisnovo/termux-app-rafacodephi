@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=libandroid-support
+id=0x0317b401
+name_len=18
+version=(29
+homepage=https://github.com/termux/libandroid-support
+description=Library extending the Android C library (Bionic) for additional multibyte, locale and math support
+source=termux/termux-packages
+path=packages/libandroid-support/build.sh

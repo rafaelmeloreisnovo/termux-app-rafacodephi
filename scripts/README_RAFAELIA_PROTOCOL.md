@@ -309,3 +309,28 @@ GPLv3 - Same as RAFAELIA and Termux projects
 **Version**: 2.0.0  
 **Last Updated**: 2026-01-08  
 **Status**: Production Ready ✅
+
+## Termux Package Metadata Pipeline (sem Python)
+
+Scripts cobertos:
+- `./scripts/sync_termux_packages.sh`
+- `./scripts/export_termux_package_manifests.sh`
+
+Ambos compilam e executam um utilitário C autoral:
+- `rafaelia/src/main/cpp/tools/raf_termux_pkg_tool.c`
+
+Pré-requisitos mínimos:
+- `bash`
+- `git`
+- `cc` (clang ou gcc com C99)
+- `sed` e `awk`
+
+Comandos:
+
+```bash
+# Gera rafaelia/src/main/cpp/raf_termux_packages.c via template determinístico
+./scripts/sync_termux_packages.sh
+
+# Gera manifests .rafpkg + INDEX.rafidx
+./scripts/export_termux_package_manifests.sh
+```
