@@ -6,6 +6,15 @@ Este repositório agora conta com documentação completa e abrangente, conforme
 
 ---
 
+## 🧭 Mapa Absoluto de Todos os Markdown
+
+Para auditoria completa de documentação (todos os `.md`), consulte:
+
+- [docs/MARKDOWN_MAPA_ABSOLUTO.md](docs/MARKDOWN_MAPA_ABSOLUTO.md)
+- [docs/REVISAO_COMPLETA_MARKDOWN.md](docs/REVISAO_COMPLETA_MARKDOWN.md)
+
+Esse arquivo lista caminhos absolutos e relativos para cada documento detectado no repositório.
+
 ## 📋 Índice de Documentos
 
 ### 🆕 Novos Documentos (Janeiro 2026)

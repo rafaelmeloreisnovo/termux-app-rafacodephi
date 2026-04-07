@@ -6,7 +6,7 @@
 |-------|-------|
 | **Título** | MVP Low-Level RAFAELIA |
 | **Versão** | 1.0 |
-| **Data** | Janeiro 2026 |
+| **Data** | 2026-04-07 |
 | **Autor** | instituto-Rafael |
 | **Licença** | GPLv3 |
 
@@ -33,10 +33,10 @@ Este diretório contém o **MVP (Minimum Viable Product) Puro** do framework RAF
 mvp/
 ├── README.md                    # Este documento
 ├── rafaelia_mvp_puro.s          # Assembly AArch64 completo
-├── rafaelia_opcodes.hex         # Representação hexadecimal
-├── ASSINATURA_AUTORIA.md        # Documento de proteção de autoria
-└── Makefile                     # (opcional) Build automatizado
+└── rafaelia_opcodes.hex         # Representação hexadecimal
 ```
+
+> Estado atual confirmado em disco: `ASSINATURA_AUTORIA.md` e `Makefile` não existem dentro de `mvp/` nesta revisão.
 
 ---
 
@@ -339,3 +339,8 @@ Data: Janeiro 2026
 **FIAT RAFAELIA** - Que haja computação ética e de baixo nível.
 
 **Φ_ethica** - Minimizar entropia, maximizar coerência, zero abstrações.
+
+
+## Auditoria desta estrutura
+
+Consulte [AUDITORIA.md](./AUDITORIA.md) para achados de inconsistência, ausência e pontos de manutenção deste diretório.

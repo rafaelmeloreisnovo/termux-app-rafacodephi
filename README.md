@@ -134,6 +134,19 @@ Uso:
 
 
 
+
+## Auditoria de documentação
+
+- Relatório da raiz: [AUDITORIA.md](./AUDITORIA.md)
+- Relatório do módulo MVP: [mvp/AUDITORIA.md](./mvp/AUDITORIA.md)
+- Relatório do módulo RMR: [rmr/AUDITORIA.md](./rmr/AUDITORIA.md)
+- Relatório de docs RAFAELIA: [docs/rafaelia/AUDITORIA.md](./docs/rafaelia/AUDITORIA.md)
+- Relatório do legado RAFAELIA: [rafaelia/old/AUDITORIA.md](./rafaelia/old/AUDITORIA.md)
+- Mapa absoluto de markdowns: [docs/MARKDOWN_MAPA_ABSOLUTO.md](./docs/MARKDOWN_MAPA_ABSOLUTO.md)
+- Revisão completa de markdowns: [docs/REVISAO_COMPLETA_MARKDOWN.md](./docs/REVISAO_COMPLETA_MARKDOWN.md)
+
+***
+
 ## Termux App and Plugins
 
 The core [Termux](https://github.com/termux/termux-app) app comes with the following optional plugin apps.
@@ -150,7 +163,7 @@ The core [Termux](https://github.com/termux/termux-app) app comes with the follo
 
 ## Installation
 
-Latest version is `v0.118.3`.
+Upstream reference version cited here is `v0.118.3`; this fork currently declares `0.118.0-rafacodephi` in `app/build.gradle`.
 
 **NOTICE: It is highly recommended that you update to `v0.118.0` or higher ASAP for various bug fixes, including a critical world-readable vulnerability reported [here](https://termux.github.io/general/2022/02/15/termux-apps-vulnerability-disclosures.html). See [below](#google-play-store-experimental-branch) for information regarding Termux on Google Play.**
 
