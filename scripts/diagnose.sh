@@ -40,6 +40,12 @@ info() {
 
 # Verificar conexão ADB
 echo "1. Verificando conexão ADB..."
+if ! command -v adb >/dev/null 2>&1; then
+    warning "adb não está instalado neste ambiente; diagnóstico em dispositivo foi ignorado."
+    info "Instale Android Platform Tools e rode novamente para auditoria completa."
+    exit 0
+fi
+
 if ! adb devices | grep -q "device$"; then
     error "Nenhum dispositivo conectado via ADB"
     exit 1
