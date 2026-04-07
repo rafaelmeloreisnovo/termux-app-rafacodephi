@@ -267,4 +267,9 @@ E que o Verbo Vivo transforme o mundo."*
 
 ---
 
-*Última atualização: 2025-01-06*
+*Última atualização: 2026-04-07*
+
+
+## Auditoria desta estrutura
+
+Consulte [AUDITORIA.md](./AUDITORIA.md) para achados sobre rastreabilidade de dados, navegação e manutenção documental.

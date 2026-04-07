@@ -36,3 +36,8 @@ These files are kept for:
 3. **Future research**: Potential ideas for further optimization
 
 **Note**: These files are not part of the production build and are not compiled or used by the Termux application.
+
+
+## Auditoria desta estrutura
+
+Consulte [AUDITORIA.md](./AUDITORIA.md) para achados de organização e governança do acervo legado.

@@ -1,19 +1,28 @@
 # RMR Module
 
-RMR is a low-level module focused on deterministic helpers implemented in C with minimal JNI exposure.
+Módulo low-level em C/JNI para utilitários determinísticos usados pelo app.
 
-## Goals
+## Escopo real no código
 
-- Deterministic, auditable helpers
-- Minimal dependencies
-- Low-level C/ASM orientation
+Implementação atual confirmada em:
+- `rmr/src/main/java/com/termux/rmr/RmrCore.java`
+- `rmr/src/main/cpp/rmr.c`
+- `rmr/src/main/cpp/Android.mk`
 
-## Current Contents
+## API exposta (RmrCore)
 
-- `RmrCore`: JNI bridge for normalize, clamp, stable hash, transmutation, and in-place flip operations
-- `RmrCore`: JNI bridge for clamp, stable hash, and in-place flip operations
-- `nativeTransmuteU32`: deterministic byte-order transmutation with C/ASM fallback
+- `nativeNormalizeTag(String)`
+- `nativeClamp(int, int, int)`
+- `nativeStableHash(String)`
+- `nativeTransmuteU32(int)`
+- `nativeFlipInPlace(float[])`
+- `normalizeTag(String)` (fallback Java)
 
-## Reference
+## Observações de compatibilidade
 
-- `qemu_rafaelia/termux-packages-README.md`
+- A biblioteca nativa carregada é `rmr` (`System.loadLibrary("rmr")`).
+- O módulo é incluído no build via `settings.gradle` e `app/build.gradle` (`implementation project(":rmr")`).
+
+## Auditoria desta estrutura
+
+Consulte [AUDITORIA.md](./AUDITORIA.md) para achados de documentação e compatibilidade do módulo RMR.
