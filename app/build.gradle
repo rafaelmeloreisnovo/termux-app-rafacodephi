@@ -238,6 +238,27 @@ task downloadBootstraps() {
     }
 }
 
+
+
+task verifyBootstrapZipsPresent {
+    description = 'Verifies required bootstrap zip artifacts are present in src/main/cpp.'
+    group = 'verification'
+
+    doLast {
+        def requiredZips = [
+            'src/main/cpp/bootstrap-aarch64.zip',
+            'src/main/cpp/bootstrap-arm.zip',
+            'src/main/cpp/bootstrap-i686.zip',
+            'src/main/cpp/bootstrap-x86_64.zip'
+        ]
+
+        def missing = requiredZips.findAll { !new File(projectDir, it).exists() }
+        if (!missing.isEmpty()) {
+            throw new GradleException('Missing required bootstrap zip artifacts:\n - ' + missing.join('\n - ') +
+                '\nRun :app:downloadBootstraps to generate them before native build tasks.')
+        }
+    }
+}
 def requiredBootstrapMetadata(File file, String expectedPackageName) {
     def zipFile = new java.util.zip.ZipFile(file)
     try {
@@ -278,10 +299,20 @@ afterEvaluate {
         variant.javaCompileProvider.get().dependsOn(downloadBootstraps)
     }
 
-    tasks.matching { task ->
+    def shouldWireBootstrapDeps = { task ->
         task.name.startsWith("externalNativeBuild") || task.name.startsWith("configureNdkBuild")
-    }.configureEach {
+    }
+
+    tasks.matching(shouldWireBootstrapDeps).configureEach {
         dependsOn(downloadBootstraps)
+        dependsOn(verifyBootstrapZipsPresent)
+    }
+
+    tasks.whenTaskAdded { task ->
+        if (shouldWireBootstrapDeps(task)) {
+            task.dependsOn(downloadBootstraps)
+            task.dependsOn(verifyBootstrapZipsPresent)
+        }
     }
 }
 
