@@ -297,38 +297,9 @@ jobs:
           echo "=========================================="
           echo ""
           
-          # Run Gradle validation tasks
-          echo "Running validation tasks..."
-          set +e
+          echo "Running blocking validation tasks..."
           ./gradlew validateAndroid15Compatibility --no-daemon
-          VALIDATION_EXIT_CODE=$?
-          set -e
-          
-          if [ $VALIDATION_EXIT_CODE -ne 0 ]; then
-            echo "⚠ Validation completed with warnings (exit code: $VALIDATION_EXIT_CODE)"
-            echo "Review the output above for details."
-          else
-            echo "✓ Validation passed successfully"
-          fi
-          
-          echo ""
-          echo "=========================================="
-          echo "16KB Page Size Validation"
-          echo "=========================================="
-          
-          # Check linker flags in app/build.gradle (main location)
-          if grep -q "max-page-size=16384" app/build.gradle 2>/dev/null; then
-            echo "✓ 16KB page alignment configured in app/build.gradle"
-          else
-            echo "⚠ 16KB page alignment may need review in app/build.gradle"
-          fi
-          
-          # Check Android.mk for native library flags
-          if grep -q "max-page-size=16384" app/src/main/cpp/Android.mk 2>/dev/null; then
-            echo "✓ 16KB page alignment configured in Android.mk"
-          else
-            echo "⚠ 16KB page alignment may need review in Android.mk"
-          fi
+          echo "✓ Validation passed successfully"
           
           echo ""
           echo "=========================================="
