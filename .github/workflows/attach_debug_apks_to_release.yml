@@ -14,6 +14,7 @@ jobs:
         package_variant: [ apt-android-7, apt-android-5 ]
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Clone repository
@@ -26,13 +27,36 @@ jobs:
         env:
           PACKAGE_VARIANT: ${{ matrix.package_variant }}
         run: |
+          set -euo pipefail
+
+          preflight_release_cli() {
+            if command -v gh >/dev/null 2>&1; then
+              RELEASE_CLI="gh"
+            else
+              echo "Neither 'gh' nor a fallback release CLI is available in PATH."
+              return 1
+            fi
+
+            if ! gh auth status >/dev/null 2>&1; then
+              echo "GitHub CLI authentication failed. Ensure GITHUB_TOKEN/GH_TOKEN is available."
+              return 1
+            fi
+
+            echo "Release CLI preflight OK: $RELEASE_CLI"
+          }
+
           exit_on_error() {
               echo "$1"
               echo "Deleting '$RELEASE_VERSION_NAME' release and '$GITHUB_REF' tag"
-              hub release delete "$RELEASE_VERSION_NAME"
+              gh release delete "$RELEASE_VERSION_NAME" --yes
               git push --delete origin "$GITHUB_REF"
               exit 1
           }
+
+          echo "Running release CLI preflight"
+          if ! preflight_release_cli; then
+            exit_on_error "Release CLI preflight failed."
+          fi
 
           echo "Setting vars"
           RELEASE_VERSION_NAME="${GITHUB_REF/refs\/tags\//}"
@@ -71,14 +95,13 @@ jobs:
           fi
 
           echo "Attaching APKs to github release"
-          if ! hub release edit \
-          -m "" \
-          -a "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_universal.apk" \
-          -a "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_arm64-v8a.apk" \
-          -a "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_armeabi-v7a.apk" \
-          -a "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_x86_64.apk" \
-          -a "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_x86.apk" \
-          -a "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_sha256sums" \
-          "$RELEASE_VERSION_NAME"; then
+          if ! gh release upload "$RELEASE_VERSION_NAME" \
+          "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_universal.apk" \
+          "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_arm64-v8a.apk" \
+          "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_armeabi-v7a.apk" \
+          "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_x86_64.apk" \
+          "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_x86.apk" \
+          "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_sha256sums" \
+          --clobber; then
             exit_on_error "Attach APKs to release failed for '$APK_VERSION_TAG' release."
           fi
