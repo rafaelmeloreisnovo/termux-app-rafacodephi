@@ -2,8 +2,10 @@
 # RAFAELIA Orchestrated Pipeline - Unified CI/CD Workflow
 # =============================================================================
 #
-# This is the SINGLE ENTRY POINT for all CI/CD operations in this repository.
+# This is the primary orchestration pipeline for CI/CD operations in this repository.
 # It implements the RAFAELIA methodology cycle (ψχρΔΣΩ) with sequential stages.
+#
+# Release-specific post-publish flows are also orchestrated here via reusable workflows.
 #
 # Stages:
 #   ψ (Psi)   - Perception: Quality gate, validation, gradle wrapper check
@@ -48,6 +50,9 @@ on:
       - 'docs/**'
       - 'art/**'
       - 'site/**'
+  release:
+    types:
+      - published
   workflow_dispatch:
     inputs:
       build_type:
@@ -82,9 +87,6 @@ concurrency:
 
 env:
   JAVA_VERSION: '17'
-  COMPILE_SDK_VERSION: 35
-  TARGET_SDK_VERSION: 28
-  NDK_VERSION: '26.3.11579264'
 
 permissions:
   contents: read
@@ -96,6 +98,7 @@ jobs:
   # ===========================================================================
   psi-perception:
     name: "ψ Perception - Quality Gate"
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     outputs:
       should_continue: ${{ steps.quality-check.outputs.should_continue }}
@@ -153,6 +156,22 @@ jobs:
       - name: "🕒 Validate MVP Metadata Timestamp"
         run: |
           ./scripts/mvp_metadata_timestamp.sh validate
+
+      - name: "📦 Read Android Toolchain Versions (gradle.properties)"
+        run: |
+          COMPILE_SDK_VERSION=$(grep -E '^compileSdkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
+          TARGET_SDK_VERSION=$(grep -E '^targetSdkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
+          NDK_VERSION=$(grep -E '^ndkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
+
+          if [ -z "$COMPILE_SDK_VERSION" ] || [ -z "$TARGET_SDK_VERSION" ] || [ -z "$NDK_VERSION" ]; then
+            echo "❌ Missing compileSdkVersion/targetSdkVersion/ndkVersion in gradle.properties"
+            exit 1
+          fi
+
+          echo "Source of truth: gradle.properties"
+          echo "compileSdkVersion=$COMPILE_SDK_VERSION"
+          echo "targetSdkVersion=$TARGET_SDK_VERSION"
+          echo "ndkVersion=$NDK_VERSION"
 
 
       - name: "📋 Extract Version Information"
@@ -442,7 +461,7 @@ jobs:
           echo "ρ EXPANSION - Full Debug Build (All ABIs)"
           echo "=========================================="
           echo ""
-          echo "Architectures: universal, arm64-v8a, armeabi-v7a, x86_64, x86"
+          echo "Architectures: universal, arm64-v8a, armeabi-v7a, x86_64, x86 (optional)"
           echo "Build Type: debug"
           echo "Variant: $PACKAGE_VARIANT"
           echo ""
@@ -465,13 +484,54 @@ jobs:
             exit 1
           fi
           
+          fail_with_output_listing() {
+            local error_message="$1"
+            local files_found
+            files_found="$(ls -1 "$APK_DIR_PATH")"
+            echo "$error_message"$'\n'"Files found:"$'\n'"$files_found"
+            exit 1
+          }
+
           echo ""
-          echo "Validating APKs..."
-          for abi in universal arm64-v8a armeabi-v7a x86_64 x86; do
-            if test -f "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_$abi.apk"; then
-              echo "✓ Found: ${APK_BASENAME_PREFIX}_$abi.apk"
+          echo "Validating APKs based on generated outputs"
+          mapfile -t generated_apks < <(find "$APK_DIR_PATH" -maxdepth 1 -type f -name "${APK_BASENAME_PREFIX}_*.apk" -printf '%f\n' | sort)
+          if [ ${#generated_apks[@]} -eq 0 ]; then
+            fail_with_output_listing "No APKs were generated in '$APK_DIR_PATH'."
+          fi
+
+          mapfile -t generated_abis < <(printf '%s\n' "${generated_apks[@]}" | sed -E "s/^${APK_BASENAME_PREFIX}_(.+)\.apk$/\1/" | sort -u)
+          echo "Generated ABIs: ${generated_abis[*]}"
+
+          declare -A generated_abi_set=()
+          for abi in "${generated_abis[@]}"; do
+            generated_abi_set["$abi"]=1
+          done
+          abi_generated() {
+            local abi="$1"
+            [[ -n "${generated_abi_set[$abi]:-}" ]]
+          }
+
+          mandatory_abis=(arm64-v8a armeabi-v7a x86_64)
+          if abi_generated universal; then
+            mandatory_abis+=(universal)
+          fi
+
+          optional_abis=(x86)
+
+          echo "Mandatory ABIs for validation: ${mandatory_abis[*]}"
+          for abi in "${mandatory_abis[@]}"; do
+            if ! abi_generated "$abi"; then
+              fail_with_output_listing "Mandatory ABI '$abi' was not generated."
+            fi
+            echo "✓ Mandatory APK present: ${APK_BASENAME_PREFIX}_$abi.apk"
+          done
+
+          echo "Optional ABIs for validation: ${optional_abis[*]}"
+          for abi in "${optional_abis[@]}"; do
+            if abi_generated "$abi"; then
+              echo "ℹ Optional ABI '$abi' detected and accepted."
             else
-              echo "⚠ Missing: ${APK_BASENAME_PREFIX}_$abi.apk"
+              echo "ℹ Optional ABI '$abi' not generated by current toolchain/AGP; continuing."
             fi
           done
           
@@ -522,6 +582,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_x86
+          if-no-files-found: ignore
           path: |
             ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_x86.apk
             ${{ env.APK_DIR_PATH }}/output-metadata.json
@@ -608,19 +669,9 @@ jobs:
           echo "=========================================="
           echo ""
           
-          # Run validation tasks (allow failures for non-blocking)
-          set +e
           ./gradlew validateAndroid15Compatibility --no-daemon
-          RESULT=$?
-          set -e
-          
-          if [ $RESULT -ne 0 ]; then
-            echo ""
-            echo "⚠ Validation completed with warnings"
-          else
-            echo ""
-            echo "✅ All validations passed"
-          fi
+          echo ""
+          echo "✅ All validations passed"
 
   # ===========================================================================
   # Ω (OMEGA) - ALIGNMENT STAGE
@@ -693,3 +744,28 @@ jobs:
           else
             echo "⚠ License file not found"
           fi
+
+
+  # ===========================================================================
+  # Release Post-Publish Orchestration (reusable workflows)
+  # ===========================================================================
+  release-attach-debug-apks:
+    name: "Release - Attach Debug APKs"
+    if: github.event_name == 'release'
+    uses: ./.github/workflows/attach_debug_apks_to_release.yml
+    permissions:
+      contents: write
+    secrets: inherit
+    with:
+      release_ref: ${{ github.ref }}
+
+  release-trigger-jitpack:
+    name: "Release - Trigger JitPack Builds"
+    if: github.event_name == 'release'
+    needs: [release-attach-debug-apks]
+    uses: ./.github/workflows/trigger_library_builds_on_jitpack.yml
+    permissions:
+      contents: read
+    secrets: inherit
+    with:
+      release_ref: ${{ github.ref }}
