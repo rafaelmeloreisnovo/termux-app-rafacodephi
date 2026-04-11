@@ -167,6 +167,19 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
 
+      - name: "🤖 Setup Android SDK/NDK"
+        uses: android-actions/setup-android@v3
+
+      - name: "📦 Install Android toolchain components"
+        run: |
+          yes | sdkmanager --licenses > /dev/null
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;26.3.11579264" \
+            "cmake;3.22.1"
+
       - name: "📋 Extract Version Information"
         id: version
         run: |
@@ -231,6 +244,19 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
 
+      - name: "🤖 Setup Android SDK/NDK"
+        uses: android-actions/setup-android@v3
+
+      - name: "📦 Install Android toolchain components"
+        run: |
+          yes | sdkmanager --licenses > /dev/null
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;26.3.11579264" \
+            "cmake;3.22.1"
+
       - name: "🔐 Security Check - 16KB Page Alignment"
         run: |
           echo "=========================================="
@@ -288,6 +314,19 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
+
+      - name: "🤖 Setup Android SDK/NDK"
+        uses: android-actions/setup-android@v3
+
+      - name: "📦 Install Android toolchain components"
+        run: |
+          yes | sdkmanager --licenses > /dev/null
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;26.3.11579264" \
+            "cmake;3.22.1"
 
       - name: "🔨 Build ARM64 Debug APK"
         id: build
@@ -369,6 +408,19 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
 
+      - name: "🤖 Setup Android SDK/NDK"
+        uses: android-actions/setup-android@v3
+
+      - name: "📦 Install Android toolchain components"
+        run: |
+          yes | sdkmanager --licenses > /dev/null
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;26.3.11579264" \
+            "cmake;3.22.1"
+
       - name: "🔨 Build ARM64 Release APK"
         id: build
         shell: bash {0}
@@ -445,6 +497,19 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
+
+      - name: "🤖 Setup Android SDK/NDK"
+        uses: android-actions/setup-android@v3
+
+      - name: "📦 Install Android toolchain components"
+        run: |
+          yes | sdkmanager --licenses > /dev/null
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;26.3.11579264" \
+            "cmake;3.22.1"
 
       - name: "🔨 Build Full Debug APKs (All ABIs)"
         id: build
@@ -607,6 +672,19 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
+
+      - name: "🤖 Setup Android SDK/NDK"
+        uses: android-actions/setup-android@v3
+
+      - name: "📦 Install Android toolchain components"
+        run: |
+          yes | sdkmanager --licenses > /dev/null
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;26.3.11579264" \
+            "cmake;3.22.1"
 
       - name: "🧪 Run Unit Tests"
         run: |
