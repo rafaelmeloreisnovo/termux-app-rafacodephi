@@ -10,6 +10,16 @@
 ~/rafacode_engine/raf_engine
 ```
 
+## Validação estrutural NDK/JNI (CI ψ-perception)
+
+Antes das etapas de build no pipeline orquestrado, execute:
+
+```bash
+python3 scripts/validate_native_structure.py
+```
+
+Essa validação falha cedo caso encontre inconsistências em módulos nativos (ABIs permitidas, flags críticas de page-size para 64-bit e versão NDK efetiva).
+
 ## Overview
 
 This is an improved version of the RAFAELIA Protocol bare-metal C engine compilation system. The script has been enhanced with **30 distinct computer science aspects** to create a production-ready, secure, and high-performance build system.
