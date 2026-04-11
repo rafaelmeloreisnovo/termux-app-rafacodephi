@@ -443,6 +443,7 @@ static JNINativeMethod methods[] = {
     /* Architecture */
     {"getArchitecture", "()Ljava/lang/String;", (void*)Java_com_termux_lowlevel_BareMetal_getArchitecture},
     {"getCapabilities", "()I", (void*)Java_com_termux_lowlevel_BareMetal_getCapabilities},
+    /* com.termux.lowlevel.BareMetal#getCapabilitiesDetail(): int[] */
     {"getCapabilitiesDetail", "()[I", (void*)Java_com_termux_lowlevel_BareMetal_getCapabilitiesDetail},
     {"getHardwareProfile", "()Ljava/lang/String;", (void*)Java_com_termux_lowlevel_BareMetal_getHardwareProfile},
     
