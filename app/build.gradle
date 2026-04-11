@@ -157,10 +157,18 @@ dependencies {
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.2"
 }
 
-task versionName {
+tasks.register("printVersionName") {
+    group = "versioning"
+    description = "Prints the effective app versionName after Gradle configuration."
     doLast {
-        print android.defaultConfig.versionName
+        println android.defaultConfig.versionName
     }
+}
+
+tasks.register("versionName") {
+    group = "versioning"
+    description = "Backward-compatible alias for printVersionName."
+    dependsOn("printVersionName")
 }
 
 def validateVersionName(String versionName) {

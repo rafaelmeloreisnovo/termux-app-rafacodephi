@@ -157,27 +157,16 @@ jobs:
         run: |
           ./scripts/mvp_metadata_timestamp.sh validate
 
-      - name: "📦 Read Android Toolchain Versions (gradle.properties)"
-        run: |
-          COMPILE_SDK_VERSION=$(grep -E '^compileSdkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-          TARGET_SDK_VERSION=$(grep -E '^targetSdkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-          NDK_VERSION=$(grep -E '^ndkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-
-          if [ -z "$COMPILE_SDK_VERSION" ] || [ -z "$TARGET_SDK_VERSION" ] || [ -z "$NDK_VERSION" ]; then
-            echo "❌ Missing compileSdkVersion/targetSdkVersion/ndkVersion in gradle.properties"
-            exit 1
-          fi
-
-          echo "Source of truth: gradle.properties"
-          echo "compileSdkVersion=$COMPILE_SDK_VERSION"
-          echo "targetSdkVersion=$TARGET_SDK_VERSION"
-          echo "ndkVersion=$NDK_VERSION"
-
+      - name: "☕ Setup Java"
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
 
       - name: "📋 Extract Version Information"
         id: version
         run: |
-          VERSION_NAME=$(grep -m 1 'versionName "' app/build.gradle | sed -E 's/.*versionName "([^"]+)".*/\1/')
+          VERSION_NAME=$(./gradlew -q :app:printVersionName | tail -n 1)
           
           if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
             COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
