@@ -147,6 +147,10 @@ jobs:
           echo ""
           echo "✅ Quality gate PASSED"
 
+      - name: "🧩 Validate Native Module Structure"
+        run: |
+          python3 scripts/validate_native_structure.py
+
       - name: "✅ Validate Gradle Wrapper"
         uses: gradle/actions/wrapper-validation@v6
 
