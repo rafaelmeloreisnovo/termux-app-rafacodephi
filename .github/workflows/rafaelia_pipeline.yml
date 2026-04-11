@@ -87,9 +87,6 @@ concurrency:
 
 env:
   JAVA_VERSION: '17'
-  COMPILE_SDK_VERSION: 35
-  TARGET_SDK_VERSION: 28
-  NDK_VERSION: '26.3.11579264'
 
 permissions:
   contents: read
@@ -159,6 +156,22 @@ jobs:
       - name: "🕒 Validate MVP Metadata Timestamp"
         run: |
           ./scripts/mvp_metadata_timestamp.sh validate
+
+      - name: "📦 Read Android Toolchain Versions (gradle.properties)"
+        run: |
+          COMPILE_SDK_VERSION=$(grep -E '^compileSdkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
+          TARGET_SDK_VERSION=$(grep -E '^targetSdkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
+          NDK_VERSION=$(grep -E '^ndkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
+
+          if [ -z "$COMPILE_SDK_VERSION" ] || [ -z "$TARGET_SDK_VERSION" ] || [ -z "$NDK_VERSION" ]; then
+            echo "❌ Missing compileSdkVersion/targetSdkVersion/ndkVersion in gradle.properties"
+            exit 1
+          fi
+
+          echo "Source of truth: gradle.properties"
+          echo "compileSdkVersion=$COMPILE_SDK_VERSION"
+          echo "targetSdkVersion=$TARGET_SDK_VERSION"
+          echo "ndkVersion=$NDK_VERSION"
 
 
       - name: "📋 Extract Version Information"
@@ -614,19 +627,9 @@ jobs:
           echo "=========================================="
           echo ""
           
-          # Run validation tasks (allow failures for non-blocking)
-          set +e
           ./gradlew validateAndroid15Compatibility --no-daemon
-          RESULT=$?
-          set -e
-          
-          if [ $RESULT -ne 0 ]; then
-            echo ""
-            echo "⚠ Validation completed with warnings"
-          else
-            echo ""
-            echo "✅ All validations passed"
-          fi
+          echo ""
+          echo "✅ All validations passed"
 
   # ===========================================================================
   # Ω (OMEGA) - ALIGNMENT STAGE

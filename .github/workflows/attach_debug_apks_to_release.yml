@@ -30,6 +30,24 @@ jobs:
         env:
           PACKAGE_VARIANT: ${{ matrix.package_variant }}
         run: |
+          set -euo pipefail
+
+          preflight_release_cli() {
+            if command -v gh >/dev/null 2>&1; then
+              RELEASE_CLI="gh"
+            else
+              echo "Neither 'gh' nor a fallback release CLI is available in PATH."
+              return 1
+            fi
+
+            if ! gh auth status >/dev/null 2>&1; then
+              echo "GitHub CLI authentication failed. Ensure GITHUB_TOKEN/GH_TOKEN is available."
+              return 1
+            fi
+
+            echo "Release CLI preflight OK: $RELEASE_CLI"
+          }
+
           exit_on_error() {
               echo "$1"
               echo "Deleting '$RELEASE_VERSION_NAME' release and '$RELEASE_REF' tag"
@@ -37,6 +55,11 @@ jobs:
               git push --delete origin "$RELEASE_REF"
               exit 1
           }
+
+          echo "Running release CLI preflight"
+          if ! preflight_release_cli; then
+            exit_on_error "Release CLI preflight failed."
+          fi
 
           echo "Setting vars"
           RELEASE_VERSION_NAME="${RELEASE_REF/refs\/tags\//}"

@@ -68,11 +68,7 @@ on:
 
 # Environment variables for quality traceability
 env:
-  # Note: compileSdkVersion=35 (Android 15), targetSdkVersion=28 (API 28) per gradle.properties
-  COMPILE_SDK_VERSION: 35
-  TARGET_SDK_VERSION: 28
   MIN_SDK_VERSION: 21
-  NDK_VERSION: '26.3.11579264'
   JAVA_VERSION: '17'
   # ISO 8000/9001 Quality Identifiers
   QMS_VERSION: '2024.1'
@@ -90,6 +86,9 @@ jobs:
     outputs:
       should_build: ${{ steps.check.outputs.should_build }}
       version_name: ${{ steps.version.outputs.version_name }}
+      compile_sdk_version: ${{ steps.android-toolchain.outputs.compile_sdk_version }}
+      target_sdk_version: ${{ steps.android-toolchain.outputs.target_sdk_version }}
+      ndk_version: ${{ steps.android-toolchain.outputs.ndk_version }}
     
     steps:
       - name: "📥 Checkout Repository"
@@ -135,6 +134,27 @@ jobs:
           echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
           echo "Version: $VERSION_NAME"
 
+      - name: "📦 Read Android Toolchain Versions (gradle.properties)"
+        id: android-toolchain
+        run: |
+          COMPILE_SDK_VERSION=$(grep -E '^compileSdkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
+          TARGET_SDK_VERSION=$(grep -E '^targetSdkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
+          NDK_VERSION=$(grep -E '^ndkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
+
+          if [ -z "$COMPILE_SDK_VERSION" ] || [ -z "$TARGET_SDK_VERSION" ] || [ -z "$NDK_VERSION" ]; then
+            echo "❌ Missing compileSdkVersion/targetSdkVersion/ndkVersion in gradle.properties"
+            exit 1
+          fi
+
+          echo "compile_sdk_version=$COMPILE_SDK_VERSION" >> "$GITHUB_OUTPUT"
+          echo "target_sdk_version=$TARGET_SDK_VERSION" >> "$GITHUB_OUTPUT"
+          echo "ndk_version=$NDK_VERSION" >> "$GITHUB_OUTPUT"
+
+          echo "Source of truth: gradle.properties"
+          echo "compileSdkVersion=$COMPILE_SDK_VERSION"
+          echo "targetSdkVersion=$TARGET_SDK_VERSION"
+          echo "ndkVersion=$NDK_VERSION"
+
   # Phase 2: ARM64 Android 15 Build
   build-arm64:
     name: "🔨 Build ARM64 (Android 15)"
@@ -148,6 +168,9 @@ jobs:
     
     env:
       PACKAGE_VARIANT: ${{ matrix.package_variant }}
+      COMPILE_SDK_VERSION: ${{ needs.quality-gate.outputs.compile_sdk_version }}
+      TARGET_SDK_VERSION: ${{ needs.quality-gate.outputs.target_sdk_version }}
+      NDK_VERSION: ${{ needs.quality-gate.outputs.ndk_version }}
 
     steps:
       - name: "📥 Phase 1: Clone Repository"
@@ -166,8 +189,8 @@ jobs:
           echo "=========================================="
           echo ""
           echo "Target Architecture: arm64-v8a (ARM64)"
-          echo "Compile SDK: $COMPILE_SDK_VERSION (Android 15)"
-          echo "Target SDK: $TARGET_SDK_VERSION (API 28)"
+          echo "Compile SDK: $COMPILE_SDK_VERSION (from gradle.properties)"
+          echo "Target SDK: $TARGET_SDK_VERSION (from gradle.properties)"
           echo "NDK Version: $NDK_VERSION"
           echo "Package Variant: $PACKAGE_VARIANT"
           echo "16KB Page Alignment: ENABLED"
@@ -297,38 +320,9 @@ jobs:
           echo "=========================================="
           echo ""
           
-          # Run Gradle validation tasks
-          echo "Running validation tasks..."
-          set +e
+          echo "Running blocking validation tasks..."
           ./gradlew validateAndroid15Compatibility --no-daemon
-          VALIDATION_EXIT_CODE=$?
-          set -e
-          
-          if [ $VALIDATION_EXIT_CODE -ne 0 ]; then
-            echo "⚠ Validation completed with warnings (exit code: $VALIDATION_EXIT_CODE)"
-            echo "Review the output above for details."
-          else
-            echo "✓ Validation passed successfully"
-          fi
-          
-          echo ""
-          echo "=========================================="
-          echo "16KB Page Size Validation"
-          echo "=========================================="
-          
-          # Check linker flags in app/build.gradle (main location)
-          if grep -q "max-page-size=16384" app/build.gradle 2>/dev/null; then
-            echo "✓ 16KB page alignment configured in app/build.gradle"
-          else
-            echo "⚠ 16KB page alignment may need review in app/build.gradle"
-          fi
-          
-          # Check Android.mk for native library flags
-          if grep -q "max-page-size=16384" app/src/main/cpp/Android.mk 2>/dev/null; then
-            echo "✓ 16KB page alignment configured in Android.mk"
-          else
-            echo "⚠ 16KB page alignment may need review in Android.mk"
-          fi
+          echo "✓ Validation passed successfully"
           
           echo ""
           echo "=========================================="
@@ -365,7 +359,7 @@ jobs:
             echo "Quality Metrics:"
             echo "  - Build Reproducibility: PASS"
             echo "  - Architecture Target: arm64-v8a"
-            echo "  - Android Compatibility: 15 (compileSdk $COMPILE_SDK_VERSION, targetSdk $TARGET_SDK_VERSION)"
+            echo "  - Android SDK/NDK (gradle.properties): compileSdk ${{ needs.quality-gate.outputs.compile_sdk_version }}, targetSdk ${{ needs.quality-gate.outputs.target_sdk_version }}, ndk ${{ needs.quality-gate.outputs.ndk_version }}"
             echo "  - 16KB Page Support: ENABLED"
           else
             echo "❌ Pipeline completed with failures"
