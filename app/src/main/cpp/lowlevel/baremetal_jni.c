@@ -33,6 +33,23 @@ Java_com_termux_lowlevel_BareMetal_getCapabilities(JNIEnv *env, jclass clazz) {
     return (jint)get_arch_caps();
 }
 
+JNIEXPORT jintArray JNICALL
+Java_com_termux_lowlevel_BareMetal_getCapabilitiesDetail(JNIEnv *env, jclass clazz) {
+    (void)clazz;
+    jint raw[4];
+    raw[0] = (jint)get_arch_caps();
+    raw[1] = (jint)get_arch_runtime_caps();
+    raw[2] = (jint)get_arch_binary_caps();
+    raw[3] = (jint)get_arch_runtime_caps_valid();
+
+    jintArray out = (*env)->NewIntArray(env, 4);
+    if (out == NULL) {
+        return NULL;
+    }
+    (*env)->SetIntArrayRegion(env, out, 0, 4, raw);
+    return out;
+}
+
 
 JNIEXPORT jstring JNICALL
 Java_com_termux_lowlevel_BareMetal_getHardwareProfile(JNIEnv *env, jclass clazz) {
@@ -426,6 +443,8 @@ static JNINativeMethod methods[] = {
     /* Architecture */
     {"getArchitecture", "()Ljava/lang/String;", (void*)Java_com_termux_lowlevel_BareMetal_getArchitecture},
     {"getCapabilities", "()I", (void*)Java_com_termux_lowlevel_BareMetal_getCapabilities},
+    /* getCapabilitiesDetail(): int[] -> JNI signature ()[I */
+    {"getCapabilitiesDetail", "()[I", (void*)Java_com_termux_lowlevel_BareMetal_getCapabilitiesDetail},
     {"getHardwareProfile", "()Ljava/lang/String;", (void*)Java_com_termux_lowlevel_BareMetal_getHardwareProfile},
     
     /* Vector ops */

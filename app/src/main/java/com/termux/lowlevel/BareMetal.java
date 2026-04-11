@@ -45,6 +45,8 @@ public class BareMetal {
      */
     public static native int getCapabilities();
 
+    private static native int[] getCapabilitiesDetail();
+
     /**
      * Native hardware profile encoded as key/value pairs.
      */

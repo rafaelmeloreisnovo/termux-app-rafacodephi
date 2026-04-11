@@ -1,16 +1,21 @@
 name: Trigger Termux Library Builds on Jitpack
 
 on:
-  release:
-    types:
-      - published
+  workflow_call:
+    inputs:
+      release_ref:
+        description: Git ref for the release tag (e.g. refs/tags/v1.2.3)
+        required: true
+        type: string
 
 jobs:
   trigger-termux-library-builds:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_REF: ${{ inputs.release_ref }}
     steps:
       - name: Set vars
-        run: echo "TERMUX_LIB_VERSION=${GITHUB_REF/refs\/tags\/v/}" >> $GITHUB_ENV # Do not include "v" prefix
+        run: echo "TERMUX_LIB_VERSION=${RELEASE_REF/refs\/tags\/v/}" >> $GITHUB_ENV # Do not include "v" prefix
       - name: Echo release
         run: echo "Triggering termux library builds on jitpack for '$TERMUX_LIB_VERSION' release after waiting for 3 mins"
       - name: Trigger termux library builds on jitpack

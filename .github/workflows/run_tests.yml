@@ -34,6 +34,28 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: '17'
+    - name: "🤖 Phase 2.1: Setup Android SDK/NDK"
+      uses: android-actions/setup-android@v3
+    - name: "📦 Phase 2.2: Install Android toolchain components"
+      run: |
+        COMPILE_SDK_VERSION=$(grep -E '^compileSdkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
+        NDK_VERSION=$(grep -E '^ndkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
+        BUILD_TOOLS_VERSION=$(grep -E '^buildToolsVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
+        if [ -z "$COMPILE_SDK_VERSION" ] || [ -z "$NDK_VERSION" ]; then
+          echo "❌ Missing compileSdkVersion/ndkVersion in gradle.properties"
+          exit 1
+        fi
+        if [ -z "$BUILD_TOOLS_VERSION" ]; then
+          BUILD_TOOLS_VERSION="${COMPILE_SDK_VERSION}.0.0"
+        fi
+
+        yes | sdkmanager --licenses > /dev/null
+        sdkmanager \
+          "platform-tools" \
+          "platforms;android-${COMPILE_SDK_VERSION}" \
+          "build-tools;${BUILD_TOOLS_VERSION}" \
+          "ndk;${NDK_VERSION}" \
+          "cmake;3.22.1"
     - name: "🧪 Phase 3: Execute unit tests"
       run: |
         echo "=========================================="

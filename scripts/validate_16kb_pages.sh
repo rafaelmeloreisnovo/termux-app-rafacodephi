@@ -15,9 +15,36 @@ echo -e "${COLOR_BLUE}  Android 15/16 16KB Page Size Validation${COLOR_RESET}"
 echo -e "${COLOR_BLUE}==================================================${COLOR_RESET}"
 echo ""
 
-# Check if APK exists
-APK_PATH="app/build/outputs/apk/debug"
-APK_FILE=$(find "$APK_PATH" -name "termux-app_*_universal.apk" 2>/dev/null | head -1)
+APK_FILE=""
+REQUIRE_READELF=0
+TARGET_ARCHS="arm64-v8a,x86_64"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --apk)
+            APK_FILE="${2:-}"
+            shift 2
+            ;;
+        --require-readelf)
+            REQUIRE_READELF=1
+            shift
+            ;;
+        --abis)
+            TARGET_ARCHS="${2:-}"
+            shift 2
+            ;;
+        *)
+            echo -e "${COLOR_RED}✗ Unknown argument:${COLOR_RESET} $1" >&2
+            echo "Usage: $0 [--apk <path>] [--require-readelf] [--abis arm64-v8a,x86_64]"
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -z "$APK_FILE" ]]; then
+    APK_PATH="app/build/outputs/apk/debug"
+    APK_FILE=$(find "$APK_PATH" -name "*.apk" 2>/dev/null | sort | tail -1)
+fi
 
 if [ -z "$APK_FILE" ] || [ ! -f "$APK_FILE" ]; then
     echo -e "${COLOR_RED}✗ APK not found!${COLOR_RESET}"
@@ -70,7 +97,10 @@ ARM64_TOTAL=0
 X86_64_VALID=0
 X86_64_TOTAL=0
 
-for arch in arm64-v8a x86_64 armeabi-v7a x86; do
+IFS=',' read -ra CRITICAL_ARCHS <<< "$TARGET_ARCHS"
+ALL_ARCHS=("arm64-v8a" "x86_64" "armeabi-v7a" "x86")
+
+for arch in "${ALL_ARCHS[@]}"; do
     LIB_DIR="$TEMP_DIR/lib/$arch"
     if [ -d "$LIB_DIR" ]; then
         echo -e "${COLOR_YELLOW}Architecture: $arch${COLOR_RESET}"
@@ -137,10 +167,10 @@ if command -v readelf &> /dev/null; then
     
     # Check if critical architectures pass
     CRITICAL_PASS=true
-    if [ "$ARM64_TOTAL" -gt 0 ] && [ "$ARM64_VALID" -ne "$ARM64_TOTAL" ]; then
+    if [[ " ${CRITICAL_ARCHS[*]} " == *" arm64-v8a "* ]] && [ "$ARM64_TOTAL" -gt 0 ] && [ "$ARM64_VALID" -ne "$ARM64_TOTAL" ]; then
         CRITICAL_PASS=false
     fi
-    if [ "$X86_64_TOTAL" -gt 0 ] && [ "$X86_64_VALID" -ne "$X86_64_TOTAL" ]; then
+    if [[ " ${CRITICAL_ARCHS[*]} " == *" x86_64 "* ]] && [ "$X86_64_TOTAL" -gt 0 ] && [ "$X86_64_VALID" -ne "$X86_64_TOTAL" ]; then
         CRITICAL_PASS=false
     fi
     
@@ -178,5 +208,8 @@ else
     echo "  2. Run the app and check for crashes"
     echo "  3. Check logcat: adb logcat | grep -i 'sigsegv\\|signal 11\\|termux'"
     echo ""
+    if [ "$REQUIRE_READELF" -eq 1 ]; then
+        exit 1
+    fi
     exit 2
 fi
