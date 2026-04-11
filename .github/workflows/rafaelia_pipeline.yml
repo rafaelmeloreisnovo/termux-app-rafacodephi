@@ -621,19 +621,9 @@ jobs:
           echo "=========================================="
           echo ""
           
-          # Run validation tasks (allow failures for non-blocking)
-          set +e
           ./gradlew validateAndroid15Compatibility --no-daemon
-          RESULT=$?
-          set -e
-          
-          if [ $RESULT -ne 0 ]; then
-            echo ""
-            echo "⚠ Validation completed with warnings"
-          else
-            echo ""
-            echo "✅ All validations passed"
-          fi
+          echo ""
+          echo "✅ All validations passed"
 
   # ===========================================================================
   # Ω (OMEGA) - ALIGNMENT STAGE

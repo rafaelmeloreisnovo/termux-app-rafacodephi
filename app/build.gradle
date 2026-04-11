@@ -1,3 +1,4 @@
+import groovy.json.JsonSlurper
 plugins {
     id "com.android.application"
 }
@@ -481,12 +482,71 @@ task validateAuthorities {
     }
 }
 
+def resolveApkFromMetadata = { String buildType ->
+    def metadataFile = file("${buildDir}/outputs/apk/${buildType}/output-metadata.json")
+    if (!metadataFile.exists()) {
+        throw new GradleException("APK metadata not found for ${buildType}: ${metadataFile}")
+    }
+
+    def metadata = new JsonSlurper().parse(metadataFile)
+    def elements = metadata?.elements ?: []
+    if (elements.isEmpty()) {
+        throw new GradleException("No APK outputs registered in ${metadataFile}")
+    }
+
+    def preferred = elements.find { element ->
+        def filters = element.filters ?: []
+        filters.isEmpty() || filters.any { filter -> filter.filterType == 'ABI' && filter.value == 'universal' }
+    } ?: elements[0]
+
+    def outputFileName = preferred.outputFile
+    if (!outputFileName) {
+        throw new GradleException("Invalid output metadata entry in ${metadataFile}: ${preferred}")
+    }
+
+    def apkFile = file("${buildDir}/outputs/apk/${buildType}/${outputFileName}")
+    if (!apkFile.exists()) {
+        throw new GradleException("Expected APK does not exist: ${apkFile}")
+    }
+
+    return apkFile
+}
+
+def register16kbValidationTask = { String buildType ->
+    def capitalized = buildType.capitalize()
+    tasks.register("validateAndroid15Compatibility${capitalized}") {
+        description = "Validate Android 15 16KB LOAD alignment for ${buildType} APK"
+        group = 'verification'
+        dependsOn("assemble${capitalized}")
+        doLast {
+            def apkFile = resolveApkFromMetadata(buildType)
+            println "Validating APK ${apkFile}"
+            exec {
+                executable "bash"
+                args "${rootProject.projectDir}/scripts/validate_16kb_pages.sh",
+                        "--apk", apkFile.absolutePath,
+                        "--require-readelf",
+                        "--abis", "arm64-v8a,x86_64"
+            }
+        }
+    }
+}
+
+register16kbValidationTask("debug")
+register16kbValidationTask("release")
+
 // Master validation task that runs all checks
-task validateAndroid15Compatibility {
+tasks.register("validateAndroid15Compatibility") {
     description = 'Runs all Android 15 compatibility validations'
     group = 'verification'
-    dependsOn validatePackageNames, validateStorageFlags, validateAuthorities
-    
+    dependsOn(
+            validatePackageNames,
+            validateStorageFlags,
+            validateAuthorities,
+            tasks.named("validateAndroid15CompatibilityDebug"),
+            tasks.named("validateAndroid15CompatibilityRelease")
+    )
+
     doLast {
         println "\n✅ All Android 15 compatibility validations passed!"
     }
