@@ -49,10 +49,19 @@ jobs:
           }
 
           exit_on_error() {
-              echo "$1"
-              echo "Deleting '$RELEASE_VERSION_NAME' release and '$RELEASE_REF' tag"
-              hub release delete "$RELEASE_VERSION_NAME"
-              git push --delete origin "$RELEASE_REF"
+              local message="$1"
+              echo "::error::$message"
+              {
+                echo "## attach_debug_apks_to_release failed"
+                echo
+                echo "- Release: \`$RELEASE_VERSION_NAME\`"
+                echo "- Tag ref: \`$GITHUB_REF\`"
+                echo "- Package variant: \`${{ env.PACKAGE_VARIANT }}\`"
+                echo "- Error: $message"
+                echo
+                echo "> No automatic release/tag deletion was performed."
+                echo "> If cleanup is required, run a dedicated manual cleanup workflow/job."
+              } >> "$GITHUB_STEP_SUMMARY"
               exit 1
           }
 
