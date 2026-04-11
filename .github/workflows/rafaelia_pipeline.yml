@@ -2,8 +2,10 @@
 # RAFAELIA Orchestrated Pipeline - Unified CI/CD Workflow
 # =============================================================================
 #
-# This is the SINGLE ENTRY POINT for all CI/CD operations in this repository.
+# This is the primary orchestration pipeline for CI/CD operations in this repository.
 # It implements the RAFAELIA methodology cycle (ψχρΔΣΩ) with sequential stages.
+#
+# Release-specific post-publish flows are also orchestrated here via reusable workflows.
 #
 # Stages:
 #   ψ (Psi)   - Perception: Quality gate, validation, gradle wrapper check
@@ -48,6 +50,9 @@ on:
       - 'docs/**'
       - 'art/**'
       - 'site/**'
+  release:
+    types:
+      - published
   workflow_dispatch:
     inputs:
       build_type:
@@ -96,6 +101,7 @@ jobs:
   # ===========================================================================
   psi-perception:
     name: "ψ Perception - Quality Gate"
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     outputs:
       should_continue: ${{ steps.quality-check.outputs.should_continue }}
@@ -693,3 +699,28 @@ jobs:
           else
             echo "⚠ License file not found"
           fi
+
+
+  # ===========================================================================
+  # Release Post-Publish Orchestration (reusable workflows)
+  # ===========================================================================
+  release-attach-debug-apks:
+    name: "Release - Attach Debug APKs"
+    if: github.event_name == 'release'
+    uses: ./.github/workflows/attach_debug_apks_to_release.yml
+    permissions:
+      contents: write
+    secrets: inherit
+    with:
+      release_ref: ${{ github.ref }}
+
+  release-trigger-jitpack:
+    name: "Release - Trigger JitPack Builds"
+    if: github.event_name == 'release'
+    needs: [release-attach-debug-apks]
+    uses: ./.github/workflows/trigger_library_builds_on_jitpack.yml
+    permissions:
+      contents: read
+    secrets: inherit
+    with:
+      release_ref: ${{ github.ref }}
