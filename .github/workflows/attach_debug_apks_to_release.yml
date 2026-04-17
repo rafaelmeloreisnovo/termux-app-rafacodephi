@@ -36,24 +36,7 @@ jobs:
 
       - name: Install Android toolchain components
         run: |
-          COMPILE_SDK_VERSION=$(grep -E '^compileSdkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-          NDK_VERSION=$(grep -E '^ndkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-          BUILD_TOOLS_VERSION=$(grep -E '^buildToolsVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-          if [ -z "$COMPILE_SDK_VERSION" ] || [ -z "$NDK_VERSION" ]; then
-            echo "❌ Missing compileSdkVersion/ndkVersion in gradle.properties"
-            exit 1
-          fi
-          if [ -z "$BUILD_TOOLS_VERSION" ]; then
-            BUILD_TOOLS_VERSION="${COMPILE_SDK_VERSION}.0.0"
-          fi
-
-          yes | sdkmanager --licenses > /dev/null
-          sdkmanager \
-            "platform-tools" \
-            "platforms;android-${COMPILE_SDK_VERSION}" \
-            "build-tools;${BUILD_TOOLS_VERSION}" \
-            "ndk;${NDK_VERSION}" \
-            "cmake;3.22.1"
+          ./scripts/setup_android_toolchain.sh
 
       - name: Build and attach APKs to release
         shell: bash {0}
@@ -113,40 +96,60 @@ jobs:
           echo "Building APKs for '$APK_VERSION_TAG' release"
           export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG" # Used by app/build.gradle
           export TERMUX_PACKAGE_VARIANT="${{ env.PACKAGE_VARIANT }}" # Used by app/build.gradle
+          export TERMUX_APP_VERSION_NAME="${RELEASE_VERSION_NAME/v/}" # Used by app/build.gradle
+          echo "Effective versioning: tag=$TERMUX_APK_VERSION_TAG versionName=$TERMUX_APP_VERSION_NAME"
+          echo "Release tag used (RELEASE_VERSION_NAME): $RELEASE_VERSION_NAME"
           if ! ./gradlew assembleDebug; then
             exit_on_error "Build failed for '$APK_VERSION_TAG' release."
           fi
+          if ! BUILT_VERSION_NAME="$(./gradlew -q :app:printVersionName)"; then
+            exit_on_error "Failed to resolve built versionName via :app:printVersionName for '$APK_VERSION_TAG'."
+          fi
+          if [[ "$BUILT_VERSION_NAME" != "$TERMUX_APP_VERSION_NAME" ]]; then
+            exit_on_error "versionName mismatch. Expected '$TERMUX_APP_VERSION_NAME' but got '$BUILT_VERSION_NAME'."
+          fi
 
-          echo "Validating APKs"
-          for abi in universal arm64-v8a armeabi-v7a x86_64 x86; do
-            if ! test -f "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_$abi.apk"; then
+          required_abis=(universal arm64-v8a armeabi-v7a x86_64)
+          optional_abis=(x86)
+          checksum_inputs=()
+          upload_assets=()
+
+          echo "Validating required APKs"
+          for abi in "${required_abis[@]}"; do
+            apk_path="$APK_DIR_PATH/${APK_BASENAME_PREFIX}_$abi.apk"
+            if ! test -f "$apk_path"; then
               files_found="$(ls "$APK_DIR_PATH")"
-              exit_on_error "Failed to find built APK at '$APK_DIR_PATH/${APK_BASENAME_PREFIX}_$abi.apk'. Files found: ${files_found}"
+              exit_on_error "Failed to find built APK at '$apk_path'. Files found: ${files_found}"
+            fi
+            checksum_inputs+=("${APK_BASENAME_PREFIX}_$abi.apk")
+            upload_assets+=("$apk_path")
+          done
+
+          echo "Optional ABIs for validation: ${optional_abis[*]}"
+          for abi in "${optional_abis[@]}"; do
+            apk_path="$APK_DIR_PATH/${APK_BASENAME_PREFIX}_$abi.apk"
+            if test -f "$apk_path"; then
+              echo "optional ABI '$abi' present: '$apk_path' (will be included in checksum/upload)."
+              checksum_inputs+=("${APK_BASENAME_PREFIX}_$abi.apk")
+              upload_assets+=("$apk_path")
+            else
+              echo "optional ABI '$abi' absent: '$apk_path' (continuing without it)."
             fi
           done
 
-          echo "Generating sha25sums file"
+          echo "Generating sha256sums file"
           if ! (
             cd "$APK_DIR_PATH"
-            sha256sum \
-              "${APK_BASENAME_PREFIX}_universal.apk" \
-              "${APK_BASENAME_PREFIX}_arm64-v8a.apk" \
-              "${APK_BASENAME_PREFIX}_armeabi-v7a.apk" \
-              "${APK_BASENAME_PREFIX}_x86_64.apk" \
-              "${APK_BASENAME_PREFIX}_x86.apk" \
-              > "${APK_BASENAME_PREFIX}_sha256sums"
+            sha256sum "${checksum_inputs[@]}" > "${APK_BASENAME_PREFIX}_sha256sums"
           ); then
-            exit_on_error "Generate sha25sums failed for '$APK_VERSION_TAG' release."
+            exit_on_error "Generate sha256sums failed for '$APK_VERSION_TAG' release."
           fi
 
           echo "Attaching APKs to github release"
-          if ! gh release upload "$RELEASE_VERSION_NAME" \
-            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_universal.apk" \
-            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_arm64-v8a.apk" \
-            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_armeabi-v7a.apk" \
-            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_x86_64.apk" \
-            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_x86.apk" \
-            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_sha256sums" \
-            --clobber; then
+          upload_assets+=("$APK_DIR_PATH/${APK_BASENAME_PREFIX}_sha256sums")
+          echo "Release upload assets:"
+          printf ' - %s\n' "${upload_assets[@]}"
+
+          if ! gh release upload "$RELEASE_VERSION_NAME" "${upload_assets[@]}" --clobber; then
             exit_on_error "Attach APKs to release failed for '$APK_VERSION_TAG' release."
           fi

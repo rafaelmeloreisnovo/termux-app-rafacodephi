@@ -590,9 +590,12 @@ public class SystemAuditActivity extends AppCompatActivity {
         
         // Side-by-Side
         sb.append("🔄 Side-by-Side Installation:\n");
-        sb.append("   • Package Name: com.termux.rafacodephi\n");
-        sb.append("   • Unique Authorities: ✅ Yes\n");
-        sb.append("   • No Collisions: ✅ Verified\n");
+        final String packageName = getApplicationContext().getPackageName();
+        final boolean canonicalAppId = "com.termux.rafacodephi".equals(packageName);
+        sb.append("   • Package Name: ").append(packageName).append("\n");
+        sb.append("   • Canonical App ID: ").append(canonicalAppId ? "✅ com.termux.rafacodephi" : "⚠️ Non-canonical").append("\n");
+        sb.append("   • Unique Authorities: ").append(canonicalAppId ? "✅ Expected by design" : "⚠️ Requires manifest verification").append("\n");
+        sb.append("   • No Collisions: ").append(canonicalAppId ? "✅ Expected by canonical build" : "⚠️ Not guaranteed in this build").append("\n");
         sb.append("   • Data Isolation: ✅ Separate directories\n\n");
         
         // Hybrid Systems

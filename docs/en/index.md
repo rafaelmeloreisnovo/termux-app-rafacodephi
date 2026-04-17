@@ -19,5 +19,6 @@ Welcome to the documentation for the [Termux App].
 - [Android 15 Compatibility](../RAFCODEPHI_ANDROID15_COMPATIBILITY.md)
 - [Troubleshooting](../../TROUBLESHOOTING.md)
 - [Implementation Summary](../IMPLEMENTATION_SUMMARY_RAFAELIA_IMPROVEMENTS.md)
+- [Engineering Build/Release Runbook](../ENGINEERING_SYSTEM_RUNBOOK.md)
 
 [Termux App]: https://github.com/termux/termux-app

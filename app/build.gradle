@@ -13,12 +13,11 @@ ext {
     packageVariant = System.getenv("TERMUX_PACKAGE_VARIANT") ?: "apt-android-7" // Default: "apt-android-7"
     bootstrapBaseUrl = System.getenv("TERMUX_BOOTSTRAP_BASE_URL") ?: "https://github.com/termux/termux-packages/releases/download"
 
-    // Prefix strategy:
-    // 1) Short term: keep app/plugins on the historical com.termux prefix.
-    // 2) Medium/long term: allow bootstraps generated from termux-packages with
-    //    TERMUX_PACKAGE_NAME=com.termux.rafacodephi and TERMUX_PAGE_SIZE=16384.
-    appPackageName = System.getenv("TERMUX_APP_PACKAGE_NAME") ?: "com.termux"
-    bootstrapMetadataPackageName = System.getenv("TERMUX_BOOTSTRAP_PACKAGE_NAME") ?: "com.termux"
+    // Canonical side-by-side strategy:
+    // - Release defaults to com.termux.rafacodephi for app id and bootstrap metadata.
+    // - Legacy compatibility remains opt-in via environment overrides.
+    appPackageName = System.getenv("TERMUX_APP_PACKAGE_NAME") ?: "com.termux.rafacodephi"
+    bootstrapMetadataPackageName = System.getenv("TERMUX_BOOTSTRAP_PACKAGE_NAME") ?: "com.termux.rafacodephi"
     bootstrapRequiredPageSize = System.getenv("TERMUX_BOOTSTRAP_PAGE_SIZE") ?: "16384"
 }
 
@@ -352,7 +351,6 @@ task validatePackageNames {
     doLast {
         def errors = []
         def rootDir = project.rootProject.projectDir
-        def customPackageName = android.defaultConfig.applicationId
         
         // Files to check
         fileTree(rootDir) {
@@ -386,8 +384,8 @@ task validatePackageNames {
                     return
                 }
                 
-                // Check for hardcoded com.termux (but not custom package name)
-                if (line.contains('com.termux') && !line.contains(customPackageName)) {
+                // Check for hardcoded legacy app id usages that are not class/package references.
+                if (line.contains('com.termux') && !line.contains('com.termux.rafacodephi')) {
                     // Check if it's using a constant or placeholder or is a class reference
                     if (!line.contains('TERMUX_PACKAGE_NAME') && 
                         !line.contains('BuildConfig.APPLICATION_ID') && 
@@ -473,8 +471,7 @@ task validateAuthorities {
                 // Check for android:authorities with hardcoded package name
                 if (line.contains('android:authorities=') && 
                     line.contains('com.termux') && 
-                    !line.contains('${TERMUX_PACKAGE_NAME}') &&
-                    !line.contains('com.termux.rafacodephi')) {
+                    !line.contains('${TERMUX_PACKAGE_NAME}')) {
                     errors.add("${file.path}:${lineNumber}: ${line.trim()}")
                 }
             }
@@ -486,6 +483,18 @@ task validateAuthorities {
             throw new GradleException(errorMsg)
         } else {
             println "✅ Authorities validation passed!"
+        }
+    }
+}
+
+task validateSideBySideContract {
+    description = 'Validates canonical side-by-side fork contract across build/runtime/manifest shortcuts'
+    group = 'verification'
+
+    doLast {
+        exec {
+            executable "python3"
+            args "${rootProject.projectDir}/scripts/validate_side_by_side_contract.py"
         }
     }
 }
@@ -551,6 +560,7 @@ tasks.register("validateAndroid15Compatibility") {
             validatePackageNames,
             validateStorageFlags,
             validateAuthorities,
+            validateSideBySideContract,
             tasks.named("validateAndroid15CompatibilityDebug"),
             tasks.named("validateAndroid15CompatibilityRelease")
     )
