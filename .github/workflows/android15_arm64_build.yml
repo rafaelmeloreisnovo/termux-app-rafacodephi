@@ -138,24 +138,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          COMPILE_SDK_VERSION=$(grep -E '^compileSdkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-          NDK_VERSION=$(grep -E '^ndkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-          BUILD_TOOLS_VERSION=$(grep -E '^buildToolsVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-          if [ -z "$COMPILE_SDK_VERSION" ] || [ -z "$NDK_VERSION" ]; then
-            echo "❌ Missing compileSdkVersion/ndkVersion in gradle.properties"
-            exit 1
-          fi
-          if [ -z "$BUILD_TOOLS_VERSION" ]; then
-            BUILD_TOOLS_VERSION="${COMPILE_SDK_VERSION}.0.0"
-          fi
-
-          yes | sdkmanager --licenses > /dev/null
-          sdkmanager \
-            "platform-tools" \
-            "platforms;android-${COMPILE_SDK_VERSION}" \
-            "build-tools;${BUILD_TOOLS_VERSION}" \
-            "ndk;${NDK_VERSION}" \
-            "cmake;3.22.1"
+          ./scripts/setup_android_toolchain.sh
 
       - name: "📋 Extract Version Information"
         id: version
@@ -217,24 +200,7 @@ jobs:
 
       - name: "📦 Phase 2.2: Install Android toolchain components"
         run: |
-          COMPILE_SDK_VERSION=$(grep -E '^compileSdkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-          NDK_VERSION=$(grep -E '^ndkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-          BUILD_TOOLS_VERSION=$(grep -E '^buildToolsVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-          if [ -z "$COMPILE_SDK_VERSION" ] || [ -z "$NDK_VERSION" ]; then
-            echo "❌ Missing compileSdkVersion/ndkVersion in gradle.properties"
-            exit 1
-          fi
-          if [ -z "$BUILD_TOOLS_VERSION" ]; then
-            BUILD_TOOLS_VERSION="${COMPILE_SDK_VERSION}.0.0"
-          fi
-
-          yes | sdkmanager --licenses > /dev/null
-          sdkmanager \
-            "platform-tools" \
-            "platforms;android-${COMPILE_SDK_VERSION}" \
-            "build-tools;${BUILD_TOOLS_VERSION}" \
-            "ndk;${NDK_VERSION}" \
-            "cmake;3.22.1"
+          ./scripts/setup_android_toolchain.sh
 
       - name: "🔧 Phase 3: Configure Build Environment"
         run: |
@@ -372,24 +338,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          COMPILE_SDK_VERSION=$(grep -E '^compileSdkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-          NDK_VERSION=$(grep -E '^ndkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-          BUILD_TOOLS_VERSION=$(grep -E '^buildToolsVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
-          if [ -z "$COMPILE_SDK_VERSION" ] || [ -z "$NDK_VERSION" ]; then
-            echo "❌ Missing compileSdkVersion/ndkVersion in gradle.properties"
-            exit 1
-          fi
-          if [ -z "$BUILD_TOOLS_VERSION" ]; then
-            BUILD_TOOLS_VERSION="${COMPILE_SDK_VERSION}.0.0"
-          fi
-
-          yes | sdkmanager --licenses > /dev/null
-          sdkmanager \
-            "platform-tools" \
-            "platforms;android-${COMPILE_SDK_VERSION}" \
-            "build-tools;${BUILD_TOOLS_VERSION}" \
-            "ndk;${NDK_VERSION}" \
-            "cmake;3.22.1"
+          ./scripts/setup_android_toolchain.sh
 
       - name: "🔍 Run Android 15 Compatibility Validation"
         run: |

@@ -101,6 +101,7 @@ Este documento serve como índice mestre de toda a documentação do projeto Ter
 | [docs/IMPLEMENTATION_SUMMARY_RAFAELIA_IMPROVEMENTS.md](docs/IMPLEMENTATION_SUMMARY_RAFAELIA_IMPROVEMENTS.md) | Resumo de melhorias | Desenvolvedores |
 | [docs/DEPENDENCIAS_TOTAIS.md](docs/DEPENDENCIAS_TOTAIS.md) | Inventário completo de dependências e repositórios | Desenvolvedores |
 | [docs/STATUS.md](docs/STATUS.md) | Status oficial e consolidado | Desenvolvedores |
+| [docs/ENGINEERING_SYSTEM_RUNBOOK.md](docs/ENGINEERING_SYSTEM_RUNBOOK.md) | Runbook canônico de build/release/CI | Engenharia de Build/Release |
 
 ### Subdiretório `/docs/rafaelia/`
 
