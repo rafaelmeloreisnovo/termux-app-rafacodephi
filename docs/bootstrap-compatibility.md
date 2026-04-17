@@ -32,6 +32,9 @@ O `app/build.gradle` valida `BOOTSTRAP_INFO` para cada bootstrap baixado e **fal
 
 Isso bloqueia versões de bootstrap sem metadados compatíveis.
 
+Além disso, o gate estático `:app:validateSideBySideContract` valida contrato canônico
+(`applicationId`, metadados bootstrap, manifest e shortcuts) antes das fases pesadas de CI.
+
 ## Matriz de compatibilidade (packageId x bootstrap x plugins)
 
 | applicationId (app) | Bootstrap (`BOOTSTRAP_INFO: TERMUX_PACKAGE_NAME`) | Suporte plugins legados | Status |
