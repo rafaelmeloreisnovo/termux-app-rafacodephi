@@ -96,8 +96,17 @@ jobs:
           echo "Building APKs for '$APK_VERSION_TAG' release"
           export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG" # Used by app/build.gradle
           export TERMUX_PACKAGE_VARIANT="${{ env.PACKAGE_VARIANT }}" # Used by app/build.gradle
+          export TERMUX_APP_VERSION_NAME="${RELEASE_VERSION_NAME/v/}" # Used by app/build.gradle
+          echo "Effective app version (TERMUX_APP_VERSION_NAME): $TERMUX_APP_VERSION_NAME"
+          echo "Release tag used (RELEASE_VERSION_NAME): $RELEASE_VERSION_NAME"
           if ! ./gradlew assembleDebug; then
             exit_on_error "Build failed for '$APK_VERSION_TAG' release."
+          fi
+          if ! BUILT_VERSION_NAME="$(./gradlew -q :app:printVersionName)"; then
+            exit_on_error "Failed to resolve built versionName via :app:printVersionName for '$APK_VERSION_TAG'."
+          fi
+          if [[ "$BUILT_VERSION_NAME" != "$TERMUX_APP_VERSION_NAME" ]]; then
+            exit_on_error "versionName mismatch. Expected '$TERMUX_APP_VERSION_NAME' but got '$BUILT_VERSION_NAME'."
           fi
 
           required_abis=(universal arm64-v8a armeabi-v7a x86_64)
