@@ -39,6 +39,9 @@ jobs:
     - name: "📦 Phase 2.2: Install Android toolchain components"
       run: |
         ./scripts/setup_android_toolchain.sh
+    - name: "🧬 Phase 2.3: Validate side-by-side contract"
+      run: |
+        ./gradlew :app:validateSideBySideContract --no-daemon
     - name: "🧪 Phase 3: Execute unit tests"
       run: |
         echo "=========================================="

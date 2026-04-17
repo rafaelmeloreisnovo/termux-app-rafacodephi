@@ -174,6 +174,10 @@ jobs:
         run: |
           ./scripts/setup_android_toolchain.sh
 
+      - name: "🧬 Validate Side-by-Side Contract"
+        run: |
+          ./gradlew :app:validateSideBySideContract --no-daemon
+
       - name: "📋 Extract Version Information"
         id: version
         run: |
@@ -696,6 +700,13 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
+
+      - name: "🤖 Setup Android SDK/NDK"
+        uses: android-actions/setup-android@v3
+
+      - name: "📦 Install Android toolchain components"
+        run: |
+          ./scripts/setup_android_toolchain.sh
 
       - name: "🔍 Android 15 Compatibility Validation"
         run: |
