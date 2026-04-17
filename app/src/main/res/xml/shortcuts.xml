@@ -2,12 +2,9 @@
     xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
-        For shortcut.xml:
-        If applicationId in build.gradle is changed from "com.termux", then targetPackage will
-        need to be manually patched since ${applicationId} variable or resource string does not work.
-        If package name in AndroidManifest is changed from "com.termux", then targetClass will
-        need to be manually patched since dot (.) prefix does not work to automatically prefix the
-        package name.
+        shortcut.xml does not support manifest placeholders for targetPackage/targetClass.
+        Keep targetPackage aligned with canonical applicationId and targetClass aligned with
+        the real Java/Kotlin package where activity classes are declared.
     -->
 
     <shortcut
@@ -34,7 +31,7 @@
             android:targetPackage="com.termux.rafacodephi"
             android:targetClass="com.termux.app.TermuxActivity"
             android:name="android.shortcut.conversation">
-            <extra android:name="com.termux.app.failsafe_session" android:value="true"/>
+            <extra android:name="com.termux.rafacodephi.app.failsafe_session" android:value="true"/>
         </intent>
     </shortcut>
 
