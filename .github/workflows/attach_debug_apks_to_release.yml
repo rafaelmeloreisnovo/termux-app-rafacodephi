@@ -100,36 +100,57 @@ jobs:
             exit_on_error "Build failed for '$APK_VERSION_TAG' release."
           fi
 
-          echo "Validating APKs"
-          for abi in universal arm64-v8a armeabi-v7a x86_64 x86; do
+          required_abis=(universal arm64-v8a armeabi-v7a x86_64)
+          optional_abis=(x86)
+
+          echo "Validating required APKs"
+          for abi in "${required_abis[@]}"; do
             if ! test -f "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_$abi.apk"; then
               files_found="$(ls "$APK_DIR_PATH")"
               exit_on_error "Failed to find built APK at '$APK_DIR_PATH/${APK_BASENAME_PREFIX}_$abi.apk'. Files found: ${files_found}"
             fi
           done
 
+          optional_x86_present=false
+          echo "Optional ABIs for validation: ${optional_abis[*]}"
+          for abi in "${optional_abis[@]}"; do
+            if test -f "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_$abi.apk"; then
+              echo "optional ABI $abi detected, including in validation/upload."
+              optional_x86_present=true
+            else
+              echo "optional ABI $abi missing, continuing"
+            fi
+          done
+
           echo "Generating sha25sums file"
           if ! (
             cd "$APK_DIR_PATH"
-            sha256sum \
-              "${APK_BASENAME_PREFIX}_universal.apk" \
-              "${APK_BASENAME_PREFIX}_arm64-v8a.apk" \
-              "${APK_BASENAME_PREFIX}_armeabi-v7a.apk" \
-              "${APK_BASENAME_PREFIX}_x86_64.apk" \
-              "${APK_BASENAME_PREFIX}_x86.apk" \
-              > "${APK_BASENAME_PREFIX}_sha256sums"
+            checksum_inputs=(
+              "${APK_BASENAME_PREFIX}_universal.apk"
+              "${APK_BASENAME_PREFIX}_arm64-v8a.apk"
+              "${APK_BASENAME_PREFIX}_armeabi-v7a.apk"
+              "${APK_BASENAME_PREFIX}_x86_64.apk"
+            )
+            if [ "$optional_x86_present" = true ]; then
+              checksum_inputs+=("${APK_BASENAME_PREFIX}_x86.apk")
+            fi
+            sha256sum "${checksum_inputs[@]}" > "${APK_BASENAME_PREFIX}_sha256sums"
           ); then
             exit_on_error "Generate sha25sums failed for '$APK_VERSION_TAG' release."
           fi
 
           echo "Attaching APKs to github release"
-          if ! gh release upload "$RELEASE_VERSION_NAME" \
-            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_universal.apk" \
-            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_arm64-v8a.apk" \
-            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_armeabi-v7a.apk" \
-            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_x86_64.apk" \
-            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_x86.apk" \
-            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_sha256sums" \
-            --clobber; then
+          upload_assets=(
+            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_universal.apk"
+            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_arm64-v8a.apk"
+            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_armeabi-v7a.apk"
+            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_x86_64.apk"
+            "$APK_DIR_PATH/${APK_BASENAME_PREFIX}_sha256sums"
+          )
+          if [ "$optional_x86_present" = true ]; then
+            upload_assets+=("$APK_DIR_PATH/${APK_BASENAME_PREFIX}_x86.apk")
+          fi
+
+          if ! gh release upload "$RELEASE_VERSION_NAME" "${upload_assets[@]}" --clobber; then
             exit_on_error "Attach APKs to release failed for '$APK_VERSION_TAG' release."
           fi
