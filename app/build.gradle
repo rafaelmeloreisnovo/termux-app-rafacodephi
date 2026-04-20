@@ -75,11 +75,47 @@ android {
         }
     }
 
+    def releaseSigningEnabled = (System.getenv("TERMUX_ENABLE_RELEASE_SIGNING") ?: "false").toBoolean()
+    def releaseKeystoreFilePath = System.getenv("TERMUX_RELEASE_KEYSTORE_FILE") ?: ""
+    def releaseKeystorePassword = System.getenv("TERMUX_RELEASE_KEYSTORE_PASSWORD") ?: ""
+    def releaseKeyAlias = System.getenv("TERMUX_RELEASE_KEY_ALIAS") ?: ""
+    def releaseKeyPassword = System.getenv("TERMUX_RELEASE_KEY_PASSWORD") ?: ""
+    def hasReleaseSigningMaterial = releaseKeystoreFilePath && releaseKeystorePassword && releaseKeyAlias && releaseKeyPassword
+    def useReleaseSigning = false
+
+    if (releaseSigningEnabled) {
+        if (!hasReleaseSigningMaterial) {
+            throw new GradleException("TERMUX_ENABLE_RELEASE_SIGNING=true requires TERMUX_RELEASE_KEYSTORE_FILE, TERMUX_RELEASE_KEYSTORE_PASSWORD, TERMUX_RELEASE_KEY_ALIAS and TERMUX_RELEASE_KEY_PASSWORD.")
+        }
+        File releaseKeystoreFile = file(releaseKeystoreFilePath)
+        if (!releaseKeystoreFile.exists()) {
+            throw new GradleException("Release keystore file not found at '${releaseKeystoreFile.absolutePath}'.")
+        }
+
+        signingConfigs {
+            release {
+                storeFile releaseKeystoreFile
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+                enableV1Signing true
+                enableV2Signing true
+            }
+        }
+        useReleaseSigning = true
+        logger.lifecycle("Release signing is enabled with explicit TERMUX release signing environment variables.")
+    } else {
+        logger.lifecycle("Release signing is disabled. assembleRelease will generate an unsigned artifact.")
+    }
+
     buildTypes {
         release {
             minifyEnabled true
             shrinkResources false // Reproducible builds
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (useReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
 
         debug {
