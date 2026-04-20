@@ -10,7 +10,7 @@ fi
 
 read_prop() {
   local key="$1"
-  grep -E "^${key}=" "$GRADLE_PROPERTIES_FILE" | head -n1 | cut -d= -f2- | tr -d '[:space:]'
+  grep -E "^${key}=" "$GRADLE_PROPERTIES_FILE" | head -n1 | cut -d= -f2- | tr -d '[:space:]' || true
 }
 
 COMPILE_SDK_VERSION="$(read_prop compileSdkVersion)"
@@ -34,7 +34,21 @@ echo "targetSdkVersion=$TARGET_SDK_VERSION"
 echo "ndkVersion=$NDK_VERSION"
 echo "buildToolsVersion=$BUILD_TOOLS_VERSION"
 
+if ! command -v sdkmanager >/dev/null 2>&1; then
+  echo "❌ sdkmanager not found in PATH. Ensure android-actions/setup-android has run before this script."
+  exit 1
+fi
+
+# Keep `pipefail` globally but avoid false failure from `yes` receiving SIGPIPE.
+set +e
 yes | sdkmanager --licenses > /dev/null
+sdkmanager_license_status=${PIPESTATUS[1]}
+set -e
+if [[ "$sdkmanager_license_status" -ne 0 ]]; then
+  echo "❌ Failed to accept Android SDK licenses (sdkmanager exit code: $sdkmanager_license_status)."
+  exit "$sdkmanager_license_status"
+fi
+
 sdkmanager \
   "platform-tools" \
   "platforms;android-${COMPILE_SDK_VERSION}" \
