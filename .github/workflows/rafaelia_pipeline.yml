@@ -401,6 +401,15 @@ jobs:
         run: |
           ./scripts/setup_android_toolchain.sh
 
+      - name: "🔐 Configure optional release signing"
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./scripts/setup_android_signing.sh
+
       - name: "🔨 Build ARM64 Release APK"
         id: build
         shell: bash {0}
