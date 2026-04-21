@@ -200,6 +200,10 @@ jobs:
       - name: "⚙️ Determine Build Configuration"
         id: build-config
         run: |
+          if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+            echo "build_debug=true" >> $GITHUB_OUTPUT
+            echo "build_release=false" >> $GITHUB_OUTPUT
+          else
           # Determine build types
           BUILD_INPUT="${{ github.event.inputs.build_type || 'both' }}"
           
@@ -212,6 +216,7 @@ jobs:
           else
             echo "build_debug=true" >> $GITHUB_OUTPUT
             echo "build_release=true" >> $GITHUB_OUTPUT
+          fi
           fi
           
           # Determine package variants
@@ -404,6 +409,7 @@ jobs:
 
       - name: "🔐 Configure optional release signing"
         env:
+          INPUT_BUILD_TYPE: release
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}

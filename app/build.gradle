@@ -23,9 +23,9 @@ ext {
 }
 
 android {
-    namespace "com.termux.rafacodephi"
+    namespace = "com.termux.rafacodephi"
 
-    compileSdkVersion project.properties.compileSdkVersion.toInteger()
+    compileSdk = project.properties.compileSdkVersion.toInteger()
     ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
     def appVersionName = System.getenv("TERMUX_APP_VERSION_NAME") ?: ""
     def apkVersionTag = System.getenv("TERMUX_APK_VERSION_TAG") ?: ""
@@ -35,8 +35,8 @@ android {
 
     defaultConfig {
         applicationId project.ext.appPackageName
-        minSdkVersion project.properties.minSdkVersion.toInteger()
-        targetSdkVersion project.properties.targetSdkVersion.toInteger()
+        minSdk = project.properties.minSdkVersion.toInteger()
+        targetSdk = project.properties.targetSdkVersion.toInteger()
         versionCode 118
         versionName "0.118.0"
         versionNameSuffix "-rafacodephi"
@@ -68,11 +68,11 @@ android {
 
     splits {
         abi {
-            enable ((gradle.startParameter.taskNames.any { it.contains("Debug") } && splitAPKsForDebugBuilds == "1") ||
+            enable = ((gradle.startParameter.taskNames.any { it.contains("Debug") } && splitAPKsForDebugBuilds == "1") ||
                 (gradle.startParameter.taskNames.any { it.contains("Release") } && splitAPKsForReleaseBuilds == "1"))
-            reset ()
+            reset()
             include 'x86', 'x86_64', 'armeabi-v7a', 'arm64-v8a'
-            universalApk true
+            universalApk = true
         }
     }
 
@@ -112,7 +112,7 @@ android {
     buildTypes {
         release {
             minifyEnabled true
-            shrinkResources false // Reproducible builds
+            shrinkResources = false // Reproducible builds
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             if (useReleaseSigning) {
                 signingConfig signingConfigs.release
@@ -125,7 +125,7 @@ android {
 
     compileOptions {
         // Flag to enable support for the new language APIs
-        coreLibraryDesugaringEnabled true
+        coreLibraryDesugaringEnabled = true
 
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -149,7 +149,7 @@ android {
 
     packagingOptions {
         jniLibs {
-            useLegacyPackaging true
+            useLegacyPackaging = true
         }
     }
 
@@ -166,7 +166,7 @@ android {
     }
 
     buildFeatures {
-        buildConfig true
+        buildConfig = true
     }
 }
 
@@ -189,7 +189,6 @@ dependencies {
     implementation project(":rafaelia")
     implementation project(":rmr")
     testImplementation "junit:junit:4.13.2"
-    testImplementation "org.robolectric:robolectric:4.10"
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.2"
 }
 
@@ -271,7 +270,86 @@ clean {
     }
 }
 
-task downloadBootstraps() {
+def configuredPackageVariant = project.ext.packageVariant
+def configuredBootstrapPackageName = project.ext.bootstrapMetadataPackageName
+def configuredBootstrapPageSize = project.ext.bootstrapRequiredPageSize
+def configuredBootstrapValidationMode = project.ext.bootstrapValidationMode
+
+def ensureBootstrapInfoEntry(File file, String expectedPackageName, String expectedPageSize) {
+    def zipFile = new java.util.zip.ZipFile(file)
+    try {
+        if (zipFile.getEntry("BOOTSTRAP_INFO") != null) return
+    } finally {
+        zipFile.close()
+    }
+
+    File tmpFile = new File(file.parentFile, file.name + ".tmp")
+    if (tmpFile.exists()) tmpFile.delete()
+    def infoText = "TERMUX_PACKAGE_NAME=${expectedPackageName}\nTERMUX_PAGE_SIZE=${expectedPageSize}\n"
+
+    zipFile = new java.util.zip.ZipFile(file)
+    def zipOut = new java.util.zip.ZipOutputStream(new FileOutputStream(tmpFile))
+    try {
+        def entries = zipFile.entries()
+        while (entries.hasMoreElements()) {
+            def oldEntry = entries.nextElement()
+            def newEntry = new java.util.zip.ZipEntry(oldEntry.name)
+            newEntry.time = oldEntry.time
+
+            if (oldEntry.method == java.util.zip.ZipEntry.STORED) {
+                newEntry.method = java.util.zip.ZipEntry.STORED
+                newEntry.size = oldEntry.size
+                newEntry.compressedSize = oldEntry.compressedSize
+                newEntry.crc = oldEntry.crc
+            }
+
+            zipOut.putNextEntry(newEntry)
+            zipOut << zipFile.getInputStream(oldEntry)
+            zipOut.closeEntry()
+        }
+
+        def infoEntry = new java.util.zip.ZipEntry("BOOTSTRAP_INFO")
+        infoEntry.time = 0L
+        zipOut.putNextEntry(infoEntry)
+        zipOut.write(infoText.getBytes("UTF-8"))
+        zipOut.closeEntry()
+    } finally {
+        zipOut.close()
+        zipFile.close()
+    }
+
+    if (!tmpFile.renameTo(file)) {
+        tmpFile.delete()
+        throw new GradleException("Failed to finalize BOOTSTRAP_INFO injection for " + file.name)
+    }
+
+    logger.lifecycle("Injected BOOTSTRAP_INFO into ${file.name} using pinned bootstrap metadata.")
+}
+
+def hasReleaseTaskRequested() {
+    return gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }
+}
+
+def hasDebugTaskRequested() {
+    return gradle.startParameter.taskNames.any { it.toLowerCase().contains("debug") }
+}
+
+def resolveBootstrapValidationMode(String configuredMode) {
+    if (configuredMode == "auto") {
+        if (hasReleaseTaskRequested()) return "strict"
+        if (hasDebugTaskRequested()) return "upstream-debug-compat"
+        return "strict"
+    }
+    if (configuredMode != "strict" && configuredMode != "upstream-debug-compat") {
+        throw new GradleException(
+            "Unsupported TERMUX_BOOTSTRAP_VALIDATION_MODE \"" + configuredMode +
+            "\". Allowed values: auto, strict, upstream-debug-compat."
+        )
+    }
+    return configuredMode
+}
+
+tasks.register("downloadBootstraps") {
     doLast {
         def packageVariant = project.ext.packageVariant
         def expectedBootstrapPackageName = project.ext.bootstrapMetadataPackageName
@@ -441,11 +519,15 @@ task validatePackageNames {
                 
                 // Check for hardcoded legacy app id usages that are not class/package references.
                 if (line.contains('com.termux') && !line.contains('com.termux.rafacodephi')) {
+                    def isManifestTopLevelClassReference =
+                        trimmedLine ==~ /.*android:name="com\.termux\.[A-Z][^"]*".*/
+
                     // Check if it's using a constant or placeholder or is a class reference
                     if (!line.contains('TERMUX_PACKAGE_NAME') && 
                         !line.contains('BuildConfig.APPLICATION_ID') && 
                         !line.contains('${TERMUX_PACKAGE_NAME}') &&
                         !line.contains('TERMUX_PACKAGE_NAME}') &&
+                        !isManifestTopLevelClassReference &&
                         !line.contains('com.termux.app.') && // Class reference
                         !line.contains('com.termux.shared.') && // Class reference  
                         !line.contains('com.termux.view.') && // Class reference
