@@ -336,6 +336,7 @@ jobs:
           export TERMUX_APP_VERSION_NAME="${VERSION_TAG/v/}"
           export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG"
           export TERMUX_PACKAGE_VARIANT="$PACKAGE_VARIANT"
+          export TERMUX_BOOTSTRAP_VALIDATION_MODE="upstream-debug-compat"
           
           # Build with ARM64 priority
           if ./gradlew assembleDebug \
@@ -432,6 +433,7 @@ jobs:
           export TERMUX_APP_VERSION_NAME="${VERSION_TAG/v/}"
           export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG"
           export TERMUX_PACKAGE_VARIANT="$PACKAGE_VARIANT"
+          export TERMUX_BOOTSTRAP_VALIDATION_MODE="upstream-debug-compat"
           
           # Build with ARM64 priority
           if ./gradlew assembleRelease \
@@ -518,6 +520,7 @@ jobs:
           export TERMUX_APP_VERSION_NAME="${VERSION_TAG/v/}"
           export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG"
           export TERMUX_PACKAGE_VARIANT="$PACKAGE_VARIANT"
+          export TERMUX_BOOTSTRAP_VALIDATION_MODE="upstream-debug-compat"
           
           # Build all ABIs
           if ! ./gradlew assembleDebug --no-daemon; then
