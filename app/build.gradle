@@ -19,11 +19,7 @@ ext {
     appPackageName = System.getenv("TERMUX_APP_PACKAGE_NAME") ?: "com.termux.rafacodephi"
     bootstrapMetadataPackageName = System.getenv("TERMUX_BOOTSTRAP_PACKAGE_NAME") ?: "com.termux.rafacodephi"
     bootstrapRequiredPageSize = System.getenv("TERMUX_BOOTSTRAP_PAGE_SIZE") ?: "16384"
-    // Validation rails:
-    // - auto (default): strict for release tasks, upstream-debug-compat for debug tasks.
-    // - strict: requires BOOTSTRAP_INFO package/page metadata.
-    // - upstream-debug-compat: allows upstream bootstrap metadata gaps for debug-only builds.
-    bootstrapValidationMode = System.getenv("TERMUX_BOOTSTRAP_VALIDATION_MODE") ?: "auto"
+    bootstrapValidationMode = System.getenv("TERMUX_BOOTSTRAP_VALIDATION_MODE") ?: "strict"
 }
 
 android {
@@ -355,23 +351,19 @@ def resolveBootstrapValidationMode(String configuredMode) {
 
 tasks.register("downloadBootstraps") {
     doLast {
-        def packageVariant = configuredPackageVariant
-        def expectedBootstrapPackageName = configuredBootstrapPackageName
-        def expectedPageSize = configuredBootstrapPageSize
-        def bootstrapValidationMode = resolveBootstrapValidationMode(configuredBootstrapValidationMode)
+        def packageVariant = project.ext.packageVariant
+        def expectedBootstrapPackageName = project.ext.bootstrapMetadataPackageName
+        def expectedPageSize = project.ext.bootstrapRequiredPageSize
+        def bootstrapValidationMode = project.ext.bootstrapValidationMode
 
         if (bootstrapValidationMode == "upstream-debug-compat" &&
-            hasReleaseTaskRequested()) {
+            gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }) {
             throw new GradleException("TERMUX_BOOTSTRAP_VALIDATION_MODE=upstream-debug-compat is forbidden for release tasks.")
         }
 
         def validateBootstrap = { arch, checksum, version ->
             downloadBootstrap(arch, checksum, version)
             File file = new File(projectDir, "src/main/cpp/bootstrap-${arch}.zip")
-            // Download integrity is already pinned by checksum in downloadBootstrap().
-            // If upstream zip lacks BOOTSTRAP_INFO, inject canonical metadata so strict
-            // release validation stays deterministic without falling back to compat mode.
-            ensureBootstrapInfoEntry(file, expectedBootstrapPackageName, expectedPageSize)
             requiredBootstrapMetadata(file, expectedBootstrapPackageName, expectedPageSize, bootstrapValidationMode)
         }
 
