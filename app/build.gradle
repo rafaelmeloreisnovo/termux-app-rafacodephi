@@ -193,7 +193,6 @@ dependencies {
     implementation project(":rafaelia")
     implementation project(":rmr")
     testImplementation "junit:junit:4.13.2"
-    testImplementation "org.robolectric:robolectric:4.10"
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.2"
 }
 
