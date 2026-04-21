@@ -10,6 +10,13 @@ if [[ ! -f "$GRADLE_PROPERTIES_FILE" ]]; then
 fi
 
 resolve_sdk_root() {
+  local common_sdk_paths=(
+    "${HOME}/Android/Sdk"
+    "/usr/local/lib/android/sdk"
+    "/opt/android-sdk"
+    "/opt/android-sdk-linux"
+  )
+
   if [[ -n "${ANDROID_HOME:-}" ]]; then
     echo "$ANDROID_HOME"
     return 0
@@ -18,6 +25,12 @@ resolve_sdk_root() {
     echo "$ANDROID_SDK_ROOT"
     return 0
   fi
+  for candidate in "${common_sdk_paths[@]}"; do
+    if [[ -d "$candidate" ]]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
   return 1
 }
 
