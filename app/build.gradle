@@ -528,11 +528,15 @@ task validatePackageNames {
                 
                 // Check for hardcoded legacy app id usages that are not class/package references.
                 if (line.contains('com.termux') && !line.contains('com.termux.rafacodephi')) {
+                    def isManifestTopLevelClassReference =
+                        trimmedLine ==~ /.*android:name="com\.termux\.[A-Z][^"]*".*/
+
                     // Check if it's using a constant or placeholder or is a class reference
                     if (!line.contains('TERMUX_PACKAGE_NAME') && 
                         !line.contains('BuildConfig.APPLICATION_ID') && 
                         !line.contains('${TERMUX_PACKAGE_NAME}') &&
                         !line.contains('TERMUX_PACKAGE_NAME}') &&
+                        !isManifestTopLevelClassReference &&
                         !line.contains('com.termux.app.') && // Class reference
                         !line.contains('com.termux.shared.') && // Class reference  
                         !line.contains('com.termux.view.') && // Class reference
