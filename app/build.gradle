@@ -25,7 +25,7 @@ ext {
 android {
     namespace = "com.termux.rafacodephi"
 
-    compileSdkVersion project.properties.compileSdkVersion.toInteger()
+    compileSdk = project.properties.compileSdkVersion.toInteger()
     ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
     def appVersionName = System.getenv("TERMUX_APP_VERSION_NAME") ?: ""
     def apkVersionTag = System.getenv("TERMUX_APK_VERSION_TAG") ?: ""
@@ -35,8 +35,8 @@ android {
 
     defaultConfig {
         applicationId project.ext.appPackageName
-        minSdkVersion project.properties.minSdkVersion.toInteger()
-        targetSdkVersion project.properties.targetSdkVersion.toInteger()
+        minSdk = project.properties.minSdkVersion.toInteger()
+        targetSdk = project.properties.targetSdkVersion.toInteger()
         versionCode 118
         versionName "0.118.0"
         versionNameSuffix "-rafacodephi"
