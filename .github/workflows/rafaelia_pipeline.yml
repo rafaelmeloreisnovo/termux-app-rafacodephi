@@ -70,12 +70,12 @@ on:
         default: false
         type: boolean
       package_variant:
-        description: 'Package Variant (empty = both)'
+        description: 'Package Variant'
         required: false
-        default: ''
+        default: 'both'
         type: choice
         options:
-          - ''
+          - both
           - apt-android-7
           - apt-android-5
 
@@ -216,7 +216,7 @@ jobs:
           
           # Determine package variants
           VARIANT_INPUT="${{ github.event.inputs.package_variant }}"
-          if [ -z "$VARIANT_INPUT" ]; then
+          if [ -z "$VARIANT_INPUT" ] || [ "$VARIANT_INPUT" == "both" ]; then
             echo 'variants=["apt-android-7", "apt-android-5"]' >> $GITHUB_OUTPUT
           else
             echo "variants=[\"$VARIANT_INPUT\"]" >> $GITHUB_OUTPUT
