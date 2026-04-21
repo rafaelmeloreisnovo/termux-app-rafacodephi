@@ -73,6 +73,9 @@ Without this fix, apps crash with SIGSEGV on startup. **This fork is patched and
 ### Quick Start
 
 ```bash
+# Optional preflight (writes local.properties sdk.dir from ANDROID_HOME/ANDROID_SDK_ROOT)
+./scripts/setup_android_toolchain.sh
+
 # Build
 ./gradlew assembleDebug
 
