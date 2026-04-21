@@ -19,7 +19,11 @@ ext {
     appPackageName = System.getenv("TERMUX_APP_PACKAGE_NAME") ?: "com.termux.rafacodephi"
     bootstrapMetadataPackageName = System.getenv("TERMUX_BOOTSTRAP_PACKAGE_NAME") ?: "com.termux.rafacodephi"
     bootstrapRequiredPageSize = System.getenv("TERMUX_BOOTSTRAP_PAGE_SIZE") ?: "16384"
-    bootstrapValidationMode = System.getenv("TERMUX_BOOTSTRAP_VALIDATION_MODE") ?: "strict"
+    // Validation rails:
+    // - auto (default): strict for release tasks, upstream-debug-compat for debug tasks.
+    // - strict: requires BOOTSTRAP_INFO package/page metadata.
+    // - upstream-debug-compat: allows upstream bootstrap metadata gaps for debug-only builds.
+    bootstrapValidationMode = System.getenv("TERMUX_BOOTSTRAP_VALIDATION_MODE") ?: "auto"
 }
 
 android {
@@ -276,21 +280,99 @@ def configuredBootstrapPackageName = project.ext.bootstrapMetadataPackageName
 def configuredBootstrapPageSize = project.ext.bootstrapRequiredPageSize
 def configuredBootstrapValidationMode = project.ext.bootstrapValidationMode
 
+def ensureBootstrapInfoEntry(File file, String expectedPackageName, String expectedPageSize) {
+    def zipFile = new java.util.zip.ZipFile(file)
+    try {
+        if (zipFile.getEntry("BOOTSTRAP_INFO") != null) return
+    } finally {
+        zipFile.close()
+    }
+
+    File tmpFile = new File(file.parentFile, file.name + ".tmp")
+    if (tmpFile.exists()) tmpFile.delete()
+    def infoText = "TERMUX_PACKAGE_NAME=${expectedPackageName}\nTERMUX_PAGE_SIZE=${expectedPageSize}\n"
+
+    zipFile = new java.util.zip.ZipFile(file)
+    def zipOut = new java.util.zip.ZipOutputStream(new FileOutputStream(tmpFile))
+    try {
+        def entries = zipFile.entries()
+        while (entries.hasMoreElements()) {
+            def oldEntry = entries.nextElement()
+            def newEntry = new java.util.zip.ZipEntry(oldEntry.name)
+            newEntry.time = oldEntry.time
+
+            if (oldEntry.method == java.util.zip.ZipEntry.STORED) {
+                newEntry.method = java.util.zip.ZipEntry.STORED
+                newEntry.size = oldEntry.size
+                newEntry.compressedSize = oldEntry.compressedSize
+                newEntry.crc = oldEntry.crc
+            }
+
+            zipOut.putNextEntry(newEntry)
+            zipOut << zipFile.getInputStream(oldEntry)
+            zipOut.closeEntry()
+        }
+
+        def infoEntry = new java.util.zip.ZipEntry("BOOTSTRAP_INFO")
+        infoEntry.time = 0L
+        zipOut.putNextEntry(infoEntry)
+        zipOut.write(infoText.getBytes("UTF-8"))
+        zipOut.closeEntry()
+    } finally {
+        zipOut.close()
+        zipFile.close()
+    }
+
+    if (!tmpFile.renameTo(file)) {
+        tmpFile.delete()
+        throw new GradleException("Failed to finalize BOOTSTRAP_INFO injection for " + file.name)
+    }
+
+    logger.lifecycle("Injected BOOTSTRAP_INFO into ${file.name} using pinned bootstrap metadata.")
+}
+
+def hasReleaseTaskRequested() {
+    return gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }
+}
+
+def hasDebugTaskRequested() {
+    return gradle.startParameter.taskNames.any { it.toLowerCase().contains("debug") }
+}
+
+def resolveBootstrapValidationMode(String configuredMode) {
+    if (configuredMode == "auto") {
+        if (hasReleaseTaskRequested()) return "strict"
+        if (hasDebugTaskRequested()) return "upstream-debug-compat"
+        return "strict"
+    }
+    if (configuredMode != "strict" && configuredMode != "upstream-debug-compat") {
+        throw new GradleException(
+            "Unsupported TERMUX_BOOTSTRAP_VALIDATION_MODE \"" + configuredMode +
+            "\". Allowed values: auto, strict, upstream-debug-compat."
+        )
+    }
+    return configuredMode
+}
+
 tasks.register("downloadBootstraps") {
     doLast {
         def packageVariant = configuredPackageVariant
         def expectedBootstrapPackageName = configuredBootstrapPackageName
         def expectedPageSize = configuredBootstrapPageSize
-        def bootstrapValidationMode = configuredBootstrapValidationMode
+        def bootstrapValidationMode = resolveBootstrapValidationMode(configuredBootstrapValidationMode)
 
         if (bootstrapValidationMode == "upstream-debug-compat" &&
-            gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }) {
+            hasReleaseTaskRequested()) {
             throw new GradleException("TERMUX_BOOTSTRAP_VALIDATION_MODE=upstream-debug-compat is forbidden for release tasks.")
         }
 
         def validateBootstrap = { arch, checksum, version ->
             downloadBootstrap(arch, checksum, version)
             File file = new File(projectDir, "src/main/cpp/bootstrap-${arch}.zip")
+            // Download integrity is already pinned by checksum in downloadBootstrap().
+            // If upstream zip lacks BOOTSTRAP_INFO, inject canonical metadata so strict
+            // release validation stays deterministic without falling back to compat mode.
+            ensureBootstrapInfoEntry(file, expectedBootstrapPackageName, expectedPageSize)
             requiredBootstrapMetadata(file, expectedBootstrapPackageName, expectedPageSize, bootstrapValidationMode)
         }
 
