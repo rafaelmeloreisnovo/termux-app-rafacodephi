@@ -19,7 +19,11 @@ ext {
     appPackageName = System.getenv("TERMUX_APP_PACKAGE_NAME") ?: "com.termux.rafacodephi"
     bootstrapMetadataPackageName = System.getenv("TERMUX_BOOTSTRAP_PACKAGE_NAME") ?: "com.termux.rafacodephi"
     bootstrapRequiredPageSize = System.getenv("TERMUX_BOOTSTRAP_PAGE_SIZE") ?: "16384"
-    bootstrapValidationMode = System.getenv("TERMUX_BOOTSTRAP_VALIDATION_MODE") ?: "strict"
+    // Validation rails:
+    // - auto (default): strict for release tasks, upstream-debug-compat for debug tasks.
+    // - strict: requires BOOTSTRAP_INFO package/page metadata.
+    // - upstream-debug-compat: allows upstream bootstrap metadata gaps for debug-only builds.
+    bootstrapValidationMode = System.getenv("TERMUX_BOOTSTRAP_VALIDATION_MODE") ?: "auto"
 }
 
 android {
@@ -276,15 +280,38 @@ def configuredBootstrapPackageName = project.ext.bootstrapMetadataPackageName
 def configuredBootstrapPageSize = project.ext.bootstrapRequiredPageSize
 def configuredBootstrapValidationMode = project.ext.bootstrapValidationMode
 
+def hasReleaseTaskRequested() {
+    return gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }
+}
+
+def hasDebugTaskRequested() {
+    return gradle.startParameter.taskNames.any { it.toLowerCase().contains("debug") }
+}
+
+def resolveBootstrapValidationMode(String configuredMode) {
+    if (configuredMode == "auto") {
+        if (hasReleaseTaskRequested()) return "strict"
+        if (hasDebugTaskRequested()) return "upstream-debug-compat"
+        return "strict"
+    }
+    if (configuredMode != "strict" && configuredMode != "upstream-debug-compat") {
+        throw new GradleException(
+            "Unsupported TERMUX_BOOTSTRAP_VALIDATION_MODE \"" + configuredMode +
+            "\". Allowed values: auto, strict, upstream-debug-compat."
+        )
+    }
+    return configuredMode
+}
+
 tasks.register("downloadBootstraps") {
     doLast {
         def packageVariant = configuredPackageVariant
         def expectedBootstrapPackageName = configuredBootstrapPackageName
         def expectedPageSize = configuredBootstrapPageSize
-        def bootstrapValidationMode = configuredBootstrapValidationMode
+        def bootstrapValidationMode = resolveBootstrapValidationMode(configuredBootstrapValidationMode)
 
         if (bootstrapValidationMode == "upstream-debug-compat" &&
-            gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }) {
+            hasReleaseTaskRequested()) {
             throw new GradleException("TERMUX_BOOTSTRAP_VALIDATION_MODE=upstream-debug-compat is forbidden for release tasks.")
         }
 
