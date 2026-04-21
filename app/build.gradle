@@ -528,7 +528,7 @@ task validateSideBySideContract {
     group = 'verification'
 
     doLast {
-        exec {
+        project.exec {
             executable "python3"
             args "${rootProject.projectDir}/scripts/validate_side_by_side_contract.py"
         }
@@ -574,7 +574,7 @@ def register16kbValidationTask = { String buildType ->
         doLast {
             def apkFile = resolveApkFromMetadata(buildType)
             println "Validating APK ${apkFile}"
-            exec {
+            project.exec {
                 executable "bash"
                 args "${rootProject.projectDir}/scripts/validate_16kb_pages.sh",
                         "--apk", apkFile.absolutePath,
