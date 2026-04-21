@@ -23,7 +23,7 @@ ext {
 }
 
 android {
-    namespace "com.termux.rafacodephi"
+    namespace = "com.termux.rafacodephi"
 
     compileSdkVersion project.properties.compileSdkVersion.toInteger()
     ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
@@ -68,11 +68,11 @@ android {
 
     splits {
         abi {
-            enable ((gradle.startParameter.taskNames.any { it.contains("Debug") } && splitAPKsForDebugBuilds == "1") ||
+            enable = ((gradle.startParameter.taskNames.any { it.contains("Debug") } && splitAPKsForDebugBuilds == "1") ||
                 (gradle.startParameter.taskNames.any { it.contains("Release") } && splitAPKsForReleaseBuilds == "1"))
-            reset ()
+            reset()
             include 'x86', 'x86_64', 'armeabi-v7a', 'arm64-v8a'
-            universalApk true
+            universalApk = true
         }
     }
 
@@ -112,7 +112,7 @@ android {
     buildTypes {
         release {
             minifyEnabled true
-            shrinkResources false // Reproducible builds
+            shrinkResources = false // Reproducible builds
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             if (useReleaseSigning) {
                 signingConfig signingConfigs.release
@@ -125,7 +125,7 @@ android {
 
     compileOptions {
         // Flag to enable support for the new language APIs
-        coreLibraryDesugaringEnabled true
+        coreLibraryDesugaringEnabled = true
 
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -149,7 +149,7 @@ android {
 
     packagingOptions {
         jniLibs {
-            useLegacyPackaging true
+            useLegacyPackaging = true
         }
     }
 
@@ -166,7 +166,7 @@ android {
     }
 
     buildFeatures {
-        buildConfig true
+        buildConfig = true
     }
 }
 
@@ -271,12 +271,17 @@ clean {
     }
 }
 
-task downloadBootstraps() {
+def configuredPackageVariant = project.ext.packageVariant
+def configuredBootstrapPackageName = project.ext.bootstrapMetadataPackageName
+def configuredBootstrapPageSize = project.ext.bootstrapRequiredPageSize
+def configuredBootstrapValidationMode = project.ext.bootstrapValidationMode
+
+tasks.register("downloadBootstraps") {
     doLast {
-        def packageVariant = project.ext.packageVariant
-        def expectedBootstrapPackageName = project.ext.bootstrapMetadataPackageName
-        def expectedPageSize = project.ext.bootstrapRequiredPageSize
-        def bootstrapValidationMode = project.ext.bootstrapValidationMode
+        def packageVariant = configuredPackageVariant
+        def expectedBootstrapPackageName = configuredBootstrapPackageName
+        def expectedPageSize = configuredBootstrapPageSize
+        def bootstrapValidationMode = configuredBootstrapValidationMode
 
         if (bootstrapValidationMode == "upstream-debug-compat" &&
             gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }) {
