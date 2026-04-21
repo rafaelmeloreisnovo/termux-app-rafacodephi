@@ -290,6 +290,37 @@ static void init_runtime_caps_once(void) {
     g_arch_caps.initialized = 1;
 }
 
+static __attribute__((unused)) uint32_t bm_simd_step_f32(void) {
+#if defined(HAS_BM_NEON_ASM)
+    return 4u;
+#elif defined(HAS_AVX2) || defined(HAS_AVX)
+    return 8u;
+#elif defined(HAS_SSE42) || defined(HAS_SSE2)
+    return 4u;
+#else
+    return 1u;
+#endif
+}
+
+static __attribute__((unused)) size_t bm_simd_step_u8(void) {
+#if defined(HAS_BM_NEON_ASM) || defined(HAS_SSE42) || defined(HAS_SSE2)
+    return 16u;
+#elif defined(HAS_AVX2) || defined(HAS_AVX)
+    return 32u;
+#else
+    return 1u;
+#endif
+}
+
+#if defined(HAS_BM_NEON_ASM)
+static int bm_can_use_neon_asm(void) {
+    const uint32_t caps = get_arch_caps();
+    return (caps & CAP_NEON) != 0u;
+}
+#else
+#define bm_can_use_neon_asm() (0)
+#endif
+
 /* ============================================================================
  * Vector Operations - Optimized for each architecture
  * ========================================================================== */

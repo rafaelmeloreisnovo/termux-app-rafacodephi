@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.OpenableColumns;
-import android.util.Patterns;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -53,12 +52,16 @@ public class FileReceiverActivity extends AppCompatActivity {
     private static final String API_TAG = TermuxConstants.TERMUX_APP_NAME + "FileReceiver";
 
     private static final String LOG_TAG = "FileReceiverActivity";
+    private static final Pattern SHARED_WEB_URL_PATTERN = Pattern.compile("^(https?)://\\S+$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern SHARED_MAGNET_URL_PATTERN = Pattern.compile("^magnet:\\?xt=urn:btih:.+?$", Pattern.CASE_INSENSITIVE);
 
     static boolean isSharedTextAnUrl(String sharedText) {
-        if (sharedText == null || sharedText.isEmpty()) return false;
+        if (sharedText == null) return false;
+        sharedText = sharedText.trim();
+        if (sharedText.isEmpty()) return false;
 
-        return Patterns.WEB_URL.matcher(sharedText).matches()
-            || Pattern.matches("magnet:\\?xt=urn:btih:.*?", sharedText);
+        return SHARED_WEB_URL_PATTERN.matcher(sharedText).matches()
+            || SHARED_MAGNET_URL_PATTERN.matcher(sharedText).matches();
     }
 
     @Override

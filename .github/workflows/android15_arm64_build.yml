@@ -273,6 +273,9 @@ jobs:
           # Determine build type (from workflow_dispatch input or default to debug)
           BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
           GRADLE_TASK="assemble${BUILD_TYPE^}" # Capitalize first letter: assembleDebug or assembleRelease
+          if [[ "$BUILD_TYPE" == "debug" ]]; then
+            export TERMUX_BOOTSTRAP_VALIDATION_MODE="upstream-debug-compat"
+          fi
           
           echo "Build Type: $BUILD_TYPE"
           echo "Gradle Task: $GRADLE_TASK"

@@ -17,6 +17,9 @@ if [[ -n "${ANDROID_SDK_ROOT:-}" ]]; then
   candidate_sdk_dirs+=("${ANDROID_SDK_ROOT}")
 fi
 candidate_sdk_dirs+=("${HOME}/Android/Sdk")
+candidate_sdk_dirs+=("/usr/local/lib/android/sdk")
+candidate_sdk_dirs+=("/opt/android-sdk")
+candidate_sdk_dirs+=("/opt/android-sdk-linux")
 
 sdk_dir=""
 for candidate in "${candidate_sdk_dirs[@]}"; do
