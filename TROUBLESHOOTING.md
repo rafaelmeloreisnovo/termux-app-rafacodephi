@@ -226,6 +226,7 @@ adb shell pm grant com.termux.rafacodephi android.permission.WRITE_EXTERNAL_STOR
 
 **Causas Comuns:**
 - NDK não instalado
+- `sdk.dir` ausente em `local.properties`
 - SDK version incorreta
 - Dependencies não baixadas
 
@@ -234,9 +235,13 @@ adb shell pm grant com.termux.rafacodephi android.permission.WRITE_EXTERNAL_STOR
 # Limpar build
 ./gradlew clean
 
+# Garantir sdk.dir em local.properties (usa ANDROID_HOME/ANDROID_SDK_ROOT)
+./scripts/ensure_android_sdk.sh
+
 # Verificar SDK/NDK
-echo $ANDROID_HOME
-ls $ANDROID_HOME/ndk/
+echo "ANDROID_HOME=${ANDROID_HOME}"
+echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT}"
+ls "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}/ndk/"
 
 # Instalar dependencies
 ./gradlew dependencies
