@@ -27,6 +27,17 @@ public class BareMetal {
     public static boolean isLoaded() {
         return sLoaded;
     }
+
+    private static int safeGetCapabilities() {
+        if (!sLoaded) return 0;
+        try {
+            return getCapabilities();
+        } catch (UnsatisfiedLinkError e) {
+            sLoaded = false;
+            android.util.Log.e("BareMetal", "Native library became unavailable", e);
+            return 0;
+        }
+    }
     
     /* ========================================================================
      * Architecture Detection
@@ -67,14 +78,14 @@ public class BareMetal {
      * Check if NEON SIMD is available
      */
     public static boolean hasNeon() {
-        return (getCapabilities() & 0x01) != 0;
+        return (safeGetCapabilities() & 0x01) != 0;
     }
     
     /**
      * Check if AVX is available
      */
     public static boolean hasAvx() {
-        return (getCapabilities() & 0x02) != 0;
+        return (safeGetCapabilities() & 0x02) != 0;
     }
     
     public static final class CapabilitiesDetail {
@@ -92,9 +103,24 @@ public class BareMetal {
     }
 
     public static CapabilitiesDetail getCapabilitiesDetailParsed() {
-        int[] raw = getCapabilitiesDetail();
+        if (!sLoaded) {
+            int caps = 0;
+            return new CapabilitiesDetail(caps, 0, caps, false);
+        }
+
+        int[] raw;
+        try {
+            raw = getCapabilitiesDetail();
+        } catch (UnsatisfiedLinkError e) {
+            sLoaded = false;
+            android.util.Log.e("BareMetal", "Failed to read detailed native capabilities", e);
+            int caps = 0;
+            return new CapabilitiesDetail(caps, 0, caps, false);
+        }
+
         if (raw == null || raw.length < 4) {
-            return new CapabilitiesDetail(getCapabilities(), 0, getCapabilities(), false);
+            int caps = safeGetCapabilities();
+            return new CapabilitiesDetail(caps, 0, caps, false);
         }
         return new CapabilitiesDetail(raw[0], raw[1], raw[2], raw[3] != 0);
     }
