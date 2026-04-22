@@ -8,7 +8,7 @@ _Gerado automaticamente por `scripts/generate_code_inventory.py`._
 - `rafaelia/`: 123 arquivos de código
 - `app/`: 48 arquivos de código
 - `terminal-emulator/`: 35 arquivos de código
-- `scripts/`: 17 arquivos de código
+- `scripts/`: 18 arquivos de código
 - `terminal-view/`: 8 arquivos de código
 - `art/`: 5 arquivos de código
 - `rmr/`: 4 arquivos de código
@@ -20,9 +20,9 @@ _Gerado automaticamente por `scripts/generate_code_inventory.py`._
 
 | Linguagem | Arquivos | Linhas | Tamanho (bytes) | % tamanho |
 |---|---:|---:|---:|---:|
-| Java | 213 | 51460 | 2292540 | 68.5% |
+| Java | 213 | 51460 | 2292540 | 68.4% |
 | C | 62 | 16134 | 522150 | 15.6% |
-| Shell | 54 | 9877 | 309095 | 9.2% |
+| Shell | 55 | 9925 | 310442 | 9.3% |
 | Python | 22 | 4441 | 156826 | 4.7% |
 | Assembly | 4 | 1028 | 29325 | 0.9% |
 | C++ | 1 | 603 | 23983 | 0.7% |
@@ -31,7 +31,7 @@ _Gerado automaticamente por `scripts/generate_code_inventory.py`._
 
 ## 🔵 Código ativo vs legado
 
-- Ativo (fora de `rafaelia/old`): **274 arquivos**, **63619 linhas**, **2691900 bytes**
+- Ativo (fora de `rafaelia/old`): **275 arquivos**, **63667 linhas**, **2693247 bytes**
 - Legado (`rafaelia/old`): **98 arquivos**, **20439 linhas**, **656399 bytes**
 
 ## 🎯 Arquivos críticos
