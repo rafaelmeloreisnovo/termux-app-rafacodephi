@@ -55,3 +55,11 @@ jobs:
         echo "=========================================="
         echo "TESTS COMPLETED"
         echo "=========================================="
+    - name: "🧭 Phase 4: RAFAELIA smoke checks + code inventory"
+      run: |
+        ./scripts/rafaelia_ci_smoke.sh
+    - name: "📦 Phase 5: Upload generated code inventory"
+      uses: actions/upload-artifact@v4
+      with:
+        name: source-code-inventory
+        path: INVENTARIO_CODIGO_FONTE.md

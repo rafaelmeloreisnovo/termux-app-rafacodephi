@@ -1,0 +1,4 @@
+REPO_URL=https://github.com/wojcikiewicz17/linuxkernel.git
+BRANCH=master
+COMMIT=b7e7d202d9245a39f3bec32d40abe4c824947cfb
+SPARSE_PATHS="README MAINTAINERS Kconfig Makefile Documentation include arch/arm64 arch/arm kernel drivers/base"
