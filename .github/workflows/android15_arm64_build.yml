@@ -138,7 +138,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "📋 Extract Version Information"
         id: version
@@ -200,7 +200,7 @@ jobs:
 
       - name: "📦 Phase 2.2: Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🔐 Phase 2.3: Configure optional release signing"
         env:
@@ -351,7 +351,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🔍 Run Android 15 Compatibility Validation"
         run: |

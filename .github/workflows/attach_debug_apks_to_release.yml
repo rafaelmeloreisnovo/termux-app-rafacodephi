@@ -36,11 +36,7 @@ jobs:
 
       - name: Install Android toolchain components
         run: |
-          ./scripts/setup_android_toolchain.sh
-
-      - name: Ensure local.properties sdk.dir
-        run: |
-          ./scripts/ensure_android_sdk.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: Build and attach APKs to release
         shell: bash {0}
