@@ -40,7 +40,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
       - name: "🤖 Phase 2.1: Setup Android SDK/NDK"
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
       - name: "📦 Phase 2.2: Install Android toolchain components"
         run: |
           ./scripts/ci_android_preflight.sh
