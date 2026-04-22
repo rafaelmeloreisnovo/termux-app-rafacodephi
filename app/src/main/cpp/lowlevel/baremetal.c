@@ -449,16 +449,28 @@ static inline float fm_abs(float x) {
 }
 
 mx_t* mx_create(uint32_t r, uint32_t c) {
+    if (r == 0 || c == 0) {
+        return NULL;
+    }
+    if (r > (UINT32_MAX / c)) {
+        return NULL;
+    }
+    if (((size_t)r * (size_t)c) > (SIZE_MAX / sizeof(float))) {
+        return NULL;
+    }
+
     mx_t* m = (mx_t*)malloc(sizeof(mx_t));
     if (!m) return NULL;
     
     /* Allocate matrix data */
-    m->m = (float*)malloc(r * c * sizeof(float));
+    size_t count = (size_t)r * (size_t)c;
+    size_t bytes = count * sizeof(float);
+    m->m = (float*)malloc(bytes);
     if (!m->m) {
         free(m);
         return NULL;
     }
-    bmem_zero(m->m, r * c * sizeof(float));
+    bmem_zero(m->m, bytes);
     
     m->r = r;
     m->c = c;

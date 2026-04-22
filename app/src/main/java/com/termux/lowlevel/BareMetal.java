@@ -170,6 +170,8 @@ public class BareMetal {
      * Create matrix with given dimensions
      * @param rows Number of rows
      * @param cols Number of columns
+     * @throws IllegalArgumentException if {@code rows <= 0} or {@code cols <= 0}
+     * @throws OutOfMemoryError if native allocation fails for a valid dimension
      * @return Matrix handle (native pointer)
      */
     public static native long matrixCreate(int rows, int cols);
@@ -477,6 +479,15 @@ public class BareMetal {
         private int rows;
         private int cols;
         
+        /**
+         * Build a native-backed matrix.
+         *
+         * Contract: both dimensions must be at least 1 ({@code rows >= 1} and
+         * {@code cols >= 1}).
+         *
+         * @throws IllegalArgumentException if any dimension is less than 1
+         * @throws OutOfMemoryError if native allocation fails for a valid size
+         */
         public Matrix(int rows, int cols) {
             this.rows = rows;
             this.cols = cols;
