@@ -12,8 +12,10 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE := termux-baremetal
 LOCAL_SRC_FILES := lowlevel/baremetal.c lowlevel/baremetal_jni.c
-# Assembly optimizations enabled for NEON support
-LOCAL_SRC_FILES += lowlevel/baremetal_asm.S
+# Assembly optimizations enabled when the target ABI guarantees SIMD support
+ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+    LOCAL_SRC_FILES += lowlevel/baremetal_asm.S
+endif
 LOCAL_CFLAGS := -std=c11 -Wall -Wextra -Werror -Os -fno-stack-protector
 LOCAL_CFLAGS += -ffast-math -fno-exceptions -fno-rtti
 LOCAL_CFLAGS += -ffunction-sections -fdata-sections
@@ -22,8 +24,8 @@ LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384
 
 # Architecture-specific optimizations
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
-    LOCAL_ARM_NEON := true
-    LOCAL_CFLAGS += -march=armv7-a -mfpu=neon -mfloat-abi=softfp -ftree-vectorize
+    # Keep ARM32 baseline-compatible and rely on runtime capability checks.
+    LOCAL_CFLAGS += -march=armv7-a -mfloat-abi=softfp -ftree-vectorize
 endif
 
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
