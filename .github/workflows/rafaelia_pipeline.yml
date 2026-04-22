@@ -796,8 +796,8 @@ jobs:
         run: |
           echo ""
           echo "Authorship Verification:"
-          RAFAEL_COUNT=$(grep -r "instituto-Rafael" . --include="*.md" --include="*.yml" --include="*.java" 2>/dev/null | wc -l || echo "0")
-          RAFAELIA_COUNT=$(grep -r "RAFAELIA" . --include="*.md" --include="*.yml" --include="*.java" 2>/dev/null | wc -l || echo "0")
+          RAFAEL_COUNT=$(rg --no-messages --glob "*.md" --glob "*.yml" --glob "*.java" --glob "!**/.git/**" --glob "!**/build/**" --glob "!**/.gradle/**" "instituto-Rafael" . | wc -l)
+          RAFAELIA_COUNT=$(rg --no-messages --glob "*.md" --glob "*.yml" --glob "*.java" --glob "!**/.git/**" --glob "!**/build/**" --glob "!**/.gradle/**" "RAFAELIA" . | wc -l)
           
           echo "  - instituto-Rafael mentions: $RAFAEL_COUNT"
           echo "  - RAFAELIA references: $RAFAELIA_COUNT"
