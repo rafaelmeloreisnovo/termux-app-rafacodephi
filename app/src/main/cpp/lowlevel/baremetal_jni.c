@@ -15,6 +15,14 @@
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
+static void throw_illegal_state(JNIEnv *env, const char *message) {
+    jclass illegal_state = (*env)->FindClass(env, "java/lang/IllegalStateException");
+    if (illegal_state) {
+        (*env)->ThrowNew(env, illegal_state, message);
+        (*env)->DeleteLocalRef(env, illegal_state);
+    }
+}
+
 /* ============================================================================
  * Architecture and Capability Detection
  * ========================================================================== */
@@ -195,6 +203,9 @@ Java_com_termux_lowlevel_BareMetal_matrixFree(JNIEnv *env, jclass clazz,
     (void)env;
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
+    if (!m) {
+        return;
+    }
     mx_free(m);
 }
 
@@ -202,11 +213,14 @@ JNIEXPORT void JNICALL
 Java_com_termux_lowlevel_BareMetal_matrixMultiply(JNIEnv *env, jclass clazz,
                                                     jlong handleA, jlong handleB,
                                                     jlong handleResult) {
-    (void)env;
     (void)clazz;
     mx_t* a = (mx_t*)(intptr_t)handleA;
     mx_t* b = (mx_t*)(intptr_t)handleB;
     mx_t* r = (mx_t*)(intptr_t)handleResult;
+    if (!a || !b || !r) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
+        return;
+    }
     
     mx_mul(a, b, r);
 }
@@ -214,46 +228,60 @@ Java_com_termux_lowlevel_BareMetal_matrixMultiply(JNIEnv *env, jclass clazz,
 JNIEXPORT void JNICALL
 Java_com_termux_lowlevel_BareMetal_matrixFlipHorizontal(JNIEnv *env, jclass clazz,
                                                           jlong handle) {
-    (void)env;
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
+    if (!m) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
+        return;
+    }
     mx_flip_h(m);
 }
 
 JNIEXPORT void JNICALL
 Java_com_termux_lowlevel_BareMetal_matrixFlipVertical(JNIEnv *env, jclass clazz,
                                                         jlong handle) {
-    (void)env;
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
+    if (!m) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
+        return;
+    }
     mx_flip_v(m);
 }
 
 JNIEXPORT void JNICALL
 Java_com_termux_lowlevel_BareMetal_matrixFlipDiagonal(JNIEnv *env, jclass clazz,
                                                         jlong handle) {
-    (void)env;
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
+    if (!m) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
+        return;
+    }
     mx_flip_d(m);
 }
 
 JNIEXPORT jfloat JNICALL
 Java_com_termux_lowlevel_BareMetal_matrixDeterminant(JNIEnv *env, jclass clazz,
                                                        jlong handle) {
-    (void)env;
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
+    if (!m) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
+        return 0.0f;
+    }
     return mx_det(m);
 }
 
 JNIEXPORT jint JNICALL
 Java_com_termux_lowlevel_BareMetal_matrixInvert(JNIEnv *env, jclass clazz,
                                                   jlong handle, jlong handleResult) {
-    (void)env;
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
     mx_t* r = (mx_t*)(intptr_t)handleResult;
+    if (!m || !r) {
+        return -1;
+    }
     return mx_inv(m, r);
 }
 
@@ -261,11 +289,14 @@ JNIEXPORT void JNICALL
 Java_com_termux_lowlevel_BareMetal_matrixAdd(JNIEnv *env, jclass clazz,
                                                jlong handleA, jlong handleB,
                                                jlong handleResult) {
-    (void)env;
     (void)clazz;
     mx_t* a = (mx_t*)(intptr_t)handleA;
     mx_t* b = (mx_t*)(intptr_t)handleB;
     mx_t* r = (mx_t*)(intptr_t)handleResult;
+    if (!a || !b || !r) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
+        return;
+    }
     mx_add(a, b, r);
 }
 
@@ -273,38 +304,50 @@ JNIEXPORT void JNICALL
 Java_com_termux_lowlevel_BareMetal_matrixSubtract(JNIEnv *env, jclass clazz,
                                                     jlong handleA, jlong handleB,
                                                     jlong handleResult) {
-    (void)env;
     (void)clazz;
     mx_t* a = (mx_t*)(intptr_t)handleA;
     mx_t* b = (mx_t*)(intptr_t)handleB;
     mx_t* r = (mx_t*)(intptr_t)handleResult;
+    if (!a || !b || !r) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
+        return;
+    }
     mx_sub(a, b, r);
 }
 
 JNIEXPORT void JNICALL
 Java_com_termux_lowlevel_BareMetal_matrixScale(JNIEnv *env, jclass clazz,
                                                  jlong handle, jfloat scalar) {
-    (void)env;
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
+    if (!m) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
+        return;
+    }
     mx_scale(m, scalar);
 }
 
 JNIEXPORT jfloat JNICALL
 Java_com_termux_lowlevel_BareMetal_matrixTrace(JNIEnv *env, jclass clazz,
                                                  jlong handle) {
-    (void)env;
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
+    if (!m) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
+        return 0.0f;
+    }
     return mx_trace(m);
 }
 
 JNIEXPORT void JNICALL
 Java_com_termux_lowlevel_BareMetal_matrixIdentity(JNIEnv *env, jclass clazz,
                                                     jlong handle) {
-    (void)env;
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
+    if (!m) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
+        return;
+    }
     mx_identity(m);
 }
 
@@ -314,6 +357,9 @@ Java_com_termux_lowlevel_BareMetal_matrixSolveLinear(JNIEnv *env, jclass clazz,
                                                        jfloatArray x) {
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
+    if (!m) {
+        return -1;
+    }
     
     jsize len_b = (*env)->GetArrayLength(env, b);
     jsize len_x = (*env)->GetArrayLength(env, x);
@@ -340,10 +386,13 @@ Java_com_termux_lowlevel_BareMetal_matrixSolveLinear(JNIEnv *env, jclass clazz,
 JNIEXPORT void JNICALL
 Java_com_termux_lowlevel_BareMetal_matrixTranspose(JNIEnv *env, jclass clazz,
                                                      jlong handle, jlong handleResult) {
-    (void)env;
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
     mx_t* r = (mx_t*)(intptr_t)handleResult;
+    if (!m || !r) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
+        return;
+    }
     mx_transpose(m, r);
 }
 
@@ -352,6 +401,10 @@ Java_com_termux_lowlevel_BareMetal_matrixGetData(JNIEnv *env, jclass clazz,
                                                    jlong handle, jfloatArray data) {
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
+    if (!m) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
+        return;
+    }
     jsize len = (*env)->GetArrayLength(env, data);
     
     if (len < (jsize)(m->r * m->c)) {
@@ -371,6 +424,10 @@ Java_com_termux_lowlevel_BareMetal_matrixSetData(JNIEnv *env, jclass clazz,
                                                    jlong handle, jfloatArray data) {
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
+    if (!m) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
+        return;
+    }
     jsize len = (*env)->GetArrayLength(env, data);
     
     if (len < (jsize)(m->r * m->c)) {
