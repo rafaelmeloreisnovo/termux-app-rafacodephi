@@ -7,6 +7,7 @@ import android.content.Context;
 import android.os.Build;
 import android.os.Environment;
 import android.system.Os;
+import android.system.StructStat;
 import android.util.Pair;
 import android.view.WindowManager;
 
@@ -30,6 +31,7 @@ import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -164,6 +166,7 @@ final class TermuxInstaller {
                     final List<Pair<String, String>> symlinks = new ArrayList<>(50);
 
                     final byte[] zipBytes = loadZipBytes();
+                    verifyBootstrapZipIntegrity(zipBytes);
                     try (ZipInputStream zipInput = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
                         ZipEntry zipEntry;
                         while ((zipEntry = zipInput.getNextEntry()) != null) {
@@ -203,9 +206,12 @@ final class TermuxInstaller {
                                     }
                                     if (zipEntryName.startsWith("bin/") || zipEntryName.startsWith("libexec") ||
                                         zipEntryName.startsWith("lib/apt/apt-helper") || zipEntryName.startsWith("lib/apt/methods")) {
-                                        //noinspection OctalInteger
-                                        Os.chmod(targetFile.getAbsolutePath(), 0700);
+                                        setPosixMode(targetFile, 0700, "executable bootstrap payload");
+                                    } else {
+                                        setPosixMode(targetFile, 0600, "bootstrap payload");
                                     }
+                                } else {
+                                    setPosixMode(targetFile, 0700, "bootstrap directory");
                                 }
                             }
                         }
@@ -223,6 +229,9 @@ final class TermuxInstaller {
                     if (!FileUtils.fileExists(TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/pkg", false)) {
                         throw new RuntimeException("Bootstrap missing required package manager: " + TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/pkg");
                     }
+                    verifyRuntimeBinary(TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/sh", "sh");
+                    verifyRuntimeBinary(TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/busybox", "busybox");
+                    verifyRuntimeBinary(TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/proot", "proot");
 
                     Logger.logInfo(LOG_TAG, "Moving termux prefix staging to prefix directory.");
 
@@ -424,5 +433,46 @@ final class TermuxInstaller {
     }
 
     public static native byte[] getZip();
+
+    private static void verifyBootstrapZipIntegrity(byte[] zipBytes) {
+        String expectedHash = BootstrapIntegrityVerifier.expectedHashForCurrentAbi();
+        if (expectedHash == null || expectedHash.isEmpty()) {
+            throw new RuntimeException("Bootstrap integrity is not configured for ABI " +
+                Build.SUPPORTED_ABIS[0] + ". Missing TERMUX_BOOTSTRAP_BLAKE3_* build value.");
+        }
+        String actualHash = BootstrapIntegrityVerifier.blake3Hex(zipBytes);
+        if (!actualHash.equalsIgnoreCase(expectedHash)) {
+            throw new RuntimeException("Bootstrap integrity verification failed (BLAKE3 mismatch). expected=" +
+                expectedHash.toLowerCase(Locale.US) + ", actual=" + actualHash.toLowerCase(Locale.US));
+        }
+        Logger.logInfo(LOG_TAG, "Bootstrap BLAKE3 verified for ABI " + Build.SUPPORTED_ABIS[0] + ": " + actualHash);
+    }
+
+    private static void setPosixMode(File file, int mode, String label) {
+        try {
+            Os.chmod(file.getAbsolutePath(), mode);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to chmod " + label + " \"" + file.getAbsolutePath() +
+                "\" to mode 0" + Integer.toOctalString(mode), e);
+        }
+    }
+
+    private static void verifyRuntimeBinary(String path, String binaryName) {
+        try {
+            if (!FileUtils.fileExists(path, false)) {
+                throw new RuntimeException("Runtime binary verification failed: missing " + binaryName + " at " + path);
+            }
+            StructStat stat = Os.stat(path);
+            if ((stat.st_mode & 0100) == 0) {
+                throw new RuntimeException("Runtime binary verification failed: " + binaryName +
+                    " is not executable by owner. mode=0" + Integer.toOctalString(stat.st_mode));
+            }
+            Logger.logInfo(LOG_TAG, "Runtime binary verified: " + binaryName + " (" + path + ")");
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Runtime binary verification failed for " + binaryName + " at " + path, e);
+        }
+    }
 
 }
