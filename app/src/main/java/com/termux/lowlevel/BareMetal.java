@@ -175,7 +175,8 @@ public class BareMetal {
     public static native long matrixCreate(int rows, int cols);
     
     /**
-     * Free matrix memory
+     * Free matrix memory.
+     * After this call, the handle is invalid and must not be used in any other matrix API call.
      * @param handle Matrix handle
      */
     public static native void matrixFree(long handle);
@@ -469,8 +470,11 @@ public class BareMetal {
     }
 
     /**
-     * Matrix helper class for easier usage
-     * Implements RAFAELIA deterministic matrix operations
+     * Matrix helper class for easier usage.
+     * Implements RAFAELIA deterministic matrix operations.
+     * <p>
+     * Once {@link #close()} is called, this object is permanently closed and can no longer be used.
+     * Any matrix operation after close will throw {@link IllegalStateException}.
      */
     public static class Matrix implements AutoCloseable {
         private long handle;
@@ -489,11 +493,18 @@ public class BareMetal {
         public int getRows() { return rows; }
         public int getCols() { return cols; }
         public long getHandle() { return handle; }
+
+        private void ensureOpen() {
+            if (handle == 0) {
+                throw new IllegalStateException("Matrix is closed and cannot be used");
+            }
+        }
         
         /**
          * Get matrix data as flat array (row-major order)
          */
         public float[] getData() {
+            ensureOpen();
             float[] data = new float[rows * cols];
             matrixGetData(handle, data);
             return data;
@@ -504,6 +515,7 @@ public class BareMetal {
          * Reuses caller-provided buffer to avoid allocations on hot paths.
          */
         public void getDataInto(float[] data) {
+            ensureOpen();
             if (data.length < rows * cols) {
                 throw new IllegalArgumentException("Data array too small");
             }
@@ -514,6 +526,7 @@ public class BareMetal {
          * Set matrix data from flat array (row-major order)
          */
         public void setData(float[] data) {
+            ensureOpen();
             if (data.length < rows * cols) {
                 throw new IllegalArgumentException("Data array too small");
             }
@@ -523,38 +536,47 @@ public class BareMetal {
         /* Flip operations - RAFAELIA deterministic method */
         
         public void flipHorizontal() {
+            ensureOpen();
             matrixFlipHorizontal(handle);
         }
         
         public void flipVertical() {
+            ensureOpen();
             matrixFlipVertical(handle);
         }
         
         public void flipDiagonal() {
+            ensureOpen();
             matrixFlipDiagonal(handle);
         }
         
         /* Basic operations */
         
         public float determinant() {
+            ensureOpen();
             return matrixDeterminant(handle);
         }
         
         public float trace() {
+            ensureOpen();
             return matrixTrace(handle);
         }
         
         public void scale(float scalar) {
+            ensureOpen();
             matrixScale(handle, scalar);
         }
         
         public void setIdentity() {
+            ensureOpen();
             matrixIdentity(handle);
         }
         
         /* Matrix algebra */
 
         public Matrix multiply(Matrix other) {
+            ensureOpen();
+            other.ensureOpen();
             if (this.cols != other.rows) {
                 throw new IllegalArgumentException("Matrix dimensions incompatible for multiplication");
             }
@@ -567,6 +589,9 @@ public class BareMetal {
          * Multiply matrices into an existing output matrix to avoid allocations.
          */
         public void multiplyInto(Matrix other, Matrix output) {
+            ensureOpen();
+            other.ensureOpen();
+            output.ensureOpen();
             if (this.cols != other.rows) {
                 throw new IllegalArgumentException("Matrix dimensions incompatible for multiplication");
             }
@@ -577,6 +602,8 @@ public class BareMetal {
         }
 
         public Matrix add(Matrix other) {
+            ensureOpen();
+            other.ensureOpen();
             if (this.rows != other.rows || this.cols != other.cols) {
                 throw new IllegalArgumentException("Matrix dimensions must match for addition");
             }
@@ -589,6 +616,9 @@ public class BareMetal {
          * Add matrices into an existing output matrix to avoid allocations.
          */
         public void addInto(Matrix other, Matrix output) {
+            ensureOpen();
+            other.ensureOpen();
+            output.ensureOpen();
             if (this.rows != other.rows || this.cols != other.cols) {
                 throw new IllegalArgumentException("Matrix dimensions must match for addition");
             }
@@ -599,6 +629,8 @@ public class BareMetal {
         }
 
         public Matrix subtract(Matrix other) {
+            ensureOpen();
+            other.ensureOpen();
             if (this.rows != other.rows || this.cols != other.cols) {
                 throw new IllegalArgumentException("Matrix dimensions must match for subtraction");
             }
@@ -611,6 +643,9 @@ public class BareMetal {
          * Subtract matrices into an existing output matrix to avoid allocations.
          */
         public void subtractInto(Matrix other, Matrix output) {
+            ensureOpen();
+            other.ensureOpen();
+            output.ensureOpen();
             if (this.rows != other.rows || this.cols != other.cols) {
                 throw new IllegalArgumentException("Matrix dimensions must match for subtraction");
             }
@@ -621,6 +656,7 @@ public class BareMetal {
         }
 
         public Matrix transpose() {
+            ensureOpen();
             Matrix result = new Matrix(this.cols, this.rows);
             matrixTranspose(this.handle, result.handle);
             return result;
@@ -630,6 +666,8 @@ public class BareMetal {
          * Transpose into an existing output matrix to avoid allocations.
          */
         public void transposeInto(Matrix output) {
+            ensureOpen();
+            output.ensureOpen();
             if (output.rows != this.cols || output.cols != this.rows) {
                 throw new IllegalArgumentException("Output matrix dimensions incompatible for transpose");
             }
@@ -641,6 +679,7 @@ public class BareMetal {
          * @return Inverted matrix, or null if singular
          */
         public Matrix invert() {
+            ensureOpen();
             if (this.rows != this.cols) {
                 throw new IllegalArgumentException("Only square matrices can be inverted");
             }
@@ -658,6 +697,8 @@ public class BareMetal {
          * @return true on success, false if singular
          */
         public boolean invertInto(Matrix output) {
+            ensureOpen();
+            output.ensureOpen();
             if (this.rows != this.cols) {
                 throw new IllegalArgumentException("Only square matrices can be inverted");
             }
@@ -674,6 +715,7 @@ public class BareMetal {
          * @return Solution vector x, or null if singular
          */
         public float[] solve(float[] b) {
+            ensureOpen();
             if (b.length != this.rows) {
                 throw new IllegalArgumentException("Vector b size must match matrix rows");
             }
@@ -690,6 +732,7 @@ public class BareMetal {
          * @return true on success, false if singular
          */
         public boolean solveInto(float[] b, float[] x) {
+            ensureOpen();
             if (b.length != this.rows) {
                 throw new IllegalArgumentException("Vector b size must match matrix rows");
             }
@@ -706,6 +749,10 @@ public class BareMetal {
             super.finalize();
         }
         
+        /**
+         * Releases native resources for this matrix.
+         * After close, this instance is permanently closed and cannot be used again.
+         */
         @Override
         public void close() {
             if (handle != 0) {
