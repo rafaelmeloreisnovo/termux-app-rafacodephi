@@ -167,9 +167,25 @@ Java_com_termux_lowlevel_BareMetal_vectorAdd(JNIEnv *env, jclass clazz,
 JNIEXPORT jlong JNICALL
 Java_com_termux_lowlevel_BareMetal_matrixCreate(JNIEnv *env, jclass clazz,
                                                   jint rows, jint cols) {
-    (void)env;
     (void)clazz;
+    if (rows <= 0 || cols <= 0) {
+        jclass illegal_arg = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
+        if (illegal_arg) {
+            (*env)->ThrowNew(env, illegal_arg,
+                             "Matrix dimensions must be > 0");
+            (*env)->DeleteLocalRef(env, illegal_arg);
+        }
+        return 0;
+    }
+
     mx_t* m = mx_create(rows, cols);
+    if (!m && !(*env)->ExceptionCheck(env)) {
+        jclass oom = (*env)->FindClass(env, "java/lang/OutOfMemoryError");
+        if (oom) {
+            (*env)->ThrowNew(env, oom, "Failed to allocate matrix");
+            (*env)->DeleteLocalRef(env, oom);
+        }
+    }
     return (jlong)(intptr_t)m;
 }
 
