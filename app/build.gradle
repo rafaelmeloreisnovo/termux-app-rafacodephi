@@ -20,6 +20,10 @@ ext {
     bootstrapMetadataPackageName = System.getenv("TERMUX_BOOTSTRAP_PACKAGE_NAME") ?: "com.termux.rafacodephi"
     bootstrapRequiredPageSize = System.getenv("TERMUX_BOOTSTRAP_PAGE_SIZE") ?: "16384"
     bootstrapValidationMode = System.getenv("TERMUX_BOOTSTRAP_VALIDATION_MODE") ?: "auto"
+    bootstrapBlake3Aarch64 = System.getenv("TERMUX_BOOTSTRAP_BLAKE3_AARCH64") ?: ""
+    bootstrapBlake3Arm = System.getenv("TERMUX_BOOTSTRAP_BLAKE3_ARM") ?: ""
+    bootstrapBlake3I686 = System.getenv("TERMUX_BOOTSTRAP_BLAKE3_I686") ?: ""
+    bootstrapBlake3X8664 = System.getenv("TERMUX_BOOTSTRAP_BLAKE3_X86_64") ?: ""
 }
 
 android {
@@ -45,6 +49,10 @@ android {
         validateVersionName(versionName)
 
         buildConfigField "String", "TERMUX_PACKAGE_VARIANT", "\"" + project.ext.packageVariant + "\"" // Used by TermuxApplication class
+        buildConfigField "String", "BOOTSTRAP_BLAKE3_AARCH64", "\"" + project.ext.bootstrapBlake3Aarch64 + "\""
+        buildConfigField "String", "BOOTSTRAP_BLAKE3_ARM", "\"" + project.ext.bootstrapBlake3Arm + "\""
+        buildConfigField "String", "BOOTSTRAP_BLAKE3_I686", "\"" + project.ext.bootstrapBlake3I686 + "\""
+        buildConfigField "String", "BOOTSTRAP_BLAKE3_X86_64", "\"" + project.ext.bootstrapBlake3X8664 + "\""
 
         manifestPlaceholders.TERMUX_PACKAGE_NAME = project.ext.appPackageName
         manifestPlaceholders.TERMUX_APP_NAME = "Termux RAFCODEΦ"
@@ -182,6 +190,7 @@ dependencies {
     implementation "io.noties.markwon:ext-strikethrough:$markwonVersion"
     implementation "io.noties.markwon:linkify:$markwonVersion"
     implementation "io.noties.markwon:recycler:$markwonVersion"
+    implementation "org.bouncycastle:bcprov-jdk18on:1.78.1"
     implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
 
     implementation project(":terminal-view")
@@ -405,6 +414,19 @@ task verifyBootstrapZipsPresent {
             throw new GradleException('Missing required bootstrap zip artifacts:\n - ' + missing.join('\n - ') +
                 '\nRun :app:downloadBootstraps to generate them before native build tasks.')
         }
+
+        def blake3ByArch = [
+            "aarch64": project.ext.bootstrapBlake3Aarch64,
+            "arm": project.ext.bootstrapBlake3Arm,
+            "i686": project.ext.bootstrapBlake3I686,
+            "x86_64": project.ext.bootstrapBlake3X8664
+        ]
+        def missingHashes = blake3ByArch.findAll { arch, hash -> !hash || !hash.matches("^[0-9a-f]{64}\$") }.collect { entry -> entry.key }
+        if (!missingHashes.isEmpty()) {
+            throw new GradleException("Missing or invalid TERMUX_BOOTSTRAP_BLAKE3_* values for architectures: " +
+                missingHashes.join(", ") +
+                ". Export 64-char lowercase hex BLAKE3 hashes before building.")
+        }
     }
 }
 def requiredBootstrapMetadata(File file, String expectedPackageName, String expectedPageSize, String validationMode) {
@@ -460,8 +482,8 @@ def requiredBootstrapMetadata(File file, String expectedPackageName, String expe
 
 afterEvaluate {
     android.applicationVariants.all { variant ->
-        variant.preBuildProvider.get().dependsOn(downloadBootstraps)
-        variant.javaCompileProvider.get().dependsOn(downloadBootstraps)
+        variant.preBuildProvider.get().dependsOn(verifyBootstrapZipsPresent)
+        variant.javaCompileProvider.get().dependsOn(verifyBootstrapZipsPresent)
     }
 
     def shouldWireBootstrapDeps = { task ->
@@ -469,13 +491,11 @@ afterEvaluate {
     }
 
     tasks.matching(shouldWireBootstrapDeps).configureEach {
-        dependsOn(downloadBootstraps)
         dependsOn(verifyBootstrapZipsPresent)
     }
 
     tasks.whenTaskAdded { task ->
         if (shouldWireBootstrapDeps(task)) {
-            task.dependsOn(downloadBootstraps)
             task.dependsOn(verifyBootstrapZipsPresent)
         }
     }
