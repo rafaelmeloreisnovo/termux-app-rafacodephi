@@ -205,7 +205,7 @@ Benchmarks on ARM Cortex-A53 (typical Android device):
 lowlevel/
 ├── baremetal.h           # Header with data structures and API
 ├── baremetal.c           # Core C implementation
-├── baremetal_asm.S       # Assembly optimizations (always ARM64; ARM32 only when built with NEON)
+├── baremetal_asm.S       # Assembly optimizations (ARM64 only)
 └── baremetal_jni.c       # JNI bridge to Java
 ```
 

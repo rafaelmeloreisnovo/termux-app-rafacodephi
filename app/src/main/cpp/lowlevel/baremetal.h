@@ -53,8 +53,6 @@
 
 #if defined(__aarch64__)
     #define HAS_BM_NEON_ASM 1
-#elif defined(__arm__) && (defined(__ARM_NEON) || defined(__ARM_NEON__))
-    #define HAS_BM_NEON_ASM 1
 #endif
 
 #if defined(__AVX2__)
