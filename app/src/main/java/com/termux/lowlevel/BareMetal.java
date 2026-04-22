@@ -103,7 +103,21 @@ public class BareMetal {
     }
 
     public static CapabilitiesDetail getCapabilitiesDetailParsed() {
-        int[] raw = getCapabilitiesDetail();
+        if (!sLoaded) {
+            int caps = 0;
+            return new CapabilitiesDetail(caps, 0, caps, false);
+        }
+
+        int[] raw;
+        try {
+            raw = getCapabilitiesDetail();
+        } catch (UnsatisfiedLinkError e) {
+            sLoaded = false;
+            android.util.Log.e("BareMetal", "Failed to read detailed native capabilities", e);
+            int caps = 0;
+            return new CapabilitiesDetail(caps, 0, caps, false);
+        }
+
         if (raw == null || raw.length < 4) {
             int caps = safeGetCapabilities();
             return new CapabilitiesDetail(caps, 0, caps, false);
