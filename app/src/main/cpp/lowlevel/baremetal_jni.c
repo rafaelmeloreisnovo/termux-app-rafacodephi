@@ -276,6 +276,7 @@ Java_com_termux_lowlevel_BareMetal_matrixDeterminant(JNIEnv *env, jclass clazz,
 JNIEXPORT jint JNICALL
 Java_com_termux_lowlevel_BareMetal_matrixInvert(JNIEnv *env, jclass clazz,
                                                   jlong handle, jlong handleResult) {
+    (void)env;
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
     mx_t* r = (mx_t*)(intptr_t)handleResult;

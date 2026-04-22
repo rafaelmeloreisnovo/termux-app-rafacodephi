@@ -172,7 +172,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🧬 Validate Side-by-Side Contract"
         run: |
@@ -252,7 +252,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🔐 Security Check - 16KB Page Alignment"
         run: |
@@ -317,7 +317,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🔨 Build ARM64 Debug APK"
         id: build
@@ -405,7 +405,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🔐 Configure optional release signing"
         env:
@@ -500,7 +500,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🔨 Build Full Debug APKs (All ABIs)"
         id: build
@@ -671,7 +671,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🧪 Run Unit Tests"
         run: |
@@ -725,7 +725,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🔍 Android 15 Compatibility Validation"
         run: |

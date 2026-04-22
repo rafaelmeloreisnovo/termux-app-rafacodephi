@@ -16,6 +16,9 @@ LOCAL_SRC_FILES := lowlevel/baremetal.c lowlevel/baremetal_jni.c
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
     LOCAL_SRC_FILES += lowlevel/baremetal_asm.S
 endif
+ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
+    LOCAL_SRC_FILES += lowlevel/baremetal_asm.S
+endif
 LOCAL_CFLAGS := -std=c11 -Wall -Wextra -Werror -Os -fno-stack-protector
 LOCAL_CFLAGS += -ffast-math -fno-exceptions -fno-rtti
 LOCAL_CFLAGS += -ffunction-sections -fdata-sections
@@ -43,4 +46,3 @@ endif
 # Link against log and math libraries
 LOCAL_LDLIBS := -llog -lm
 include $(BUILD_SHARED_LIBRARY)
-
