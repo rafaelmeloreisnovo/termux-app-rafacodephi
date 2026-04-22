@@ -13,7 +13,7 @@ LOCAL_SRC_FILES := rafaelia.c \
   raf_termux_toolset.c \
   raf_termux_exec.c \
   tools/raf_termux_pkg_tool.c
-LOCAL_CFLAGS := -Wall -Wextra -Werror -Wno-unused-function -Os
+LOCAL_CFLAGS := -Wall -Wextra -Werror -Wno-unused-function -Wno-missing-field-initializers -Os
 # Critical: 16KB page alignment for Android 15/16 compatibility
 LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384
 

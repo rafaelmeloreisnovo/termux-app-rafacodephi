@@ -55,6 +55,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -80,10 +81,10 @@ typedef struct {
     uint32_t caps_runtime;
     uint32_t caps_binary;
     int runtime_valid;
-    int initialized;
 } arch_caps_rt_t;
 
-static arch_caps_rt_t g_arch_caps = {0, 0, 0, 0};
+static arch_caps_rt_t g_arch_caps = {0, 0, 0};
+static pthread_once_t g_arch_caps_once = PTHREAD_ONCE_INIT;
 
 static uint32_t get_binary_caps(void) {
     uint32_t caps = 0;
@@ -273,22 +274,64 @@ static uint32_t detect_runtime_caps_x86(int* valid) {
 #endif
 
 static void init_runtime_caps_once(void) {
-    if (g_arch_caps.initialized) {
-        return;
-    }
-
-    g_arch_caps.caps_binary = get_binary_caps();
-    g_arch_caps.caps_runtime = 0;
-    g_arch_caps.runtime_valid = 0;
+    /*
+     * Synchronization model:
+     * - pthread_once guarantees this block executes exactly one time process-wide.
+     * - We compute runtime/binary capability fields in local temporaries first.
+     * - Only after full detection finishes do we publish to g_arch_caps.
+     * - The once-control synchronization provides the required happens-before
+     *   relation, so readers after pthread_once observe a fully initialized
+     *   snapshot (caps_binary, caps_runtime, runtime_valid).
+     */
+    uint32_t caps_binary = get_binary_caps();
+    uint32_t caps_runtime = 0;
+    int runtime_valid = 0;
 
     #if defined(__linux__) && (defined(__aarch64__) || defined(__arm__) || defined(__arm64__))
-    g_arch_caps.caps_runtime = detect_runtime_caps_arm(&g_arch_caps.runtime_valid);
+    caps_runtime = detect_runtime_caps_arm(&runtime_valid);
     #elif defined(__i386__) || defined(__x86_64__) || defined(__amd64__)
-    g_arch_caps.caps_runtime = detect_runtime_caps_x86(&g_arch_caps.runtime_valid);
+    caps_runtime = detect_runtime_caps_x86(&runtime_valid);
     #endif
 
-    g_arch_caps.initialized = 1;
+    g_arch_caps.caps_binary = caps_binary;
+    g_arch_caps.caps_runtime = caps_runtime;
+    g_arch_caps.runtime_valid = runtime_valid;
 }
+
+static inline void ensure_runtime_caps_initialized(void) {
+    (void)pthread_once(&g_arch_caps_once, init_runtime_caps_once);
+}
+
+static __attribute__((unused)) uint32_t bm_simd_step_f32(void) {
+#if defined(HAS_BM_NEON_ASM)
+    return 4u;
+#elif defined(HAS_AVX2) || defined(HAS_AVX)
+    return 8u;
+#elif defined(HAS_SSE42) || defined(HAS_SSE2)
+    return 4u;
+#else
+    return 1u;
+#endif
+}
+
+static __attribute__((unused)) size_t bm_simd_step_u8(void) {
+#if defined(HAS_BM_NEON_ASM) || defined(HAS_SSE42) || defined(HAS_SSE2)
+    return 16u;
+#elif defined(HAS_AVX2) || defined(HAS_AVX)
+    return 32u;
+#else
+    return 1u;
+#endif
+}
+
+#if defined(HAS_BM_NEON_ASM)
+static int bm_can_use_neon_asm(void) {
+    const uint32_t caps = get_arch_caps();
+    return (caps & CAP_NEON) != 0u;
+}
+#else
+#define bm_can_use_neon_asm() (0)
+#endif
 
 /* ============================================================================
  * Vector Operations - Optimized for each architecture
@@ -418,16 +461,28 @@ static inline float fm_abs(float x) {
 }
 
 mx_t* mx_create(uint32_t r, uint32_t c) {
+    if (r == 0 || c == 0) {
+        return NULL;
+    }
+    if (r > (UINT32_MAX / c)) {
+        return NULL;
+    }
+    if (((size_t)r * (size_t)c) > (SIZE_MAX / sizeof(float))) {
+        return NULL;
+    }
+
     mx_t* m = (mx_t*)malloc(sizeof(mx_t));
     if (!m) return NULL;
     
     /* Allocate matrix data */
-    m->m = (float*)malloc(r * c * sizeof(float));
+    size_t count = (size_t)r * (size_t)c;
+    size_t bytes = count * sizeof(float);
+    m->m = (float*)malloc(bytes);
     if (!m->m) {
         free(m);
         return NULL;
     }
-    bmem_zero(m->m, r * c * sizeof(float));
+    bmem_zero(m->m, bytes);
     
     m->r = r;
     m->c = c;
@@ -1136,7 +1191,7 @@ void get_hw_profile(hw_profile_t* p) {
 }
 
 uint32_t get_arch_caps(void) {
-    init_runtime_caps_once();
+    ensure_runtime_caps_initialized();
 
     const uint32_t caps = g_arch_caps.runtime_valid
         ? g_arch_caps.caps_runtime
@@ -1153,16 +1208,16 @@ uint32_t get_arch_caps(void) {
 }
 
 uint32_t get_arch_runtime_caps(void) {
-    init_runtime_caps_once();
+    ensure_runtime_caps_initialized();
     return g_arch_caps.caps_runtime;
 }
 
 uint32_t get_arch_binary_caps(void) {
-    init_runtime_caps_once();
+    ensure_runtime_caps_initialized();
     return g_arch_caps.caps_binary;
 }
 
 int get_arch_runtime_caps_valid(void) {
-    init_runtime_caps_once();
+    ensure_runtime_caps_initialized();
     return g_arch_caps.runtime_valid;
 }

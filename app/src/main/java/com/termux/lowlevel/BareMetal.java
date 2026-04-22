@@ -27,6 +27,17 @@ public class BareMetal {
     public static boolean isLoaded() {
         return sLoaded;
     }
+
+    private static int safeGetCapabilities() {
+        if (!sLoaded) return 0;
+        try {
+            return getCapabilities();
+        } catch (UnsatisfiedLinkError e) {
+            sLoaded = false;
+            android.util.Log.e("BareMetal", "Native library became unavailable", e);
+            return 0;
+        }
+    }
     
     /* ========================================================================
      * Architecture Detection
@@ -67,14 +78,14 @@ public class BareMetal {
      * Check if NEON SIMD is available
      */
     public static boolean hasNeon() {
-        return (getCapabilities() & 0x01) != 0;
+        return (safeGetCapabilities() & 0x01) != 0;
     }
     
     /**
      * Check if AVX is available
      */
     public static boolean hasAvx() {
-        return (getCapabilities() & 0x02) != 0;
+        return (safeGetCapabilities() & 0x02) != 0;
     }
     
     public static final class CapabilitiesDetail {
@@ -92,9 +103,24 @@ public class BareMetal {
     }
 
     public static CapabilitiesDetail getCapabilitiesDetailParsed() {
-        int[] raw = getCapabilitiesDetail();
+        if (!sLoaded) {
+            int caps = 0;
+            return new CapabilitiesDetail(caps, 0, caps, false);
+        }
+
+        int[] raw;
+        try {
+            raw = getCapabilitiesDetail();
+        } catch (UnsatisfiedLinkError e) {
+            sLoaded = false;
+            android.util.Log.e("BareMetal", "Failed to read detailed native capabilities", e);
+            int caps = 0;
+            return new CapabilitiesDetail(caps, 0, caps, false);
+        }
+
         if (raw == null || raw.length < 4) {
-            return new CapabilitiesDetail(getCapabilities(), 0, getCapabilities(), false);
+            int caps = safeGetCapabilities();
+            return new CapabilitiesDetail(caps, 0, caps, false);
         }
         return new CapabilitiesDetail(raw[0], raw[1], raw[2], raw[3] != 0);
     }
@@ -170,12 +196,15 @@ public class BareMetal {
      * Create matrix with given dimensions
      * @param rows Number of rows
      * @param cols Number of columns
+     * @throws IllegalArgumentException if {@code rows <= 0} or {@code cols <= 0}
+     * @throws OutOfMemoryError if native allocation fails for a valid dimension
      * @return Matrix handle (native pointer)
      */
     public static native long matrixCreate(int rows, int cols);
     
     /**
-     * Free matrix memory
+     * Free matrix memory.
+     * After this call, the handle is invalid and must not be used in any other matrix API call.
      * @param handle Matrix handle
      */
     public static native void matrixFree(long handle);
@@ -469,14 +498,26 @@ public class BareMetal {
     }
 
     /**
-     * Matrix helper class for easier usage
-     * Implements RAFAELIA deterministic matrix operations
+     * Matrix helper class for easier usage.
+     * Implements RAFAELIA deterministic matrix operations.
+     * <p>
+     * Once {@link #close()} is called, this object is permanently closed and can no longer be used.
+     * Any matrix operation after close will throw {@link IllegalStateException}.
      */
     public static class Matrix implements AutoCloseable {
         private long handle;
         private int rows;
         private int cols;
         
+        /**
+         * Build a native-backed matrix.
+         *
+         * Contract: both dimensions must be at least 1 ({@code rows >= 1} and
+         * {@code cols >= 1}).
+         *
+         * @throws IllegalArgumentException if any dimension is less than 1
+         * @throws OutOfMemoryError if native allocation fails for a valid size
+         */
         public Matrix(int rows, int cols) {
             this.rows = rows;
             this.cols = cols;
@@ -489,11 +530,18 @@ public class BareMetal {
         public int getRows() { return rows; }
         public int getCols() { return cols; }
         public long getHandle() { return handle; }
+
+        private void ensureOpen() {
+            if (handle == 0) {
+                throw new IllegalStateException("Matrix is closed and cannot be used");
+            }
+        }
         
         /**
          * Get matrix data as flat array (row-major order)
          */
         public float[] getData() {
+            ensureOpen();
             float[] data = new float[rows * cols];
             matrixGetData(handle, data);
             return data;
@@ -504,6 +552,7 @@ public class BareMetal {
          * Reuses caller-provided buffer to avoid allocations on hot paths.
          */
         public void getDataInto(float[] data) {
+            ensureOpen();
             if (data.length < rows * cols) {
                 throw new IllegalArgumentException("Data array too small");
             }
@@ -514,6 +563,7 @@ public class BareMetal {
          * Set matrix data from flat array (row-major order)
          */
         public void setData(float[] data) {
+            ensureOpen();
             if (data.length < rows * cols) {
                 throw new IllegalArgumentException("Data array too small");
             }
@@ -523,38 +573,47 @@ public class BareMetal {
         /* Flip operations - RAFAELIA deterministic method */
         
         public void flipHorizontal() {
+            ensureOpen();
             matrixFlipHorizontal(handle);
         }
         
         public void flipVertical() {
+            ensureOpen();
             matrixFlipVertical(handle);
         }
         
         public void flipDiagonal() {
+            ensureOpen();
             matrixFlipDiagonal(handle);
         }
         
         /* Basic operations */
         
         public float determinant() {
+            ensureOpen();
             return matrixDeterminant(handle);
         }
         
         public float trace() {
+            ensureOpen();
             return matrixTrace(handle);
         }
         
         public void scale(float scalar) {
+            ensureOpen();
             matrixScale(handle, scalar);
         }
         
         public void setIdentity() {
+            ensureOpen();
             matrixIdentity(handle);
         }
         
         /* Matrix algebra */
 
         public Matrix multiply(Matrix other) {
+            ensureOpen();
+            other.ensureOpen();
             if (this.cols != other.rows) {
                 throw new IllegalArgumentException("Matrix dimensions incompatible for multiplication");
             }
@@ -567,6 +626,9 @@ public class BareMetal {
          * Multiply matrices into an existing output matrix to avoid allocations.
          */
         public void multiplyInto(Matrix other, Matrix output) {
+            ensureOpen();
+            other.ensureOpen();
+            output.ensureOpen();
             if (this.cols != other.rows) {
                 throw new IllegalArgumentException("Matrix dimensions incompatible for multiplication");
             }
@@ -577,6 +639,8 @@ public class BareMetal {
         }
 
         public Matrix add(Matrix other) {
+            ensureOpen();
+            other.ensureOpen();
             if (this.rows != other.rows || this.cols != other.cols) {
                 throw new IllegalArgumentException("Matrix dimensions must match for addition");
             }
@@ -589,6 +653,9 @@ public class BareMetal {
          * Add matrices into an existing output matrix to avoid allocations.
          */
         public void addInto(Matrix other, Matrix output) {
+            ensureOpen();
+            other.ensureOpen();
+            output.ensureOpen();
             if (this.rows != other.rows || this.cols != other.cols) {
                 throw new IllegalArgumentException("Matrix dimensions must match for addition");
             }
@@ -599,6 +666,8 @@ public class BareMetal {
         }
 
         public Matrix subtract(Matrix other) {
+            ensureOpen();
+            other.ensureOpen();
             if (this.rows != other.rows || this.cols != other.cols) {
                 throw new IllegalArgumentException("Matrix dimensions must match for subtraction");
             }
@@ -611,6 +680,9 @@ public class BareMetal {
          * Subtract matrices into an existing output matrix to avoid allocations.
          */
         public void subtractInto(Matrix other, Matrix output) {
+            ensureOpen();
+            other.ensureOpen();
+            output.ensureOpen();
             if (this.rows != other.rows || this.cols != other.cols) {
                 throw new IllegalArgumentException("Matrix dimensions must match for subtraction");
             }
@@ -621,6 +693,7 @@ public class BareMetal {
         }
 
         public Matrix transpose() {
+            ensureOpen();
             Matrix result = new Matrix(this.cols, this.rows);
             matrixTranspose(this.handle, result.handle);
             return result;
@@ -630,6 +703,8 @@ public class BareMetal {
          * Transpose into an existing output matrix to avoid allocations.
          */
         public void transposeInto(Matrix output) {
+            ensureOpen();
+            output.ensureOpen();
             if (output.rows != this.cols || output.cols != this.rows) {
                 throw new IllegalArgumentException("Output matrix dimensions incompatible for transpose");
             }
@@ -641,6 +716,7 @@ public class BareMetal {
          * @return Inverted matrix, or null if singular
          */
         public Matrix invert() {
+            ensureOpen();
             if (this.rows != this.cols) {
                 throw new IllegalArgumentException("Only square matrices can be inverted");
             }
@@ -658,6 +734,8 @@ public class BareMetal {
          * @return true on success, false if singular
          */
         public boolean invertInto(Matrix output) {
+            ensureOpen();
+            output.ensureOpen();
             if (this.rows != this.cols) {
                 throw new IllegalArgumentException("Only square matrices can be inverted");
             }
@@ -674,6 +752,7 @@ public class BareMetal {
          * @return Solution vector x, or null if singular
          */
         public float[] solve(float[] b) {
+            ensureOpen();
             if (b.length != this.rows) {
                 throw new IllegalArgumentException("Vector b size must match matrix rows");
             }
@@ -690,6 +769,7 @@ public class BareMetal {
          * @return true on success, false if singular
          */
         public boolean solveInto(float[] b, float[] x) {
+            ensureOpen();
             if (b.length != this.rows) {
                 throw new IllegalArgumentException("Vector b size must match matrix rows");
             }
@@ -706,6 +786,10 @@ public class BareMetal {
             super.finalize();
         }
         
+        /**
+         * Releases native resources for this matrix.
+         * After close, this instance is permanently closed and cannot be used again.
+         */
         @Override
         public void close() {
             if (handle != 0) {

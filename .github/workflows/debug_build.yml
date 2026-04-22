@@ -43,7 +43,7 @@ jobs:
         uses: android-actions/setup-android@v3
       - name: "📦 Phase 2.2: Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🔨 Phase 3: Build APKs"
         shell: bash {0}
@@ -69,7 +69,7 @@ jobs:
           fi
 
           APK_DIR_PATH="./app/build/outputs/apk/debug"
-          APK_VERSION_TAG="$RELEASE_VERSION_NAME-${{ env.PACKAGE_VARIANT }}-github-debug" # Note the "-", GITHUB_SHA will already have "+" before it
+          APK_VERSION_TAG="$RELEASE_VERSION_NAME-${PACKAGE_VARIANT}-github-debug" # Note the "-", GITHUB_SHA will already have "+" before it
           APK_BASENAME_PREFIX="termux-app_$APK_VERSION_TAG"
 
           # Used by attachment steps later
@@ -82,12 +82,13 @@ jobs:
           echo "PHASE 2: Building APKs"
           echo "=========================================="
           echo "Building APKs for 'APK_VERSION_TAG' build"
-          echo "Package variant: ${{ env.PACKAGE_VARIANT }}"
+          echo "Package variant: ${PACKAGE_VARIANT}"
           echo "Version: ${RELEASE_VERSION_NAME/v/}"
           echo ""
           export TERMUX_APP_VERSION_NAME="${RELEASE_VERSION_NAME/v/}" # Used by app/build.gradle
           export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG" # Used by app/build.gradle
-          export TERMUX_PACKAGE_VARIANT="${{ env.PACKAGE_VARIANT }}" # Used by app/build.gradle
+          export TERMUX_PACKAGE_VARIANT="${PACKAGE_VARIANT}" # Used by app/build.gradle
+          export TERMUX_BOOTSTRAP_VALIDATION_MODE="upstream-debug-compat" # Debug-only compatibility rail.
           
           echo "Starting Gradle build process..."
           if ! ./gradlew assembleDebug; then
@@ -158,15 +159,16 @@ jobs:
           echo ""
 
       - name: "📦 Phase 4.1: Upload universal APK artifact"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_universal
+          if-no-files-found: ignore
           path: |
             ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_universal.apk
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Phase 4.2: Upload arm64-v8a APK artifact"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_arm64-v8a
           path: |
@@ -174,7 +176,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Phase 4.3: Upload armeabi-v7a APK artifact"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_armeabi-v7a
           path: |
@@ -182,7 +184,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Phase 4.4: Upload x86_64 APK artifact"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_x86_64
           path: |
@@ -190,7 +192,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Phase 4.5: Upload x86 APK artifact (optional)"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_x86
           if-no-files-found: ignore
@@ -199,7 +201,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Phase 4.6: Upload sha256sums artifact"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_sha256sums
           path: |

@@ -70,12 +70,12 @@ on:
         default: false
         type: boolean
       package_variant:
-        description: 'Package Variant (empty = both)'
+        description: 'Package Variant'
         required: false
-        default: ''
+        default: 'both'
         type: choice
         options:
-          - ''
+          - both
           - apt-android-7
           - apt-android-5
 
@@ -172,7 +172,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🧬 Validate Side-by-Side Contract"
         run: |
@@ -200,6 +200,10 @@ jobs:
       - name: "⚙️ Determine Build Configuration"
         id: build-config
         run: |
+          if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+            echo "build_debug=true" >> $GITHUB_OUTPUT
+            echo "build_release=false" >> $GITHUB_OUTPUT
+          else
           # Determine build types
           BUILD_INPUT="${{ github.event.inputs.build_type || 'both' }}"
           
@@ -213,10 +217,11 @@ jobs:
             echo "build_debug=true" >> $GITHUB_OUTPUT
             echo "build_release=true" >> $GITHUB_OUTPUT
           fi
+          fi
           
           # Determine package variants
           VARIANT_INPUT="${{ github.event.inputs.package_variant }}"
-          if [ -z "$VARIANT_INPUT" ]; then
+          if [ -z "$VARIANT_INPUT" ] || [ "$VARIANT_INPUT" == "both" ]; then
             echo 'variants=["apt-android-7", "apt-android-5"]' >> $GITHUB_OUTPUT
           else
             echo "variants=[\"$VARIANT_INPUT\"]" >> $GITHUB_OUTPUT
@@ -247,7 +252,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🔐 Security Check - 16KB Page Alignment"
         run: |
@@ -312,7 +317,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🔨 Build ARM64 Debug APK"
         id: build
@@ -336,6 +341,7 @@ jobs:
           export TERMUX_APP_VERSION_NAME="${VERSION_TAG/v/}"
           export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG"
           export TERMUX_PACKAGE_VARIANT="$PACKAGE_VARIANT"
+          export TERMUX_BOOTSTRAP_VALIDATION_MODE="upstream-debug-compat"
           
           # Build with ARM64 priority
           if ./gradlew assembleDebug \
@@ -354,7 +360,7 @@ jobs:
           fi
 
       - name: "📦 Upload ARM64 Debug APK"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: termux-arm64-debug-${{ matrix.variant }}-${{ env.APK_VERSION_TAG }}
           path: |
@@ -399,7 +405,17 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
+
+      - name: "🔐 Configure optional release signing"
+        env:
+          INPUT_BUILD_TYPE: release
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./scripts/setup_android_signing.sh
 
       - name: "🔨 Build ARM64 Release APK"
         id: build
@@ -423,6 +439,7 @@ jobs:
           export TERMUX_APP_VERSION_NAME="${VERSION_TAG/v/}"
           export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG"
           export TERMUX_PACKAGE_VARIANT="$PACKAGE_VARIANT"
+          export TERMUX_BOOTSTRAP_VALIDATION_MODE="strict"
           
           # Build with ARM64 priority
           if ./gradlew assembleRelease \
@@ -438,7 +455,7 @@ jobs:
           fi
 
       - name: "📦 Upload ARM64 Release APK"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: termux-arm64-release-${{ matrix.variant }}-${{ env.APK_VERSION_TAG }}
           path: |
@@ -483,7 +500,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🔨 Build Full Debug APKs (All ABIs)"
         id: build
@@ -509,6 +526,7 @@ jobs:
           export TERMUX_APP_VERSION_NAME="${VERSION_TAG/v/}"
           export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG"
           export TERMUX_PACKAGE_VARIANT="$PACKAGE_VARIANT"
+          export TERMUX_BOOTSTRAP_VALIDATION_MODE="upstream-debug-compat"
           
           # Build all ABIs
           if ! ./gradlew assembleDebug --no-daemon; then
@@ -579,15 +597,16 @@ jobs:
           echo "✅ Full debug build completed"
 
       - name: "📦 Upload Universal APK"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_universal
+          if-no-files-found: ignore
           path: |
             ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_universal.apk
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload ARM64-v8a APK"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_arm64-v8a
           path: |
@@ -595,7 +614,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload ARMv7a APK"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_armeabi-v7a
           path: |
@@ -603,7 +622,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload x86_64 APK"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_x86_64
           path: |
@@ -611,7 +630,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload x86 APK"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_x86
           if-no-files-found: ignore
@@ -620,7 +639,7 @@ jobs:
             ${{ env.APK_DIR_PATH }}/output-metadata.json
 
       - name: "📦 Upload Checksums"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}_sha256sums
           path: ${{ env.APK_DIR_PATH }}/sha256sums.txt
@@ -652,7 +671,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🧪 Run Unit Tests"
         run: |
@@ -667,7 +686,7 @@ jobs:
           echo "✅ Unit tests completed"
 
       - name: "📊 Upload Test Results"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
@@ -706,7 +725,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🔍 Android 15 Compatibility Validation"
         run: |
@@ -778,8 +797,8 @@ jobs:
         run: |
           echo ""
           echo "Authorship Verification:"
-          RAFAEL_COUNT=$(grep -r "instituto-Rafael" . --include="*.md" --include="*.yml" --include="*.java" 2>/dev/null | wc -l || echo "0")
-          RAFAELIA_COUNT=$(grep -r "RAFAELIA" . --include="*.md" --include="*.yml" --include="*.java" 2>/dev/null | wc -l || echo "0")
+          RAFAEL_COUNT=$(rg --no-messages --glob "*.md" --glob "*.yml" --glob "*.java" --glob "!**/.git/**" --glob "!**/build/**" --glob "!**/.gradle/**" "instituto-Rafael" . | wc -l)
+          RAFAELIA_COUNT=$(rg --no-messages --glob "*.md" --glob "*.yml" --glob "*.java" --glob "!**/.git/**" --glob "!**/build/**" --glob "!**/.gradle/**" "RAFAELIA" . | wc -l)
           
           echo "  - instituto-Rafael mentions: $RAFAEL_COUNT"
           echo "  - RAFAELIA references: $RAFAELIA_COUNT"

@@ -36,7 +36,7 @@ jobs:
 
       - name: Install Android toolchain components
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: Build and attach APKs to release
         shell: bash {0}
@@ -69,7 +69,7 @@ jobs:
                 echo
                 echo "- Release: \`$RELEASE_VERSION_NAME\`"
                 echo "- Tag ref: \`$GITHUB_REF\`"
-                echo "- Package variant: \`${{ env.PACKAGE_VARIANT }}\`"
+                echo "- Package variant: \`${PACKAGE_VARIANT}\`"
                 echo "- Error: $message"
                 echo
                 echo "> No automatic release/tag deletion was performed."
@@ -90,13 +90,14 @@ jobs:
           fi
 
           APK_DIR_PATH="./app/build/outputs/apk/debug"
-          APK_VERSION_TAG="$RELEASE_VERSION_NAME+${{ env.PACKAGE_VARIANT }}-github-debug"
+          APK_VERSION_TAG="$RELEASE_VERSION_NAME+${PACKAGE_VARIANT}-github-debug"
           APK_BASENAME_PREFIX="termux-app_$APK_VERSION_TAG"
 
           echo "Building APKs for '$APK_VERSION_TAG' release"
           export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG" # Used by app/build.gradle
-          export TERMUX_PACKAGE_VARIANT="${{ env.PACKAGE_VARIANT }}" # Used by app/build.gradle
+          export TERMUX_PACKAGE_VARIANT="${PACKAGE_VARIANT}" # Used by app/build.gradle
           export TERMUX_APP_VERSION_NAME="${RELEASE_VERSION_NAME/v/}" # Used by app/build.gradle
+          export TERMUX_BOOTSTRAP_VALIDATION_MODE="upstream-debug-compat" # Debug-only compatibility rail.
           echo "Effective versioning: tag=$TERMUX_APK_VERSION_TAG versionName=$TERMUX_APP_VERSION_NAME"
           echo "Release tag used (RELEASE_VERSION_NAME): $RELEASE_VERSION_NAME"
           if ! ./gradlew assembleDebug; then

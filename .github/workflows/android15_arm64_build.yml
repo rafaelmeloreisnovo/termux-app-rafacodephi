@@ -138,7 +138,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "📋 Extract Version Information"
         id: version
@@ -200,7 +200,17 @@ jobs:
 
       - name: "📦 Phase 2.2: Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
+
+      - name: "🔐 Phase 2.3: Configure optional release signing"
+        env:
+          INPUT_BUILD_TYPE: ${{ github.event.inputs.build_type || 'debug' }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./scripts/setup_android_signing.sh
 
       - name: "🔧 Phase 3: Configure Build Environment"
         run: |
@@ -263,6 +273,9 @@ jobs:
           # Determine build type (from workflow_dispatch input or default to debug)
           BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
           GRADLE_TASK="assemble${BUILD_TYPE^}" # Capitalize first letter: assembleDebug or assembleRelease
+          if [[ "$BUILD_TYPE" == "debug" ]]; then
+            export TERMUX_BOOTSTRAP_VALIDATION_MODE="upstream-debug-compat"
+          fi
           
           echo "Build Type: $BUILD_TYPE"
           echo "Gradle Task: $GRADLE_TASK"
@@ -305,7 +318,7 @@ jobs:
           ls -la $APK_DIR_PATH/ 2>/dev/null || echo "Build directory not found"
 
       - name: "📦 Phase 6: Upload ARM64 APK Artifact"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: termux-rafacodephi-arm64-android15-${{ env.APK_VERSION_TAG }}
           path: |
@@ -338,7 +351,7 @@ jobs:
 
       - name: "📦 Install Android toolchain components"
         run: |
-          ./scripts/setup_android_toolchain.sh
+          ./scripts/ci_android_preflight.sh
 
       - name: "🔍 Run Android 15 Compatibility Validation"
         run: |

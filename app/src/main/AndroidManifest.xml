@@ -76,7 +76,6 @@
         android:name="com.termux.app.TermuxApplication"
         android:allowBackup="false"
         android:banner="@drawable/banner"
-        android:extractNativeLibs="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/application_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -110,7 +109,7 @@
         </activity>
 
         <activity-alias
-            android:name="com.termux.HomeActivity"
+            android:name="${TERMUX_PACKAGE_NAME}.HomeActivity"
             android:exported="true"
             android:targetActivity="com.termux.app.TermuxActivity">
 

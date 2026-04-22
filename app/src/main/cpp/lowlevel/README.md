@@ -183,7 +183,7 @@ The native library is compiled with:
 | Architecture | Support | SIMD | Optimizations |
 |-------------|---------|------|---------------|
 | **arm64-v8a** | ✅ Full | NEON | ARMv8-A, Advanced SIMD |
-| **armeabi-v7a** | ✅ Full | NEON | ARMv7-A, NEON |
+| **armeabi-v7a** | ✅ Full | Runtime-gated NEON | ARMv7-A baseline + optional NEON |
 | **x86_64** | ✅ Full | AVX/SSE | SSE2, SSE4.2, AVX |
 | **x86** | ✅ Full | SSE | SSE2, SSE4.2 |
 
@@ -205,7 +205,7 @@ Benchmarks on ARM Cortex-A53 (typical Android device):
 lowlevel/
 ├── baremetal.h           # Header with data structures and API
 ├── baremetal.c           # Core C implementation
-├── baremetal_asm.S       # Assembly optimizations (ARM/ARM64)
+├── baremetal_asm.S       # Assembly optimizations (always ARM64; ARM32 only when built with NEON)
 └── baremetal_jni.c       # JNI bridge to Java
 ```
 
