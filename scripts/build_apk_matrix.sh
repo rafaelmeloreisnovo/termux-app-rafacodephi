@@ -9,6 +9,7 @@ KEY_PASS="${KEY_PASS:-changeit}"
 STORE_PASS="${STORE_PASS:-changeit}"
 
 cd "${ROOT_DIR}"
+./scripts/ensure_android_sdk.sh "${ROOT_DIR}"
 ./scripts/ci_android_preflight.sh
 mkdir -p "${OUT_DIR}" "$(dirname "${KEYSTORE_PATH}")"
 
