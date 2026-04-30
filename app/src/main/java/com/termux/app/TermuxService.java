@@ -472,6 +472,7 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
             String errmsg = getString(R.string.error_termux_service_unsupported_execution_command_runner, executionCommand.runner);
             executionCommand.setStateFailed(Errno.ERRNO_FAILED.getCode(), errmsg);
             TermuxPluginUtils.processPluginExecutionCommandError(this, LOG_TAG, executionCommand, false);
+            removePendingPluginExecutionCommand(executionCommand);
         }
     }
 
@@ -491,7 +492,10 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
 
         AppShell newTermuxTask = null;
         ShellCreateMode shellCreateMode = processShellCreateMode(executionCommand);
-        if (shellCreateMode == null) return;
+        if (shellCreateMode == null) {
+            removePendingPluginExecutionCommand(executionCommand);
+            return;
+        }
         if (ShellCreateMode.NO_SHELL_WITH_NAME.equals(shellCreateMode)) {
             newTermuxTask = getTermuxTaskForShellName(executionCommand.shellName);
             if (newTermuxTask != null)
@@ -520,6 +524,7 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
 
         if (!Runner.APP_SHELL.equalsRunner(executionCommand.runner)) {
             Logger.logDebug(LOG_TAG, "Ignoring wrong runner \"" + executionCommand.runner + "\" command passed to createTermuxTask()");
+            removePendingPluginExecutionCommand(executionCommand);
             return null;
         }
 
@@ -539,6 +544,7 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
                 Logger.logError(LOG_TAG, "Set log level to debug or higher to see error in logs");
                 Logger.logErrorPrivateExtended(LOG_TAG, executionCommand.toString());
             }
+            removePendingPluginExecutionCommand(executionCommand);
             return null;
         }
 
@@ -546,8 +552,7 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
 
         // Remove the execution command from the pending plugin execution commands list since it has
         // now been processed
-        if (executionCommand.isPluginExecutionCommand)
-            mShellManager.mPendingPluginExecutionCommands.remove(executionCommand);
+        removePendingPluginExecutionCommand(executionCommand);
 
         updateNotification();
 
@@ -590,7 +595,10 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
 
         TermuxSession newTermuxSession = null;
         ShellCreateMode shellCreateMode = processShellCreateMode(executionCommand);
-        if (shellCreateMode == null) return;
+        if (shellCreateMode == null) {
+            removePendingPluginExecutionCommand(executionCommand);
+            return;
+        }
         if (ShellCreateMode.NO_SHELL_WITH_NAME.equals(shellCreateMode)) {
             newTermuxSession = getTermuxSessionForShellName(executionCommand.shellName);
             if (newTermuxSession != null)
@@ -630,6 +638,7 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
 
         if (!Runner.TERMINAL_SESSION.equalsRunner(executionCommand.runner)) {
             Logger.logDebug(LOG_TAG, "Ignoring wrong runner \"" + executionCommand.runner + "\" command passed to createTermuxSession()");
+            removePendingPluginExecutionCommand(executionCommand);
             return null;
         }
 
@@ -653,6 +662,7 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
                 Logger.logError(LOG_TAG, "Set log level to debug or higher to see error in logs");
                 Logger.logErrorPrivateExtended(LOG_TAG, executionCommand.toString());
             }
+            removePendingPluginExecutionCommand(executionCommand);
             return null;
         }
 
@@ -660,8 +670,7 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
 
         // Remove the execution command from the pending plugin execution commands list since it has
         // now been processed
-        if (executionCommand.isPluginExecutionCommand)
-            mShellManager.mPendingPluginExecutionCommands.remove(executionCommand);
+        removePendingPluginExecutionCommand(executionCommand);
 
         // Notify {@link TermuxSessionsListViewController} that sessions list has been updated if
         // activity in is foreground
@@ -729,6 +738,11 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
                 getString(R.string.error_termux_service_unsupported_execution_command_shell_create_mode, executionCommand.shellCreateMode));
             return null;
         }
+    }
+
+    private void removePendingPluginExecutionCommand(@Nullable ExecutionCommand executionCommand) {
+        if (executionCommand == null || !executionCommand.isPluginExecutionCommand) return;
+        mShellManager.mPendingPluginExecutionCommands.remove(executionCommand);
     }
 
     /** Process session action for new session. */
