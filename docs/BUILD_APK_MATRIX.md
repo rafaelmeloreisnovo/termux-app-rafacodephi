@@ -8,10 +8,15 @@
 
 Artifacts are generated at `dist/apk-matrix/`:
 
-- `*arm64-v8a*.apk` (debug/release unsigned)
-- `*armeabi-v7a*.apk` (debug/release unsigned)
-- `*release*-signed.apk` (signed local release variants)
-- `SHA256SUMS.txt`
+- `unsigned/*.apk` (debug/release unsigned artifacts)
+- `signed/*-signed.apk` (locally signed release artifacts)
+- `SHA256SUMS.txt` (checksums for signed and unsigned artifacts)
+
+## Guarantees
+
+- Fails if unsigned `arm64-v8a` or `armeabi-v7a` APK is missing.
+- Fails if signed release `arm64-v8a` or `armeabi-v7a` APK is missing.
+- Verifies signatures with `apksigner verify`.
 
 ## Notes
 
