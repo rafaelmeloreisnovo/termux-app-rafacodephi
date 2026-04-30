@@ -59,4 +59,12 @@ signed_arm32_count=$(find "${SIGNED_DIR}" -maxdepth 1 -type f -name '*armeabi-v7
 [[ "${signed_arm32_count}" -gt 0 ]] || fail "signed armeabi-v7a release APK missing"
 
 ( cd "${OUT_DIR}" && find unsigned signed -type f -name '*.apk' -print0 | xargs -0 sha256sum > SHA256SUMS.txt )
+( cd "${OUT_DIR}" && {
+  echo "artifact_dir=${OUT_DIR}";
+  echo "generated_at_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)";
+  echo "signed_release_apks=${signed_arm64_count}+${signed_arm32_count} (arm64+arm32 validated)";
+  find unsigned signed -type f -name '*.apk' | sort;
+} > ARTIFACT_MANIFEST.txt )
 info "Artifacts generated in ${OUT_DIR}"
+cat "${OUT_DIR}/ARTIFACT_MANIFEST.txt"
+cat "${OUT_DIR}/SHA256SUMS.txt"

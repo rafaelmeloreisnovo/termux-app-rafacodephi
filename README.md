@@ -76,7 +76,7 @@ Quick how-to about Termux package management is available at [Package Management
 - Android 16 Beta (all devices)
 - Devices with kernel 5.15.178+ (like RMX3834)
 
-Without this fix, apps crash with SIGSEGV on startup. **This fork is patched and production-ready.**
+Without this fix, apps crash with SIGSEGV on startup. **This fork includes the compatibility patch; validate in your own environment before production release.**
 
 📖 See [Android 16 Page Size Fix Documentation](./ANDROID16_PAGE_SIZE_FIX.md) for technical details.
 
@@ -84,7 +84,7 @@ Without this fix, apps crash with SIGSEGV on startup. **This fork is patched and
 - ✅ **Package Name**: `com.termux.rafacodephi` (unique, no conflicts)
 - ✅ **App Name**: `Termux RAFCODEΦ` (distinct branding)
 - ✅ **Side-by-Side**: Install alongside official Termux without conflicts
-- ✅ **Android 15/16**: Optimized with 16KB page alignment and Phantom Process Killer handling
+- ✅ **Android 15/16**: Configured for 16KB page alignment and Phantom Process Killer handling
 - ✅ **Zero Collisions**: Unique authorities, permissions, and data directories
 - ✅ **Bare-Metal**: NEON/SIMD optimized native code with pthread support
 
@@ -585,3 +585,14 @@ Every contribution, no matter how small, is significant and acknowledged. Even a
 ### Trademark Notice
 
 "Termux" is a trademark of the original Termux project. This fork is not officially endorsed by or affiliated with the original Termux project, though it maintains full compliance with the GPLv3 license under which Termux is released.
+
+
+## Security and release policy (RAFCODEΦ)
+
+- Package name oficial e único: `com.termux.rafacodephi`.
+- Keystores/chaves de release não devem ser versionados; use apenas variáveis de ambiente para signing oficial.
+- Trilha interna unsigned é somente para validação técnica, nunca para release oficial.
+- `TERMUX_BOOTSTRAP_VALIDATION_MODE=upstream-debug-compat` é bloqueado nos scripts de release.
+- Hashes de bootstrap BLAKE3 e SHA256 são gerados por `scripts/prepare_bootstrap_env.sh`.
+
+ABIs validadas na trilha de build local: `armeabi-v7a`, `arm64-v8a` e `x86_64`.
