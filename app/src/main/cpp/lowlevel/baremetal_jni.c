@@ -104,27 +104,38 @@ Java_com_termux_lowlevel_BareMetal_vectorDot(JNIEnv *env, jclass clazz,
     (void)clazz;
     jsize len_a = (*env)->GetArrayLength(env, a);
     jsize len_b = (*env)->GetArrayLength(env, b);
-    
+
     if (len_a != len_b) {
         LOGE("Vector dimensions mismatch: %d != %d", len_a, len_b);
-        throw_illegal_argument(env, "Vector dimensions mismatch: arrays must have equal length");
+        jclass illegal_arg = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
+        if (illegal_arg) {
+            (*env)->ThrowNew(env, illegal_arg,
+                             "Vector dimensions mismatch: arrays must have equal length");
+            (*env)->DeleteLocalRef(env, illegal_arg);
+        }
         return 0.0f;
     }
-    
+
     jfloat *pa = (*env)->GetPrimitiveArrayCritical(env, a, NULL);
     jfloat *pb = (*env)->GetPrimitiveArrayCritical(env, b, NULL);
-    
+
     if (!pa || !pb) {
         if (pa) (*env)->ReleasePrimitiveArrayCritical(env, a, pa, JNI_ABORT);
         if (pb) (*env)->ReleasePrimitiveArrayCritical(env, b, pb, JNI_ABORT);
+
+        jclass illegal_state = (*env)->FindClass(env, "java/lang/IllegalStateException");
+        if (illegal_state) {
+            (*env)->ThrowNew(env, illegal_state, "Failed to pin input arrays for vectorDot");
+            (*env)->DeleteLocalRef(env, illegal_state);
+        }
         return 0.0f;
     }
-    
+
     float result = vop_dot(pa, pb, len_a);
-    
+
     (*env)->ReleasePrimitiveArrayCritical(env, a, pa, JNI_ABORT);
     (*env)->ReleasePrimitiveArrayCritical(env, b, pb, JNI_ABORT);
-    
+
     return result;
 }
 
@@ -494,18 +505,31 @@ Java_com_termux_lowlevel_BareMetal_memCopy(JNIEnv *env, jclass clazz,
     (void)clazz;
     jsize src_len = (*env)->GetArrayLength(env, src);
     jsize dst_len = (*env)->GetArrayLength(env, dst);
+
     if (dst_len < src_len) {
-        throw_illegal_argument(env, "Destination array is smaller than source array");
+        LOGE("memCopy destination too small: dst=%d src=%d", dst_len, src_len);
+        jclass illegal_arg = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
+        if (illegal_arg) {
+            (*env)->ThrowNew(env, illegal_arg,
+                             "Destination array length must be >= source array length");
+            (*env)->DeleteLocalRef(env, illegal_arg);
+        }
         return;
     }
-    
+
     jbyte *pd = (*env)->GetPrimitiveArrayCritical(env, dst, NULL);
     jbyte *ps = (*env)->GetPrimitiveArrayCritical(env, src, NULL);
-    
+
     if (pd && ps) {
         bmem_cpy(pd, ps, src_len);
+    } else {
+        jclass illegal_state = (*env)->FindClass(env, "java/lang/IllegalStateException");
+        if (illegal_state) {
+            (*env)->ThrowNew(env, illegal_state, "Failed to pin arrays for memCopy");
+            (*env)->DeleteLocalRef(env, illegal_state);
+        }
     }
-    
+
     if (pd) (*env)->ReleasePrimitiveArrayCritical(env, dst, pd, 0);
     if (ps) (*env)->ReleasePrimitiveArrayCritical(env, src, ps, JNI_ABORT);
 }
