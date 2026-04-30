@@ -51,7 +51,7 @@ bm_dot_neon:
     @ Horizontal add of q0
     vadd.f32    d0, d0, d1          @ Add high and low parts
     vpadd.f32   d0, d0, d0          @ Pairwise add
-    vmov.f32    r0, s0              @ Move result to return register
+    vmov        r0, s0              @ Move result to return register
     bx          lr
 
 /**

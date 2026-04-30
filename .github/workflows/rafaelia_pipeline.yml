@@ -174,6 +174,14 @@ jobs:
         run: |
           ./scripts/ci_android_preflight.sh
 
+      - name: "🧬 Prepare Bootstrap Environment"
+        run: |
+          ./scripts/prepare_bootstrap_env.sh --github-env
+
+      - name: "🧩 Validate Release Pipeline Contract"
+        run: |
+          ./scripts/validate_release_pipeline_contract.sh
+
       - name: "🧬 Validate Side-by-Side Contract"
         run: |
           ./gradlew :app:validateSideBySideContract --no-daemon
@@ -254,6 +262,10 @@ jobs:
         run: |
           ./scripts/ci_android_preflight.sh
 
+      - name: "🧬 Prepare Bootstrap Environment"
+        run: |
+          ./scripts/prepare_bootstrap_env.sh --github-env
+
       - name: "🔐 Security Check - 16KB Page Alignment"
         run: |
           echo "=========================================="
@@ -318,6 +330,10 @@ jobs:
       - name: "📦 Install Android toolchain components"
         run: |
           ./scripts/ci_android_preflight.sh
+
+      - name: "🧬 Prepare Bootstrap Environment"
+        run: |
+          ./scripts/prepare_bootstrap_env.sh --github-env
 
       - name: "🔨 Build ARM64 Debug APK"
         id: build
@@ -406,6 +422,10 @@ jobs:
       - name: "📦 Install Android toolchain components"
         run: |
           ./scripts/ci_android_preflight.sh
+
+      - name: "🧬 Prepare Bootstrap Environment"
+        run: |
+          ./scripts/prepare_bootstrap_env.sh --github-env
 
       - name: "🔐 Configure optional release signing"
         env:
@@ -501,6 +521,10 @@ jobs:
       - name: "📦 Install Android toolchain components"
         run: |
           ./scripts/ci_android_preflight.sh
+
+      - name: "🧬 Prepare Bootstrap Environment"
+        run: |
+          ./scripts/prepare_bootstrap_env.sh --github-env
 
       - name: "🔨 Build Full Debug APKs (All ABIs)"
         id: build
@@ -673,6 +697,10 @@ jobs:
         run: |
           ./scripts/ci_android_preflight.sh
 
+      - name: "🧬 Prepare Bootstrap Environment"
+        run: |
+          ./scripts/prepare_bootstrap_env.sh --github-env
+
       - name: "🧪 Run Unit Tests"
         run: |
           echo "=========================================="
@@ -726,6 +754,10 @@ jobs:
       - name: "📦 Install Android toolchain components"
         run: |
           ./scripts/ci_android_preflight.sh
+
+      - name: "🧬 Prepare Bootstrap Environment"
+        run: |
+          ./scripts/prepare_bootstrap_env.sh --github-env
 
       - name: "🔍 Android 15 Compatibility Validation"
         run: |

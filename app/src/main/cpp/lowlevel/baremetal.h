@@ -51,9 +51,6 @@
     #define HAS_NEON 1
 #endif
 
-#if defined(__aarch64__)
-    #define HAS_BM_NEON_ASM 1
-#endif
 
 #if defined(__AVX2__)
     #define HAS_AVX2 1
