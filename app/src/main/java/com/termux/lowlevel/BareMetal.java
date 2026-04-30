@@ -201,6 +201,11 @@ public class BareMetal {
      * @return Matrix handle (native pointer)
      */
     public static native long matrixCreate(int rows, int cols);
+
+    public static native long arenaCreate(long capacityBytes);
+    public static native void arenaReset(long arenaHandle);
+    public static native void arenaDestroy(long arenaHandle);
+    public static native long matrixCreateInArena(long arenaHandle, int rows, int cols);
     
     /**
      * Free matrix memory.

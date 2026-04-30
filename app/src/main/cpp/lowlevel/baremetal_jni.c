@@ -242,6 +242,10 @@ Java_com_termux_lowlevel_BareMetal_matrixMultiply(JNIEnv *env, jclass clazz,
         return;
     }
     
+    if (a->c != b->r || r->r != a->r || r->c != b->c) {
+        throw_illegal_argument(env, "Invalid matrix dimensions for multiplication");
+        return;
+    }
     mx_mul(a, b, r);
 }
 
@@ -301,6 +305,11 @@ Java_com_termux_lowlevel_BareMetal_matrixInvert(JNIEnv *env, jclass clazz,
     mx_t* m = (mx_t*)(intptr_t)handle;
     mx_t* r = (mx_t*)(intptr_t)handleResult;
     if (!m || !r) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
+        return -1;
+    }
+    if (m->r != m->c || r->r != m->r || r->c != m->c) {
+        throw_illegal_argument(env, "Invalid matrix dimensions for inversion");
         return -1;
     }
     return mx_inv(m, r);
@@ -379,6 +388,7 @@ Java_com_termux_lowlevel_BareMetal_matrixSolveLinear(JNIEnv *env, jclass clazz,
     (void)clazz;
     mx_t* m = (mx_t*)(intptr_t)handle;
     if (!m) {
+        throw_illegal_state(env, "Matrix is closed or invalid");
         return -1;
     }
     
@@ -387,6 +397,7 @@ Java_com_termux_lowlevel_BareMetal_matrixSolveLinear(JNIEnv *env, jclass clazz,
     
     if (len_b != (jsize)m->r || len_x != (jsize)m->c) {
         LOGE("Size mismatch in matrixSolveLinear");
+        throw_illegal_argument(env, "Invalid dimensions for linear solve");
         return -1;
     }
     
@@ -430,6 +441,7 @@ Java_com_termux_lowlevel_BareMetal_matrixGetData(JNIEnv *env, jclass clazz,
     
     if (len < (jsize)(m->r * m->c)) {
         LOGE("Array too small for matrix data");
+        throw_illegal_argument(env, "Array too small for matrix data");
         return;
     }
     
@@ -453,6 +465,7 @@ Java_com_termux_lowlevel_BareMetal_matrixSetData(JNIEnv *env, jclass clazz,
     
     if (len < (jsize)(m->r * m->c)) {
         LOGE("Array too small for matrix data");
+        throw_illegal_argument(env, "Array too small for matrix data");
         return;
     }
     
@@ -461,6 +474,43 @@ Java_com_termux_lowlevel_BareMetal_matrixSetData(JNIEnv *env, jclass clazz,
         bmem_cpy(m->m, pd, m->r * m->c * sizeof(float));
         (*env)->ReleasePrimitiveArrayCritical(env, data, pd, JNI_ABORT);
     }
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_termux_lowlevel_BareMetal_arenaCreate(JNIEnv *env, jclass clazz, jlong capacityBytes) {
+    (void)clazz;
+    if (capacityBytes <= 0) {
+        throw_illegal_argument(env, "Arena capacity must be > 0");
+        return 0;
+    }
+    mx_arena_t* arena = arena_create((size_t)capacityBytes);
+    if (!arena) throw_illegal_state(env, "Failed to allocate native arena");
+    return (jlong)(intptr_t)arena;
+}
+
+JNIEXPORT void JNICALL
+Java_com_termux_lowlevel_BareMetal_arenaReset(JNIEnv *env, jclass clazz, jlong arenaHandle) {
+    (void)env; (void)clazz;
+    mx_arena_t* arena = (mx_arena_t*)(intptr_t)arenaHandle;
+    if (arena) arena_reset(arena);
+}
+
+JNIEXPORT void JNICALL
+Java_com_termux_lowlevel_BareMetal_arenaDestroy(JNIEnv *env, jclass clazz, jlong arenaHandle) {
+    (void)env; (void)clazz;
+    mx_arena_t* arena = (mx_arena_t*)(intptr_t)arenaHandle;
+    if (arena) arena_destroy(arena);
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_termux_lowlevel_BareMetal_matrixCreateInArena(JNIEnv *env, jclass clazz, jlong arenaHandle, jint rows, jint cols) {
+    (void)clazz;
+    mx_arena_t* arena = (mx_arena_t*)(intptr_t)arenaHandle;
+    if (!arena) { throw_illegal_state(env, "Arena is closed or invalid"); return 0; }
+    if (rows <= 0 || cols <= 0) { throw_illegal_argument(env, "Matrix dimensions must be > 0"); return 0; }
+    mx_t* m = mx_create_in_arena(arena, (uint32_t)rows, (uint32_t)cols);
+    if (!m) throw_illegal_state(env, "Failed to allocate matrix in arena");
+    return (jlong)(intptr_t)m;
 }
 
 /* ============================================================================
@@ -566,6 +616,10 @@ static JNINativeMethod methods[] = {
     
     /* Matrix ops - basic */
     {"matrixCreate", "(II)J", (void*)Java_com_termux_lowlevel_BareMetal_matrixCreate},
+    {"matrixCreateInArena", "(JII)J", (void*)Java_com_termux_lowlevel_BareMetal_matrixCreateInArena},
+    {"arenaCreate", "(J)J", (void*)Java_com_termux_lowlevel_BareMetal_arenaCreate},
+    {"arenaReset", "(J)V", (void*)Java_com_termux_lowlevel_BareMetal_arenaReset},
+    {"arenaDestroy", "(J)V", (void*)Java_com_termux_lowlevel_BareMetal_arenaDestroy},
     {"matrixFree", "(J)V", (void*)Java_com_termux_lowlevel_BareMetal_matrixFree},
     {"matrixMultiply", "(JJJ)V", (void*)Java_com_termux_lowlevel_BareMetal_matrixMultiply},
     {"matrixTranspose", "(JJ)V", (void*)Java_com_termux_lowlevel_BareMetal_matrixTranspose},
