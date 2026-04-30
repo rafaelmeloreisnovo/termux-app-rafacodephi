@@ -21,7 +21,7 @@ ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
     LOCAL_SRC_FILES += lowlevel/baremetal_asm.S
     LOCAL_CFLAGS += -DHAS_BM_NEON_ASM=1
 endif
-LOCAL_CFLAGS := -std=c11 -Wall -Wextra -Werror -Os -fno-stack-protector
+LOCAL_CFLAGS += -std=c11 -Wall -Wextra -Werror -Os -fno-stack-protector
 LOCAL_CFLAGS += -ffast-math
 LOCAL_CFLAGS += -ffunction-sections -fdata-sections
 # Critical: 16KB page alignment for Android 15/16 compatibility

@@ -24,8 +24,7 @@ info "Preparing bootstrap environment and BLAKE3 vars"
 eval "$(./scripts/prepare_bootstrap_env.sh --print-env)"
 
 info "Building unsigned debug and release APKs"
-TERMUX_BOOTSTRAP_VALIDATION_MODE=upstream-debug-compat ./gradlew :app:assembleDebug
-./gradlew :app:assembleRelease
+./gradlew :app:assembleDebug :app:assembleRelease --no-daemon
 
 cp app/build/outputs/apk/debug/*.apk "${UNSIGNED_DIR}/"
 cp app/build/outputs/apk/release/*.apk "${UNSIGNED_DIR}/"

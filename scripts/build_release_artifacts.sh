@@ -5,6 +5,11 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist/release-artifacts"
 cd "$ROOT_DIR"
 
+if [[ "${TERMUX_BOOTSTRAP_VALIDATION_MODE:-}" == "upstream-debug-compat" ]]; then
+  echo "❌ TERMUX_BOOTSTRAP_VALIDATION_MODE=upstream-debug-compat is blocked for release artifact lanes" >&2
+  exit 9
+fi
+
 ./scripts/ensure_android_sdk.sh "$ROOT_DIR"
 eval "$(./scripts/prepare_bootstrap_env.sh --print-env)"
 
