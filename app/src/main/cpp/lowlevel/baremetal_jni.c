@@ -23,14 +23,6 @@ static void throw_illegal_state(JNIEnv *env, const char *message) {
     }
 }
 
-static void throw_illegal_argument(JNIEnv *env, const char *message) {
-    jclass illegal_arg = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
-    if (illegal_arg) {
-        (*env)->ThrowNew(env, illegal_arg, message);
-        (*env)->DeleteLocalRef(env, illegal_arg);
-    }
-}
-
 /* ============================================================================
  * Architecture and Capability Detection
  * ========================================================================== */
