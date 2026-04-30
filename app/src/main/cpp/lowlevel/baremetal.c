@@ -59,6 +59,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <assert.h>
 
 #ifdef __linux__
 #include <sys/auxv.h>
@@ -343,7 +344,9 @@ void vop_add(const float* a, const float* b, float* r, uint32_t n) {
 #if defined(HAS_BM_NEON_ASM)
     if (bm_can_use_neon_asm()) {
         const uint32_t step = bm_simd_step_f32();
+        assert(step != 0u);
         const uint32_t simd_n = n - (n % step);
+        assert(simd_n <= n);
         if (simd_n != 0) {
             bm_vadd_neon(a, b, r, simd_n);
         }
@@ -422,7 +425,9 @@ float vop_dot(const float* a, const float* b, uint32_t n) {
 #if defined(HAS_BM_NEON_ASM)
     if (bm_can_use_neon_asm()) {
         const uint32_t step = bm_simd_step_f32();
+        assert(step != 0u);
         const uint32_t simd_n = n - (n % step);
+        assert(simd_n <= n);
         float s = 0.0f;
         if (simd_n != 0) {
             s = bm_dot_neon(a, b, simd_n);
@@ -995,12 +1000,14 @@ void* bmem_cpy(void* d, const void* s, size_t n) {
 #if defined(HAS_BM_NEON_ASM)
     if (bm_can_use_neon_asm()) {
         const size_t step = bm_simd_step_u8();
+        assert(step != 0u);
         while (n != 0 && ((((uintptr_t)pd & (step - 1u)) != 0u) || (((uintptr_t)ps & (step - 1u)) != 0u))) {
             *pd++ = *ps++;
             n--;
         }
 
         const size_t simd_n = n - (n % step);
+        assert(simd_n <= n);
         if (simd_n != 0) {
             bm_memcpy_neon(pd, ps, simd_n);
             pd += simd_n;
