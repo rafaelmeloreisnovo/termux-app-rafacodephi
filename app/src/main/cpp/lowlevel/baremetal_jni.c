@@ -23,6 +23,14 @@ static void throw_illegal_state(JNIEnv *env, const char *message) {
     }
 }
 
+static void throw_illegal_argument(JNIEnv *env, const char *message) {
+    jclass illegal_arg = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
+    if (illegal_arg) {
+        (*env)->ThrowNew(env, illegal_arg, message);
+        (*env)->DeleteLocalRef(env, illegal_arg);
+    }
+}
+
 /* ============================================================================
  * Architecture and Capability Detection
  * ========================================================================== */
@@ -99,6 +107,7 @@ Java_com_termux_lowlevel_BareMetal_vectorDot(JNIEnv *env, jclass clazz,
     
     if (len_a != len_b) {
         LOGE("Vector dimensions mismatch: %d != %d", len_a, len_b);
+        throw_illegal_argument(env, "Vector dimensions mismatch: arrays must have equal length");
         return 0.0f;
     }
     
@@ -483,13 +492,18 @@ JNIEXPORT void JNICALL
 Java_com_termux_lowlevel_BareMetal_memCopy(JNIEnv *env, jclass clazz,
                                              jbyteArray dst, jbyteArray src) {
     (void)clazz;
-    jsize len = (*env)->GetArrayLength(env, src);
+    jsize src_len = (*env)->GetArrayLength(env, src);
+    jsize dst_len = (*env)->GetArrayLength(env, dst);
+    if (dst_len < src_len) {
+        throw_illegal_argument(env, "Destination array is smaller than source array");
+        return;
+    }
     
     jbyte *pd = (*env)->GetPrimitiveArrayCritical(env, dst, NULL);
     jbyte *ps = (*env)->GetPrimitiveArrayCritical(env, src, NULL);
     
     if (pd && ps) {
-        bmem_cpy(pd, ps, len);
+        bmem_cpy(pd, ps, src_len);
     }
     
     if (pd) (*env)->ReleasePrimitiveArrayCritical(env, dst, pd, 0);
