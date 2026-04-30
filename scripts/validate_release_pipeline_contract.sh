@@ -19,7 +19,7 @@ if rg -n 'LOCAL_CFLAGS.*(fno-rtti|fno-exceptions)|fno-rtti|fno-exceptions' app/s
 fi
 
 rg -q 'TARGET_ARCH_ABI\),armeabi-v7a\)' app/src/main/cpp/Android.mk || fail "Android.mk must contain armeabi-v7a branch"
-python3 - <<'PYCHK'
+if ! python3 - <<'PYCHK'
 from pathlib import Path
 text = Path('app/src/main/cpp/Android.mk').read_text()
 arm32_idx = text.find('ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)')
@@ -29,8 +29,9 @@ block = text[arm32_idx:text.find('endif', arm32_idx)]
 if 'lowlevel/baremetal_asm.S' not in block or 'HAS_BM_NEON_ASM=1' not in block:
     raise SystemExit(2)
 PYCHK
-status=$?
-[[ $status -eq 0 ]] || fail "ARM32 branch must set HAS_BM_NEON_ASM=1 when asm is built"
+then
+  fail "ARM32 branch must set HAS_BM_NEON_ASM=1 when asm is built"
+fi
 rg -q 'verifyBootstrapZipsPresent' app/build.gradle || fail "app/build.gradle must contain verifyBootstrapZipsPresent"
 for v in AARCH64 ARM I686 X86_64; do
   rg -q "TERMUX_BOOTSTRAP_BLAKE3_${v}" app/build.gradle || fail "Missing TERMUX_BOOTSTRAP_BLAKE3_${v} reference in app/build.gradle"
