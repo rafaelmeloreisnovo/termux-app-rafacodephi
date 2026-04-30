@@ -42,6 +42,29 @@ Quick how-to about Termux package management is available at [Package Management
 
 ***
 
+
+## Fork Contract: Upstream vs RAFCODEΦ
+
+### A) Termux Upstream (base)
+- Este repositório mantém o app Termux como base upstream (UI, terminal e integração padrão).
+- Pacotes do ecossistema continuam referenciando o fluxo `termux-packages`.
+
+### B) Alterações RAFCODEΦ
+- Identidade side-by-side própria: `com.termux.rafacodephi`.
+- Pipeline RAFAELIA com preparação explícita de bootstrap e validações de contrato.
+
+### C) Módulo low-level RMR
+- Módulo nativo C/ASM com JNI fino, fallback C e dispatch runtime por capacidades.
+- Sem promessa de ganho de performance sem benchmark reproduzível.
+
+### D) Compatibilidade Android 15/16
+- Binários nativos com alinhamento para page size 16KB via linker flags.
+- ABIs validadas na trilha de build: `armeabi-v7a`, `arm64-v8a`, `x86_64` (e universal quando gerado).
+
+### E) Bootstrap e Signing
+- Bootstraps obrigatórios e hashes BLAKE3 verificados antes de builds críticos.
+- Signing oficial é opt-in e separado da trilha unsigned interna de validação.
+
 ## 🚀 Termux RAFCODEΦ - Android 15/16 Ready
 
 **This fork is fully compatible with Android 15/16 and can be installed side-by-side with official Termux.**
@@ -220,7 +243,6 @@ For local builds in this repository, bootstrap ZIPs under `app/src/main/cpp/boot
 If your local environment only has upstream bootstrap archives (without `BOOTSTRAP_INFO` for this fork), you can use an **explicit debug-only validation track**:
 
 ```bash
-export TERMUX_BOOTSTRAP_VALIDATION_MODE=upstream-debug-compat
 ./gradlew assembleDebug
 ```
 

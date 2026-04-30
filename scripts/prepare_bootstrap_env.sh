@@ -12,11 +12,11 @@ elif [[ $# -gt 0 ]]; then
   exit 1
 fi
 
-./scripts/ci_android_preflight.sh
-./gradlew :app:downloadBootstraps --no-daemon
+./scripts/ci_android_preflight.sh >&2
+./gradlew :app:downloadBootstraps --no-daemon >&2
 
 if ! python3 -c 'import blake3' >/dev/null 2>&1; then
-  python3 -m pip install --user blake3
+  python3 -m pip install --user blake3 >&2
 fi
 
 readarray -t HASH_LINES < <(python3 - <<'PY'
