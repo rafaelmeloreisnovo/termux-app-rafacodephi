@@ -88,6 +88,39 @@ adb install app/build/outputs/apk/debug/termux-app_apt-android-7-debug_universal
 ./scripts/diagnose.sh
 ```
 
+### Build/release pipeline local (bootstrap + BLAKE3)
+
+Para manter a mesma coerência do CI RAFAELIA localmente:
+
+```bash
+# Prepara SDK/NDK, baixa bootstraps e exporta hashes BLAKE3
+# para o shell atual.
+eval "$(./scripts/prepare_bootstrap_env.sh --print-env)"
+
+# Build debug/release (split APKs habilitado)
+./scripts/build_release_artifacts.sh
+
+# Matriz completa de artefatos + assinatura local auxiliar + SHA256
+./scripts/build_apk_matrix.sh
+```
+
+Variáveis exportadas por `prepare_bootstrap_env.sh`:
+
+- `TERMUX_BOOTSTRAP_BLAKE3_AARCH64`
+- `TERMUX_BOOTSTRAP_BLAKE3_ARM`
+- `TERMUX_BOOTSTRAP_BLAKE3_I686`
+- `TERMUX_BOOTSTRAP_BLAKE3_X86_64`
+
+Release signing oficial é opcional e controlado por:
+
+- `TERMUX_ENABLE_RELEASE_SIGNING`
+- `TERMUX_RELEASE_KEYSTORE_FILE`
+- `TERMUX_RELEASE_KEYSTORE_PASSWORD`
+- `TERMUX_RELEASE_KEY_ALIAS`
+- `TERMUX_RELEASE_KEY_PASSWORD`
+
+O módulo nativo mantém dispatch runtime com fallback C seguro para ARM32/ARM64 quando NEON ASM não estiver disponível em runtime.
+
 ### Requisitos mínimos para scripts de sincronização/export
 
 Os scripts de metadados Termux desta fork não dependem mais de Python e usam um utilitário C autoral em `rafaelia/src/main/cpp/tools/`.

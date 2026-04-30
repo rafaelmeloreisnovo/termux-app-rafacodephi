@@ -17,28 +17,11 @@ cd "${ROOT_DIR}"
 
 info "Provisioning Android SDK/NDK/CMake"
 ./scripts/ensure_android_sdk.sh "${ROOT_DIR}"
-./scripts/ci_android_preflight.sh
 
 mkdir -p "${UNSIGNED_DIR}" "${SIGNED_DIR}" "$(dirname "${KEYSTORE_PATH}")"
 
-info "Syncing bootstrap archives"
-./gradlew :app:downloadBootstraps
-
-if ! python3 -c 'import blake3' >/dev/null 2>&1; then
-  info "Installing missing python dependency: blake3"
-  python3 -m pip install --user blake3 >/dev/null
-fi
-
-read -r TERMUX_BOOTSTRAP_BLAKE3_AARCH64 TERMUX_BOOTSTRAP_BLAKE3_ARM TERMUX_BOOTSTRAP_BLAKE3_I686 TERMUX_BOOTSTRAP_BLAKE3_X86_64 < <(
-python3 - <<'PY'
-from pathlib import Path
-from blake3 import blake3
-base = Path('app/src/main/cpp')
-files = ['bootstrap-aarch64.zip','bootstrap-arm.zip','bootstrap-i686.zip','bootstrap-x86_64.zip']
-print(' '.join(blake3((base/f).read_bytes()).hexdigest() for f in files))
-PY
-)
-export TERMUX_BOOTSTRAP_BLAKE3_AARCH64 TERMUX_BOOTSTRAP_BLAKE3_ARM TERMUX_BOOTSTRAP_BLAKE3_I686 TERMUX_BOOTSTRAP_BLAKE3_X86_64
+info "Preparing bootstrap environment and BLAKE3 vars"
+eval "$(./scripts/prepare_bootstrap_env.sh --print-env)"
 
 info "Building unsigned debug and release APKs"
 TERMUX_BOOTSTRAP_VALIDATION_MODE=upstream-debug-compat ./gradlew :app:assembleDebug
