@@ -29,6 +29,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -164,12 +165,19 @@ final class TermuxInstaller {
 
                     final byte[] buffer = new byte[8096];
                     final List<Pair<String, String>> symlinks = new ArrayList<>(50);
+                    long totalEntries = 0;
+                    long totalFiles = 0;
+                    long totalDirs = 0;
+                    long totalSymlinks = 0;
+                    long totalBytesExtracted = 0;
+                    final String canonicalStagingPrefix = TERMUX_STAGING_PREFIX_DIR.getCanonicalPath() + "/";
 
                     final byte[] zipBytes = loadZipBytes();
                     verifyBootstrapZipIntegrity(zipBytes);
                     try (ZipInputStream zipInput = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
                         ZipEntry zipEntry;
                         while ((zipEntry = zipInput.getNextEntry()) != null) {
+                            totalEntries++;
                             if (zipEntry.getName().equals("SYMLINKS.txt")) {
                                 BufferedReader symlinksReader = new BufferedReader(new InputStreamReader(zipInput));
                                 String line;
@@ -178,8 +186,14 @@ final class TermuxInstaller {
                                     if (parts.length != 2)
                                         throw new RuntimeException("Malformed symlink line: " + line);
                                     String oldPath = parts[0];
-                                    String newPath = TERMUX_STAGING_PREFIX_DIR_PATH + "/" + parts[1];
+                                    String linkDestination = parts[1];
+                                    if (linkDestination.startsWith("/") || linkDestination.contains("..")) {
+                                        throw new RuntimeException("Unsafe symlink destination in SYMLINKS.txt: " + line);
+                                    }
+                                    String newPath = TERMUX_STAGING_PREFIX_DIR_PATH + "/" + linkDestination;
+                                    validatePathInStaging(canonicalStagingPrefix, new File(newPath), "symlink destination");
                                     symlinks.add(Pair.create(oldPath, newPath));
+                                    totalSymlinks++;
 
                                     error = ensureDirectoryExists(new File(newPath).getParentFile());
                                     if (error != null) {
@@ -189,7 +203,9 @@ final class TermuxInstaller {
                                 }
                             } else {
                                 String zipEntryName = zipEntry.getName();
+                                validateZipEntryName(zipEntryName);
                                 File targetFile = new File(TERMUX_STAGING_PREFIX_DIR_PATH, zipEntryName);
+                                validatePathInStaging(canonicalStagingPrefix, targetFile, "zip entry");
                                 boolean isDirectory = zipEntry.isDirectory();
 
                                 error = ensureDirectoryExists(isDirectory ? targetFile : targetFile.getParentFile());
@@ -201,9 +217,12 @@ final class TermuxInstaller {
                                 if (!isDirectory) {
                                     try (FileOutputStream outStream = new FileOutputStream(targetFile)) {
                                         int readBytes;
-                                        while ((readBytes = zipInput.read(buffer)) != -1)
+                                        while ((readBytes = zipInput.read(buffer)) != -1) {
                                             outStream.write(buffer, 0, readBytes);
+                                            totalBytesExtracted += readBytes;
+                                        }
                                     }
+                                    totalFiles++;
                                     if (zipEntryName.startsWith("bin/") || zipEntryName.startsWith("libexec") ||
                                         zipEntryName.startsWith("lib/apt/apt-helper") || zipEntryName.startsWith("lib/apt/methods")) {
                                         setPosixMode(targetFile, 0700, "executable bootstrap payload");
@@ -211,11 +230,15 @@ final class TermuxInstaller {
                                         setPosixMode(targetFile, 0600, "bootstrap payload");
                                     }
                                 } else {
+                                    totalDirs++;
                                     setPosixMode(targetFile, 0700, "bootstrap directory");
                                 }
                             }
                         }
                     }
+                    Logger.logInfo(LOG_TAG, "Bootstrap extraction stats: entries=" + totalEntries +
+                        ", files=" + totalFiles + ", dirs=" + totalDirs + ", symlinks=" + totalSymlinks +
+                        ", bytes=" + totalBytesExtracted);
 
                     if (symlinks.isEmpty())
                         throw new RuntimeException("No SYMLINKS.txt encountered");
@@ -424,6 +447,19 @@ final class TermuxInstaller {
 
     private static Error ensureDirectoryExists(File directory) {
         return FileUtils.createDirectoryFile(directory.getAbsolutePath());
+    }
+
+    private static void validateZipEntryName(String zipEntryName) {
+        if (zipEntryName.startsWith("/") || zipEntryName.contains("..")) {
+            throw new RuntimeException("Unsafe zip entry name: " + zipEntryName);
+        }
+    }
+
+    private static void validatePathInStaging(String canonicalStagingPrefix, File path, String label) throws IOException {
+        String canonicalTarget = path.getCanonicalPath();
+        if (!canonicalTarget.startsWith(canonicalStagingPrefix)) {
+            throw new RuntimeException("Unsafe " + label + " outside staging prefix: " + canonicalTarget);
+        }
     }
 
     public static byte[] loadZipBytes() {
