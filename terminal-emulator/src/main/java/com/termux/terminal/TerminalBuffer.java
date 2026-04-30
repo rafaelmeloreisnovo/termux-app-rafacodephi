@@ -364,8 +364,10 @@ public final class TerminalBuffer {
             cursor[1] = newCursorRow;
         }
 
-        // Handle cursor scrolling off screen:
+        // resize_shadow tail guard: never publish cursor outside visible bounds.
         if (cursor[0] < 0 || cursor[1] < 0) cursor[0] = cursor[1] = 0;
+        if (cursor[0] >= mColumns) cursor[0] = mColumns - 1;
+        if (cursor[1] >= mScreenRows) cursor[1] = mScreenRows - 1;
     }
 
     /**
