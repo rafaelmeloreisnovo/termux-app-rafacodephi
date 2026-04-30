@@ -16,7 +16,7 @@ fail() { printf '\n[build_apk_matrix] ERROR: %s\n' "$*" >&2; exit 1; }
 cd "${ROOT_DIR}"
 
 info "Provisioning Android SDK/NDK/CMake"
-./scripts/ensure_android_sdk.sh "${ROOT_DIR}"
+./scripts/setup_android_toolchain.sh
 
 mkdir -p "${UNSIGNED_DIR}" "${SIGNED_DIR}" "$(dirname "${KEYSTORE_PATH}")"
 

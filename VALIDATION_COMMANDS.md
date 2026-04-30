@@ -129,3 +129,12 @@ Steps:
 3. The workflow executes:
    - Checkout repository
    - `gradle/actions/wrapper-validation@v5` to verify the wrapper artifacts
+
+## APK matrix (assinado + não assinado)
+
+```bash
+./scripts/build_apk_matrix.sh
+```
+
+No GitHub Actions, execute o workflow manual `APK Matrix Build (signed + unsigned)` para gerar e publicar artefatos em `dist/apk-matrix/`.
+
