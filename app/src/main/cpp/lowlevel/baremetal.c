@@ -59,6 +59,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <assert.h>
 
 #ifdef __linux__
 #include <sys/auxv.h>
@@ -343,7 +344,9 @@ void vop_add(const float* a, const float* b, float* r, uint32_t n) {
 #if defined(HAS_BM_NEON_ASM)
     if (bm_can_use_neon_asm()) {
         const uint32_t step = bm_simd_step_f32();
+        assert(step != 0u);
         const uint32_t simd_n = n - (n % step);
+        assert(simd_n <= n);
         if (simd_n != 0) {
             bm_vadd_neon(a, b, r, simd_n);
         }
@@ -422,7 +425,9 @@ float vop_dot(const float* a, const float* b, uint32_t n) {
 #if defined(HAS_BM_NEON_ASM)
     if (bm_can_use_neon_asm()) {
         const uint32_t step = bm_simd_step_f32();
+        assert(step != 0u);
         const uint32_t simd_n = n - (n % step);
+        assert(simd_n <= n);
         float s = 0.0f;
         if (simd_n != 0) {
             s = bm_dot_neon(a, b, simd_n);
@@ -455,6 +460,56 @@ float vop_norm(const float* a, uint32_t n) {
 
 /* Simple memory allocation - using stdlib for now */
 #include <stdlib.h>
+
+
+static size_t align_up_size(size_t value, size_t alignment) {
+    if (alignment == 0) return value;
+    size_t mask = alignment - 1;
+    return (value + mask) & ~mask;
+}
+
+mx_arena_t* arena_create(size_t capacity_bytes) {
+    if (capacity_bytes == 0) return NULL;
+    mx_arena_t* arena = (mx_arena_t*)malloc(sizeof(mx_arena_t));
+    if (!arena) return NULL;
+    arena->base = (unsigned char*)malloc(capacity_bytes);
+    if (!arena->base) { free(arena); return NULL; }
+    arena->cap = capacity_bytes;
+    arena->off = 0;
+    return arena;
+}
+
+void* arena_alloc(mx_arena_t* arena, size_t size_bytes, size_t alignment) {
+    if (!arena || !arena->base || size_bytes == 0) return NULL;
+    if (alignment == 0) alignment = sizeof(void*);
+    size_t aligned = align_up_size(arena->off, alignment);
+    if (aligned > arena->cap || size_bytes > (arena->cap - aligned)) return NULL;
+    void* ptr = arena->base + aligned;
+    arena->off = aligned + size_bytes;
+    return ptr;
+}
+
+void arena_reset(mx_arena_t* arena) { if (arena) arena->off = 0; }
+
+void arena_destroy(mx_arena_t* arena) {
+    if (!arena) return;
+    free(arena->base);
+    free(arena);
+}
+
+mx_t* mx_create_in_arena(mx_arena_t* arena, uint32_t r, uint32_t c) {
+    if (!arena || r == 0 || c == 0) return NULL;
+    if (r > (UINT32_MAX / c)) return NULL;
+    size_t count = (size_t)r * (size_t)c;
+    if (count > (SIZE_MAX / sizeof(float))) return NULL;
+    mx_t* m = (mx_t*)arena_alloc(arena, sizeof(mx_t), _Alignof(mx_t));
+    if (!m) return NULL;
+    m->m = (float*)arena_alloc(arena, count * sizeof(float), _Alignof(float));
+    if (!m->m) return NULL;
+    m->r = r; m->c = c;
+    bmem_zero(m->m, count * sizeof(float));
+    return m;
+}
 
 static inline float fm_abs(float x) {
     return (x < 0.0f) ? -x : x;
@@ -945,12 +1000,14 @@ void* bmem_cpy(void* d, const void* s, size_t n) {
 #if defined(HAS_BM_NEON_ASM)
     if (bm_can_use_neon_asm()) {
         const size_t step = bm_simd_step_u8();
+        assert(step != 0u);
         while (n != 0 && ((((uintptr_t)pd & (step - 1u)) != 0u) || (((uintptr_t)ps & (step - 1u)) != 0u))) {
             *pd++ = *ps++;
             n--;
         }
 
         const size_t simd_n = n - (n % step);
+        assert(simd_n <= n);
         if (simd_n != 0) {
             bm_memcpy_neon(pd, ps, simd_n);
             pd += simd_n;

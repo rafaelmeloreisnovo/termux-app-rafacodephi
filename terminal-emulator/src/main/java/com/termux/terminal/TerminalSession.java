@@ -128,7 +128,15 @@ public final class TerminalSession extends TerminalOutput {
         mShellPid = processId[0];
         mClient.setTerminalShellPid(this, mShellPid);
 
-        final FileDescriptor terminalFileDescriptorWrapped = wrapFileDescriptor(mTerminalFileDescriptor, mClient);
+        final FileDescriptor terminalFileDescriptorWrapped;
+        try {
+            terminalFileDescriptorWrapped = wrapFileDescriptor(mTerminalFileDescriptor, mClient);
+        } catch (IllegalStateException e) {
+            Logger.logStackTraceWithMessage(mClient, LOG_TAG, "Failed to initialize terminal emulator I/O", e);
+            cleanupResources(1);
+            mClient.onSessionFinished(this);
+            return;
+        }
 
         new Thread("TermSessionInputReader[pid=" + mShellPid + "]") {
             @Override
@@ -278,7 +286,7 @@ public final class TerminalSession extends TerminalOutput {
     }
 
     public synchronized boolean isRunning() {
-        return mShellPid != -1;
+        return mShellPid > 0;
     }
 
     /** Only valid if not {@link #isRunning()}. */
@@ -345,7 +353,7 @@ public final class TerminalSession extends TerminalOutput {
             descriptorField.set(result, fileDescriptor);
         } catch (NoSuchFieldException | IllegalAccessException | IllegalArgumentException e) {
             Logger.logStackTraceWithMessage(client, LOG_TAG, "Error accessing FileDescriptor#descriptor private field", e);
-            System.exit(1);
+            throw new IllegalStateException("Failed to wrap terminal file descriptor", e);
         }
         return result;
     }

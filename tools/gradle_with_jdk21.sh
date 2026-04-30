@@ -20,4 +20,11 @@ if [[ -n "${JAVA_HOME:-}" && -x "$JAVA_HOME/bin/java" ]]; then
   export PATH="$JAVA_HOME/bin:$PATH"
 fi
 
+if [[ "${SKIP_ANDROID_TOOLCHAIN_SETUP:-0}" != "1" ]]; then
+  if [[ ! -f "$ROOT_DIR/local.properties" ]] || ! grep -q '^sdk.dir=' "$ROOT_DIR/local.properties"; then
+    echo "[gradle_with_jdk21] sdk.dir missing, running scripts/setup_android_toolchain.sh"
+    "$ROOT_DIR/scripts/setup_android_toolchain.sh"
+  fi
+fi
+
 exec "$ROOT_DIR/gradlew" "$@"

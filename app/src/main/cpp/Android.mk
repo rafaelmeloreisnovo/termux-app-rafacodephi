@@ -15,12 +15,14 @@ LOCAL_SRC_FILES := lowlevel/baremetal.c lowlevel/baremetal_jni.c
 # Assembly optimizations enabled when the target ABI guarantees SIMD support
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
     LOCAL_SRC_FILES += lowlevel/baremetal_asm.S
+    LOCAL_CFLAGS += -DHAS_BM_NEON_ASM=1
 endif
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
     LOCAL_SRC_FILES += lowlevel/baremetal_asm.S
+    LOCAL_CFLAGS += -DHAS_BM_NEON_ASM=1
 endif
-LOCAL_CFLAGS := -std=c11 -Wall -Wextra -Werror -Os -fno-stack-protector
-LOCAL_CFLAGS += -ffast-math -fno-exceptions -fno-rtti
+LOCAL_CFLAGS += -std=c11 -Wall -Wextra -Werror -Os -fno-stack-protector
+LOCAL_CFLAGS += -ffast-math
 LOCAL_CFLAGS += -ffunction-sections -fdata-sections
 # Critical: 16KB page alignment for Android 15/16 compatibility
 LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384
@@ -28,7 +30,7 @@ LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384
 # Architecture-specific optimizations
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
     # Keep ARM32 baseline-compatible and rely on runtime capability checks.
-    LOCAL_CFLAGS += -march=armv7-a -mfloat-abi=softfp -ftree-vectorize
+    LOCAL_CFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon -ftree-vectorize
 endif
 
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)

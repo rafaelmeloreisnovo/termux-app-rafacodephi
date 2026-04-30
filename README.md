@@ -42,6 +42,29 @@ Quick how-to about Termux package management is available at [Package Management
 
 ***
 
+
+## Fork Contract: Upstream vs RAFCODEΦ
+
+### A) Termux Upstream (base)
+- Este repositório mantém o app Termux como base upstream (UI, terminal e integração padrão).
+- Pacotes do ecossistema continuam referenciando o fluxo `termux-packages`.
+
+### B) Alterações RAFCODEΦ
+- Identidade side-by-side própria: `com.termux.rafacodephi`.
+- Pipeline RAFAELIA com preparação explícita de bootstrap e validações de contrato.
+
+### C) Módulo low-level RMR
+- Módulo nativo C/ASM com JNI fino, fallback C e dispatch runtime por capacidades.
+- Sem promessa de ganho de performance sem benchmark reproduzível.
+
+### D) Compatibilidade Android 15/16
+- Binários nativos com alinhamento para page size 16KB via linker flags.
+- ABIs validadas na trilha de build: `armeabi-v7a`, `arm64-v8a`, `x86_64` (e universal quando gerado).
+
+### E) Bootstrap e Signing
+- Bootstraps obrigatórios e hashes BLAKE3 verificados antes de builds críticos.
+- Signing oficial é opt-in e separado da trilha unsigned interna de validação.
+
 ## 🚀 Termux RAFCODEΦ - Android 15/16 Ready
 
 **This fork is fully compatible with Android 15/16 and can be installed side-by-side with official Termux.**
@@ -53,7 +76,7 @@ Quick how-to about Termux package management is available at [Package Management
 - Android 16 Beta (all devices)
 - Devices with kernel 5.15.178+ (like RMX3834)
 
-Without this fix, apps crash with SIGSEGV on startup. **This fork is patched and production-ready.**
+Without this fix, apps crash with SIGSEGV on startup. **This fork includes the compatibility patch; validate in your own environment before production release.**
 
 📖 See [Android 16 Page Size Fix Documentation](./ANDROID16_PAGE_SIZE_FIX.md) for technical details.
 
@@ -61,7 +84,7 @@ Without this fix, apps crash with SIGSEGV on startup. **This fork is patched and
 - ✅ **Package Name**: `com.termux.rafacodephi` (unique, no conflicts)
 - ✅ **App Name**: `Termux RAFCODEΦ` (distinct branding)
 - ✅ **Side-by-Side**: Install alongside official Termux without conflicts
-- ✅ **Android 15/16**: Optimized with 16KB page alignment and Phantom Process Killer handling
+- ✅ **Android 15/16**: Configured for 16KB page alignment and Phantom Process Killer handling
 - ✅ **Zero Collisions**: Unique authorities, permissions, and data directories
 - ✅ **Bare-Metal**: NEON/SIMD optimized native code with pthread support
 
@@ -87,6 +110,39 @@ adb install app/build/outputs/apk/debug/termux-app_apt-android-7-debug_universal
 # Diagnose
 ./scripts/diagnose.sh
 ```
+
+### Build/release pipeline local (bootstrap + BLAKE3)
+
+Para manter a mesma coerência do CI RAFAELIA localmente:
+
+```bash
+# Prepara SDK/NDK, baixa bootstraps e exporta hashes BLAKE3
+# para o shell atual.
+eval "$(./scripts/prepare_bootstrap_env.sh --print-env)"
+
+# Build debug/release (split APKs habilitado)
+./scripts/build_release_artifacts.sh
+
+# Matriz completa de artefatos + assinatura local auxiliar + SHA256
+./scripts/build_apk_matrix.sh
+```
+
+Variáveis exportadas por `prepare_bootstrap_env.sh`:
+
+- `TERMUX_BOOTSTRAP_BLAKE3_AARCH64`
+- `TERMUX_BOOTSTRAP_BLAKE3_ARM`
+- `TERMUX_BOOTSTRAP_BLAKE3_I686`
+- `TERMUX_BOOTSTRAP_BLAKE3_X86_64`
+
+Release signing oficial é opcional e controlado por:
+
+- `TERMUX_ENABLE_RELEASE_SIGNING`
+- `TERMUX_RELEASE_KEYSTORE_FILE`
+- `TERMUX_RELEASE_KEYSTORE_PASSWORD`
+- `TERMUX_RELEASE_KEY_ALIAS`
+- `TERMUX_RELEASE_KEY_PASSWORD`
+
+O módulo nativo mantém dispatch runtime com fallback C seguro para ARM32/ARM64 quando NEON ASM não estiver disponível em runtime.
 
 ### Requisitos mínimos para scripts de sincronização/export
 
@@ -187,7 +243,6 @@ For local builds in this repository, bootstrap ZIPs under `app/src/main/cpp/boot
 If your local environment only has upstream bootstrap archives (without `BOOTSTRAP_INFO` for this fork), you can use an **explicit debug-only validation track**:
 
 ```bash
-export TERMUX_BOOTSTRAP_VALIDATION_MODE=upstream-debug-compat
 ./gradlew assembleDebug
 ```
 
@@ -530,3 +585,14 @@ Every contribution, no matter how small, is significant and acknowledged. Even a
 ### Trademark Notice
 
 "Termux" is a trademark of the original Termux project. This fork is not officially endorsed by or affiliated with the original Termux project, though it maintains full compliance with the GPLv3 license under which Termux is released.
+
+
+## Security and release policy (RAFCODEΦ)
+
+- Package name oficial e único: `com.termux.rafacodephi`.
+- Keystores/chaves de release não devem ser versionados; use apenas variáveis de ambiente para signing oficial.
+- Trilha interna unsigned é somente para validação técnica, nunca para release oficial.
+- `TERMUX_BOOTSTRAP_VALIDATION_MODE=upstream-debug-compat` é bloqueado nos scripts de release.
+- Hashes de bootstrap BLAKE3 e SHA256 são gerados por `scripts/prepare_bootstrap_env.sh`.
+
+ABIs validadas na trilha de build local: `armeabi-v7a`, `arm64-v8a` e `x86_64`.

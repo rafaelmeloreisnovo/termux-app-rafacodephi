@@ -51,9 +51,6 @@
     #define HAS_NEON 1
 #endif
 
-#if defined(__aarch64__)
-    #define HAS_BM_NEON_ASM 1
-#endif
 
 #if defined(__AVX2__)
     #define HAS_AVX2 1
@@ -91,6 +88,20 @@ extern float bm_dot_neon(const float* a, const float* b, uint32_t n);
 extern void bm_vadd_neon(const float* a, const float* b, float* r, uint32_t n);
 extern void* bm_memcpy_neon(void* d, const void* s, size_t n);
 #endif
+
+
+
+typedef struct {
+    unsigned char* base;
+    size_t cap;
+    size_t off;
+} mx_arena_t;
+
+mx_arena_t* arena_create(size_t capacity_bytes);
+void* arena_alloc(mx_arena_t* arena, size_t size_bytes, size_t alignment);
+void arena_reset(mx_arena_t* arena);
+void arena_destroy(mx_arena_t* arena);
+mx_t* mx_create_in_arena(mx_arena_t* arena, uint32_t r, uint32_t c);
 
 /* Matrix operations - deterministic mathematics */
 mx_t* mx_create(uint32_t r, uint32_t c);

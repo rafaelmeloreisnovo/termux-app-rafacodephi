@@ -230,10 +230,16 @@ public class RunCommandService extends Service {
         }
 
         // Start TERMUX_SERVICE and pass it execution intent
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            this.startForegroundService(execIntent);
-        } else {
-            this.startService(execIntent);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                this.startForegroundService(execIntent);
+            } else {
+                this.startService(execIntent);
+            }
+        } catch (Exception e) {
+            errmsg = this.getString(R.string.error_run_command_service_failed_to_execute_run_command_intent);
+            executionCommand.setStateFailed(Errno.ERRNO_FAILED.getCode(), errmsg, e);
+            TermuxPluginUtils.processPluginExecutionCommandError(this, LOG_TAG, executionCommand, false);
         }
 
         return stopService();

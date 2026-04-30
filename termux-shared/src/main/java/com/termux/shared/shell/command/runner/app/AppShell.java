@@ -28,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A class that maintains info for background app shells run with {@link Runtime#exec(String[], String[], File)}.
@@ -41,6 +42,7 @@ public final class AppShell {
     private final AppShellClient mAppShellClient;
 
     private static final String LOG_TAG = "AppShell";
+    private static final long APP_SHELL_TIMEOUT_MILLIS = 10 * 60 * 1000L;
 
     private AppShell(@NonNull final Process process, @NonNull final ExecutionCommand executionCommand,
                      final AppShellClient appShellClient) {
@@ -143,7 +145,7 @@ public final class AppShell {
                 appShell.handleExecuteInnerFailure(currentPackageContext, e);
             }
         } else {
-            new Thread() {
+            Thread appShellThread = new Thread() {
                 @Override
                 public void run() {
                     try {
@@ -152,7 +154,9 @@ public final class AppShell {
                         appShell.handleExecuteInnerFailure(currentPackageContext, e);
                     }
                 }
-            }.start();
+            };
+            appShellThread.setName(getAppShellThreadName(executionCommand));
+            appShellThread.start();
         }
 
         return appShell;
@@ -211,10 +215,26 @@ public final class AppShell {
                     return;
                 }
             }
+        } else {
+            try {
+                STDIN.close();
+            } catch (IOException e) {
+                // might be closed already
+            }
         }
 
         // wait for our process to finish, while we gobble away in the background
-        int exitCode = mProcess.waitFor();
+        boolean processExited = mProcess.waitFor(APP_SHELL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+        if (!processExited) {
+            mExecutionCommand.setStateFailed(Errno.ERRNO_FAILED.getCode(),
+                context.getString(R.string.error_exception_received_while_executing_app_shell_command,
+                    mExecutionCommand.getCommandIdAndLabelLogString(), "Process timed out"));
+            mExecutionCommand.resultData.exitCode = 124;
+            AppShell.processAppShellResult(this, null);
+            kill();
+            return;
+        }
+        int exitCode = mProcess.exitValue();
 
         // make sure our threads are done gobbling
         // and the process is destroyed - while the latter shouldn't be
@@ -269,7 +289,7 @@ public final class AppShell {
     }
 
     /**
-     * Kill this {@link AppShell} by sending a {@link OsConstants#SIGILL} to its {@link #mProcess}
+     * Kill this {@link AppShell} by sending a {@link OsConstants#SIGKILL} to its {@link #mProcess}
      * if its still executing.
      *
      * @param context The {@link Context} for operations.
@@ -298,16 +318,24 @@ public final class AppShell {
     }
 
     /**
-     * Kill this {@link AppShell} by sending a {@link OsConstants#SIGILL} to its {@link #mProcess}.
+     * Kill this {@link AppShell} by sending a {@link OsConstants#SIGKILL} to its {@link #mProcess}.
      */
     public void kill() {
         int pid = ShellUtils.getPid(mProcess);
         try {
             // Send SIGKILL to process
-            Os.kill(pid, OsConstants.SIGKILL);
+            if (pid > 0)
+                Os.kill(pid, OsConstants.SIGKILL);
         } catch (ErrnoException e) {
             Logger.logWarn(LOG_TAG, "Failed to send SIGKILL to \"" + mExecutionCommand.getCommandIdAndLabelLogString() + "\" AppShell with pid " + pid + ": " + e.getMessage());
+        } finally {
+            mProcess.destroy();
         }
+    }
+
+    private static String getAppShellThreadName(@NonNull ExecutionCommand executionCommand) {
+        String name = "AppShell[" + executionCommand.getCommandIdAndLabelLogString() + "]";
+        return name.length() > 64 ? name.substring(0, 64) : name;
     }
 
     /**

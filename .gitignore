@@ -37,3 +37,9 @@ local.properties
 .swp
 ehthumbs.db
 Thumbs.db
+
+# Local signing/build artifacts
+dist/*.keystore
+dist/*.jks
+*.keystore
+*.jks

@@ -1,0 +1,32 @@
+name: APK Matrix Build (signed + unsigned)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-apk-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK/NDK
+        run: ./scripts/setup_android_toolchain.sh
+
+      - name: Build signed + unsigned APK matrix
+        run: ./scripts/build_apk_matrix.sh
+
+      - name: Upload APK matrix artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-apk-matrix-${{ github.sha }}
+          path: |
+            dist/apk-matrix/**
+            dist/local-release.keystore
+          if-no-files-found: error
