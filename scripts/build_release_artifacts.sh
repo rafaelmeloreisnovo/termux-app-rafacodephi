@@ -45,6 +45,13 @@ else
 fi
 
 ( cd "$DIST_DIR" && sha256sum *.apk > SHA256SUMS.txt )
+( cd "$DIST_DIR" && {
+  echo "artifact_dir=$DIST_DIR";
+  echo "generated_at_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)";
+  echo "signing_status=$signing_status";
+  echo "required_abis=armeabi-v7a,arm64-v8a,x86_64";
+  find . -maxdepth 1 -type f -name "*.apk" -printf "%f\n" | sort;
+} > ARTIFACT_MANIFEST.txt )
 
 echo "== Release Artifact Summary =="
 echo "debug_apks=${debug_count}"
@@ -52,4 +59,5 @@ echo "release_apks=${release_count}"
 echo "abis=armeabi-v7a,arm64-v8a,x86_64"
 echo "universal_apks=${universal_count}"
 echo "signing_status=${signing_status}"
+cat "$DIST_DIR/ARTIFACT_MANIFEST.txt"
 cat "$DIST_DIR/SHA256SUMS.txt"
