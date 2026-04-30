@@ -23,9 +23,9 @@ mkdir -p "${UNSIGNED_DIR}" "${SIGNED_DIR}" "$(dirname "${KEYSTORE_PATH}")"
 info "Preparing bootstrap environment and BLAKE3 vars"
 eval "$(./scripts/prepare_bootstrap_env.sh --print-env)"
 
-info "Building unsigned debug and release APKs"
-TERMUX_BOOTSTRAP_VALIDATION_MODE=upstream-debug-compat ./gradlew :app:assembleDebug
-./gradlew :app:assembleRelease
+info "Building unsigned debug + release APKs via single Gradle pipeline"
+# Keep upstream-debug-compat validation enabled for debug in the unified build path.
+TERMUX_BOOTSTRAP_VALIDATION_MODE=upstream-debug-compat ./gradlew --no-daemon :app:assembleDebug :app:assembleRelease
 
 cp app/build/outputs/apk/debug/*.apk "${UNSIGNED_DIR}/"
 cp app/build/outputs/apk/release/*.apk "${UNSIGNED_DIR}/"
