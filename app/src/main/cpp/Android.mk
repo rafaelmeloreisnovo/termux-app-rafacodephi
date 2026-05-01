@@ -11,7 +11,7 @@ include $(BUILD_SHARED_LIBRARY)
 # Bare-metal low-level library
 include $(CLEAR_VARS)
 LOCAL_MODULE := termux-baremetal
-LOCAL_SRC_FILES := lowlevel/baremetal.c lowlevel/baremetal_jni.c
+LOCAL_SRC_FILES := lowlevel/baremetal.c lowlevel/baremetal_jni.c lowlevel/rafaelia_gpu_orchestrator.c
 # Assembly optimizations enabled when the target ABI guarantees SIMD support
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
     LOCAL_SRC_FILES += lowlevel/baremetal_asm.S
@@ -46,5 +46,5 @@ ifeq ($(TARGET_ARCH_ABI),x86_64)
 endif
 
 # Link against log and math libraries
-LOCAL_LDLIBS := -llog -lm
+LOCAL_LDLIBS := -llog -lm -ldl
 include $(BUILD_SHARED_LIBRARY)
