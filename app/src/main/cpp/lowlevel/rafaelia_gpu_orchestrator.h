@@ -1,0 +1,27 @@
+#ifndef RAFAELIA_GPU_ORCHESTRATOR_H
+#define RAFAELIA_GPU_ORCHESTRATOR_H
+
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define RGO_OK 0
+#define RGO_ERR_ARGS -1
+#define RGO_ERR_DLOPEN -2
+#define RGO_ERR_DLSYM -3
+
+int rgpu_probe_opencl(void);
+int rgpu_probe_vulkan(void);
+void rcpu_map_toroidal(uint32_t cpu_count, uint32_t* zones, uint32_t zone_cap);
+uint32_t rcrc32_sw(const uint8_t* data, uint32_t len);
+uint32_t rscheduler_pick_core(uint32_t task_hz_q16);
+void rscheduler_set_load(uint32_t core_idx, uint32_t load_q16);
+void rscheduler_reset(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
