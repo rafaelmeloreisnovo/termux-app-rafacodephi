@@ -25,6 +25,9 @@ typedef enum {
     GPU_FAIL_RUNTIME
 } rgpu_state_t;
 
+#define RGO_CAP_OPENCL (1u << 8)
+#define RGO_CAP_VULKAN (1u << 9)
+
 int rgpu_probe_opencl(void);
 int rgpu_probe_vulkan(void);
 rgpu_state_t rgpu_get_state(void);
