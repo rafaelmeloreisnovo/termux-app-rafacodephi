@@ -11,15 +11,30 @@ extern "C" {
 #define RGO_ERR_ARGS -1
 #define RGO_ERR_DLOPEN -2
 #define RGO_ERR_DLSYM -3
+#define RGO_ERR_GPU_RUNTIME -4
+
+#define MAX_CORES 16u
+
+#define RGO_CAP_OPENCL (1u << 8)
+#define RGO_CAP_VULKAN (1u << 9)
+
+typedef enum {
+    GPU_UNKNOWN = 0,
+    GPU_PRESENT,
+    GPU_NO_DRIVER,
+    GPU_FAIL_RUNTIME
+} rgpu_state_t;
 
 #define RGO_CAP_OPENCL (1u << 8)
 #define RGO_CAP_VULKAN (1u << 9)
 
 int rgpu_probe_opencl(void);
 int rgpu_probe_vulkan(void);
-void rcpu_map_toroidal(uint32_t cpu_count, uint32_t* zones, uint32_t zone_cap);
+rgpu_state_t rgpu_get_state(void);
+uint32_t rgpu_get_core_count(void);
+void rcpu_map_toroidal(uint32_t* zones, uint32_t n);
 uint32_t rcrc32_sw(const uint8_t* data, uint32_t len);
-uint32_t rscheduler_pick_core(uint32_t task_hz_q16);
+uint32_t rscheduler_pick_core(uint32_t task_hz_q16, uint32_t intensity);
 void rscheduler_set_load(uint32_t core_idx, uint32_t load_q16);
 void rscheduler_reset(void);
 uint32_t rgpu_runtime_caps(void);
