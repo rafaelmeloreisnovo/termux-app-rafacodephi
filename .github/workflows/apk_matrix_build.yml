@@ -22,6 +22,17 @@ jobs:
       - name: Build signed + unsigned APK matrix
         run: ./scripts/build_apk_matrix.sh
 
+      - name: Publish APK size report in workflow summary
+        run: |
+          echo "## APK Matrix Size Report" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          cat dist/apk-matrix/APK_SIZE_REPORT.tsv >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo "## Release Signed vs Unsigned Size Diff" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          cat dist/apk-matrix/APK_SIZE_DIFF_RELEASE.tsv >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+
       - name: Upload APK matrix artifacts
         uses: actions/upload-artifact@v4
         with:
