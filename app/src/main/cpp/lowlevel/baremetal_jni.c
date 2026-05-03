@@ -15,6 +15,14 @@
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
+static void throw_illegal_argument(JNIEnv *env, const char *message) {
+    jclass illegal_arg = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
+    if (illegal_arg) {
+        (*env)->ThrowNew(env, illegal_arg, message);
+        (*env)->DeleteLocalRef(env, illegal_arg);
+    }
+}
+
 static void throw_illegal_state(JNIEnv *env, const char *message) {
     jclass illegal_state = (*env)->FindClass(env, "java/lang/IllegalStateException");
     if (illegal_state) {

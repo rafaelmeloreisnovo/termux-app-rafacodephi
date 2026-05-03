@@ -34,12 +34,31 @@ done
 
 universal_count=$(find "$DIST_DIR" -type f -name '*universal*.apk' | wc -l | tr -d ' ')
 
+SDK_DIR="$(grep -E '^sdk.dir=' local.properties | cut -d= -f2-)"
+SDK_DIR="${SDK_DIR//\\/}"
+APKSIGNER="$SDK_DIR/build-tools/35.0.0/apksigner"
+
+if [[ ! -x "$APKSIGNER" ]]; then
+  echo "❌ apksigner not found at $APKSIGNER" >&2
+  exit 5
+fi
+
 if [[ "${TERMUX_ENABLE_RELEASE_SIGNING:-false}" == "true" ]]; then
-  signed_count=$(find "$DIST_DIR" -type f -name '*release*.apk' ! -name '*unsigned*' | wc -l | tr -d ' ')
+  signed_count=0
+  while IFS= read -r -d '' apk; do
+    if "$APKSIGNER" verify "$apk" >/dev/null 2>&1; then
+      signed_count=$((signed_count + 1))
+    fi
+  done < <(find "$DIST_DIR" -type f -name '*release*.apk' -print0)
   [[ "$signed_count" -gt 0 ]] || { echo "❌ Signing enabled but no signed release APK found" >&2; exit 3; }
   signing_status="signed"
 else
-  unsigned_count=$(find "$DIST_DIR" -type f -name '*release*unsigned*.apk' | wc -l | tr -d ' ')
+  unsigned_count=0
+  while IFS= read -r -d '' apk; do
+    if ! "$APKSIGNER" verify "$apk" >/dev/null 2>&1; then
+      unsigned_count=$((unsigned_count + 1))
+    fi
+  done < <(find "$DIST_DIR" -type f -name '*release*.apk' -print0)
   [[ "$unsigned_count" -gt 0 ]] || { echo "❌ Signing disabled but unsigned release APK not found" >&2; exit 4; }
   signing_status="unsigned"
 fi
