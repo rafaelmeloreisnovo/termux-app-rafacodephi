@@ -24,7 +24,7 @@ info "Preparing bootstrap environment and BLAKE3 vars"
 eval "$(./scripts/prepare_bootstrap_env.sh --print-env)"
 
 info "Building unsigned debug and release APKs"
-./gradlew :app:assembleDebug :app:assembleRelease --no-daemon
+TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS=1 TERMUX_SPLIT_APKS_FOR_RELEASE_BUILDS=1 ./gradlew :app:assembleDebug :app:assembleRelease --no-daemon
 
 cp app/build/outputs/apk/debug/*.apk "${UNSIGNED_DIR}/"
 cp app/build/outputs/apk/release/*.apk "${UNSIGNED_DIR}/"
