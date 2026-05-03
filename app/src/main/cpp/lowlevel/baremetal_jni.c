@@ -16,10 +16,10 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 static void throw_illegal_argument(JNIEnv *env, const char *message) {
-    jclass illegal_arg = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
-    if (illegal_arg) {
-        (*env)->ThrowNew(env, illegal_arg, message);
-        (*env)->DeleteLocalRef(env, illegal_arg);
+    jclass illegal_argument = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
+    if (illegal_argument) {
+        (*env)->ThrowNew(env, illegal_argument, message);
+        (*env)->DeleteLocalRef(env, illegal_argument);
     }
 }
 
