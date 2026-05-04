@@ -104,6 +104,11 @@ public final class RafaeliaCore {
     public static native int stepAllVcpusNative();
     public static native int getVcpuTelemetryNative(ByteBuffer out, int cap);
     public static native int getClockProfileNative(ByteBuffer out, int cap);
+    public static native int initVcpuNative(int targetHz);
+    public static native int stepAllVcpuNative();
+    public static native int getVcpuMapNative(ByteBuffer out, int cap);
+    public static native int getMemoryLayersNative(ByteBuffer out, int cap);
+    public static native int getClockNative(ByteBuffer out, int cap);
 
     // ── API pública — sem alocações ────────────────────────────────────
 

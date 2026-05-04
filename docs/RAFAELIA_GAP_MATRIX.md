@@ -22,3 +22,12 @@ Mapear, de forma operacional, o que está implementado, parcial e ausente para o
 2. Operacional: batch periódico + `audit_json` persistido.
 3. Governança: `promotable` por gate definido.
 4. Científico: benchmark mínimo replicável com dataset controlado.
+
+
+## v0.10.0-unreleased
+- seed alignment
+- loose files map
+- vCPU/HZ official MVP
+- memory layers
+- BitRAF encode/decode MVP
+- GP dimension MVP

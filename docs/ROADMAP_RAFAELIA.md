@@ -14,3 +14,12 @@
 - Painel de auditoria de convergência período 42 (SVG MVP adicionado)
 - Export de séries (phi/coerência/entropia) para JSON/SVG (phi→SVG entregue)
 - Política de release e assinatura de artefatos (manifesto SHA-256 + raiz merkle-like entregue)
+
+
+## v0.10.0-unreleased
+- seed alignment
+- loose files map
+- vCPU/HZ official MVP
+- memory layers
+- BitRAF encode/decode MVP
+- GP dimension MVP
