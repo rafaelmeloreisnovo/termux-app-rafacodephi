@@ -94,3 +94,7 @@ Este relatório cobre **todos os arquivos com extensão markdown** detectados no
 1. Priorizar arquivos sem título inicial para padronização editorial.
 2. Corrigir links relativos quebrados listados na coluna correspondente (quando > 0).
 3. Revisar manualmente os arquivos marcados com placeholder/TODO/TBD para fechamento de lacunas documentais.
+
+## Atualização pós-fix (2026-05-04)
+- TODOs de build nativo/hardening atualizados para estado implementado.
+- Links novos: `docs/RAFAELIA_PATH_GRAPH.md`.

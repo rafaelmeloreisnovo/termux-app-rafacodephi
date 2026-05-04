@@ -62,5 +62,5 @@ LOCAL_MODULE := termux_rafaelia_direct
 LOCAL_SRC_FILES := lowlevel/rafaelia_jni_direct.c lowlevel/raf_vcpu.c lowlevel/raf_clock.c lowlevel/raf_memory_layers.c lowlevel/raf_bitraf.c lowlevel/raf_gp_dimension.c
 LOCAL_CFLAGS += -std=c11 -Wall -Wextra -Os -fno-stack-protector
 LOCAL_LDFLAGS := -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
-LOCAL_LDLIBS := -llog
+LOCAL_LDLIBS := -llog -lm
 include $(BUILD_SHARED_LIBRARY)

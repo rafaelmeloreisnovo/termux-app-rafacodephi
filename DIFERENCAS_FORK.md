@@ -876,3 +876,6 @@ rsync -av /data/data/com.termux/files/home/ \
 **Licença**: GPLv3
 
 **FIAT RAFAELIA** - Computação ética, coerente e de alto desempenho.
+
+## Status update (2026-05-04)
+- Claims de performance e comprovação experimental foram rebaixadas para **a validar** quando sem artefato reproduzível.
