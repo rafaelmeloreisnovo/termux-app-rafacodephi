@@ -3,6 +3,9 @@ package com.termux.rafaelia.runtime;
 import com.termux.rafaelia.RafaeliaCore;
 import com.termux.rafaelia.RafaeliaUtils;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 /**
  * Worker lógico para execução cíclica do pipeline RAFAELIA.
  * Mantém métricas de commit/rollback e telemetria de convergência (phi/ciclo).
@@ -60,6 +63,29 @@ public final class RafaeliaPipelineWorker {
 
     public Snapshot snapshot() {
         return new Snapshot(total, committed, rolledBack, lastPhiQ16, lastPhase, lastStep, RafaeliaCore.getCurrentCycle());
+    }
+
+
+    public String exportAuditJson() {
+        try {
+            Snapshot s = snapshot();
+            JSONObject root = new JSONObject();
+            root.put("total", s.total);
+            root.put("committed", s.committed);
+            root.put("rolledBack", s.rolledBack);
+            root.put("commitRate", s.commitRate());
+            root.put("lastPhiQ16", s.lastPhiQ16);
+            root.put("lastPhase", s.lastPhase);
+            root.put("lastStep", s.lastStep);
+            root.put("currentCycle", s.currentCycle);
+
+            JSONArray arr = new JSONArray();
+            for (int v : phiWindow) arr.put(v);
+            root.put("phiWindow", arr);
+            return root.toString();
+        } catch (Exception e) {
+            return "{}";
+        }
     }
 
     public int[] getPhiWindowCopy() {
