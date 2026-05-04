@@ -11,7 +11,7 @@
  * Copyright (c) instituto-Rafael — GPLv3
  */
 
-#include "baremetal.h"
+#include "baremetal_nomalloc.h"
 
 #include <stdint.h>
 #include <stddef.h>
