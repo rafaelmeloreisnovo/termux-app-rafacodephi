@@ -743,3 +743,7 @@ Este fork mantém a licença GPLv3 do projeto original Termux.
 **Φ_ethica** - Que todas as operações minimizem entropia e maximizem coerência.
 
 **ψχρΔΣΩ** - O ciclo eterno de percepção, feedback, expansão, validação, execução e alinhamento.
+
+
+### Governança e Auditabilidade Multi-IA
+- [FRAMEWORK_MULTI_IA_SPEC_V1.md](FRAMEWORK_MULTI_IA_SPEC_V1.md) - Especificação de governança, privacidade, rastreabilidade e proteção humana.
