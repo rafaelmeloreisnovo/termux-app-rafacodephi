@@ -18,6 +18,7 @@ public class RafaeliaBatchWorker extends Worker {
     public static final String KEY_AUDIT_JSON = "audit_json";
     public static final String KEY_BUILD_ID = "build_id";
     public static final String KEY_AUDIT_PATH = "audit_path";
+    public static final String KEY_AUDIT_SVG_PATH = "audit_svg_path";
     public static final String KEY_PROMOTABLE = "promotable";
 
     public RafaeliaBatchWorker(@NonNull Context context, @NonNull WorkerParameters params) {
@@ -40,8 +41,10 @@ public class RafaeliaBatchWorker extends Worker {
             }
 
             String auditJson = pipeline.exportAuditJson();
+            String auditSvg = RafaeliaAuditSvg.renderPhiWindow(pipeline.getPhiWindowOrdered());
             String buildId = getInputData().getString(KEY_BUILD_ID);
             java.io.File saved = RafaeliaAuditStore.saveAuditJson(getApplicationContext(), buildId, auditJson);
+            java.io.File savedSvg = RafaeliaAuditStore.saveAuditSvg(getApplicationContext(), buildId, auditSvg);
 
             RafaeliaPipelineWorker.Snapshot snap = pipeline.snapshot();
             boolean promotable = RafaeliaPromotionGate.isPromotable(snap);
@@ -49,6 +52,7 @@ public class RafaeliaBatchWorker extends Worker {
             return Result.success(new androidx.work.Data.Builder()
                 .putString(KEY_AUDIT_JSON, auditJson)
                 .putString(KEY_AUDIT_PATH, saved.getAbsolutePath())
+                .putString(KEY_AUDIT_SVG_PATH, savedSvg.getAbsolutePath())
                 .putBoolean(KEY_PROMOTABLE, promotable)
                 .build());
         } catch (Exception e) {

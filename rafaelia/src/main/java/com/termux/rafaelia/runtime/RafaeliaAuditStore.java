@@ -23,4 +23,17 @@ public final class RafaeliaAuditStore {
         }
         return out;
     }
+
+    public static File saveAuditSvg(Context context, String buildId, String auditSvg) throws Exception {
+        File dir = new File(context.getFilesDir(), "rafaelia-audit");
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw new IllegalStateException("failed to create audit dir");
+        }
+        String safeBuild = (buildId == null || buildId.isEmpty()) ? "unknown" : buildId.replaceAll("[^a-zA-Z0-9._-]", "_");
+        File out = new File(dir, "audit_" + safeBuild + ".svg");
+        try (FileOutputStream fos = new FileOutputStream(out, false)) {
+            fos.write((auditSvg == null ? "" : auditSvg).getBytes(StandardCharsets.UTF_8));
+        }
+        return out;
+    }
 }

@@ -1,5 +1,11 @@
 # Release Notes (Rafaelia Integration)
 
+## v0.8.0-unreleased
+- `RafaeliaAuditSvg` adicionado para exportar visualização SVG da série `phiWindow(42)`.
+- `RafaeliaBatchWorker` passa a persistir e retornar `audit_svg_path` além de `audit_json`.
+- `RafaeliaAuditStore` ampliado com persistência `saveAuditSvg(...)`.
+- `ROADMAP_RAFAELIA.md` atualizado com Fase 3 em andamento.
+
 ## v0.7.0-unreleased
 - Adicionado `app/src/main/cpp/lowlevel/raf_bench_suite.c` (MVP) com métricas de CRC32C throughput, EMA Q16.16 e entropia milli.
 - Atualizada matriz de gaps para refletir `raf_bench_suite.c` como implementado (MVP).

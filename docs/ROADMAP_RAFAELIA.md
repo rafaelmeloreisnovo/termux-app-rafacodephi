@@ -10,7 +10,7 @@
 - Métrica de commit/rollback por janela
 - Teste instrumentado Android para runtime JNI real
 
-## Fase 3 (próxima)
-- Painel de auditoria de convergência período 42
-- Export de séries (phi/coerência/entropia) para JSON/SVG
-- Política de release e assinatura de artefatos
+## Fase 3 (em andamento)
+- Painel de auditoria de convergência período 42 (SVG MVP adicionado)
+- Export de séries (phi/coerência/entropia) para JSON/SVG (phi→SVG entregue)
+- Política de release e assinatura de artefatos (pendente)
