@@ -36,6 +36,29 @@ public final class RafaeliaUtils {
     public static boolean isNativeAvailable() {
         return NATIVE_AVAILABLE;
     }
+
+
+    /**
+     * Verifica disponibilidade do pipeline RAFAELIA direto (JNI zero-copy).
+     */
+    public static boolean isDirectPipelineAvailable() {
+        return RafaeliaCore.isNativeAvailable();
+    }
+
+    /**
+     * Executa pipeline commit-gate (LOAD->PROCESS->VERIFY->COMMIT) e retorna resultado estruturado.
+     */
+    public static RafaeliaCore.CommitGateResult processCommitGate(byte[] data, int len) {
+        return RafaeliaCore.processWithCommitGate(data, len);
+    }
+
+    /**
+     * Executa um tick toroidal T^7 e retorna phi Q16.16.
+     */
+    public static int toroidalTickQ16() {
+        return RafaeliaCore.step();
+    }
+
     
     // Private constructor to prevent instantiation
     private RafaeliaUtils() {
