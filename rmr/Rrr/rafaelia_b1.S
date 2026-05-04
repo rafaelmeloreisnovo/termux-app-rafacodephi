@@ -294,31 +294,31 @@ torus_init:
     ldr     r4, =g_state
     ldr     r5, =SPIRAL_Q16
     ldr     r6, =PHI_Q16
-    and     r0, r5, #0xFFFF
+    uxth    r0, r5
     str     r0, [r4, #0]
-    and     r0, r6, #0xFFFF
+    uxth    r0, r6
     str     r0, [r4, #4]
     mul     r0, r5, r6
     lsr     r0, r0, #16
-    and     r0, r0, #0xFFFF
+    uxth    r0, r0
     str     r0, [r4, #8]
     ldr     r0, =PI_Q16
-    and     r0, r0, #0xFFFF
+    uxth    r0, r0
     str     r0, [r4, #12]
     ldr     r1, =PI_Q16
     mul     r0, r1, r5
     lsr     r0, r0, #16
-    and     r0, r0, #0xFFFF
+    uxth    r0, r0
     str     r0, [r4, #16]
     ldr     r1, =PI_Q16
     mul     r0, r6, r1
     lsr     r0, r0, #16
-    and     r0, r0, #0xFFFF
+    uxth    r0, r0
     str     r0, [r4, #20]
     ldr     r1, =PI_Q16
     add     r0, r5, r6
     add     r0, r0, r1
-    and     r0, r0, #0xFFFF
+    uxth    r0, r0
     str     r0, [r4, #24]
     ldr     r4, =g_coherence
     mov     r0, #0x8000
@@ -527,9 +527,9 @@ rafaelia_run_42:
     ldr     r1, =SPIRAL_Q16
     mul     r0, r0, r1
     lsr     r0, r0, #16
-    and     r0, r0, #0xFFFF
+    uxth    r0, r0
     mvn     r1, r0
-    and     r1, r1, #0xFFFF
+    uxth    r1, r1
     bl      torus_step
     ldr     r5, =g_phase
     ldr     r5, [r5]

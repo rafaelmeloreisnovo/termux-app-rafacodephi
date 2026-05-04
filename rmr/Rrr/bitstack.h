@@ -20,6 +20,5 @@ void bitstacks_set(BitStacks *bs, int x, int y, int d, int stack_idx, int value)
 int bitstacks_get(BitStacks *bs, int x, int y, int d, int stack_idx);
 
 /* atomic-like push/pop not implemented fully; simple set/get provided */
-size_t bitstacks_index(BlockSizes_unused);
 
 #endif // BITSTACK_H
