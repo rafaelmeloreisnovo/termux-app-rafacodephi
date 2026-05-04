@@ -73,6 +73,15 @@ public final class RafaeliaCore {
      */
     public static native int crc32Native(ByteBuffer buf, int len);
 
+    /** Envia instrução BitRAF 42-bit diretamente ao hardware. */
+    public static native int sendBitrafInstructionNative(long lo32, int hi10);
+
+    /** Lê estado dos 1000 osciladores (7D Q16.16 por oscilador) para outState. */
+    public static native int readOscillatorStateNative(ByteBuffer outState, int oscCount);
+
+    /** Single-step de depuração com dump textual 7D em outDebug. */
+    public static native int debugStepNative(ByteBuffer state, int cycle, ByteBuffer outDebug, int cap);
+
     // ── API pública — sem alocações ────────────────────────────────────
 
     /**
@@ -134,6 +143,14 @@ public final class RafaeliaCore {
         IN_BUF.clear();
         IN_BUF.put(data, 0, len);
         return crc32Native(IN_BUF, len);
+    }
+
+
+    public static int sendBitrafInstruction(long bitraf42) {
+        if (!_libLoaded) return -1;
+        long lo = bitraf42 & 0xFFFFFFFFL;
+        int hi = (int)((bitraf42 >>> 32) & 0x3FFL);
+        return sendBitrafInstructionNative(lo, hi);
     }
 
     public static boolean isNativeAvailable() { return _libLoaded; }

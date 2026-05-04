@@ -334,3 +334,43 @@ Java_com_termux_rafaelia_RafaeliaCore_crc32Native(
     if (!p || len<=0) return 0;
     return (jint)_crc32(p,(size_t)len);
 }
+
+JNIEXPORT jint JNICALL
+Java_com_termux_rafaelia_RafaeliaCore_sendBitrafInstructionNative(
+    JNIEnv *env, jclass cls, jlong lo32, jint hi10) {
+    (void)env; (void)cls;
+    uint64_t bitraf = (((uint64_t)(hi10 & 0x3FF)) << 32) | ((uint32_t)lo32);
+    ensure_state();
+    if (!g_state) return -1;
+    g_state->phase = (uint32_t)((bitraf >> 14) & 0x7Fu) % RAF_PERIOD;
+    g_state->step++;
+    return 0;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_termux_rafaelia_RafaeliaCore_readOscillatorStateNative(
+    JNIEnv *env, jclass cls, jobject out_state, jint osc_count) {
+    (void)cls;
+    uint8_t *out = (uint8_t*)(*env)->GetDirectBufferAddress(env, out_state);
+    jlong cap = (*env)->GetDirectBufferCapacity(env, out_state);
+    if (!out || osc_count <= 0) return -1;
+    size_t need = (size_t)osc_count * 7u * sizeof(uint32_t);
+    if (cap < (jlong)need) return -2;
+    for (int i=0;i<osc_count;i++) {
+        for (int d=0; d<7; d++) {
+            ((uint32_t*)out)[i*7+d] = (uint32_t)(((i+1)*(d+3)*56755u) & 0xFFFFu);
+        }
+    }
+    return (jint)need;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_termux_rafaelia_RafaeliaCore_debugStepNative(
+    JNIEnv *env, jclass cls, jobject state_buf, jint cycle, jobject out_dbg, jint cap) {
+    (void)cls;
+    jint phi = Java_com_termux_rafaelia_RafaeliaCore_stepNative(env, cls, state_buf, cycle);
+    char *out = (char*)(*env)->GetDirectBufferAddress(env, out_dbg);
+    if (!out || cap < 32) return -1;
+    int n = snprintf(out, (size_t)cap, "cycle=%d phi=%d", (int)cycle, (int)phi);
+    return n;
+}
