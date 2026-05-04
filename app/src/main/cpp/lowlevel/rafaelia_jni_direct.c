@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <limits.h>
 #include <pthread.h>
+#include "raf_vcpu.h"
+#include "raf_clock.h"
 
 #ifdef __ANDROID__
 #include <android/log.h>
@@ -84,6 +86,8 @@ static void *jni_alloc(uint32_t n) {
 static raf_state_t *g_state = NULL;  /* aponta para arena */
 static pthread_once_t g_state_once = PTHREAD_ONCE_INIT;
 static pthread_mutex_t g_state_mutex = PTHREAD_MUTEX_INITIALIZER;
+static raf_clock_t g_clock;
+static uint32_t g_target_hz = 10;
 
 static void ensure_state(void) {
     if (g_state) return;
@@ -402,4 +406,74 @@ Java_com_termux_rafaelia_RafaeliaCore_debugStepNative(
         cycle, phi, st->s[0], st->s[1], st->s[2], st->s[3], st->s[4], st->s[5], st->s[6],
         st->coherence, st->entropy, st->phase);
     return (n > 0) ? phi : -3;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_termux_rafaelia_RafaeliaCore_initVcpuSchedulerNative(
+    JNIEnv *env, jclass cls, jint targetHz)
+{
+    (void)env; (void)cls;
+    if (targetHz <= 0 || targetHz > 200000) return -1;
+    g_target_hz = (uint32_t)targetHz;
+    raf_clock_init(&g_clock, g_target_hz);
+    raf_vcpu_init(g_target_hz);
+    return 0;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_termux_rafaelia_RafaeliaCore_stepVcpuNative(
+    JNIEnv *env, jclass cls, jint vcpuId)
+{
+    (void)env; (void)cls;
+    if (vcpuId < 0 || vcpuId >= RAF_VCPU) return -1;
+    uint64_t now = raf_clock_now_ns();
+    if (raf_clock_should_tick(&g_clock, now)) raf_clock_mark_tick(&g_clock, now);
+    return raf_vcpu_step((uint32_t)vcpuId, now);
+}
+
+JNIEXPORT jint JNICALL
+Java_com_termux_rafaelia_RafaeliaCore_stepAllVcpusNative(
+    JNIEnv *env, jclass cls)
+{
+    (void)env; (void)cls;
+    uint64_t now = raf_clock_now_ns();
+    if (raf_clock_should_tick(&g_clock, now)) raf_clock_mark_tick(&g_clock, now);
+    for (int i = 0; i < RAF_VCPU; i++) {
+        if (raf_vcpu_step((uint32_t)i, now) != 0) return -1;
+    }
+    return 0;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_termux_rafaelia_RafaeliaCore_getVcpuTelemetryNative(
+    JNIEnv *env, jclass cls, jobject out_buf, jint cap)
+{
+    (void)cls;
+    char *out = (char*)(*env)->GetDirectBufferAddress(env, out_buf);
+    jlong out_cap = (*env)->GetDirectBufferCapacity(env, out_buf);
+    if (!out || cap < 128 || out_cap < cap) return -1;
+    int n = snprintf(out, (size_t)cap,
+        "{\"vcpu_count\":%d,\"target_hz\":%u,\"actual_hz_q16\":%u,\"period_ns\":%llu,\"jitter_ns\":%llu,\"total_ticks\":%llu,"
+        "\"v0_step\":%u,\"v1_step\":%u,\"v0_phase\":%u,\"v1_phase\":%u,\"v0_crc\":%u,\"v1_crc\":%u,\"arena_used\":%u}",
+        RAF_VCPU, g_target_hz, raf_clock_actual_hz_q16(&g_clock),
+        (unsigned long long)g_clock.period_ns, (unsigned long long)g_clock.jitter_ns, (unsigned long long)g_clock.total_ticks,
+        raf_vcpu_get(0)->state.step, raf_vcpu_get(1)->state.step, raf_vcpu_get(0)->state.phase, raf_vcpu_get(1)->state.phase,
+        raf_vcpu_get(0)->crc, raf_vcpu_get(1)->crc, (unsigned)g_jni_bump);
+    return (n > 0 && n < cap) ? n : -2;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_termux_rafaelia_RafaeliaCore_getClockProfileNative(
+    JNIEnv *env, jclass cls, jobject out_buf, jint cap)
+{
+    (void)cls;
+    char *out = (char*)(*env)->GetDirectBufferAddress(env, out_buf);
+    jlong out_cap = (*env)->GetDirectBufferCapacity(env, out_buf);
+    if (!out || cap < 96 || out_cap < cap) return -1;
+    int n = snprintf(out, (size_t)cap,
+        "{\"target_hz\":%u,\"period_ns\":%llu,\"actual_delta_ns\":%llu,\"actual_hz_q16\":%u,\"jitter_ns\":%llu,\"missed_ticks\":%llu,\"total_ticks\":%llu}",
+        g_clock.target_hz, (unsigned long long)g_clock.period_ns, (unsigned long long)g_clock.actual_delta_ns,
+        raf_clock_actual_hz_q16(&g_clock), (unsigned long long)g_clock.jitter_ns,
+        (unsigned long long)g_clock.missed_ticks, (unsigned long long)g_clock.total_ticks);
+    return (n > 0 && n < cap) ? n : -2;
 }
