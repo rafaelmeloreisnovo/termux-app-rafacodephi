@@ -153,6 +153,18 @@ public final class RafaeliaCore {
         return sendBitrafInstructionNative(lo, hi);
     }
 
+    public static int readOscillatorState(ByteBuffer outState, int oscCount) {
+        if (!_libLoaded) return -1;
+        return readOscillatorStateNative(outState, oscCount);
+    }
+
+    public static int debugSingleStep(ByteBuffer debugOut, int cap) {
+        if (!_libLoaded) return -1;
+        int phi = debugStepNative(STATE_BUF, _cycle, debugOut, cap);
+        _cycle = (_cycle + 1) % 42;
+        return phi;
+    }
+
     public static boolean isNativeAvailable() { return _libLoaded; }
     public static int     getNativeArenaUsed() { return _libLoaded ? arenaSizeNative() : 0; }
     public static int     getCurrentCycle()    { return _cycle; }
