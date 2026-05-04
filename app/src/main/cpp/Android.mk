@@ -52,7 +52,7 @@ include $(BUILD_SHARED_LIBRARY)
 
 # RAFAELIA direct JNI helper (zero-copy DirectByteBuffer path)
 include $(CLEAR_VARS)
-LOCAL_MODULE := termux-rafaelia-direct
+LOCAL_MODULE := termux_rafaelia_direct
 LOCAL_SRC_FILES := lowlevel/rafaelia_jni_direct.c
 LOCAL_CFLAGS += -std=c11 -Wall -Wextra -Os -fno-stack-protector
 LOCAL_LDFLAGS := -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
