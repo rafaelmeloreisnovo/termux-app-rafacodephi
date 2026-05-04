@@ -11,7 +11,13 @@ include $(BUILD_SHARED_LIBRARY)
 # Bare-metal low-level library
 include $(CLEAR_VARS)
 LOCAL_MODULE := termux-baremetal
-LOCAL_SRC_FILES := lowlevel/baremetal.c lowlevel/baremetal_jni.c lowlevel/rafaelia_gpu_orchestrator.c lowlevel/rafaelia_commit_gate_ll.c
+ifeq ($(RAFAELIA_NO_MALLOC),1)
+LOCAL_SRC_FILES := lowlevel/baremetal_nomalloc.c
+LOCAL_CFLAGS += -DRAFAELIA_NO_MALLOC=1
+else
+LOCAL_SRC_FILES := lowlevel/baremetal.c
+endif
+LOCAL_SRC_FILES += lowlevel/baremetal_jni.c lowlevel/rafaelia_gpu_orchestrator.c lowlevel/rafaelia_commit_gate_ll.c
 # Assembly optimizations enabled when the target ABI guarantees SIMD support
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
     LOCAL_SRC_FILES += lowlevel/baremetal_asm.S
@@ -53,7 +59,7 @@ include $(BUILD_SHARED_LIBRARY)
 # RAFAELIA direct JNI helper (zero-copy DirectByteBuffer path)
 include $(CLEAR_VARS)
 LOCAL_MODULE := termux_rafaelia_direct
-LOCAL_SRC_FILES := lowlevel/rafaelia_jni_direct.c
+LOCAL_SRC_FILES := lowlevel/rafaelia_jni_direct.c lowlevel/raf_vcpu.c lowlevel/raf_clock.c
 LOCAL_CFLAGS += -std=c11 -Wall -Wextra -Os -fno-stack-protector
 LOCAL_LDFLAGS := -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
 LOCAL_LDLIBS := -llog
