@@ -25,7 +25,7 @@ LOCAL_CFLAGS += -std=c11 -Wall -Wextra -Werror -Os -fno-stack-protector
 LOCAL_CFLAGS += -ffast-math
 LOCAL_CFLAGS += -ffunction-sections -fdata-sections
 # Critical: 16KB page alignment for Android 15/16 compatibility
-LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384
+LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
 
 # Architecture-specific optimizations
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
@@ -47,4 +47,14 @@ endif
 
 # Link against log and math libraries
 LOCAL_LDLIBS := -llog -lm -ldl
+include $(BUILD_SHARED_LIBRARY)
+
+
+# RAFAELIA direct JNI helper (zero-copy DirectByteBuffer path)
+include $(CLEAR_VARS)
+LOCAL_MODULE := termux-rafaelia-direct
+LOCAL_SRC_FILES := lowlevel/rafaelia_jni_direct.c
+LOCAL_CFLAGS += -std=c11 -Wall -Wextra -Os -fno-stack-protector
+LOCAL_LDFLAGS := -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
+LOCAL_LDLIBS := -llog
 include $(BUILD_SHARED_LIBRARY)
