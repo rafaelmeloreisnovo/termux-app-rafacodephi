@@ -1,84 +1,169 @@
 #!/usr/bin/env python3
-"""Simulador clássico RAFAELIA (T^7, Q16.16, período 42)."""
-import math, zlib
+"""RAFAELIA Classical QPU Simulator.
+Implements T^7 continuous-variable dynamics with Q16.16 fixed-point arithmetic,
+canonical period 42, BitStack parity/CRC checks, commit gate rollback, Mandelbrot
+coupling modulation, and attractor collapse by Manhattan distance.
+"""
+from __future__ import annotations
+import math
+from dataclasses import dataclass
 import numpy as np
 import matplotlib.pyplot as plt
 
-SPIRAL_Q16=56755; PHI_Q16=105965; PI_Q16=205887; Q16=1<<16; PERIOD=42
-FREQ_Q16=np.array([9804,19608,29412,39216,49020,58824,68628],dtype=np.int64)
-W_INIT=np.array([65536,56755,49157,42573,36877,31940,27671],dtype=np.int64)
-CONST_TERM=3146
-N_OSC=1000
+Q16 = 1 << 16
+PERIOD = 42
+N_OSC = 1000
+DIM = 7
+SPIRAL_Q16 = 56755
+PHI_Q16 = 105965
+PI_Q16 = 205887
+Q16_2PI = 411774
+CONST_TERM_Q16 = 3146
+ALPHA_NUM = 16384  # 0.25 in Q16.16
+ONE_MINUS_ALPHA_NUM = 49152  # 0.75
 
-def qmul(a,b): return ((a*b)>>16).astype(np.int64)
-def wrap(x): return x & 0xFFFF
+FREQ_Q16 = np.array([9804, 19608, 29412, 39216, 49020, 58824, 68628], dtype=np.int64)
+W_INIT_Q16 = np.array([65536, 56755, 49157, 42573, 36877, 31940, 27671], dtype=np.int64)
 
-def sin_q16(x_q16):
-    x=(x_q16.astype(np.float64)/Q16)*2*math.pi
-    return (np.sin(x)*Q16).astype(np.int64)
 
-def mandelbrot_mod(u,v,it=16):
-    c=(u/Q16-0.5)+1j*(v/Q16-0.5); z=0j
-    for i in range(it):
-        z=z*z+c
-        if abs(z)>2: break
-    return int((i/it)*Q16)
+def qmul(a: np.ndarray, b: np.ndarray | int) -> np.ndarray:
+    return ((a.astype(np.int64) * np.asarray(b, dtype=np.int64)) >> 16).astype(np.int64)
 
-def apply_direction(state, d):
-    s=state.copy()
-    if d==0: s[:,0]=wrap(s[:,0]+s[:,2])
-    elif d==1: s[:,1]=wrap(s[:,1]-s[:,3])
-    elif d==2: s[:,2]=wrap(qmul(s[:,2],SPIRAL_Q16)+CONST_TERM)  # FORWARD S-box
-    elif d==3: s=np.roll(s,1,axis=1)
-    elif d==4: s[:,4]=wrap((s[:,4]+s[:,5])>>1)
-    elif d==5: s[:,5]=wrap(s[:,5]+(s[:,0]>>2))
-    else: s[:,6]=wrap(s[:,6]^s[:,1])
-    return s
 
-def gen_attractors():
-    a=np.zeros((PERIOD,7),dtype=np.int64)
-    x=np.array([56755,105965,205887,46341,92682,138564,184245],dtype=np.int64)&0xFFFF
+def wrap16(a: np.ndarray) -> np.ndarray:
+    return a & 0xFFFF
+
+
+def taylor_sin_q16(theta_q16: np.ndarray) -> np.ndarray:
+    x = (theta_q16.astype(np.float64) / Q16) * 2.0 * math.pi
+    x3 = x * x * x
+    x5 = x3 * x * x
+    y = x - x3 / 6.0 + x5 / 120.0
+    return np.clip((y * Q16).astype(np.int64), -65535, 65535)
+
+
+def crc32c_soft(data: bytes) -> int:
+    """CRC32C (Castagnoli) software implementation (poly=0x82F63B78)."""
+    poly = 0x82F63B78
+    crc = 0xFFFFFFFF
+    for b in data:
+        crc ^= b
+        for _ in range(8):
+            crc = (crc >> 1) ^ poly if (crc & 1) else (crc >> 1)
+    return (~crc) & 0xFFFFFFFF
+
+
+def mandelbrot_q16(u: int, v: int, max_iter: int = 21) -> int:
+    c = complex((u / 65535.0) * 3.0 - 2.0, (v / 65535.0) * 3.0 - 1.5)
+    z = 0j
+    i = 0
+    while i < max_iter and (z.real * z.real + z.imag * z.imag) <= 4.0:
+        z = z * z + c
+        i += 1
+    return int((i * Q16) / max_iter)
+
+
+def gen_42_attractors() -> np.ndarray:
+    a = np.zeros((PERIOD, DIM), dtype=np.int64)
+    seed = np.array([56755, 105965, 205887, 46341, 92682, 138564, 184245], dtype=np.int64) & 0xFFFF
     for i in range(PERIOD):
-        x=wrap((x*SPIRAL_Q16>>16)+np.roll(x,-1)+i)
-        a[i]=x
+        seed = wrap16(qmul(seed, SPIRAL_Q16) + np.roll(seed, -1) + i)
+        a[i] = seed
     return a
 
-def main():
-    rng=np.random.default_rng(42)
-    state=rng.integers(0,65536,size=(N_OSC,7),dtype=np.int64)
-    snapshot=state.copy(); weights=np.tile(W_INIT,(N_OSC,1)).astype(np.int64)
-    coherence=0.5; entropy=0.5; phi_hist=[]; coh=[]; ent=[]
-    attractors=gen_attractors(); rollback=0
-    for cyc in range(PERIOD):
-        state=apply_direction(state,cyc%7)
-        phases=state[:,:7]
-        layer=np.zeros(N_OSC,dtype=np.int64)
-        for k in range(7):
-            layer+=qmul(weights[:,k],sin_q16(wrap(qmul(phases[:,k],FREQ_Q16[k]))))
-            weights[:,k]=((weights[:,k]*49152 + W_INIT[k]*16384)>>16)
-        mod=np.array([mandelbrot_mod(state[i,0],state[i,1]) for i in range(N_OSC)],dtype=np.int64)
-        state[:,2]=wrap(state[:,2]+(layer>>4)+(mod>>6))
-        # integrity every 7 cycles
-        if cyc%7==0:
-            x=0
-            for v in state[:,0]: x^=int(v)&0xFF
-            crc=zlib.crc32(state.astype(np.uint16).tobytes()) & 0xFFFFFFFF
-            ok=((x^ (crc&0xFF))!=0)
-            if not ok:
-                state=snapshot.copy(); rollback+=1
-            else:
-                snapshot=state.copy()
-        route=(np.arange(N_OSC)*7)%N_OSC
-        state=state[route]
-        c_in=float(np.mean(state[:,0])/65535.0); h_in=float(np.std(state[:,1])/65535.0)
-        coherence=0.75*coherence+0.25*c_in; entropy=0.75*entropy+0.25*h_in
-        phi=(1-entropy)*coherence
-        coh.append(coherence); ent.append(entropy); phi_hist.append(phi)
-    # measure Manhattan to 42 attractors
-    d=np.abs(state[:,None,:]-attractors[None,:,:]).sum(axis=2)
-    cls=np.argmin(d,axis=1)
-    print(f"rollbacks={rollback}, mean_class={cls.mean():.2f}")
-    plt.figure(figsize=(8,4)); plt.plot(coh,label='coherence'); plt.plot(ent,label='entropy'); plt.plot(phi_hist,label='phi')
-    plt.legend(); plt.tight_layout(); plt.savefig('rmr/Rrr/generated/rafaelia_metrics.png',dpi=120)
 
-if __name__=='__main__': main()
+def apply_direction(state: np.ndarray, d: int) -> np.ndarray:
+    s = state.copy()
+    if d == 0:  # UP
+        s[:, 0] = wrap16(s[:, 0] + s[:, 2])
+    elif d == 1:  # DOWN
+        s[:, 1] = wrap16(s[:, 1] - s[:, 3])
+    elif d == 2:  # FORWARD recurrence S-box style
+        s[:, 2] = wrap16(qmul(s[:, 2], SPIRAL_Q16) + CONST_TERM_Q16)
+    elif d == 3:  # RECURSE
+        s = np.roll(s, 1, axis=1)
+    elif d == 4:  # COMPRESS
+        s[:, 4] = wrap16((s[:, 4] + s[:, 5]) >> 1)
+    elif d == 5:  # EXPAND
+        s[:, 5] = wrap16(s[:, 5] + (s[:, 0] >> 2))
+    elif d == 6:  # PHASE/XOR
+        s[:, 6] = wrap16(s[:, 6] ^ s[:, 1])
+    return s
+
+
+@dataclass
+class CommitGate:
+    snapshot: np.ndarray
+    rollbacks: int = 0
+
+    def verify_and_commit(self, state: np.ndarray, cycle: int) -> np.ndarray:
+        global_xor = int(np.bitwise_xor.reduce(state[:, 0] & 0xFF))
+        crc = crc32c_soft(state.astype(np.uint16).tobytes())
+        # VERIFY phase (every multiple of 7)
+        ok = ((global_xor ^ (crc & 0xFF)) != 0)
+        if cycle % 7 == 0:
+            if ok:
+                self.snapshot = state.copy()
+            else:
+                self.rollbacks += 1
+                state = self.snapshot.copy()
+        return state
+
+
+def run() -> None:
+    rng = np.random.default_rng(42)
+    state = rng.integers(0, 65536, size=(N_OSC, DIM), dtype=np.int64)
+    weights = np.tile(W_INIT_Q16, (N_OSC, 1)).astype(np.int64)
+    commit = CommitGate(snapshot=state.copy())
+    attractors = gen_42_attractors()
+
+    C = 0.5
+    H = 0.5
+    coh_hist, ent_hist, phi_hist = [], [], []
+
+    for cyc in range(PERIOD):
+        state = apply_direction(state, cyc % 7)
+
+        layer_sum = np.zeros(N_OSC, dtype=np.int64)
+        for k in range(7):
+            arg = wrap16(qmul(state[:, k], FREQ_Q16[k]))
+            layer_sum += qmul(weights[:, k], taylor_sin_q16(arg))
+            weights[:, k] = ((weights[:, k] * ONE_MINUS_ALPHA_NUM + W_INIT_Q16[k] * ALPHA_NUM) >> 16)
+
+        mods = np.array([mandelbrot_q16(int(state[i, 0]), int(state[i, 1])) for i in range(N_OSC)], dtype=np.int64)
+        state[:, 2] = wrap16(state[:, 2] + (layer_sum >> 4) + (mods >> 6))
+
+        state = commit.verify_and_commit(state, cyc)
+
+        # toroidal stride routing 7 (coprime with 1000)
+        route = (np.arange(N_OSC, dtype=np.int64) * 7) % N_OSC
+        state = state[route]
+
+        c_in = float(np.mean(state[:, 0]) / 65535.0)
+        h_in = float(np.std(state[:, 1]) / 65535.0)
+        C = 0.75 * C + 0.25 * c_in
+        H = 0.75 * H + 0.25 * h_in
+        phi = (1.0 - H) * C
+
+        coh_hist.append(C)
+        ent_hist.append(H)
+        phi_hist.append(phi)
+
+    d = np.abs(state[:, None, :] - attractors[None, :, :]).sum(axis=2)
+    closest = np.argmin(d, axis=1)
+    print(f"rollbacks={commit.rollbacks} mean_attractor={closest.mean():.4f} phi_last={phi_hist[-1]:.6f}")
+
+    plt.figure(figsize=(10, 4))
+    plt.plot(coh_hist, label="coherence")
+    plt.plot(ent_hist, label="entropy")
+    plt.plot(phi_hist, label="phi")
+    plt.title("RAFAELIA 42-cycle evolution")
+    plt.xlabel("cycle")
+    plt.grid(alpha=0.25)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("rmr/Rrr/generated/rafaelia_metrics.png", dpi=150)
+
+
+if __name__ == "__main__":
+    run()
