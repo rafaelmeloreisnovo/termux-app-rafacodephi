@@ -6,7 +6,6 @@ coupling modulation, and attractor collapse by Manhattan distance.
 """
 from __future__ import annotations
 import math
-import zlib
 from dataclasses import dataclass
 import numpy as np
 import matplotlib.pyplot as plt
@@ -44,8 +43,14 @@ def taylor_sin_q16(theta_q16: np.ndarray) -> np.ndarray:
 
 
 def crc32c_soft(data: bytes) -> int:
-    # castagnoli polynomial requested in project; here we use zlib crc32 as software checksum surrogate
-    return zlib.crc32(data) & 0xFFFFFFFF
+    """CRC32C (Castagnoli) software implementation (poly=0x82F63B78)."""
+    poly = 0x82F63B78
+    crc = 0xFFFFFFFF
+    for b in data:
+        crc ^= b
+        for _ in range(8):
+            crc = (crc >> 1) ^ poly if (crc & 1) else (crc >> 1)
+    return (~crc) & 0xFFFFFFFF
 
 
 def mandelbrot_q16(u: int, v: int, max_iter: int = 21) -> int:
