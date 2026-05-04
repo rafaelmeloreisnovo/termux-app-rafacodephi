@@ -11,3 +11,7 @@
 | Hipóteses matemáticas (F*, n_crítico) | HIPÓTESE MATEMÁTICA | RAFAELIA_SEMENTES.txt | não promover sem medição |
 | NEON EMA/hardware probe avançado | SOLTO/EXPERIMENTAL | rmr/Rrr/rafaelia_core.c | promover por etapas |
 | Claims de performance | PRECISA MEDIÇÃO | sem benchmark oficial | criar baseline CI |
+
+## Build status real (2026-05-04)
+- `:app:externalNativeBuildDebug`: **a validar em ambiente com Android SDK configurado**.
+- Ajustes de build nativo aplicados (link de `-lm`, conflitos de tipo/macro removidos, hardening JNI).
