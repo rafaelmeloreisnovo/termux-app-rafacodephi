@@ -19,6 +19,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <stdio.h>
 
 #ifdef __ANDROID__
 #include <android/log.h>
@@ -337,40 +338,52 @@ Java_com_termux_rafaelia_RafaeliaCore_crc32Native(
 
 JNIEXPORT jint JNICALL
 Java_com_termux_rafaelia_RafaeliaCore_sendBitrafInstructionNative(
-    JNIEnv *env, jclass cls, jlong lo32, jint hi10) {
+    JNIEnv *env, jclass cls, jlong lo32, jint hi10)
+{
     (void)env; (void)cls;
-    uint64_t bitraf = (((uint64_t)(hi10 & 0x3FF)) << 32) | ((uint32_t)lo32);
     ensure_state();
     if (!g_state) return -1;
-    g_state->phase = (uint32_t)((bitraf >> 14) & 0x7Fu) % RAF_PERIOD;
-    g_state->step++;
+    uint64_t instr = (((uint64_t)(hi10 & 0x3FF)) << 32) | ((uint64_t)lo32 & 0xFFFFFFFFULL);
+    g_state->s[0] ^= (uint32_t)(instr & 0xFFFFu);
+    g_state->s[1] ^= (uint32_t)((instr >> 7) & 0xFFFFu);
+    g_state->phase = (g_state->phase + 1u) % RAF_PERIOD;
+    g_state->crc = 0;
+    g_state->crc = _crc32(g_state, offsetof(raf_state_t, crc));
     return 0;
 }
 
 JNIEXPORT jint JNICALL
 Java_com_termux_rafaelia_RafaeliaCore_readOscillatorStateNative(
-    JNIEnv *env, jclass cls, jobject out_state, jint osc_count) {
+    JNIEnv *env, jclass cls, jobject outState, jint oscCount)
+{
     (void)cls;
-    uint8_t *out = (uint8_t*)(*env)->GetDirectBufferAddress(env, out_state);
-    jlong cap = (*env)->GetDirectBufferCapacity(env, out_state);
-    if (!out || osc_count <= 0) return -1;
-    size_t need = (size_t)osc_count * 7u * sizeof(uint32_t);
-    if (cap < (jlong)need) return -2;
-    for (int i=0;i<osc_count;i++) {
-        for (int d=0; d<7; d++) {
-            ((uint32_t*)out)[i*7+d] = (uint32_t)(((i+1)*(d+3)*56755u) & 0xFFFFu);
+    uint32_t *out = (uint32_t*)(*env)->GetDirectBufferAddress(env, outState);
+    jlong cap = (*env)->GetDirectBufferCapacity(env, outState);
+    if (!out || oscCount <= 0) return -1;
+    if (cap < (jlong)(oscCount * 7 * (int)sizeof(uint32_t))) return -2;
+    ensure_state();
+    if (!g_state) return -3;
+    for (int i = 0; i < oscCount; i++) {
+        for (int k = 0; k < 7; k++) {
+            out[i*7 + k] = (g_state->s[k] + (uint32_t)(i*131 + k*17)) & 0xFFFFu;
         }
     }
-    return (jint)need;
+    return oscCount;
 }
 
 JNIEXPORT jint JNICALL
 Java_com_termux_rafaelia_RafaeliaCore_debugStepNative(
-    JNIEnv *env, jclass cls, jobject state_buf, jint cycle, jobject out_dbg, jint cap) {
+    JNIEnv *env, jclass cls, jobject state_buf, jint cycle, jobject outDebug, jint cap)
+{
     (void)cls;
+    char *dbg = (char*)(*env)->GetDirectBufferAddress(env, outDebug);
+    if (!dbg || cap < 96) return -1;
     jint phi = Java_com_termux_rafaelia_RafaeliaCore_stepNative(env, cls, state_buf, cycle);
-    char *out = (char*)(*env)->GetDirectBufferAddress(env, out_dbg);
-    if (!out || cap < 32) return -1;
-    int n = snprintf(out, (size_t)cap, "cycle=%d phi=%d", (int)cycle, (int)phi);
-    return n;
+    raf_state_t *st = (raf_state_t*)(*env)->GetDirectBufferAddress(env, state_buf);
+    if (!st) return -2;
+    int n = snprintf(dbg, (size_t)cap,
+        "cycle=%d phi=%d s=[%u,%u,%u,%u,%u,%u,%u] C=%u H=%u phase=%u\n",
+        cycle, phi, st->s[0], st->s[1], st->s[2], st->s[3], st->s[4], st->s[5], st->s[6],
+        st->coherence, st->entropy, st->phase);
+    return (n > 0) ? phi : -3;
 }
