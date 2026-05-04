@@ -1,0 +1,73 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\title{The RAFAELIA Toroidal Quantum Processor: A Self-Verifying Continuous-Variable Architecture with Fractal Coupling}
+\author{RAFAELIA Project}
+\date{}
+\begin{document}
+\maketitle
+
+\section{Introduction}
+RAFAELIA is a continuous-variable processor over $\mathbb{T}^7=(\mathbb{R}/\mathbb{Z})^7$ designed for deterministic control firmware and self-verification every canonical period of $42$ steps.
+
+\section{Mathematical Model}
+State: $\mathbf{s}=(u,v,\psi,\chi,\rho,\delta,\sigma) \in [0,1)^7$.
+
+EMA dynamics:
+\begin{align}
+C_{t+1}&=0.75C_t+0.25C_{in},\\
+H_{t+1}&=0.75H_t+0.25H_{in},\\
+\phi_t&=(1-H_t)C_t.
+\end{align}
+
+Forward recurrence (Q16.16):
+\begin{equation}
+F_{n+1}=F_n\frac{\sqrt{3}}{2}-\pi\sin(279^\circ),\quad x_{n+42}=x_n.
+\end{equation}
+
+\section{Hardware Architecture}
+1000 active oscillators + 8 special points in a 1008-cell control map; BitRAF words (42-bit) feed phase/amplitude DAC chains.
+
+\begin{center}
+\begin{tikzpicture}[scale=0.8]
+\draw[step=.5,gray!35] (0,0) grid (6,6);
+\draw[thick,blue] (0,0)--(6,6);
+\node at (3,-0.5){3D oscillator lattice projection};
+\end{tikzpicture}
+\end{center}
+
+\section{Error Correction and Commit Gate}
+Pipeline phases: LOAD $\rightarrow$ PROCESS $\rightarrow$ VERIFY $\rightarrow$ COMMIT. If VERIFY fails (XOR/CRC mismatch), rollback is asserted to optical delay-line snapshot.
+
+\begin{center}
+\begin{tikzpicture}
+\node[draw,rounded corners] (l) at (0,0){LOAD};
+\node[draw,rounded corners] (p) at (2.7,0){PROCESS};
+\node[draw,rounded corners] (v) at (5.4,0){VERIFY};
+\node[draw,rounded corners] (c) at (8.1,0){COMMIT};
+\draw[->] (l)--(p);
+\draw[->] (p)--(v);
+\draw[->] (v)--(c);
+\draw[->,red] (v) to[bend left=35] node[above]{rollback} (l);
+\end{tikzpicture}
+\end{center}
+
+\section{Programming Model: ISA and BitRAF}
+BitRAF fields: frequency, weight, phase, partial CRC, load, opcode. One word is emitted each cycle at 100 MHz.
+
+\section{Scheduling Geometry}
+\begin{center}
+\begin{tikzpicture}
+\draw[thick] (0,0)--(4,0)--(2,3)--cycle;
+\node at (2,3.35){high Hz apex};
+\node at (0,-0.3){high load};
+\node at (4,-0.3){high load};
+\end{tikzpicture}
+\end{center}
+
+\section{Comparison and Estimates}
+Compared with gate-model qubit processors and annealers, RAFAELIA adds cycle-level self-verification and deterministic fixed-point control.
+At 100 MHz, 42-step epoch duration is 420 ns; verify checkpoints every 7 cycles occur every 70 ns.
+
+\end{document}

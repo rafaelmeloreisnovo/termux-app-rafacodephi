@@ -1,0 +1,25 @@
+version: 1
+name: RAFAELIA_CORE
+space:
+  torus: T7
+  state: [u, v, psi, chi, rho, delta, sigma]
+parameters:
+  alpha: 0.25
+  contraction: 0.8660254037844386
+  attractors: 42
+equations:
+  - "C_{t+1}=(1-alpha)C_t+alpha*C_in"
+  - "H_{t+1}=(1-alpha)H_t+alpha*H_in"
+  - "phi=(1-H)*C"
+  - "F_{n+1}=F_n*sqrt(3)/2-pi*sin(279deg)"
+integrity:
+  hashes: [fnv1a64, crc32, merkle]
+audit:
+  required_fields:
+    - formula_version
+    - input_seed
+    - input_hash
+    - output_hash
+    - merkle_root
+    - lyapunov_q16
+    - attractor_id

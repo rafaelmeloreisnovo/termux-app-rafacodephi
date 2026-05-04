@@ -35,7 +35,7 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
     - name: "🤖 Phase 2.1: Setup Android SDK/NDK"
-      uses: android-actions/setup-android@v3
+      uses: android-actions/setup-android@v4
     - name: "📦 Phase 2.2: Install Android toolchain components"
       run: |
         ./scripts/ci_android_preflight.sh
@@ -52,11 +52,15 @@ jobs:
         echo "=========================================="
         echo "TESTS COMPLETED"
         echo "=========================================="
+    - name: "🐍 Phase 3.5: Compile Python artifacts (PYC in CI only)"
+      run: |
+        python3 -m py_compile rmr/Rrr/generated/rafaelia_qpu_simulator.py
+        python3 -m py_compile rmr/Rrr/generated/rafaelia_auto_calibration.py
     - name: "🧭 Phase 4: RAFAELIA smoke checks + code inventory"
       run: |
         ./scripts/rafaelia_ci_smoke.sh
     - name: "📦 Phase 5: Upload generated code inventory"
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: source-code-inventory
         path: INVENTARIO_CODIGO_FONTE.md

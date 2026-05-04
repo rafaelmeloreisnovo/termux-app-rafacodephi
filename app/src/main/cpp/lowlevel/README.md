@@ -272,3 +272,19 @@ When contributing:
 - Fast Inverse Square Root: https://en.wikipedia.org/wiki/Fast_inverse_square_root
 - ARM NEON: https://developer.arm.com/architectures/instruction-sets/simd-isas/neon
 - Intel AVX: https://www.intel.com/content/www/us/en/architecture-and-technology/avx-512-overview.html
+
+
+## RAFAELIA Toroidal Inference Engine
+
+Arquivos adicionados para inferência toroidal e métricas geométricas:
+
+- `rafaelia_toroidal_inference.h`
+- `rafaelia_toroidal_inference.c`
+- `rafaelia_toroidal_inference_test.c`
+
+Funções principais:
+- `rafaelia_sphere_volume(r)` implementa V = (4/3)·π·r³.
+- `rafaelia_torus_volume(R, r)` implementa \(V=2\pi^2 R r^2\).
+- `rafaelia_toroidal_map(...)` gera estado \(\mathbf{s}\in[0,1)^7\).
+- `rafaelia_update_coherence_entropy(...)` aplica atualização com alpha (ex.: 0.25).
+- `rafaelia_pulse_stats(...)` calcula mínimo, mediana (média) e máximo do pulso.
