@@ -1,5 +1,11 @@
 # Release Notes (Rafaelia Integration)
 
+## v0.5.0-unreleased
+- `RafaeliaPipelineWorker` agora exporta `schemaVersion` e `rollbackRate` no JSON de auditoria.
+- `phiWindow` exportado em ordem temporal (mais antigo -> mais novo) para comparação consistente entre builds.
+- Teste unitário novo `RafaeliaPipelineWorkerTest` validando contrato mínimo do JSON.
+- Novo documento `RAFAELIA_SEMANTIC_LAYERS.md` com mapa semântico entre matemática, runtime e release.
+
 ## v0.4.0-unreleased
 - Agendador periódico `RafaeliaBatchScheduler` para coleta histórica via WorkManager.
 - Persistência local de auditoria `audit_json` por build em `files/rafaelia-audit/`.

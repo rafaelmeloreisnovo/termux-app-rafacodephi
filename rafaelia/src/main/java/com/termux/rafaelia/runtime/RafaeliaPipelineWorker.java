@@ -34,6 +34,10 @@ public final class RafaeliaPipelineWorker {
         public double commitRate() {
             return total == 0 ? 0.0 : ((double) committed / (double) total);
         }
+
+        public double rollbackRate() {
+            return total == 0 ? 0.0 : ((double) rolledBack / (double) total);
+        }
     }
 
     private long total = 0;
@@ -70,17 +74,19 @@ public final class RafaeliaPipelineWorker {
         try {
             Snapshot s = snapshot();
             JSONObject root = new JSONObject();
+            root.put("schemaVersion", 1);
             root.put("total", s.total);
             root.put("committed", s.committed);
             root.put("rolledBack", s.rolledBack);
             root.put("commitRate", s.commitRate());
+            root.put("rollbackRate", s.rollbackRate());
             root.put("lastPhiQ16", s.lastPhiQ16);
             root.put("lastPhase", s.lastPhase);
             root.put("lastStep", s.lastStep);
             root.put("currentCycle", s.currentCycle);
 
             JSONArray arr = new JSONArray();
-            for (int v : phiWindow) arr.put(v);
+            for (int v : getPhiWindowOrdered()) arr.put(v);
             root.put("phiWindow", arr);
             return root.toString();
         } catch (Exception e) {
@@ -91,6 +97,17 @@ public final class RafaeliaPipelineWorker {
     public int[] getPhiWindowCopy() {
         int[] out = new int[42];
         System.arraycopy(phiWindow, 0, out, 0, 42);
+        return out;
+    }
+
+    /**
+     * Retorna a janela de 42 elementos em ordem temporal (mais antigo -> mais novo).
+     */
+    public int[] getPhiWindowOrdered() {
+        int[] out = new int[42];
+        for (int i = 0; i < 42; i++) {
+            out[i] = phiWindow[(winPos + i) % 42];
+        }
         return out;
     }
 }
