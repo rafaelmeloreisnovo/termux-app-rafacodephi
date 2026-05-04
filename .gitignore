@@ -43,3 +43,7 @@ dist/*.keystore
 dist/*.jks
 *.keystore
 *.jks
+
+# Python artifacts
+__pycache__/
+*.py[cod]

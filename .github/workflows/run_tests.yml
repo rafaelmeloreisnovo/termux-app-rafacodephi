@@ -52,6 +52,10 @@ jobs:
         echo "=========================================="
         echo "TESTS COMPLETED"
         echo "=========================================="
+    - name: "🐍 Phase 3.5: Compile Python artifacts (PYC in CI only)"
+      run: |
+        python3 -m py_compile rmr/Rrr/generated/rafaelia_qpu_simulator.py
+        python3 -m py_compile rmr/Rrr/generated/rafaelia_auto_calibration.py
     - name: "🧭 Phase 4: RAFAELIA smoke checks + code inventory"
       run: |
         ./scripts/rafaelia_ci_smoke.sh
