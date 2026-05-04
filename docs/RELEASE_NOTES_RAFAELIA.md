@@ -1,5 +1,11 @@
 # Release Notes (Rafaelia Integration)
 
+## v0.4.0-unreleased
+- Agendador periódico `RafaeliaBatchScheduler` para coleta histórica via WorkManager.
+- Persistência local de auditoria `audit_json` por build em `files/rafaelia-audit/`.
+- Gate formal de promoção por rollback rate (`RafaeliaPromotionGate`, default <= 10%).
+- `RafaeliaBatchWorker` agora retorna `audit_path` e `promotable` além de `audit_json`.
+
 ## v0.3.0-unreleased
 - `RafaeliaPipelineWorker` com métricas: `total`, `committed`, `rolledBack`, `commitRate`.
 - Export JSON de auditoria (`phiWindow[42]` + estado de ciclo).

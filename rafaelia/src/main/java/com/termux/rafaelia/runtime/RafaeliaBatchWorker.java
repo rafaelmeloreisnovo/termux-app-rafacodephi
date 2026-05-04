@@ -16,6 +16,9 @@ public class RafaeliaBatchWorker extends Worker {
     public static final String KEY_PAYLOAD = "payload";
     public static final String KEY_ITERATIONS = "iterations";
     public static final String KEY_AUDIT_JSON = "audit_json";
+    public static final String KEY_BUILD_ID = "build_id";
+    public static final String KEY_AUDIT_PATH = "audit_path";
+    public static final String KEY_PROMOTABLE = "promotable";
 
     public RafaeliaBatchWorker(@NonNull Context context, @NonNull WorkerParameters params) {
         super(context, params);
@@ -37,7 +40,17 @@ public class RafaeliaBatchWorker extends Worker {
             }
 
             String auditJson = pipeline.exportAuditJson();
-            return Result.success(new androidx.work.Data.Builder().putString(KEY_AUDIT_JSON, auditJson).build());
+            String buildId = getInputData().getString(KEY_BUILD_ID);
+            java.io.File saved = RafaeliaAuditStore.saveAuditJson(getApplicationContext(), buildId, auditJson);
+
+            RafaeliaPipelineWorker.Snapshot snap = pipeline.snapshot();
+            boolean promotable = RafaeliaPromotionGate.isPromotable(snap);
+
+            return Result.success(new androidx.work.Data.Builder()
+                .putString(KEY_AUDIT_JSON, auditJson)
+                .putString(KEY_AUDIT_PATH, saved.getAbsolutePath())
+                .putBoolean(KEY_PROMOTABLE, promotable)
+                .build());
         } catch (Exception e) {
             return Result.failure();
         }
