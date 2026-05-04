@@ -1,5 +1,11 @@
 # Release Notes (Rafaelia Integration)
 
+## v0.6.0-unreleased
+- Novo `RafaeliaAuditComparator` para comparar auditorias entre builds consecutivos (`commitRate`, `rollbackRate`, `currentCycle`).
+- Teste unitário `RafaeliaAuditComparatorTest` cobrindo cálculo de deltas.
+- Novo `docs/RAFAELIA_GAP_MATRIX.md` com mapeamento objetivo de lacunas (implementado/parcial/ausente).
+- Atualização de inventário para incluir runtime completo, testes e documentação operacional.
+
 ## v0.5.0-unreleased
 - `RafaeliaPipelineWorker` agora exporta `schemaVersion` e `rollbackRate` no JSON de auditoria.
 - `phiWindow` exportado em ordem temporal (mais antigo -> mais novo) para comparação consistente entre builds.
