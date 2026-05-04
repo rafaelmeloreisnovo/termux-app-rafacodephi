@@ -36,4 +36,17 @@ public final class RafaeliaAuditStore {
         }
         return out;
     }
+
+    public static File saveManifest(Context context, String buildId, String manifestJson) throws Exception {
+        File dir = new File(context.getFilesDir(), "rafaelia-audit");
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw new IllegalStateException("failed to create audit dir");
+        }
+        String safeBuild = (buildId == null || buildId.isEmpty()) ? "unknown" : buildId.replaceAll("[^a-zA-Z0-9._-]", "_");
+        File out = new File(dir, "audit_" + safeBuild + ".manifest.json");
+        try (FileOutputStream fos = new FileOutputStream(out, false)) {
+            fos.write((manifestJson == null ? "{}" : manifestJson).getBytes(StandardCharsets.UTF_8));
+        }
+        return out;
+    }
 }

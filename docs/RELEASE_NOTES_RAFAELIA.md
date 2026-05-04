@@ -1,5 +1,11 @@
 # Release Notes (Rafaelia Integration)
 
+## v0.9.0-unreleased
+- `RafaeliaAuditManifest` adicionado para gerar hashes SHA-256 de `audit_json`/`audit_svg` e raiz merkle-like.
+- `RafaeliaAuditStore.saveManifest(...)` adicionado para persistência de manifesto.
+- `RafaeliaBatchWorker` agora retorna `audit_manifest_path`.
+- Teste `RafaeliaAuditManifestTest` adicionado.
+
 ## v0.8.0-unreleased
 - `RafaeliaAuditSvg` adicionado para exportar visualização SVG da série `phiWindow(42)`.
 - `RafaeliaBatchWorker` passa a persistir e retornar `audit_svg_path` além de `audit_json`.

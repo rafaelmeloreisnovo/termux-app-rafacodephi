@@ -13,4 +13,4 @@
 ## Fase 3 (em andamento)
 - Painel de auditoria de convergência período 42 (SVG MVP adicionado)
 - Export de séries (phi/coerência/entropia) para JSON/SVG (phi→SVG entregue)
-- Política de release e assinatura de artefatos (pendente)
+- Política de release e assinatura de artefatos (manifesto SHA-256 + raiz merkle-like entregue)

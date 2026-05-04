@@ -16,6 +16,7 @@
 - `rafaelia/src/main/java/com/termux/rafaelia/runtime/RafaeliaBatchWorker.java`
 - `rafaelia/src/main/java/com/termux/rafaelia/runtime/RafaeliaBatchScheduler.java`
 - `rafaelia/src/main/java/com/termux/rafaelia/runtime/RafaeliaAuditStore.java`
+- `rafaelia/src/main/java/com/termux/rafaelia/runtime/RafaeliaAuditManifest.java`
 - `rafaelia/src/main/java/com/termux/rafaelia/runtime/RafaeliaPromotionGate.java`
 - `rafaelia/src/main/java/com/termux/rafaelia/runtime/RafaeliaAuditSvg.java`
 
@@ -23,6 +24,7 @@
 - Unit: `RafaeliaCoreTest`, `RafaeliaUtilsDirectPipelineTest`
 - Unit (runtime): `RafaeliaPipelineWorkerTest`
 - Unit (runtime): `RafaeliaAuditComparatorTest`, `RafaeliaAuditSvgTest`
+- Unit (runtime): `RafaeliaAuditManifestTest`
 - Instrumentado: `RafaeliaDirectInstrumentedTest`, `RafaeliaLoadInstrumentedTest`
 
 ## Documentação operacional
