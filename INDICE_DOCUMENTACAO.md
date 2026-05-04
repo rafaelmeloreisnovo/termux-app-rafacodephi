@@ -285,3 +285,7 @@ LICENSE.md (Legal)
 **FIAT RAFAELIA** - Documentação organizada, acessível e completa.
 
 **Φ_ethica** - Transparência e coerência em toda documentação.
+
+
+### Governança e Auditabilidade Multi-IA
+- [FRAMEWORK_MULTI_IA_SPEC_V1.md](FRAMEWORK_MULTI_IA_SPEC_V1.md) - Especificação de governança, privacidade, rastreabilidade e proteção humana.
