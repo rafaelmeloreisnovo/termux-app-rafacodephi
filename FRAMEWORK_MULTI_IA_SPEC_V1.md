@@ -142,3 +142,15 @@ Pipeline falha automaticamente se:
 - Documento de referência: `FRAMEWORK_MULTI_IA_SPEC_V1.md` (raiz).
 - Integração futura: apontar este arquivo em `DOCUMENTACAO.md` e `INDICE_DOCUMENTACAO.md`.
 
+
+## 11) Implementação inicial no repositório
+
+Implementação de referência adicionada para permitir evolução incremental:
+
+- `app/src/main/java/com/termux/app/agents/AgentMessage.java`
+- `app/src/main/java/com/termux/app/agents/CommitGate.java`
+- `app/src/main/java/com/termux/app/agents/DependencyRobot.java`
+- `app/src/test/java/com/termux/app/agents/AgentCoreSelfTest.java`
+
+Objetivo: fornecer base mínima para codificação de agentes e orquestração de dependências com validação de integridade.
+
