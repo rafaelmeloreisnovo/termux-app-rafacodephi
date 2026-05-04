@@ -1,0 +1,49 @@
+name: rafaelia-generated-artifacts
+
+on:
+  push:
+    paths:
+      - 'rmr/Rrr/generated/**'
+      - 'rmr/Rrr/rafaelia_jni_direct.c'
+      - 'rmr/Rrr/RafaeliaCore.java'
+      - '.github/workflows/rafaelia-generated.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install simulator deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy matplotlib
+      - name: Run QPU simulator
+        run: |
+          python rmr/Rrr/generated/rafaelia_qpu_simulator.py
+      - name: Run auto calibration
+        run: |
+          python rmr/Rrr/generated/rafaelia_auto_calibration.py > rmr/Rrr/generated/calibration_result.txt
+      - name: Build whitepaper PDF
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-latex-base texlive-pictures
+          pdflatex -interaction=nonstopmode -halt-on-error -output-directory rmr/Rrr/generated rmr/Rrr/generated/rafaelia_whitepaper.tex
+
+      - name: Archive generated binaries/artifacts
+        run: |
+          tar -czf rafaelia_generated_artifacts.tar.gz \
+            rmr/Rrr/generated/rafaelia_metrics.png \
+            rmr/Rrr/generated/calibration_result.txt \
+            rmr/Rrr/generated/rafaelia_isa_spec.md \
+            rmr/Rrr/generated/rafaelia_ctrl_fpga.sv \
+            rmr/Rrr/generated/rafaelia_whitepaper.tex \
+            rmr/Rrr/generated/rafaelia_whitepaper.pdf \
+            rmr/Rrr/generated/README_ALL_ARTIFACTS.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rafaelia-generated
+          path: rafaelia_generated_artifacts.tar.gz
