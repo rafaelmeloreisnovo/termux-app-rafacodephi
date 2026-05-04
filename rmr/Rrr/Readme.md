@@ -1,0 +1,1 @@
+os arquivos aqui devem ser implementado de cada lugares apropriado para o que é possível mapear a logica pode ser considerado uma capacidade para variar para o próximo conteúdo que tem uma relação com onde é possível resultado 
