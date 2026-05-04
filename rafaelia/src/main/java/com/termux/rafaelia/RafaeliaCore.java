@@ -197,8 +197,10 @@ public final class RafaeliaCore {
      * CRC32C de byte array — sem criar ByteBuffer temporário.
      */
     public static int crc32(byte[] data, int len) {
-        if (!_libLoaded || data == null) return 0;
+        if (!_libLoaded || data == null || len <= 0) return 0;
+        if (len > data.length) len = data.length;
         if (len > IN_CAP) len = IN_CAP;
+        if (len <= 0) return 0;
         IN_BUF.clear();
         IN_BUF.put(data, 0, len);
         return crc32Native(IN_BUF, len);

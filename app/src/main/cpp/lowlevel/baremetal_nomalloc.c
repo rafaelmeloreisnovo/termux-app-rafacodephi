@@ -98,7 +98,9 @@ static void bm_init_caps(void) {
 #if defined(HAS_NEON) || defined(__ARM_NEON) || defined(__ARM_NEON__)
     bin |= CAP_NEON | CAP_ASIMD;
 #endif
-#if defined(HAS_AVX2);  bin |= CAP_AVX2; bin |= CAP_AVX; }
+#if defined(HAS_AVX2)
+    bin |= CAP_AVX2;
+    bin |= CAP_AVX;
 #endif
 #if defined(HAS_AVX)
     bin |= CAP_AVX;

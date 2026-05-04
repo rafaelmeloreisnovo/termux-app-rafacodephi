@@ -56,3 +56,12 @@
 - memory layers
 - BitRAF encode/decode MVP
 - GP dimension MVP
+
+
+## vNext / Unreleased
+- código alterado: correção AVX2 preprocessor, locking de perfil de clock, validação de capacidade em debugStep, guardas crc32 Java, pipeline TOP42 CI artifacts.
+- motivo: coerência code+docs+artifact.
+- teste: validate_code_doc_sync + geração top42.*
+- status: IMPLEMENTADO/PARCIAL (device benchmark pendente).
+- gap remanescente: medições em arm32/arm64 real.
+- próximos passos: anexar artifacts por ABI.

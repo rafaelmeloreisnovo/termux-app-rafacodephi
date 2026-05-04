@@ -41,3 +41,7 @@
 - memory layers
 - BitRAF encode/decode MVP
 - GP dimension MVP
+
+
+## vNext / Unreleased
+- Adicionados: raf_top42_bench.c/.h, scripts/run_top42_bench.sh, scripts/validate_code_doc_sync.py, workflow top42_bench.yml, docs de sync/memória/hz/top42/report.

@@ -1,0 +1,391 @@
+{
+  "schema_version": "1.0.0",
+  "git_sha": "d345a61",
+  "device": "github-actions-generic",
+  "abi": "unknown",
+  "page_size": null,
+  "cache_line": null,
+  "target_hz": null,
+  "actual_hz_q16": null,
+  "jitter_ns": null,
+  "metrics": [
+    {
+      "name": "memcpy MB/s",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "memset MB/s",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "crc32c MiB/s",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "crc32_sw MiB/s",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "EMA ops/sec",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "entropy ops/sec",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "DirectByteBuffer process ops/sec",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "JNI call latency ns",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "vCPU step ops/sec",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "stepAllVcpus ops/sec",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "target_hz",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "actual_hz_q16",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "jitter_ns",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "missed_ticks",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "period_ns",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "L1 state bytes",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "L2 input bytes",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "L2 output bytes",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "JNI arena used",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "baremetal arena used",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "sequential read MB/s",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "sequential write MB/s",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "random read 4K IOPS",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "random write 4K IOPS",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "fsync latency",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "shell spawn latency",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "command throughput",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "matrix create ops/sec",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "vector dot ops/sec",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "vector add ops/sec",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "BitRAF encode ops/sec",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "BitRAF decode ops/sec",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "GP small sample time",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "Java heap KB",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "native heap KB",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "RSS idle MB",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "RSS after benchmark MB",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "APK size",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": ".so size",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "page size",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "cache line",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    },
+    {
+      "name": "battery / energy estimate when available",
+      "value": null,
+      "unit": "raw",
+      "status": "NEEDS_ARTIFACT",
+      "source": "CI_ARTIFACT",
+      "command": "scripts/run_top42_bench.sh",
+      "timestamp": "2026-05-04T23:17:23Z"
+    }
+  ]
+}
