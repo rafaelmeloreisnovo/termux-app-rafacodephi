@@ -20,6 +20,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <limits.h>
+#include <pthread.h>
 
 #ifdef __ANDROID__
 #include <android/log.h>
@@ -80,6 +82,8 @@ static void *jni_alloc(uint32_t n) {
 }
 
 static raf_state_t *g_state = NULL;  /* aponta para arena */
+static pthread_once_t g_state_once = PTHREAD_ONCE_INIT;
+static pthread_mutex_t g_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void ensure_state(void) {
     if (g_state) return;
@@ -98,6 +102,7 @@ static void ensure_state(void) {
     g_state->crc       = 0;
     g_state->crc = _crc32(g_state, offsetof(raf_state_t, crc));
 }
+static void ensure_state_once(void) { ensure_state(); }
 
 /* EMA update Q16.16 */
 static uint32_t ema(uint32_t old, uint32_t in) {
@@ -119,12 +124,14 @@ Java_com_termux_rafaelia_RafaeliaCore_processNative(
 
     uint8_t *in  = (uint8_t*)(*env)->GetDirectBufferAddress(env, in_buf);
     uint8_t *out = (uint8_t*)(*env)->GetDirectBufferAddress(env, out_buf);
+    jlong in_cap = (*env)->GetDirectBufferCapacity(env, in_buf);
     jlong out_cap = (*env)->GetDirectBufferCapacity(env, out_buf);
+    if (!in || !out || in_len <= 0 || out_cap < 8 || in_cap <= 0) return -1;
+    if ((jlong)in_len > in_cap) return -1;
 
-    if (!in || !out || in_len <= 0 || out_cap < 8) return -1;
-
-    ensure_state();
+    pthread_once(&g_state_once, ensure_state_once);
     if (!g_state) return -2;
+    pthread_mutex_lock(&g_state_mutex);
 
     /* Verifica integridade do estado */
     uint32_t saved_crc = g_state->crc;
@@ -174,10 +181,12 @@ Java_com_termux_rafaelia_RafaeliaCore_processNative(
             g_state->step
         };
         memcpy(out, r, 16);
+        pthread_mutex_unlock(&g_state_mutex);
         return 16;
     }
     uint32_t r2[2] = { _crc32(in,(size_t)in_len), phi };
     memcpy(out, r2, 8);
+    pthread_mutex_unlock(&g_state_mutex);
     return 8;
 }
 
@@ -195,7 +204,7 @@ Java_com_termux_rafaelia_RafaeliaCore_stepNative(
 
     raf_state_t *st = (raf_state_t*)(*env)->GetDirectBufferAddress(env, state_buf);
     jlong cap = (*env)->GetDirectBufferCapacity(env, state_buf);
-    if (!st || cap < (jlong)sizeof(raf_state_t)) return -1;
+    if (!st || cap < (jlong)sizeof(raf_state_t) || cycle < 0) return -1;
 
     /* verifica CRC */
     uint32_t sc = st->crc;
@@ -245,7 +254,8 @@ Java_com_termux_rafaelia_RafaeliaCore_profileNative(
 {
     (void)cls;
     char *out = (char*)(*env)->GetDirectBufferAddress(env, out_buf);
-    if (!out || cap < 64) return -1;
+    jlong out_cap = (*env)->GetDirectBufferCapacity(env, out_buf);
+    if (!out || cap < 64 || out_cap < cap) return -1;
 
     /* lê dados sem malloc — buffers na stack */
     char cpu_online[64]={0}, freq0[32]={0}, freq1[32]={0};
@@ -359,15 +369,21 @@ Java_com_termux_rafaelia_RafaeliaCore_readOscillatorStateNative(
     (void)cls;
     uint32_t *out = (uint32_t*)(*env)->GetDirectBufferAddress(env, outState);
     jlong cap = (*env)->GetDirectBufferCapacity(env, outState);
-    if (!out || oscCount <= 0) return -1;
-    if (cap < (jlong)(oscCount * 7 * (int)sizeof(uint32_t))) return -2;
-    ensure_state();
+    if (!out || oscCount <= 0 || cap <= 0) return -1;
+    size_t required_words = (size_t)oscCount * 7u;
+    if (required_words / 7u != (size_t)oscCount) return -2;
+    size_t required_bytes = required_words * sizeof(uint32_t);
+    if (required_bytes / sizeof(uint32_t) != required_words) return -2;
+    if ((uint64_t)required_bytes > (uint64_t)cap) return -2;
+    pthread_once(&g_state_once, ensure_state_once);
     if (!g_state) return -3;
+    pthread_mutex_lock(&g_state_mutex);
     for (int i = 0; i < oscCount; i++) {
         for (int k = 0; k < 7; k++) {
             out[i*7 + k] = (g_state->s[k] + (uint32_t)(i*131 + k*17)) & 0xFFFFu;
         }
     }
+    pthread_mutex_unlock(&g_state_mutex);
     return oscCount;
 }
 
