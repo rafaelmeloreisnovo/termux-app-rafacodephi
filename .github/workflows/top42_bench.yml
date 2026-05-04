@@ -1,0 +1,20 @@
+name: top42-bench
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  top42:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate code/doc sync
+        run: python3 scripts/validate_code_doc_sync.py
+      - name: Generate TOP42 placeholders
+        run: scripts/run_top42_bench.sh .
+      - name: Upload TOP42 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: top42-artifacts
+          path: |
+            top42.json
+            top42.csv
+            top42_env.txt
+            top42_readme.md

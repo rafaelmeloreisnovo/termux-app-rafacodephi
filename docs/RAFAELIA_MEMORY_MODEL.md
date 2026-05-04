@@ -1,21 +1,16 @@
 # RAFAELIA MEMORY MODEL
 
-## L1 / hot path
-- `raf_state_t`: s[7], coherence, entropy, phase, step, crc.
-- `STATE_CAP=64` no Java.
-- `raf_vcpu_t` alinhado em 64 bytes para reduzir false sharing entre vCPU.
+## L1 lógico
+`STATE_CAP=64`, `raf_state_t`, vCPU alinhado, `phase`, `step`, `crc`, `coherence`, `entropy`, `s[7]`.
 
-## L2 / warm path
-- `IN_BUF` 64KB e `OUT_BUF` 64KB (DirectByteBuffer).
-- `JNI_ARENA_SZ` 256KB.
-- `BM_ARENA_SZ` 512KB no caminho nomalloc.
-- matrizes/vetores/catálogo em baremetal.
+## L2 lógico
+`IN_BUF=64KB`, `OUT_BUF=64KB`, arena JNI, arena baremetal nomalloc, BitRAF, GP MVP, buffers benchmark.
 
-## RAM / cold path
-- Java heap do app, APK, bootstrap Termux, logs e arquivos de pacotes.
+## Buffer
+`DirectByteBuffer` é ponte Java/C; não usar `ByteBuffer.wrap` no hot path. Todo acesso com tamanho externo deve validar capacidade real.
 
-## Observações de cache
-- cache line alvo: 64 bytes.
-- stride por vCPU via struct alinhada.
-- working set do estado lógico é pequeno e separado de buffers grandes.
-- estado lógico não representa toda memória física do processo.
+## RAM
+Heap Java, APK, arquivos Termux, bootstrap, logs e artifacts de benchmark.
+
+## Hardware
+`page_size`, `cache_line`, ABI e recursos SIMD (NEON/SSE/AVX) quando disponíveis.

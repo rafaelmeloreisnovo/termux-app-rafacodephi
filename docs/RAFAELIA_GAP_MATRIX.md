@@ -31,3 +31,12 @@ Mapear, de forma operacional, o que está implementado, parcial e ausente para o
 - memory layers
 - BitRAF encode/decode MVP
 - GP dimension MVP
+
+
+## vNext / Unreleased
+- code: rafaelia_jni_direct.c, baremetal_nomalloc.c, TOP42 scripts/workflow
+- motivo: contratos JNI/capacidade, lock de clock, artifact CI
+- teste: scripts/validate_code_doc_sync.py e scripts/run_top42_bench.sh
+- status: PARCIAL
+- gap remanescente: benchmark em device real
+- próximos passos: promover métricas para DEVICE_ARTIFACT

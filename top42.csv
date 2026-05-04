@@ -1,0 +1,43 @@
+name,value,unit,status,source,command,timestamp
+memcpy MB/s,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+memset MB/s,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+crc32c MiB/s,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+crc32_sw MiB/s,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+EMA ops/sec,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+entropy ops/sec,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+DirectByteBuffer process ops/sec,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+JNI call latency ns,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+vCPU step ops/sec,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+stepAllVcpus ops/sec,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+target_hz,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+actual_hz_q16,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+jitter_ns,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+missed_ticks,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+period_ns,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+L1 state bytes,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+L2 input bytes,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+L2 output bytes,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+JNI arena used,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+baremetal arena used,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+sequential read MB/s,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+sequential write MB/s,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+random read 4K IOPS,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+random write 4K IOPS,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+fsync latency,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+shell spawn latency,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+command throughput,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+matrix create ops/sec,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+vector dot ops/sec,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+vector add ops/sec,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+BitRAF encode ops/sec,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+BitRAF decode ops/sec,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+GP small sample time,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+Java heap KB,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+native heap KB,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+RSS idle MB,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+RSS after benchmark MB,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+APK size,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+.so size,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+page size,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+cache line,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z
+battery / energy estimate when available,,raw,NEEDS_ARTIFACT,CI_ARTIFACT,scripts/run_top42_bench.sh,2026-05-04T23:17:23Z

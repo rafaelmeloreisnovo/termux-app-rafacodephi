@@ -400,7 +400,8 @@ Java_com_termux_rafaelia_RafaeliaCore_debugStepNative(
 {
     (void)cls;
     char *dbg = (char*)(*env)->GetDirectBufferAddress(env, outDebug);
-    if (!dbg || cap < 96) return -1;
+    jlong dbg_cap = (*env)->GetDirectBufferCapacity(env, outDebug);
+    if (!dbg || cap < 96 || dbg_cap < cap) return -1;
     jint phi = Java_com_termux_rafaelia_RafaeliaCore_stepNative(env, cls, state_buf, cycle);
     raf_state_t *st = (raf_state_t*)(*env)->GetDirectBufferAddress(env, state_buf);
     if (!st) return -2;
@@ -408,7 +409,9 @@ Java_com_termux_rafaelia_RafaeliaCore_debugStepNative(
         "cycle=%d phi=%d s=[%u,%u,%u,%u,%u,%u,%u] C=%u H=%u phase=%u\n",
         cycle, phi, st->s[0], st->s[1], st->s[2], st->s[3], st->s[4], st->s[5], st->s[6],
         st->coherence, st->entropy, st->phase);
-    return (n > 0) ? phi : -3;
+    if (n < 0) return -3;
+    if (n >= cap) return -4;
+    return phi;
 }
 
 JNIEXPORT jint JNICALL
@@ -490,12 +493,17 @@ Java_com_termux_rafaelia_RafaeliaCore_getClockProfileNative(
     char *out = (char*)(*env)->GetDirectBufferAddress(env, out_buf);
     jlong out_cap = (*env)->GetDirectBufferCapacity(env, out_buf);
     if (!out || cap < 96 || out_cap < cap) return -1;
+    pthread_mutex_lock(&g_sched_mutex);
+    ensure_scheduler_locked(10);
     int n = snprintf(out, (size_t)cap,
         "{\"target_hz\":%u,\"period_ns\":%llu,\"actual_delta_ns\":%llu,\"actual_hz_q16\":%u,\"jitter_ns\":%llu,\"missed_ticks\":%llu,\"total_ticks\":%llu}",
         g_clock.target_hz, (unsigned long long)g_clock.period_ns, (unsigned long long)g_clock.actual_delta_ns,
         raf_clock_actual_hz_q16(&g_clock), (unsigned long long)g_clock.jitter_ns,
         (unsigned long long)g_clock.missed_ticks, (unsigned long long)g_clock.total_ticks);
-    return (n > 0 && n < cap) ? n : -2;
+    pthread_mutex_unlock(&g_sched_mutex);
+    if (n < 0) return -2;
+    if (n >= cap) return -3;
+    return n;
 }
 
 JNIEXPORT jint JNICALL
