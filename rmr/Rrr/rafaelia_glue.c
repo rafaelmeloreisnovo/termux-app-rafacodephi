@@ -282,7 +282,7 @@ static void cg_run_one(uint32_t core){
 
     /* VERIFY */
     uint32_t sc = crc(v, offsetof(vcpu_t,crc_s));
-    if(!sc || v->s[0] >= Q2PI){ /* sanidade */
+    if(sc != v->crc_s){ /* sanidade */
         /* rollback */
         memcpy(v, &g_snapshot[core], sizeof(vcpu_t));
         g_cg_bitmap[core] = 0;
