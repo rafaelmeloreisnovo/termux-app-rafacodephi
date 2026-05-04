@@ -32,3 +32,12 @@
 - `docs/ROADMAP_RAFAELIA.md`
 - `docs/RAFAELIA_SEMANTIC_LAYERS.md`
 - `docs/RAFAELIA_GAP_MATRIX.md`
+
+
+## v0.10.0-unreleased
+- seed alignment
+- loose files map
+- vCPU/HZ official MVP
+- memory layers
+- BitRAF encode/decode MVP
+- GP dimension MVP

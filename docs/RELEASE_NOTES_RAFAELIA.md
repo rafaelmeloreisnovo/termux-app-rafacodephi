@@ -47,3 +47,12 @@
 ## v0.1.0-unreleased
 - JNI zero-copy (`termux_rafaelia_direct`) com DirectByteBuffer.
 - Base `baremetal_nomalloc` e ponte `RafaeliaCore`.
+
+
+## v0.10.0-unreleased
+- seed alignment
+- loose files map
+- vCPU/HZ official MVP
+- memory layers
+- BitRAF encode/decode MVP
+- GP dimension MVP
