@@ -1,5 +1,9 @@
 # Release Notes (Rafaelia Integration)
 
+## v0.7.0-unreleased
+- Adicionado `app/src/main/cpp/lowlevel/raf_bench_suite.c` (MVP) com métricas de CRC32C throughput, EMA Q16.16 e entropia milli.
+- Atualizada matriz de gaps para refletir `raf_bench_suite.c` como implementado (MVP).
+
 ## v0.6.0-unreleased
 - Novo `RafaeliaAuditComparator` para comparar auditorias entre builds consecutivos (`commitRate`, `rollbackRate`, `currentCycle`).
 - Teste unitário `RafaeliaAuditComparatorTest` cobrindo cálculo de deltas.

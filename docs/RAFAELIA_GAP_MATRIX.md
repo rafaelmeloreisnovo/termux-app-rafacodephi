@@ -11,7 +11,7 @@ Mapear, de forma operacional, o que está implementado, parcial e ausente para o
 | Janela periódica 42 | Implementado | `phiWindow[42]`, export JSON | Adicionar teste de estabilidade estatística por build |
 | Persistência de auditoria | Implementado | `RafaeliaAuditStore`, `RafaeliaBatchWorker` | Criar comparador entre builds |
 | Gate de promoção por rollback | Implementado | `RafaeliaPromotionGate` | Parametrizar por perfil de dispositivo |
-| raf_bench_suite.c (microbench C) | **Ausente** | não encontrado | Criar suíte bare-metal de métricas (latência, energia proxy, throughput) |
+| raf_bench_suite.c (microbench C) | Implementado (MVP) | `app/src/main/cpp/lowlevel/raf_bench_suite.c` | Integrar ao CI com baseline por ABI |
 | Medições multilíngues (entropia 10 línguas) | **Ausente** | não encontrado | Definir dataset + pipeline de coleta |
 | Grassberger-Procaccia / D_H | **Ausente** | não encontrado | Implementar módulo analítico offline |
 | CLIMEX/PLIMEX | **Ausente** | não encontrado | Especificar API e experimento reprodutível |

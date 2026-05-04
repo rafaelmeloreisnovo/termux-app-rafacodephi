@@ -4,6 +4,7 @@
 - `app/src/main/cpp/lowlevel/rafaelia_jni_direct.c`
 - `app/src/main/cpp/lowlevel/baremetal_nomalloc.c`
 - `app/src/main/cpp/lowlevel/baremetal_nomalloc.h`
+- `app/src/main/cpp/lowlevel/raf_bench_suite.c` (microbench MVP)
 
 ## Build
 - `app/src/main/cpp/Android.mk` (módulo `termux_rafaelia_direct`)
