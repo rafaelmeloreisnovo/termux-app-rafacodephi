@@ -39,6 +39,24 @@ public final class RafaeliaCore {
     private static final boolean _libLoaded;
     private static int _cycle = 0;
 
+
+    public static final class CommitGateResult {
+        public final boolean committed;
+        public final int crc32c;
+        public final int phiQ16;
+        public final int phase;
+        public final int step;
+
+        CommitGateResult(boolean committed, int crc32c, int phiQ16, int phase, int step) {
+            this.committed = committed;
+            this.crc32c = crc32c;
+            this.phiQ16 = phiQ16;
+            this.phase = phase;
+            this.step = step;
+        }
+    }
+
+
     // Prevent instantiation
     private RafaeliaCore() {}
 
@@ -90,6 +108,37 @@ public final class RafaeliaCore {
      * Lê resultado de OUT_BUF.
      * Retorna phi Q16.16 ou 0 em erro.
      */
+
+    /**
+     * Commit gate Java side: LOAD->PROCESS->VERIFY->COMMIT.
+     * VERIFY compara crc32Native(data) com crc retornado do pipeline nativo.
+     */
+    public static CommitGateResult processWithCommitGate(byte[] data, int len) {
+        if (!_libLoaded || data == null || len <= 0) {
+            return new CommitGateResult(false, 0, 0, 0, 0);
+        }
+        if (len > IN_CAP) len = IN_CAP;
+
+        IN_BUF.clear();
+        IN_BUF.put(data, 0, len);
+        OUT_BUF.clear();
+
+        int written = processNative(IN_BUF, len, OUT_BUF);
+        if (written < 8) {
+            return new CommitGateResult(false, 0, 0, 0, 0);
+        }
+
+        OUT_BUF.position(0);
+        int crcFromPipe = OUT_BUF.getInt();
+        int phi = OUT_BUF.getInt();
+        int phase = written >= 12 ? OUT_BUF.getInt() : 0;
+        int step = written >= 16 ? OUT_BUF.getInt() : 0;
+
+        int crcFromVerify = crc32(data, len);
+        boolean ok = (crcFromPipe == crcFromVerify);
+        return new CommitGateResult(ok, crcFromPipe, phi, phase, step);
+    }
+
     public static int process(byte[] data, int len) {
         if (!_libLoaded || data == null || len <= 0) return 0;
         if (len > IN_CAP) len = IN_CAP;
