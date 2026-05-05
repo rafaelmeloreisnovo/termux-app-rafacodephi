@@ -4,7 +4,7 @@ jobs:
   top42:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Validate code/doc sync
         run: python3 scripts/validate_code_doc_sync.py
       - name: Generate TOP42 placeholders
