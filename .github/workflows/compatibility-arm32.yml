@@ -1,0 +1,128 @@
+name: compatibility-arm32
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - master
+      - main
+
+jobs:
+  compatibility-arm32:
+    runs-on: ubuntu-latest
+    env:
+      TERMUX_PACKAGE_VARIANT: apt-android-7
+      TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android toolchain
+        run: ./scripts/setup_android_toolchain.sh
+
+      - name: Validate bootstrap assets for ARM32
+        run: |
+          test -f app/src/main/cpp/bootstrap-arm.zip
+          ls -lh app/src/main/cpp/bootstrap-arm.zip > bootstrap-arm-presence.txt
+
+      - name: Build debug APKs
+        run: ./gradlew clean :app:assembleDebug
+
+      - name: Install inspection dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y binutils zip unzip
+
+      - name: Validate APK compatibility and generate report
+        run: |
+          set -euo pipefail
+          mkdir -p ci-reports
+          ARM32_APK="app/build/outputs/apk/debug/termux-rafcodephi-debug-armeabi-v7a.apk"
+          ARM64_APK="app/build/outputs/apk/debug/termux-rafcodephi-debug-arm64-v8a.apk"
+          UNIVERSAL_APK="app/build/outputs/apk/debug/termux-rafcodephi-debug-universal.apk"
+
+          test -f "$ARM32_APK"
+          test -f "$ARM64_APK"
+          test -f "$UNIVERSAL_APK"
+
+          AAPT_BIN="$ANDROID_HOME/build-tools/35.0.0/aapt"
+          APKSIGNER_BIN="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+
+          "$AAPT_BIN" dump badging "$ARM32_APK" | tee ci-reports/apk-badging.txt
+
+          grep -q "package: name='com.termux.rafacodephi'" ci-reports/apk-badging.txt
+          grep -q "sdkVersion:'21'" ci-reports/apk-badging.txt
+          grep -Eq "targetSdkVersion:'(34|35|36|37|38|39)'" ci-reports/apk-badging.txt
+          grep -q "native-code:.*'armeabi-v7a'" ci-reports/apk-badging.txt
+
+          unzip -l "$ARM32_APK" | tee ci-reports/native-libs.txt
+          grep -q "lib/armeabi-v7a/" ci-reports/native-libs.txt
+
+          unzip -l "$UNIVERSAL_APK" | tee ci-reports/native-libs-universal.txt
+          grep -q "lib/armeabi-v7a/" ci-reports/native-libs-universal.txt
+
+          TMP_LIB_DIR="$(mktemp -d)"
+          unzip -o "$ARM32_APK" "lib/armeabi-v7a/*" -d "$TMP_LIB_DIR" >/dev/null
+          {
+            echo "# readelf -h"
+            find "$TMP_LIB_DIR/lib/armeabi-v7a" -type f -name '*.so' -print0 | xargs -0 -I{} sh -c 'echo "## {}"; readelf -h "{}"'
+            echo
+            echo "# readelf -A"
+            find "$TMP_LIB_DIR/lib/armeabi-v7a" -type f -name '*.so' -print0 | xargs -0 -I{} sh -c 'echo "## {}"; readelf -A "{}"'
+          } | tee ci-reports/readelf-arm32.txt
+
+          "$APKSIGNER_BIN" verify --verbose "$ARM32_APK" | tee ci-reports/apk-signature.txt
+
+          {
+            echo "# Moto E7 Power (Android 32-bit) install notes"
+            echo
+            echo "Use termux-rafcodephi-debug-armeabi-v7a.apk or termux-rafcodephi-debug-universal.apk."
+            echo "Do not use arm64-v8a APK on 32-bit Android userspace."
+            echo
+            echo "Verified bootstrap asset:"
+            cat bootstrap-arm-presence.txt
+          } > ci-reports/install-notes-moto-e7-power.md
+
+      - name: Validate compile/ndk config from source of truth
+        run: |
+          grep -q '^minSdkVersion=21$' gradle.properties
+          grep -q '^targetSdkVersion=34$' gradle.properties
+          grep -q '^compileSdkVersion=35$' gradle.properties
+          grep -q '^ndkVersion=26.3.11579264$' gradle.properties
+
+      - name: Block unsigned release publication as primary
+        run: |
+          if rg -n "upload-artifact" .github/workflows | rg -q "unsigned.*release"; then
+            echo "Unsigned release artifacts exist in repo workflows; ensure they are non-primary and explicitly labeled." > ci-reports/unsigned-release-warning.txt
+          fi
+
+      - name: Upload ARM32 compatibility report
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-arm32-report-${{ github.sha }}
+          path: |
+            ci-reports/apk-badging.txt
+            ci-reports/native-libs.txt
+            ci-reports/readelf-arm32.txt
+            ci-reports/apk-signature.txt
+            ci-reports/install-notes-moto-e7-power.md
+            ci-reports/native-libs-universal.txt
+            bootstrap-arm-presence.txt
+          if-no-files-found: error
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-rafcodephi-debug-apks-${{ github.sha }}
+          path: |
+            app/build/outputs/apk/debug/termux-rafcodephi-debug-universal.apk
+            app/build/outputs/apk/debug/termux-rafcodephi-debug-armeabi-v7a.apk
+            app/build/outputs/apk/debug/termux-rafcodephi-debug-arm64-v8a.apk
+          if-no-files-found: error
