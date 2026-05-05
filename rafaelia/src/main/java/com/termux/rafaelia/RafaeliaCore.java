@@ -20,6 +20,7 @@ public final class RafaeliaCore {
     public static final ByteBuffer IN_BUF;
     public static final ByteBuffer OUT_BUF;
     public static final ByteBuffer STATE_BUF;
+    private static final boolean _libLoaded;
 
     static {
         // allocateDirect não vai para o heap Java — usa memória nativa
@@ -28,15 +29,15 @@ public final class RafaeliaCore {
         STATE_BUF = ByteBuffer.allocateDirect(STATE_CAP).order(ByteOrder.nativeOrder());
 
         // Inicializa estado no buffer nativo
+        boolean libLoaded;
         try {
             System.loadLibrary("termux_rafaelia_direct");
-            _libLoaded = true;
+            libLoaded = true;
         } catch (UnsatisfiedLinkError e) {
-            _libLoaded = false;
+            libLoaded = false;
         }
+        _libLoaded = libLoaded;
     }
-
-    private static final boolean _libLoaded;
     private static int _cycle = 0;
 
 

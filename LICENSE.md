@@ -213,3 +213,15 @@ For questions about licensing, attribution, or to report missing attributions:
 - **Original Termux**: See [https://termux.com](https://termux.com)
 - **RAFAELIA Framework**: Open an issue at [https://github.com/instituto-Rafael/termux-app-rafacodephi/issues](https://github.com/instituto-Rafael/termux-app-rafacodephi/issues)
 - **This Fork**: Open an issue at [https://github.com/instituto-Rafael/termux-app-rafacodephi/issues](https://github.com/instituto-Rafael/termux-app-rafacodephi/issues)
+
+## Manifesto Notice (Non-Normative)
+
+Este repositório inclui um manifesto filosófico-técnico denominado **"Parábola do Zero e do Um"** no `README.md`.
+
+Este manifesto:
+- não substitui, altera ou restringe os termos jurídicos das licenças aplicáveis;
+- não cria licença adicional;
+- não modifica obrigações de copyleft já estabelecidas;
+- funciona apenas como declaração de princípios de engenharia, coerência e validação.
+
+Em caso de conflito interpretativo, prevalecem sempre os textos de licença formais citados nesta documentação.
