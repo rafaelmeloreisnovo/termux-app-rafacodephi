@@ -1,0 +1,71 @@
+name: APK Matrix Artifact Variants
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_set:
+        description: Which artifact set to upload
+        required: true
+        type: choice
+        default: all
+        options:
+          - all
+          - signed-only
+          - unsigned-only
+          - reports-only
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK/NDK
+        run: ./scripts/setup_android_toolchain.sh
+
+      - name: Build signed + unsigned APK matrix
+        run: ./scripts/build_apk_matrix.sh
+
+      - name: Upload all outputs
+        if: ${{ inputs.artifact_set == 'all' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: termux-apk-matrix-all-${{ github.sha }}
+          path: |
+            dist/apk-matrix/**
+
+      - name: Upload signed APKs only
+        if: ${{ inputs.artifact_set == 'signed-only' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: termux-apk-matrix-signed-${{ github.sha }}
+          path: |
+            dist/apk-matrix/signed/**
+            dist/apk-matrix/SHA256SUMS.txt
+
+      - name: Upload unsigned APKs only
+        if: ${{ inputs.artifact_set == 'unsigned-only' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: termux-apk-matrix-unsigned-${{ github.sha }}
+          path: |
+            dist/apk-matrix/unsigned/**
+            dist/apk-matrix/SHA256SUMS.txt
+
+      - name: Upload reports only
+        if: ${{ inputs.artifact_set == 'reports-only' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: termux-apk-matrix-reports-${{ github.sha }}
+          path: |
+            dist/apk-matrix/APK_SIZE_REPORT.tsv
+            dist/apk-matrix/APK_SIZE_DIFF_RELEASE.tsv
+            dist/apk-matrix/SHA256SUMS.txt
+            dist/apk-matrix/ARTIFACT_MANIFEST.txt
