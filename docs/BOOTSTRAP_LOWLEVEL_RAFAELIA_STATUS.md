@@ -34,7 +34,7 @@
 
 ## Riscos
 - confundir ZIPRAF com ZIP real.
-- suporte riscv64 Android pode depender da imagem/NDK do runner.
+- suporte de target pode variar por imagem/NDK; workflow agora registra skip explícito por arquitetura não suportada.
 
 ## Próximos passos
 - adicionar entry ASM específico para arm32 se necessário.

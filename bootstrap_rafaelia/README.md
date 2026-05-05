@@ -10,3 +10,10 @@ Módulo isolado experimental baseado em BOOTSTRAP_LOWLEVEL_RAFAELIA.txt.
 ## Build
 - `make -C bootstrap_rafaelia host-smoke`
 - `make -C bootstrap_rafaelia arm64-freestanding`
+
+## Termux compat (auxiliar, sem substituir bootstrap real)
+- `make -C bootstrap_rafaelia termux-compat`
+- Gera:
+  - `libbootstrap_rafaelia_arm32.a`
+  - `libbootstrap_rafaelia_arm64.a`
+  - payload auxiliar em `bootstrap_rafaelia/out-termux-compat/`

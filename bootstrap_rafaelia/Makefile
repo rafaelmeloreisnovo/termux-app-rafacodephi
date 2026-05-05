@@ -29,7 +29,7 @@ else
 $(error Unsupported ARCH=$(ARCH))
 endif
 
-.PHONY: host-smoke selftest bootstrap_rafaelia_selftest arm-freestanding clean
+.PHONY: host-smoke selftest bootstrap_rafaelia_selftest arm-freestanding termux-compat termux-compat-arm32 termux-compat-arm64 clean
 host-smoke: selftest
 
 selftest: bootstrap_rafaelia_selftest
@@ -46,4 +46,16 @@ arm-freestanding:
 	@echo "freestanding objects generated for $(ARCH) target $(TARGET_TRIPLE)"
 
 clean:
-	rm -f raf_selftest selftest.log raf_main.*.o entry_*.o
+	rm -f raf_selftest selftest.log raf_main.*.o entry_*.o libbootstrap_rafaelia_*.a
+
+termux-compat-arm32:
+	$(NDK_CLANG) --target=armv7a-linux-androideabi$(ANDROID_API) -ffreestanding -fno-builtin -nostdlib -nostdinc -I. -c raf_main.c -o raf_main.termux.arm32.o
+	llvm-ar rcs libbootstrap_rafaelia_arm32.a raf_main.termux.arm32.o
+
+termux-compat-arm64:
+	$(NDK_CLANG) --target=aarch64-linux-android$(ANDROID_API) -ffreestanding -fno-builtin -nostdlib -nostdinc -I. -c raf_main.c -o raf_main.termux.arm64.o
+	llvm-ar rcs libbootstrap_rafaelia_arm64.a raf_main.termux.arm64.o
+
+termux-compat: termux-compat-arm32 termux-compat-arm64
+	bash ./raf_termux_compat.sh
+
