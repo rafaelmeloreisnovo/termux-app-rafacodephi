@@ -1,0 +1,81 @@
+# RAFCODEΦ Bootstrap Contract
+
+Este documento fixa o bootstrap como requisito obrigatório da fork `termux-app-rafacodephi`.
+
+## Decisão técnica
+
+O app só deve ser considerado operacional quando houver bootstrap íntegro, verificável e compatível com a ABI alvo. Um build que compila mas não entrega shell funcional não é considerado entrega válida.
+
+## Fonte de verdade
+
+Os arquivos bootstrap esperados são gerados pela task Gradle existente:
+
+```bash
+./gradlew :app:downloadBootstraps --no-daemon
+```
+
+Os arquivos esperados ficam em:
+
+```text
+app/src/main/cpp/bootstrap-aarch64.zip
+app/src/main/cpp/bootstrap-arm.zip
+app/src/main/cpp/bootstrap-i686.zip
+app/src/main/cpp/bootstrap-x86_64.zip
+```
+
+Esses arquivos podem ser artefatos de build e não precisam ser versionados em Git. O contrato obrigatório é: eles precisam existir, ser ZIPs válidos e ter hashes rastreáveis durante build, CI ou preparação local.
+
+## Requisitos mínimos
+
+### Build-time
+
+- `app/src/main/cpp/bootstrap-aarch64.zip` existe e é ZIP válido.
+- `app/src/main/cpp/bootstrap-arm.zip` existe e é ZIP válido.
+- `app/src/main/cpp/bootstrap-i686.zip` existe e é ZIP válido.
+- `app/src/main/cpp/bootstrap-x86_64.zip` existe e é ZIP válido.
+- SHA256 deve ser emitido para cada arquivo.
+- BLAKE3 deve ser emitido quando `b3sum` estiver disponível no ambiente.
+- Espaço livre mínimo padrão: `1024 MB`, ajustável por `MIN_FREE_MB`.
+
+### Runtime Termux
+
+Quando executado dentro de uma instalação Termux/RAFCODEΦ, o contrato exige:
+
+```text
+$PREFIX
+$PREFIX/bin/sh
+$PREFIX/bin/pkg
+```
+
+Se `PREFIX` ou `TERMUX_PREFIX` não estiver definido, a checagem de runtime é tratada como ambiente de build, não como falha.
+
+## Comandos canônicos
+
+Preparar e validar bootstrap:
+
+```bash
+bash scripts/verify_bootstrap_contract.sh --prepare
+```
+
+Validar bootstrap já existente:
+
+```bash
+bash scripts/verify_bootstrap_contract.sh --check
+```
+
+Validar somente runtime instalado:
+
+```bash
+bash scripts/verify_bootstrap_contract.sh --runtime-prefix-only
+```
+
+Reduzir ou elevar o limite de espaço livre:
+
+```bash
+MIN_FREE_MB=2048 bash scripts/verify_bootstrap_contract.sh --prepare
+```
+
+
+## Implementação lowlevel
+
+A verificação usa utilitários lowlevel de sistema (`od`, `tail`, `sed`, `sha256sum`, `b3sum`) sem dependência em módulos Python ou validação via bibliotecas ZIP de alto nível.
