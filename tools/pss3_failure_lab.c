@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,8 +22,8 @@ typedef struct {
     int gate_class;
 } failure_bucket;
 
-static const int fibo_01123[] = {0,1,1,2,3};
-static const int fibo_001123[] = {0,0,1,1,2,3};
+static const int fibo_01123[] = {0, 1, 1, 2, 3};
+static const int fibo_001123[] = {0, 0, 1, 1, 2, 3};
 
 static int to_i(const char *s){ return (s&&*s)?atoi(s):0; }
 static double to_d(const char *s){ return (s&&*s)?atof(s):0.0; }
