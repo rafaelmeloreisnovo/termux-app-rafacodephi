@@ -50,12 +50,12 @@ typedef float     f32;
 #define PACKED   __attribute__((packed))
 
 /* ── Constantes do sistema ────────────────────────────────────────────── */
-#define PERIOD      42u
-#define TORUS_DIM   7u
+#define PERIOD      RMR_PERIOD_42
+#define TORUS_DIM   RMR_TORUS_DIM_7
 #define N_VCPU      8u
-#define N_STACKS    1000u
-#define N_EXTRA     8u
-#define N_TOTAL     1008u
+#define N_STACKS    RMR_N_STACKS_1000
+#define N_EXTRA     RMR_N_EXTRA_8
+#define N_TOTAL     RMR_N_TOTAL_1008
 #define CACHE_LINE  64u
 
 /* ── Q16.16 ops ───────────────────────────────────────────────────────── */
