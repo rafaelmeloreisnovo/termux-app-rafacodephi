@@ -34,7 +34,7 @@ Esses arquivos podem ser artefatos de build e não precisam ser versionados em G
 - `app/src/main/cpp/bootstrap-i686.zip` existe e é ZIP válido.
 - `app/src/main/cpp/bootstrap-x86_64.zip` existe e é ZIP válido.
 - SHA256 deve ser emitido para cada arquivo.
-- BLAKE3 deve ser emitido quando o módulo Python `blake3` estiver disponível.
+- BLAKE3 deve ser emitido quando `b3sum` estiver disponível no ambiente.
 - Espaço livre mínimo padrão: `1024 MB`, ajustável por `MIN_FREE_MB`.
 
 ### Runtime Termux
@@ -57,6 +57,13 @@ Preparar e validar bootstrap:
 bash scripts/verify_bootstrap_contract.sh --prepare
 ```
 
+
+Gerar bootstrap developer local em C lowlevel (sem download remoto):
+
+```bash
+bash scripts/verify_bootstrap_contract.sh --prepare-dev
+```
+
 Validar bootstrap já existente:
 
 ```bash
@@ -74,3 +81,8 @@ Reduzir ou elevar o limite de espaço livre:
 ```bash
 MIN_FREE_MB=2048 bash scripts/verify_bootstrap_contract.sh --prepare
 ```
+
+
+## Implementação lowlevel
+
+A verificação usa um checker lowlevel em C (`scripts/bootstrap_zip_contract_check.c`) compilado no ato e executado sem heap/malloc para validar assinatura local + EOCD do ZIP, junto de `sha256sum` e `b3sum` opcional.

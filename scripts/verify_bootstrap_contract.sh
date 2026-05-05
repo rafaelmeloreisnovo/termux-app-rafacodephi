@@ -6,118 +6,77 @@ cd "$ROOT_DIR"
 
 MIN_FREE_MB="${MIN_FREE_MB:-1024}"
 BOOTSTRAP_DIR="app/src/main/cpp"
-BOOTSTRAPS=(
-  "bootstrap-aarch64.zip"
-  "bootstrap-arm.zip"
-  "bootstrap-i686.zip"
-  "bootstrap-x86_64.zip"
-)
+BOOTSTRAPS=(bootstrap-aarch64.zip bootstrap-arm.zip bootstrap-i686.zip bootstrap-x86_64.zip)
 
-usage() {
-  cat <<'USAGE'
-Usage:
-  bash scripts/verify_bootstrap_contract.sh --prepare
-  bash scripts/verify_bootstrap_contract.sh --check
-  bash scripts/verify_bootstrap_contract.sh --runtime-prefix-only
+log(){ printf '[bootstrap-contract] %s\n' "$*"; }
+fail(){ printf '[bootstrap-contract] ERROR: %s\n' "$*" >&2; exit 1; }
+need(){ command -v "$1" >/dev/null 2>&1 || fail "Missing required command: $1"; }
 
-Options:
-  --prepare              Run :app:downloadBootstraps then validate archives + hashes + runtime check.
-  --check                Validate existing bootstrap archives + hashes + runtime check.
-  --runtime-prefix-only  Validate runtime PREFIX contract only.
-
-Environment:
-  MIN_FREE_MB            Minimum free space in MB required for bootstrap checks (default: 1024).
-USAGE
-}
-
-log() { printf '[bootstrap-contract] %s\n' "$*"; }
-fail() { printf '[bootstrap-contract] ERROR: %s\n' "$*" >&2; exit 1; }
-
-check_free_space() {
+check_free_space(){
   local free_mb
   free_mb="$(df -Pm "$ROOT_DIR" | awk 'NR==2{print $4}')"
   [[ "$free_mb" =~ ^[0-9]+$ ]] || fail "Unable to parse free disk space: $free_mb"
-  if (( free_mb < MIN_FREE_MB )); then
-    fail "Free space ${free_mb}MB below required MIN_FREE_MB=${MIN_FREE_MB}MB"
-  fi
+  (( free_mb >= MIN_FREE_MB )) || fail "Free space ${free_mb}MB below required MIN_FREE_MB=${MIN_FREE_MB}MB"
   log "Free space check OK: ${free_mb}MB >= ${MIN_FREE_MB}MB"
 }
 
-check_zip_valid() {
-  local zip_file="$1"
-  [[ -f "$zip_file" ]] || fail "Missing bootstrap archive: $zip_file"
-  [[ -s "$zip_file" ]] || fail "Bootstrap archive is empty: $zip_file"
-  python3 - "$zip_file" <<'PY'
-import sys, zipfile
-path = sys.argv[1]
-with zipfile.ZipFile(path, 'r') as zf:
-    bad = zf.testzip()
-    if bad is not None:
-        raise SystemExit(f"Corrupted zip entry in {path}: {bad}")
-    if len(zf.infolist()) == 0:
-        raise SystemExit(f"Empty zip archive: {path}")
-PY
+check_zip_valid_lowlevel(){
+  local f="$1"
+  [[ -f "$f" ]] || fail "Missing bootstrap archive: $f"
+  [[ -s "$f" ]] || fail "Bootstrap archive is empty: $f"
+  /tmp/bootstrap_zip_contract_check "$f" >/dev/null 2>&1 || fail "Invalid ZIP structure in $f"
 }
 
-emit_hashes() {
-  local has_blake3=0
-  if python3 -c 'import blake3' >/dev/null 2>&1; then
-    has_blake3=1
-  fi
-
-  python3 - "$BOOTSTRAP_DIR" "$has_blake3" "${BOOTSTRAPS[@]}" <<'PY'
-import hashlib
-import sys
-from pathlib import Path
-
-base = Path(sys.argv[1])
-has_blake3 = int(sys.argv[2])
-files = sys.argv[3:]
-if has_blake3:
-    from blake3 import blake3
-
-for file_name in files:
-    path = base / file_name
-    data = path.read_bytes()
-    sha = hashlib.sha256(data).hexdigest()
-    print(f"SHA256 {file_name} {sha}")
-    if has_blake3:
-        b3 = blake3(data).hexdigest()
-        print(f"BLAKE3 {file_name} {b3}")
-PY
-
-  if (( has_blake3 == 0 )); then
-    log "Python module 'blake3' unavailable; skipped BLAKE3 emission. SHA256 emitted for all archives."
-  fi
-}
-
-check_bootstraps() {
-  check_free_space
-  for f in "${BOOTSTRAPS[@]}"; do
-    check_zip_valid "$BOOTSTRAP_DIR/$f"
-    log "Zip validation OK: $BOOTSTRAP_DIR/$f"
+emit_hashes_lowlevel(){
+  need sha256sum
+  local has_b3=0
+  command -v b3sum >/dev/null 2>&1 && has_b3=1
+  local z p sha b3
+  for z in "${BOOTSTRAPS[@]}"; do
+    p="$BOOTSTRAP_DIR/$z"
+    sha="$(sha256sum "$p" | awk '{print $1}')"
+    [[ "$sha" =~ ^[0-9a-f]{64}$ ]] || fail "Invalid SHA256 for $p"
+    printf 'SHA256 %s %s\n' "$z" "$sha"
+    if (( has_b3 == 1 )); then
+      b3="$(b3sum "$p" | awk '{print $1}')"
+      [[ "$b3" =~ ^[0-9a-f]{64}$ ]] || fail "Invalid BLAKE3 for $p"
+      printf 'BLAKE3 %s %s\n' "$z" "$b3"
+    fi
   done
-  emit_hashes
+  (( has_b3 == 1 )) || log "b3sum unavailable; BLAKE3 skipped (SHA256 emitted)."
 }
 
-check_runtime_prefix() {
-  local runtime_prefix="${PREFIX:-${TERMUX_PREFIX:-}}"
-  if [[ -z "$runtime_prefix" ]]; then
-    log "PREFIX/TERMUX_PREFIX not set; runtime check skipped (build environment mode)."
-    return 0
-  fi
-
-  [[ -d "$runtime_prefix" ]] || fail "PREFIX directory not found: $runtime_prefix"
-  [[ -x "$runtime_prefix/bin/sh" ]] || fail "Missing runtime shell: $runtime_prefix/bin/sh"
-  [[ -x "$runtime_prefix/bin/pkg" ]] || fail "Missing runtime pkg: $runtime_prefix/bin/pkg"
-  log "Runtime PREFIX contract OK: $runtime_prefix"
+check_runtime_prefix(){
+  local p="${PREFIX:-${TERMUX_PREFIX:-}}"
+  [[ -n "$p" ]] || { log "PREFIX/TERMUX_PREFIX not set; runtime check skipped (build mode)."; return 0; }
+  [[ -d "$p" ]] || fail "PREFIX directory not found: $p"
+  [[ -x "$p/bin/sh" ]] || fail "Missing runtime shell: $p/bin/sh"
+  [[ -x "$p/bin/pkg" ]] || fail "Missing runtime pkg: $p/bin/pkg"
+  log "Runtime PREFIX contract OK: $p"
 }
 
-mode="${1:-}"
-case "$mode" in
+check_bootstraps(){
+  need cc
+  cc -O2 -std=c11 -Wall -Wextra -Werror scripts/bootstrap_zip_contract_check.c -o /tmp/bootstrap_zip_contract_check
+  check_free_space
+  local z
+  for z in "${BOOTSTRAPS[@]}"; do
+    check_zip_valid_lowlevel "$BOOTSTRAP_DIR/$z"
+    log "Zip validation OK: $BOOTSTRAP_DIR/$z"
+  done
+  emit_hashes_lowlevel
+}
+
+case "${1:-}" in
   --prepare)
     check_free_space
     ./gradlew :app:downloadBootstraps --no-daemon
+    check_bootstraps
+    check_runtime_prefix
+    ;;
+  --prepare-dev)
+    check_free_space
+    bash scripts/generate_developer_bootstraps.sh
     check_bootstraps
     check_runtime_prefix
     ;;
@@ -129,7 +88,7 @@ case "$mode" in
     check_runtime_prefix
     ;;
   *)
-    usage
-    [[ -n "$mode" ]] && exit 1 || exit 0
+    echo "Usage: bash scripts/verify_bootstrap_contract.sh [--prepare|--prepare-dev|--check|--runtime-prefix-only]" >&2
+    exit 1
     ;;
 esac
