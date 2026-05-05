@@ -57,6 +57,13 @@ Preparar e validar bootstrap:
 bash scripts/verify_bootstrap_contract.sh --prepare
 ```
 
+
+Gerar bootstrap developer local em C lowlevel (sem download remoto):
+
+```bash
+bash scripts/verify_bootstrap_contract.sh --prepare-dev
+```
+
 Validar bootstrap já existente:
 
 ```bash

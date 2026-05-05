@@ -74,6 +74,12 @@ case "${1:-}" in
     check_bootstraps
     check_runtime_prefix
     ;;
+  --prepare-dev)
+    check_free_space
+    bash scripts/generate_developer_bootstraps.sh
+    check_bootstraps
+    check_runtime_prefix
+    ;;
   --check)
     check_bootstraps
     check_runtime_prefix
@@ -82,7 +88,7 @@ case "${1:-}" in
     check_runtime_prefix
     ;;
   *)
-    echo "Usage: bash scripts/verify_bootstrap_contract.sh [--prepare|--check|--runtime-prefix-only]" >&2
+    echo "Usage: bash scripts/verify_bootstrap_contract.sh [--prepare|--prepare-dev|--check|--runtime-prefix-only]" >&2
     exit 1
     ;;
 esac
