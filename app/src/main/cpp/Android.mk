@@ -80,6 +80,9 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE := termux_rafaelia_direct
 LOCAL_SRC_FILES := lowlevel/rafaelia_jni_direct.c lowlevel/raf_vcpu.c lowlevel/raf_clock.c lowlevel/raf_memory_layers.c lowlevel/raf_bitraf.c lowlevel/raf_gp_dimension.c
+ifeq ($(RMR_PURE_CORE),1)
+LOCAL_CFLAGS += -DRMR_NO_DEBUG_STRING=1
+endif
 ifneq ($(RMR_NO_DEBUG_STRING),1)
 LOCAL_SRC_FILES += lowlevel/raf_bitraf_debug.c
 endif
