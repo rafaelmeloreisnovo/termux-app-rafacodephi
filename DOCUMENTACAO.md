@@ -603,6 +603,47 @@ Para detalhes completos sobre cada tipo de booster, incluindo:
 
 ---
 
+
+## Estado Real de Build/Release (Sincronizado com Código)
+
+### Fonte de verdade atual
+
+- Pipeline principal: `.github/workflows/rafaelia_pipeline.yml`
+- Workflows legados (`debug_build.yml`, `android15_arm64_build.yml`, `run_tests.yml`, etc.) continuam no repositório, mas com aviso explícito de que foram incorporados ao pipeline unificado.
+- Matriz de artefatos signed/unsigned: `.github/workflows/apk_matrix_artifacts_variants.yml` + `scripts/build_apk_matrix.sh`.
+
+### Compilação e toolchain efetivos
+
+- **JDK**: Java 17 (pipelines principais) e Java 21 (workflow dedicado de matriz signed/unsigned).
+- **SDK/NDK** (fonte: `gradle.properties`):
+  - `compileSdkVersion=35`
+  - `targetSdkVersion=34`
+  - `minSdkVersion=21`
+  - `ndkVersion=26.3.11579264`
+
+### ABIs e contratos de saída
+
+- ABIs mandatórias validadas no fluxo de build: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
+- `universal` é tratado como mandatória quando gerado.
+- `x86` é opcional (aceito quando existir, sem quebrar build quando ausente).
+
+### Artefatos publicados
+
+- Upload de APKs por ABI em workflows de build.
+- Upload de `SHA256SUMS` para rastreabilidade/reprodutibilidade.
+- Workflow de matriz permite publicar: 
+  - `all`
+  - `signed-only`
+  - `unsigned-only`
+  - `reports-only`
+
+### Assinatura e trilha oficial
+
+- O repositório suporta geração de APK **assinado e não assinado** na trilha de matriz de artefatos.
+- A trilha oficial de release mantém separação explícita de artefatos, sem rebaixar release oficial para unsigned por conveniência.
+
+---
+
 ## Guias de Uso
 
 ### Instalação
