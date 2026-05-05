@@ -33,11 +33,37 @@ jobs:
           cat dist/apk-matrix/APK_SIZE_DIFF_RELEASE.tsv >> $GITHUB_STEP_SUMMARY
           echo "```" >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload APK matrix artifacts
+      - name: Upload unsigned APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: termux-apk-matrix-${{ github.sha }}
+          name: termux-apk-matrix-unsigned-${{ github.sha }}
           path: |
-            dist/apk-matrix/**
+            dist/apk-matrix/unsigned/*.apk
+          if-no-files-found: error
+
+      - name: Upload signed APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-apk-matrix-signed-${{ github.sha }}
+          path: |
+            dist/apk-matrix/signed/*.apk
+          if-no-files-found: error
+
+      - name: Upload reports and checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-apk-matrix-reports-${{ github.sha }}
+          path: |
+            dist/apk-matrix/APK_SIZE_REPORT.tsv
+            dist/apk-matrix/APK_SIZE_DIFF_RELEASE.tsv
+            dist/apk-matrix/SHA256SUMS.txt
+            dist/apk-matrix/ARTIFACT_MANIFEST.txt
+          if-no-files-found: error
+
+      - name: Upload local signing keystore
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-apk-matrix-local-keystore-${{ github.sha }}
+          path: |
             dist/local-release.keystore
           if-no-files-found: error
