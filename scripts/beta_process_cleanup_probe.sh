@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PKG_NAME="${1:-com.termux}"
+PKG_NAME="${1:-com.termux.rafacodephi}"
 OUT_DIR="dist/runtime-smoke/$(date -u +%Y%m%dT%H%M%SZ)-process"
 mkdir -p "$OUT_DIR"
 

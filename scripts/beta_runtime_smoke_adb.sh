@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat <<EOF
 Usage: $0 [--wipe-data] <apk_path> [package_name]
-Default package_name: com.termux
+Default package_name: com.termux.rafacodephi
 EOF
 }
 
@@ -15,7 +15,7 @@ if [[ "${1:-}" == "--wipe-data" ]]; then
 fi
 
 APK_PATH="${1:-}"
-PKG_NAME="${2:-com.termux}"
+PKG_NAME="${2:-com.termux.rafacodephi}"
 [[ -n "$APK_PATH" ]] || { usage; exit 1; }
 [[ -f "$APK_PATH" ]] || { echo "APK not found: $APK_PATH"; exit 1; }
 

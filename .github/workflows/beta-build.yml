@@ -21,6 +21,9 @@ jobs:
       - name: Setup Android SDK/NDK
         run: ./scripts/setup_android_toolchain.sh
 
+      - name: Prepare bootstrap hashes (BLAKE3 + SHA256)
+        run: ./scripts/prepare_bootstrap_env.sh --github-env
+
       - name: Build signed + unsigned APK matrix (arm32 + arm64)
         run: ./scripts/build_apk_matrix.sh
 
@@ -61,7 +64,6 @@ jobs:
           name: rafcodephi-beta-artifacts-${{ github.sha }}
           path: |
             dist/apk-matrix/**
-            dist/local-release.keystore
             docs/BETA_BUILD_REPORT.md
             docs/BETA_READINESS_REPORT.md
             out/pss3_failure_report.txt
