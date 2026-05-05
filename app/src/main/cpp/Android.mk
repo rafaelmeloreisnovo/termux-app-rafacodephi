@@ -11,11 +11,28 @@ include $(BUILD_SHARED_LIBRARY)
 # Bare-metal low-level library
 include $(CLEAR_VARS)
 LOCAL_MODULE := termux-baremetal
+ifeq ($(RMR_PURE_CORE),1)
+LOCAL_SRC_FILES := lowlevel/baremetal_nomalloc.c
+LOCAL_CFLAGS += -DRAFAELIA_NO_MALLOC=1
+LOCAL_CFLAGS += -DRMR_PURE_CORE=1
+LOCAL_CFLAGS += -DRMR_NO_HEAP=1
+LOCAL_CFLAGS += -DRMR_NO_STDIO=1
+LOCAL_CFLAGS += -DRMR_NO_LIBM=1
+LOCAL_CFLAGS += -DRMR_NO_DEBUG_STRING=1
+LOCAL_CFLAGS += -DRMR_USE_Q16=1
+LOCAL_CFLAGS += -DRMR_ENABLE_ASM=1
+LOCAL_CFLAGS += -DRMR_ENABLE_BRANCHLESS=1
+LOCAL_CFLAGS += -fvisibility=hidden
+LOCAL_CFLAGS += -fno-unwind-tables
+LOCAL_CFLAGS += -fno-asynchronous-unwind-tables
+LOCAL_CFLAGS += -fno-ident
+else
 ifeq ($(RAFAELIA_NO_MALLOC),1)
 LOCAL_SRC_FILES := lowlevel/baremetal_nomalloc.c
 LOCAL_CFLAGS += -DRAFAELIA_NO_MALLOC=1
 else
 LOCAL_SRC_FILES := lowlevel/baremetal.c
+endif
 endif
 LOCAL_SRC_FILES += lowlevel/baremetal_jni.c lowlevel/rafaelia_gpu_orchestrator.c lowlevel/rafaelia_commit_gate_ll.c
 # Assembly optimizations enabled when the target ABI guarantees SIMD support
@@ -52,7 +69,10 @@ ifeq ($(TARGET_ARCH_ABI),x86_64)
 endif
 
 # Link against log and math libraries
-LOCAL_LDLIBS := -llog -lm -ldl
+LOCAL_LDLIBS := -llog -ldl
+ifneq ($(RMR_NO_LIBM),1)
+LOCAL_LDLIBS += -lm
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 
@@ -62,5 +82,8 @@ LOCAL_MODULE := termux_rafaelia_direct
 LOCAL_SRC_FILES := lowlevel/rafaelia_jni_direct.c lowlevel/raf_vcpu.c lowlevel/raf_clock.c lowlevel/raf_memory_layers.c lowlevel/raf_bitraf.c lowlevel/raf_gp_dimension.c
 LOCAL_CFLAGS += -std=c11 -Wall -Wextra -Os -fno-stack-protector
 LOCAL_LDFLAGS := -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
-LOCAL_LDLIBS := -llog -lm
+LOCAL_LDLIBS := -llog
+ifneq ($(RMR_NO_LIBM),1)
+LOCAL_LDLIBS += -lm
+endif
 include $(BUILD_SHARED_LIBRARY)
