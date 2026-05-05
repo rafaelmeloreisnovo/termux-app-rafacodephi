@@ -2,6 +2,63 @@ name: APK Matrix Build (signed + unsigned)
 
 on:
   workflow_dispatch:
+    inputs:
+      upload_unsigned_debug_arm64:
+        description: Upload unsigned debug arm64-v8a APK
+        type: boolean
+        default: true
+      upload_unsigned_debug_arm32:
+        description: Upload unsigned debug armeabi-v7a APK
+        type: boolean
+        default: true
+      upload_unsigned_debug_universal:
+        description: Upload unsigned debug universal APK
+        type: boolean
+        default: true
+      upload_unsigned_release_arm64:
+        description: Upload unsigned release arm64-v8a APK
+        type: boolean
+        default: true
+      upload_unsigned_release_arm32:
+        description: Upload unsigned release armeabi-v7a APK
+        type: boolean
+        default: true
+      upload_unsigned_release_universal:
+        description: Upload unsigned release universal APK
+        type: boolean
+        default: true
+      upload_signed_release_arm64:
+        description: Upload signed release arm64-v8a APK
+        type: boolean
+        default: true
+      upload_signed_release_arm32:
+        description: Upload signed release armeabi-v7a APK
+        type: boolean
+        default: true
+      upload_signed_release_universal:
+        description: Upload signed release universal APK
+        type: boolean
+        default: true
+      upload_report_apk_size:
+        description: Upload APK size report
+        type: boolean
+        default: true
+      upload_report_size_diff:
+        description: Upload release size diff report
+        type: boolean
+        default: true
+      upload_report_sha256:
+        description: Upload SHA256 checksums report
+        type: boolean
+        default: true
+      upload_report_manifest:
+        description: Upload artifact manifest report
+        type: boolean
+        default: true
+      upload_local_keystore:
+        description: Upload generated local signing keystore
+        type: boolean
+        default: false
 
 jobs:
   build-apk-matrix:
@@ -34,6 +91,7 @@ jobs:
           echo "```" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload unsigned debug arm64 APK
+        if: ${{ inputs.upload_unsigned_debug_arm64 }}
         uses: actions/upload-artifact@v4
         with:
           name: termux-unsigned-debug-arm64-v8a-${{ github.sha }}
@@ -41,6 +99,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload unsigned debug arm32 APK
+        if: ${{ inputs.upload_unsigned_debug_arm32 }}
         uses: actions/upload-artifact@v4
         with:
           name: termux-unsigned-debug-armeabi-v7a-${{ github.sha }}
@@ -48,6 +107,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload unsigned debug universal APK
+        if: ${{ inputs.upload_unsigned_debug_universal }}
         uses: actions/upload-artifact@v4
         with:
           name: termux-unsigned-debug-universal-${{ github.sha }}
@@ -58,6 +118,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload unsigned release arm64 APK
+        if: ${{ inputs.upload_unsigned_release_arm64 }}
         uses: actions/upload-artifact@v4
         with:
           name: termux-unsigned-release-arm64-v8a-${{ github.sha }}
@@ -65,6 +126,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload unsigned release arm32 APK
+        if: ${{ inputs.upload_unsigned_release_arm32 }}
         uses: actions/upload-artifact@v4
         with:
           name: termux-unsigned-release-armeabi-v7a-${{ github.sha }}
@@ -72,6 +134,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload unsigned release universal APK
+        if: ${{ inputs.upload_unsigned_release_universal }}
         uses: actions/upload-artifact@v4
         with:
           name: termux-unsigned-release-universal-${{ github.sha }}
@@ -82,6 +145,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload signed release arm64 APK
+        if: ${{ inputs.upload_signed_release_arm64 }}
         uses: actions/upload-artifact@v4
         with:
           name: termux-signed-release-arm64-v8a-${{ github.sha }}
@@ -89,6 +153,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload signed release arm32 APK
+        if: ${{ inputs.upload_signed_release_arm32 }}
         uses: actions/upload-artifact@v4
         with:
           name: termux-signed-release-armeabi-v7a-${{ github.sha }}
@@ -96,6 +161,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload signed release universal APK
+        if: ${{ inputs.upload_signed_release_universal }}
         uses: actions/upload-artifact@v4
         with:
           name: termux-signed-release-universal-${{ github.sha }}
@@ -106,6 +172,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload APK size report
+        if: ${{ inputs.upload_report_apk_size }}
         uses: actions/upload-artifact@v4
         with:
           name: termux-report-apk-size-${{ github.sha }}
@@ -113,6 +180,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload release size diff report
+        if: ${{ inputs.upload_report_size_diff }}
         uses: actions/upload-artifact@v4
         with:
           name: termux-report-apk-size-diff-${{ github.sha }}
@@ -120,6 +188,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload SHA256 checksums
+        if: ${{ inputs.upload_report_sha256 }}
         uses: actions/upload-artifact@v4
         with:
           name: termux-report-sha256sums-${{ github.sha }}
@@ -127,6 +196,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload artifact manifest
+        if: ${{ inputs.upload_report_manifest }}
         uses: actions/upload-artifact@v4
         with:
           name: termux-report-artifact-manifest-${{ github.sha }}
@@ -134,6 +204,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload local signing keystore
+        if: ${{ inputs.upload_local_keystore }}
         uses: actions/upload-artifact@v4
         with:
           name: termux-apk-matrix-local-keystore-${{ github.sha }}
