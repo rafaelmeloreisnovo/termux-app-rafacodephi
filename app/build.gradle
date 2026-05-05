@@ -443,11 +443,39 @@ task verifyBootstrapZipsPresent {
     }
 }
 
+
+
+tasks.register("validateBootstrapBlake3Config") {
+    description = "Validates TERMUX_BOOTSTRAP_BLAKE3_* availability before packaging."
+    group = "verification"
+    doLast {
+        def missing = []
+        def values = [
+            "AARCH64": project.ext.bootstrapBlake3Aarch64,
+            "ARM": project.ext.bootstrapBlake3Arm,
+            "I686": project.ext.bootstrapBlake3I686,
+            "X86_64": project.ext.bootstrapBlake3X8664
+        ]
+        values.each { arch, value ->
+            if (!value || value.trim().isEmpty()) missing << arch
+        }
+
+        if (!missing.isEmpty()) {
+            def msg = "Missing TERMUX_BOOTSTRAP_BLAKE3_* for architectures: ${missing.join(', ')}. " +
+                "Set TERMUX_BOOTSTRAP_BLAKE3_AARCH64/ARM/I686/X86_64 before release builds."
+            if (hasReleaseTaskRequested()) {
+                throw new GradleException(msg)
+            }
+            logger.warn(msg + " Debug builds are allowed but are not BOOTSTRAP_RUNTIME_READY.")
+        }
+    }
+}
 tasks.register("ensureBootstrapArchives") {
     description = 'Downloads and validates all bootstrap zip artifacts required by native bootstrap ASM embedding.'
     group = 'build setup'
     def useDevBootstrap = (project.findProperty("RAF_BOOTSTRAP_SOURCE") ?: System.getenv("RAF_BOOTSTRAP_SOURCE") ?: "").toString().toLowerCase() == "local"
     dependsOn(useDevBootstrap ? tasks.named("buildDeveloperBootstraps") : tasks.named("verifyBootstrapZipsPresent"))
+    dependsOn(tasks.named("validateBootstrapBlake3Config"))
 }
 def requiredBootstrapMetadata(File file, String expectedPackageName, String expectedPageSize, String validationMode) {
     def zipFile = new java.util.zip.ZipFile(file)
