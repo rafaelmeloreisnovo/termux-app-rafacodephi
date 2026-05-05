@@ -63,7 +63,10 @@ public final class TerminalSession extends TerminalOutput {
      * The file descriptor referencing the master half of a pseudo-terminal pair, resulting from calling
      * {@link JNI#createSubprocess(String, String, String[], String[], int[], int, int, int, int)}.
      */
-    private int mTerminalFileDescriptor;
+    private int mTerminalFileDescriptor = -1;
+
+    /** Set once terminal queues and the pty master have been closed. */
+    private boolean mResourcesCleaned;
 
     /** Set by the application for user identification of session, not by terminal. */
     public String mSessionName;
@@ -124,7 +127,20 @@ public final class TerminalSession extends TerminalOutput {
         mEmulator = new TerminalEmulator(this, columns, rows, cellWidthPixels, cellHeightPixels, mTranscriptRows, mClient);
 
         int[] processId = new int[1];
-        mTerminalFileDescriptor = JNI.createSubprocess(mShellPath, mCwd, mArgs, mEnv, processId, rows, columns, cellWidthPixels, cellHeightPixels);
+        try {
+            mTerminalFileDescriptor = JNI.createSubprocess(mShellPath, mCwd, mArgs, mEnv, processId, rows, columns, cellWidthPixels, cellHeightPixels);
+        } catch (RuntimeException e) {
+            Logger.logStackTraceWithMessage(mClient, LOG_TAG, "Failed to create terminal subprocess", e);
+            cleanupResources(1);
+            mClient.onSessionFinished(this);
+            return;
+        }
+        if (mTerminalFileDescriptor < 0 || processId[0] <= 0) {
+            Logger.logError(mClient, LOG_TAG, "Failed to create terminal subprocess: invalid pid or pty fd");
+            cleanupResources(1);
+            mClient.onSessionFinished(this);
+            return;
+        }
         mShellPid = processId[0];
         mClient.setTerminalShellPid(this, mShellPid);
 
@@ -171,10 +187,11 @@ public final class TerminalSession extends TerminalOutput {
             }
         }.start();
 
-        new Thread("TermSessionWaiter[pid=" + mShellPid + "]") {
+        final int shellPid = mShellPid;
+        new Thread("TermSessionWaiter[pid=" + shellPid + "]") {
             @Override
             public void run() {
-                int processExitCode = JNI.waitFor(mShellPid);
+                int processExitCode = JNI.waitFor(shellPid);
                 mMainThreadHandler.sendMessage(mMainThreadHandler.obtainMessage(MSG_PROCESS_EXITED, processExitCode));
             }
         }.start();
@@ -239,44 +256,64 @@ public final class TerminalSession extends TerminalOutput {
         notifyScreenUpdate();
     }
 
-    /** Finish this terminal session by sending SIGKILL to the shell. */
+    /** Finish this terminal session by sending SIGKILL to the shell process group, then the shell. */
     public void finishIfRunning() {
-        if (isRunning()) {
-            try {
-                Os.kill(mShellPid, OsConstants.SIGKILL);
-            } catch (ErrnoException e) {
-                Logger.logWarn(mClient, LOG_TAG, "Failed sending SIGKILL: " + e.getMessage());
-            } catch (SecurityException | IllegalArgumentException e) {
-                // Catch specific exceptions that might be thrown by Os.kill()
-                Logger.logWarn(mClient, LOG_TAG, "Error sending SIGKILL: " + e.getMessage());
-            }
+        final int shellPid;
+        synchronized (this) {
+            shellPid = mShellPid;
+        }
+        if (shellPid <= 0) return;
+
+        try {
+            // The native child calls setsid(), so -pid targets the shell process group and prevents
+            // simple child commands from being orphaned when the terminal is closed.
+            Os.kill(-shellPid, OsConstants.SIGKILL);
+        } catch (ErrnoException e) {
+            Logger.logWarn(mClient, LOG_TAG, "Failed sending SIGKILL to process group: " + e.getMessage());
+        } catch (SecurityException | IllegalArgumentException e) {
+            Logger.logWarn(mClient, LOG_TAG, "Error sending SIGKILL to process group: " + e.getMessage());
+        }
+
+        try {
+            Os.kill(shellPid, OsConstants.SIGKILL);
+        } catch (ErrnoException e) {
+            Logger.logWarn(mClient, LOG_TAG, "Failed sending SIGKILL to shell: " + e.getMessage());
+        } catch (SecurityException | IllegalArgumentException e) {
+            Logger.logWarn(mClient, LOG_TAG, "Error sending SIGKILL to shell: " + e.getMessage());
         }
     }
 
     /** Cleanup resources when the process exits. */
     void cleanupResources(int exitStatus) {
+        final int terminalFileDescriptor;
         synchronized (this) {
+            if (mResourcesCleaned) return;
+            mResourcesCleaned = true;
             mShellPid = -1;
             mShellExitStatus = exitStatus;
+            terminalFileDescriptor = mTerminalFileDescriptor;
+            mTerminalFileDescriptor = -1;
         }
 
-        // Stop the reader and writer threads, and close the I/O streams
+        // Stop the reader and writer threads, and close the I/O streams.
         try {
             mTerminalToProcessIOQueue.close();
         } catch (Exception e) {
             Logger.logWarn(mClient, LOG_TAG, "Error closing terminal to process queue: " + e.getMessage());
         }
-        
+
         try {
             mProcessToTerminalIOQueue.close();
         } catch (Exception e) {
             Logger.logWarn(mClient, LOG_TAG, "Error closing process to terminal queue: " + e.getMessage());
         }
-        
-        try {
-            JNI.close(mTerminalFileDescriptor);
-        } catch (Exception e) {
-            Logger.logWarn(mClient, LOG_TAG, "Error closing terminal file descriptor: " + e.getMessage());
+
+        if (terminalFileDescriptor >= 0) {
+            try {
+                JNI.close(terminalFileDescriptor);
+            } catch (Exception e) {
+                Logger.logWarn(mClient, LOG_TAG, "Error closing terminal file descriptor: " + e.getMessage());
+            }
         }
     }
 

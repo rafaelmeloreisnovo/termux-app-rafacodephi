@@ -228,27 +228,46 @@ def downloadBootstrap(String arch, String expectedChecksum, String version) {
     def localUrl = "src/main/cpp/bootstrap-" + arch + ".zip"
     def file = new File(projectDir, localUrl)
     if (file.exists()) {
-        def buffer = new byte[8192]
-        new FileInputStream(file).withCloseable { input ->
-            while (true) {
-                def readBytes = input.read(buffer)
-                if (readBytes < 0) break
-                digest.update(buffer, 0, readBytes)
+        // Zips that already contain BOOTSTRAP_INFO have been finalized for this fork.
+        // Their bytes intentionally differ from upstream bootstrap checksums, so do not
+        // delete and re-download them on every build. Metadata is validated by
+        // requiredBootstrapMetadata() immediately after this function returns.
+        try {
+            def zipFile = new java.util.zip.ZipFile(file)
+            try {
+                if (zipFile.getEntry("BOOTSTRAP_INFO") != null) return
+            } finally {
+                zipFile.close()
             }
-        }
-        def checksum = new BigInteger(1, digest.digest()).toString(16)
-        while (checksum.length() < 64) { checksum = "0" + checksum }
-        if (checksum == expectedChecksum) {
-            return
-        } else {
-            logger.quiet("Deleting old local file with wrong hash: " + localUrl + ": expected: " + expectedChecksum + ", actual: " + checksum)
+        } catch (java.util.zip.ZipException ignored) {
+            logger.quiet("Deleting invalid local bootstrap zip: " + localUrl)
             file.delete()
+            digest.reset()
         }
 
-        // Reset hash state before validating a newly downloaded file. Without this,
-        // stale local bytes contaminate checksum validation and bootstrap download can
-        // fail permanently after a single corrupted/incomplete file.
-        digest.reset()
+        if (file.exists()) {
+            def buffer = new byte[8192]
+            new FileInputStream(file).withCloseable { input ->
+                while (true) {
+                    def readBytes = input.read(buffer)
+                    if (readBytes < 0) break
+                    digest.update(buffer, 0, readBytes)
+                }
+            }
+            def checksum = new BigInteger(1, digest.digest()).toString(16)
+            while (checksum.length() < 64) { checksum = "0" + checksum }
+            if (checksum == expectedChecksum) {
+                return
+            } else {
+                logger.quiet("Deleting old local file with wrong hash: " + localUrl + ": expected: " + expectedChecksum + ", actual: " + checksum)
+                file.delete()
+            }
+
+            // Reset hash state before validating a newly downloaded file. Without this,
+            // stale local bytes contaminate checksum validation and bootstrap download can
+            // fail permanently after a single corrupted/incomplete file.
+            digest.reset()
+        }
     }
 
     def remoteUrl = baseUrl + "/bootstrap-" + version + "/bootstrap-" + arch + ".zip"

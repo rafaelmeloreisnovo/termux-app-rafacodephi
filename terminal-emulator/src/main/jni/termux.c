@@ -1,4 +1,5 @@
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <jni.h>
 #include <signal.h>
@@ -260,7 +261,17 @@ JNIEXPORT void JNICALL Java_com_termux_terminal_JNI_setPtyUTF8Mode(JNIEnv* TERMU
 JNIEXPORT jint JNICALL Java_com_termux_terminal_JNI_waitFor(JNIEnv* TERMUX_UNUSED(env), jclass TERMUX_UNUSED(clazz), jint pid)
 {
     int status;
-    waitpid(pid, &status, 0);
+    pid_t result;
+    do {
+        result = waitpid(pid, &status, 0);
+    } while (result == -1 && errno == EINTR);
+
+    if (result == -1) {
+        // The Java side treats negative values as signal-style abnormal termination.
+        // Preserve a clean return path instead of leaving status uninitialized.
+        return -1;
+    }
+
     if (WIFEXITED(status)) {
         return WEXITSTATUS(status);
     } else if (WIFSIGNALED(status)) {

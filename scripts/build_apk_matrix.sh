@@ -42,8 +42,8 @@ if [[ ! -f "${KEYSTORE_PATH}" ]]; then
   keytool -genkeypair -v -storetype JKS -keystore "${KEYSTORE_PATH}" -alias "${KEY_ALIAS}" -keyalg RSA -keysize 2048 -validity 3650 -storepass "${STORE_PASS}" -keypass "${KEY_PASS}" -dname "CN=Local Build,O=Termux,C=US"
 fi
 
-BUILD_TOOLS_VERSION="$(grep -E '^buildToolsVersion=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')"
-[[ -n "${BUILD_TOOLS_VERSION}" ]] || BUILD_TOOLS_VERSION="$(grep -E '^compileSdkVersion=' gradle.properties | cut -d= -f2 | tr -d '[:space:]').0.0"
+BUILD_TOOLS_VERSION="$(awk -F= '/^buildToolsVersion=/{gsub(/[[:space:]]/, "", $2); print $2; exit}' gradle.properties || true)"
+[[ -n "${BUILD_TOOLS_VERSION}" ]] || BUILD_TOOLS_VERSION="$(awk -F= '/^compileSdkVersion=/{gsub(/[[:space:]]/, "", $2); print $2; exit}' gradle.properties).0.0"
 SDK_DIR="$(grep -E '^sdk.dir=' local.properties | cut -d= -f2-)"; SDK_DIR="${SDK_DIR//\\/}"
 APKSIGNER="${SDK_DIR}/build-tools/${BUILD_TOOLS_VERSION}/apksigner"
 [[ -x "${APKSIGNER}" ]] || fail "apksigner not found at ${APKSIGNER}"
