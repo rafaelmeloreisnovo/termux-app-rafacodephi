@@ -42,6 +42,10 @@ jobs:
     - name: "🧬 Phase 2.3: Validate side-by-side contract"
       run: |
         ./gradlew :app:validateSideBySideContract --no-daemon
+    - name: "🧾 Phase 2.4: Prepare bootstrap env for test lane"
+      run: |
+        ./scripts/prepare_bootstrap_env.sh --github-env
+        echo "TERMUX_BOOTSTRAP_VALIDATION_MODE=upstream-debug-compat" >> "$GITHUB_ENV"
     - name: "🧪 Phase 3: Execute unit tests"
       run: |
         echo "=========================================="
