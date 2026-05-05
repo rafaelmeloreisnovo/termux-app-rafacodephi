@@ -1,12 +1,20 @@
 # RAFAELIA Benchmark Taxonomy
 
-- `storage_io`: MB/s, random, fsync, IOPS físicos.
-- `memory_compute`: memcpy/memset/CRC/EMA/bandwidth/cache-resident.
-- `logical_instruction`: BitRAF ops/s, vCPU step/s, macro-op throughput.
-- `scheduler`: target_hz, actual_hz_q16, jitter_ns, missed_ticks.
-- `binary_system`: APK/.so/page_size/cacheline/ABI/RSS.
+## 1) storage_io
+- read/write MB/s, random 4K IOPS, fsync latency.
+- status típico: SCRIPT_ONLY/NEEDS_DEVICE.
 
-## Status por métrica
-DOC_ONLY | SCRIPT_ONLY | MEASURED_LOCAL | CI_ARTIFACT | DEVICE_ARTIFACT | NEEDS_DEVICE | NEEDS_BENCHMARK | INVALIDATED.
+## 2) memory_compute
+- memcpy, memset, CRC, EMA, bandwidth, cache-resident ops.
 
-Regra: bilhões de ops/s sem I/O físico **não** são storage IOPS; classificar como logical_instruction/memory_compute.
+## 3) logical_instruction
+- BitRAF ops/sec, vCPU step/sec, macro-op throughput.
+
+## 4) scheduler
+- target_hz, actual_hz_q16, jitter_ns, missed_ticks.
+
+## 5) binary/system
+- APK size, .so size, page size, cache line, ABI, RSS.
+
+## Status permitidos
+DOC_ONLY, SCRIPT_ONLY, MEASURED_LOCAL, CI_ARTIFACT, DEVICE_ARTIFACT, NEEDS_DEVICE, NEEDS_BENCHMARK, INVALIDATED.

@@ -1,33 +1,20 @@
 # RAFAELIA Total Matrix
 
-| Cadeia | Oficial | Rrr | MVP | Fonte principal | Gap | Próximo passo |
+| Elo | Oficial | Rrr | MVP | Fonte | Gap | Próximo passo |
 |---|---|---|---|---|---|---|
-| BIT | Parcial | Sim | Sim | `rmr/Rrr/rafaelia_core.c` | sem formalização única | consolidar contrato binário |
-| BitStack | Não oficial | Sim (N_STACKS=1000,N_EXTRA=8,N_TOTAL=1008) | Não | `rmr/Rrr/rafaelia_core.c` | fora do build | portar com testes |
-| ZipRAF | Ausente oficial | não comprovado | não comprovado | docs | sem código | classificar HIPÓTESE |
-| BitRAF | Sim | parcial | docs | `app/src/main/cpp/lowlevel/raf_bitraf.*` | cobertura teste | ampliar artifacts |
-| BitOmega | Ausente oficial | não comprovado | não comprovado | docs | sem código | classificar HIPÓTESE |
-| vCPU | Sim | Sim | parcial | `raf_vcpu.*`, `rafaelia_core.c` | divergência de modelos | alinhar API |
-| Hz | Sim | Sim | conceitual | `raf_clock.*`, `rafaelia_core.c` | gaps de medição artifact | benchmark device |
-| L1/L2/BUF/RAM | Parcial | Sim | conceitual | `raf_memory_layers.*`, `rafaelia_core.c` | critérios diferentes | normalizar mapping |
-| C/H | Parcial | Sim | conceitual | `rafaelia_core.c` | falta integração oficial completa | especificar schema |
-| CRC | Sim | Sim | parcial | `rafaelia_core.c`, lowlevel | CRC chain incompleta oficial | testes cruzados |
-| Commit Gate | Sim | conceitual | não | `rafaelia_commit_gate_ll.c` | sem artifact CI robusto | publicar artifact |
-| MissHit Cache | Doc only | conceitual | não | docs | sem módulo formal | definir contrato/medição |
-| TOP42 Benchmark | Parcial | docs | docs | `raf_bench_suite.c`, docs | claims sem artifact | taxonomy + CI artifacts |
-| ASM/Inline ASM | Sim parcial | Sim | Sim | `.S/.s`, `rmr.c` | falta índice único | `RAFAELIA_LOWLEVEL_ASM_INDEX.md` |
+| BIT | PARCIAL | SIM | SIM | raf_bitraf.c, rafaelia_core.c | sem unificação formal | consolidar contrato |
+| BitStack | AUSENTE oficial | SIM | conceitual | rmr/Rrr/rafaelia_core.c | sem integração build oficial | portar com testes |
+| ZipRAF | AUSENTE | hipótese | hipótese | docs/Rrr | sem código | manter HIPÓTESE |
+| BitRAF | IMPLEMENTADO | SIM | parcial | app/src/main/cpp/lowlevel/raf_bitraf.c | benchmark parcial | artifact device |
+| BitOmega | AUSENTE | hipótese | hipótese | docs dispersas | sem código | manter AUSENTE/HIPÓTESE |
+| vCPU | IMPLEMENTADO | SIM | parcial | raf_vcpu.c | sem benchmark robusto em device | ampliar suite |
+| Hz | IMPLEMENTADO | SIM | conceitual | raf_clock.c / Rrr cores | diferença target vs actual | medir jitter em device |
+| L1/L2/BUF/RAM | PARCIAL | SIM | conceitual | raf_memory_layers.c / rmr Rrr | thresholds só em Rrr pleno | alinhar oficial |
+| C/H | PARCIAL | SIM | conceitual | commit/state structs | sem schema único | definir schema |
+| CRC | IMPLEMENTADO | SIM | parcial | commit_gate_ll.c / core Rrr | artifacts incompletos | CI+device artifacts |
+| Commit Gate | IMPLEMENTADO | SIM | parcial | rafaelia_commit_gate_ll.c | sem política unificada | doc contrato |
+| MissHit Cache | DOC_ONLY | parcial conceitual | ausente | docs | sem módulo oficial | manter conceito |
+| TOP42 | SCRIPT/CI placeholder | n/a | n/a | scripts/run_top42_bench.sh | precisa device artifact | executar em hardware |
+| ASM/Inline/Low-level | IMPLEMENTADO parcial | extenso | extenso | *.S, rmr.c | divergência oficial vs Rrr | mapear priorização |
 
-## Pontos S (matriz global)
-S0: tabela acima + arquivos fonte.
-S1: misto OFICIAL/SOLTO/MVP/HIPÓTESE.
-S2: cadeia operacional RAFAELIA.
-S3: prevalece CODE_AHEAD_DOC e CLAIM_WITHOUT_ARTIFACT em benchmarks.
-S4: verificar bounds/CRC/overflow/JNI direct capacity/page-size.
-S5: selos via CRC/hash/artifact ainda parciais.
-S6: scheduler via `raf_clock` + `phase/tick` em Rrr.
-S7: memória via `raf_memory_layers` + arena Rrr.
-S8: ruído = delta target/actual/jitter/miss.
-S9: erro = violação CRC/ABI/buffer/build.
-S10: schemas precisam consolidação JSON/CSV benchmark.
-S11: source-of-truth = código + testes + artifact.
-S12: sem prova => HIPÓTESE/EXPERIMENTAL/PRECISA_MEDIÇÃO.
+Todos os itens devem ler S12 como: sem prova -> HIPÓTESE/EXPERIMENTAL/PRECISA_MEDIÇÃO.

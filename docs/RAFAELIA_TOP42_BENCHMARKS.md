@@ -1,16 +1,16 @@
 # RAFAELIA TOP42 Benchmarks
 
-## Estado atual
-- Suite low-level em `app/src/main/cpp/lowlevel/raf_bench_suite.c` (MEASURED_LOCAL).
-- Comparativos em `BENCHMARKS_COMPARISON.md` (DOC_ONLY/SCRIPT_ONLY conforme item).
-- Sem evidência completa de artifact CI/device para todas as métricas TOP42.
+Fonte principal: `scripts/run_top42_bench.sh`, `top42.csv`, `top42.json`, workflow `.github/workflows/top42_bench.yml`.
 
-## Classificação obrigatória
-- storage_io: NEEDS_DEVICE na ausência de artifact físico.
-- memory_compute: MEASURED_LOCAL quando extraído localmente.
-- logical_instruction: MEASURED_LOCAL/DOC_ONLY sem artifact CI.
-- scheduler: NEEDS_BENCHMARK se não publicar jitter/missed_ticks reproduzíveis.
-- binary/system: CI_ARTIFACT quando workflow exporta APK/.so size, senão DOC_ONLY.
+## Classificação de estado
+- CI atual gera placeholders e schema base.
+- Métricas dependentes de hardware real: `NEEDS_DEVICE` / `PRECISA_ARTIFACT`.
 
-## Claims sem artifact
-Todo claim de throughput/IOPS/latency sem log+hash+artifact permanece `CLAIM_WITHOUT_ARTIFACT`.
+## Regras de interpretação
+- Números muito altos de ops/sec devem entrar em `logical_instruction` ou `memory_compute`.
+- Não classificar como storage IOPS sem evidência de I/O físico real.
+
+## Campos centrais monitorados
+- scheduler: `target_hz`, `actual_hz_q16`, `jitter_ns`, `missed_ticks`.
+- memória: L1/L2 bytes, arena used, page size, cache line.
+- compute: crc32c, memcpy/memset, BitRAF encode/decode, vCPU ops.
