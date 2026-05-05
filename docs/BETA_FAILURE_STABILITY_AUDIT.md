@@ -1,7 +1,14 @@
 # Beta Failure Stability Audit
 
 | signature_hash | domain | event_type | count | recurrence | severity | fix_stability | delta_failure | beta_risk | status |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---|
-| TBD | TBD | TBD | 0 | 0 | 0 | 0 | 0 | 0 | NO_DATA |
+|---|---|---|---:|---:|---:|---:|---:|---:|---|
+| _pending_ | _pending_ | _pending_ | 0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | WATCH |
 
-Sem dados em `out/failure_trace.csv`, nenhum claim de estabilidade deve ser feito.
+Conclusões devem separar:
+- bloqueios de beta (BLOCKER_BETA);
+- recorrências críticas;
+- ruído provável;
+- mitigadas pós-fix;
+- casos para teste manual;
+- casos para benchmark;
+- casos para correção de código.
