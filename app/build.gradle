@@ -166,14 +166,10 @@ android {
         variant.outputs.all { output ->
             if (variant.buildType.name == "debug") {
                 def abi = output.getFilter(com.android.build.OutputFile.ABI)
-                if (apkVersionTag) {
-                    outputFileName = new File("termux-app_" + apkVersionTag + "_" + (abi ? abi : "universal") + ".apk")
-                } else {
-                    outputFileName = new File("termux-rafcodephi-debug-" + (abi ? abi : "universal") + ".apk")
-                }
+                outputFileName = new File("termux-rafcodephi-debug-" + (abi ? abi : "universal") + ".apk")
             } else if (variant.buildType.name == "release") {
                 def abi = output.getFilter(com.android.build.OutputFile.ABI)
-                outputFileName = new File("termux-app_" + (apkVersionTag ? apkVersionTag : project.ext.packageVariant + "-" + "release") + "_" + (abi ? abi : "universal") + ".apk")
+                outputFileName = new File("termux-rafcodephi-release-" + (abi ? abi : "universal") + ".apk")
             }
         }
     }

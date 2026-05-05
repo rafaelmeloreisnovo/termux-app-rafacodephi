@@ -1,42 +1,42 @@
-# INSTALL_ARM32
+# INSTALL_ARM32.md
 
-## APK correto para Moto E7 Power 32-bit
+## Moto E7 Power 32-bit: qual APK instalar
+Para Moto E7 Power com Android 32-bit, instale:
+- `termux-rafcodephi-debug-armeabi-v7a.apk` (preferencial para ARM32)
+- ou `termux-rafcodephi-debug-universal.apk` (contém ARM32 e ARM64)
 
-Para Moto E7 Power com Android 32-bit (userspace ARM32), instale:
+Não instale `arm64-v8a` em sistema 32-bit, porque o loader do Android 32-bit não executa binários 64-bit.
 
-- `termux-rafcodephi-debug-armeabi-v7a.apk` (preferencial)
-- ou `termux-rafcodephi-debug-universal.apk`
+## Conceitos rápidos
+- **minSdk**: API mínima que pode instalar o app (neste projeto, 21).
+- **targetSdk**: API alvo de comportamento/compatibilidade do app (neste projeto, 34).
+- **compileSdk**: API usada para compilar (neste projeto, 35).
+- **ABI**: arquitetura de CPU do binário nativo (`armeabi-v7a`, `arm64-v8a`, etc).
 
-Não instale `arm64-v8a` em sistema Android 32-bit: o PackageManager rejeita por incompatibilidade de ABI.
-
-## Por que arm64-v8a não funciona em Android 32-bit
-
-Mesmo que o SoC suporte 64-bit, se o Android foi instalado como 32-bit, o processo app roda ABI 32-bit (`armeabi-v7a`).
-APK `arm64-v8a` exige userspace 64-bit e falha na instalação.
-
-## Diferença entre minSdk, targetSdk, compileSdk e ABI
-
-- `minSdk`: menor versão Android permitida para instalar/executar.
-- `targetSdk`: versão alvo de comportamento/runtime e políticas de compatibilidade.
-- `compileSdk`: API usada para compilar.
-- `ABI`: arquitetura nativa embarcada no APK (`armeabi-v7a`, `arm64-v8a`, etc.).
-
-## Diagnóstico de erro com adb install
-
-Comandos úteis:
+## Diagnóstico de erro de instalação (ADB)
+Use:
 
 ```bash
 adb install -r termux-rafcodephi-debug-armeabi-v7a.apk
-adb shell getprop ro.product.cpu.abi
-adb shell getprop ro.product.cpu.abilist
-adb logcat -d | rg -n "PackageManager|INSTALL_FAILED|abi"
 ```
 
-Falhas comuns:
+Se falhar, colete:
 
-- `INSTALL_FAILED_NO_MATCHING_ABIS`: APK sem `armeabi-v7a` para sistema 32-bit.
-- `INSTALL_PARSE_FAILED_*`: APK corrompido ou assinatura inválida.
+```bash
+adb shell getprop ro.product.cpu.abi
+adb shell getprop ro.product.cpu.abilist
+adb shell pm path com.termux.rafacodephi
+adb logcat -d | rg -i "PackageManager|INSTALL_FAILED|No matching ABIs"
+```
+
+Erros comuns:
+- `INSTALL_FAILED_NO_MATCHING_ABIS`: APK não contém `armeabi-v7a`.
+- `INSTALL_FAILED_OLDER_SDK`: aparelho abaixo de API 21.
+- `INSTALL_PARSE_FAILED_NO_CERTIFICATES`: APK sem assinatura válida para fluxo de instalação.
 
 ## Bootstrap ARM32
+O build ARM32 depende de `app/src/main/cpp/bootstrap-arm.zip` presente e válido.
+A CI `compatibility-arm32` valida a presença desse arquivo e publica relatório específico.
 
-Este projeto preserva `apt-android-7` e exige presença de `app/src/main/cpp/bootstrap-arm.zip`, validada em CI no job `compatibility-arm32`.
+## Observação de variante bootstrap
+O projeto preserva o bootstrap `apt-android-7` para Android 7+.
