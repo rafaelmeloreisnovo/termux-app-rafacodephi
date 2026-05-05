@@ -34,6 +34,7 @@ jobs:
       - name: Run bootstrap baremetal guard selftest (non-blocking)
         run: |
           set +e
+          mkdir -p out
           tools/bootstrap_baremetal_guard_smoke | tee out/bootstrap_baremetal_guard_smoke.txt
           exit 0
 

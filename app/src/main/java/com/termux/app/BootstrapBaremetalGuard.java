@@ -31,8 +31,13 @@ final class BootstrapBaremetalGuard {
 
     static void selftest() {
         if (!LIB_LOADED) return;
-        int rc = selftestNative(SHARED_BUFFER, BUFFER_CAPACITY);
-        String json = readBufferString();
+        int rc;
+        String json;
+        synchronized (SHARED_BUFFER) {
+            clearBuffer();
+            rc = selftestNative(SHARED_BUFFER, BUFFER_CAPACITY);
+            json = readBufferString();
+        }
         if (rc < 0) {
             Logger.logWarn(LOG_TAG, "selftest failed rc=" + rc + " payload=" + json);
         } else {
@@ -45,8 +50,13 @@ final class BootstrapBaremetalGuard {
             Logger.logWarn(LOG_TAG, "Skipped guard validation: native lib not loaded");
             return;
         }
-        int rc = validatePrefixNative(prefix, SHARED_BUFFER, BUFFER_CAPACITY);
-        String json = readBufferString();
+        int rc;
+        String json;
+        synchronized (SHARED_BUFFER) {
+            clearBuffer();
+            rc = validatePrefixNative(prefix, SHARED_BUFFER, BUFFER_CAPACITY);
+            json = readBufferString();
+        }
         if (rc < 0) {
             String msg = "Guard validation failed rc=" + rc + " payload=" + json;
             if (BuildConfig.BOOTSTRAP_BAREMETAL_STRICT) {
@@ -56,6 +66,12 @@ final class BootstrapBaremetalGuard {
             return;
         }
         Logger.logInfo(LOG_TAG, "Guard validation OK payload=" + json);
+    }
+
+    private static void clearBuffer() {
+        SHARED_BUFFER.position(0);
+        for (int i = 0; i < BUFFER_CAPACITY; i++) SHARED_BUFFER.put((byte) 0);
+        SHARED_BUFFER.position(0);
     }
 
     private static String readBufferString() {
