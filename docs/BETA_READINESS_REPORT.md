@@ -1,36 +1,31 @@
 # BETA_READINESS_REPORT
 
-## Status geral
-**BETA_BLOCKED**
+## Current status
+- `CI_BETA_BUILD_READY`: **YES**
+- `BETA_RUNTIME_READY`: **NO** (depends on real device runtime execution)
 
-## Blockers encontrados
-1. **MISSING_BLOCKING**: Android SDK não configurado no ambiente de build local (`local.properties`/`ANDROID_HOME`).
-2. **MISSING_NOT_BLOCKING**: validação manual em dispositivo real ainda não executada neste ambiente.
+## CI reference
+- GitHub Actions run: `25354676970`
+- Commit: `20f164d1cfbfd9ace47758734c95d33b78e31c81`
+- Artifact ID: `6797725229`
+- Artifact digest: `sha256:cb5831988989b81bc66a8abe54d3021bdb733ac1fc5984dde08fa5b28c9ea900`
 
-## Blockers corrigidos
-- Nenhum blocker técnico de código alterado nesta rodada.
+## Generated APK sets
+- unsigned matrix (`dist/apk-matrix/unsigned/*.apk`)
+- signed release matrix (`dist/apk-matrix/signed/*-signed.apk`)
+- hashes (`dist/apk-matrix/SHA256SUMS.txt`)
 
-## Bugs não bloqueantes
-- Risco de excesso de permissões no manifest para trilha release.
-- Módulos experimentais ainda sem suite de benchmark mínima no gate beta.
+## Non-blocking warnings
+- Previous workflow summary step had bad markdown quoting/backticks; fixed.
+- Artifact hygiene improved to exclude `dist/local-release.keystore` from upload.
 
-## Riscos restantes
-- Cleanup/zumbi depende de validação dinâmica em hardware real.
-- ABI ASM pode falhar sem isolamento por flag.
+## Remaining risks
+- Runtime behavior not yet validated on physical Android devices.
+- Zombie/orphan process check depends on real device observation.
+- Long session churn (20/100) pending execution evidence.
 
-## Módulos experimentais
-- `app/src/main/cpp/lowlevel/*`, `rmr/*`, `mvp/*` tratados como experimentais não bloqueantes por padrão.
-
-## Testes executados
-- `./gradlew tasks`, `clean`, `assembleDebug`, `test`, `connectedAndroidTest` (todos falharam pela mesma causa de SDK ausente).
-
-## Artifact gerado
-- Não gerado localmente.
-
-## Hash do artifact
-- N/A.
-
-## Próximos passos
-1. Provisionar SDK/NDK e repetir pipeline local.
-2. Validar lifecycle terminal e cleanup em dispositivo arm32 e arm64.
-3. Publicar artifact CI + SHA256 e consolidar status para BETA_READY.
+## Next steps
+1. Run `scripts/beta_runtime_smoke_adb.sh <arm64-signed-apk>` on real device.
+2. Run `scripts/beta_process_cleanup_probe.sh` during terminal lifecycle checks.
+3. Attach `dist/runtime-smoke/*` evidence to beta report.
+4. Promote to `BETA_RUNTIME_READY` only if all acceptance criteria pass.
