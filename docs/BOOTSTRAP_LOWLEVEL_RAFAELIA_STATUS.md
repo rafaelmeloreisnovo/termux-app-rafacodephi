@@ -2,7 +2,7 @@
 
 ## Compila
 - host-smoke (`make selftest`) no módulo experimental.
-- arm64-freestanding (objetos `raf_main.o` e `entry_arm64.o`).
+- freestanding experimental multi-arquitetura via `make arm-freestanding ARCH=<arch>`.
 
 ## Não compila / não implementado
 - integração completa Android runtime sem libc no app principal.
@@ -18,7 +18,13 @@
 ## Experimental
 - ZIPRAF apenas round-trip de formato próprio.
 - sem substituir bootstrap real do Termux.
-- workflow NDK dedicado para objetos freestanding AArch64 com upload de artifacts.
+- workflow NDK dedicado com matrix para 6 arquiteturas:
+  - arm32
+  - arm64
+  - x86
+  - x86_64
+  - riscv64
+  - armv7a-neon
 
 ## Pode entrar na beta
 - apenas como módulo isolado e opcional.
@@ -28,8 +34,8 @@
 
 ## Riscos
 - confundir ZIPRAF com ZIP real.
-- tentar usar freestanding fora da trilha experimental.
+- suporte riscv64 Android pode depender da imagem/NDK do runner.
 
 ## Próximos passos
-- adicionar target freestanding sem libc para selftest binário mínimo (sem printf).
-- validar execução em dispositivo ARM64 via shell de teste isolado.
+- adicionar entry ASM específico para arm32 se necessário.
+- validar execução em dispositivo ARM64/ARM32 via shell de teste isolado.
