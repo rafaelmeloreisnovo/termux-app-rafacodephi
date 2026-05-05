@@ -35,7 +35,12 @@ final class BootstrapBaremetalGuard {
         String json;
         synchronized (SHARED_BUFFER) {
             clearBuffer();
-            rc = selftestNative(SHARED_BUFFER, BUFFER_CAPACITY);
+            try {
+                rc = selftestNative(SHARED_BUFFER, BUFFER_CAPACITY);
+            } catch (UnsatisfiedLinkError e) {
+                Logger.logWarn(LOG_TAG, "selftestNative missing JNI symbol: " + e.getMessage());
+                return;
+            }
             json = readBufferString();
         }
         if (rc < 0) {
@@ -54,7 +59,12 @@ final class BootstrapBaremetalGuard {
         String json;
         synchronized (SHARED_BUFFER) {
             clearBuffer();
-            rc = validatePrefixNative(prefix, SHARED_BUFFER, BUFFER_CAPACITY);
+            try {
+                rc = validatePrefixNative(prefix, SHARED_BUFFER, BUFFER_CAPACITY);
+            } catch (UnsatisfiedLinkError e) {
+                Logger.logWarn(LOG_TAG, "validatePrefixNative missing JNI symbol: " + e.getMessage());
+                return;
+            }
             json = readBufferString();
         }
         if (rc < 0) {
