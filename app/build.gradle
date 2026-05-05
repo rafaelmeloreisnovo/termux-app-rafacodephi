@@ -829,3 +829,27 @@ tasks.register("validateAndroid15Compatibility") {
         println "\n✅ All Android 15 compatibility validations passed!"
     }
 }
+
+
+tasks.register("validateExternalIntegrity", Exec) {
+    group = "verification"
+    description = "Validates bootstrap integrity contract via external/fallback backend."
+    commandLine "bash", "${rootDir}/scripts/raf_external_integrity.sh", "--backend", (System.getenv("RAF_INTEGRITY_BACKEND") ?: "python-blake3"), "--input", "app/src/main/cpp/bootstrap-arm.zip"
+}
+
+tasks.register("validateVectraGradeBenchContract") {
+    group = "verification"
+    description = "Validates Vectra contract artifacts when RAF_ENABLE_VECTRA_BENCH=true."
+    doLast {
+        def enabled = (System.getenv("RAF_ENABLE_VECTRA_BENCH") ?: "false").toBoolean()
+        if (!enabled) {
+            logger.lifecycle("RAF_ENABLE_VECTRA_BENCH=false; skipping Vectra artifact validation.")
+            return
+        }
+        def reportJson = file("${rootDir}/reports/vectra_integration_report.json")
+        def reportMd = file("${rootDir}/reports/vectra_integration_report.md")
+        if (!reportJson.exists() || !reportMd.exists()) {
+            throw new GradleException("Vectra benchmark contract enabled but required reports are missing.")
+        }
+    }
+}

@@ -74,3 +74,9 @@
 3. Rodar matriz de release com e sem signing (quando credenciais existirem).
 4. Validar artefatos por ABI e universal.
 5. Implementar/rodar a suíte de benchmarks industriais Vectra-grade e publicar artefatos JSON/CSV/Markdown no CI.
+
+
+## Contratos adicionais L2
+- External Integrity Contract
+- External Vectra Benchmark Contract
+- Symbol Encoding Contract
