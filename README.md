@@ -1,5 +1,7 @@
 # Termux Application - RafaCodePhi Fork
 
+> 📚 **Mapa rápido em nível L/L2**: veja [`DOCS_L2_TREE.md`](./DOCS_L2_TREE.md).
+
 ## Fork Notice and Attribution
 
 **This is a fork of the original [Termux](https://github.com/termux/termux-app) project.**
