@@ -1,0 +1,40 @@
+name: pss3-failure-lab
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tools/pss3_failure_lab.c'
+      - 'rmr/Rrr/rafaelia_pss3.c'
+      - 'rmr/Rrr/rafaelia_pss3.h'
+      - 'tools/pss3_failure_lab_selftest.c'
+      - 'out/failure_trace.csv'
+
+jobs:
+  pss3:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build pss3 tools
+        run: |
+          cc -O2 -Wall -Wextra -std=c11 -o pss3_failure_lab tools/pss3_failure_lab.c
+          cc -O2 -Wall -Wextra -std=c11 -Irmr/Rrr -o pss3_selftest tools/pss3_failure_lab_selftest.c rmr/Rrr/rafaelia_pss3.c
+      - name: build asm object (aarch64)
+        run: clang -target aarch64-linux-android21 -c rmr/Rrr/rafaelia_pss3_aarch64.S -o pss3_aarch64.o
+      - name: run selftest
+        run: ./pss3_selftest
+      - name: run report if csv exists
+        run: |
+          if [ -f out/failure_trace.csv ]; then
+            ./pss3_failure_lab out/failure_trace.csv | tee pss3_report.txt
+          else
+            echo "no out/failure_trace.csv" | tee pss3_report.txt
+          fi
+      - name: blocker gate
+        run: |
+          if grep -q 'status=BLOCKER_BETA' pss3_report.txt; then
+            echo 'BLOCKER_BETA found'; exit 1;
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pss3-report
+          path: pss3_report.txt
