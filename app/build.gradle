@@ -414,6 +414,61 @@ tasks.register("downloadBootstraps") {
     }
 }
 
+
+
+tasks.register("rewriteBootstraps") {
+    group = "build setup"
+    description = "Rewrites upstream bootstraps into runtime-ready RAFCODEPHI bootstraps."
+    dependsOn(tasks.named("downloadBootstraps"))
+    doLast {
+        def mappings = [
+            [arch:"arm", abi:"armeabi-v7a"],
+            [arch:"aarch64", abi:"arm64-v8a"],
+            [arch:"i686", abi:"x86"],
+            [arch:"x86_64", abi:"x86_64"]
+        ]
+        mappings.each { m ->
+            exec {
+                workingDir rootProject.projectDir
+                commandLine "python3", "scripts/rewrite_bootstrap.py",
+                    "--input", "app/src/main/cpp/bootstrap-${m.arch}.zip",
+                    "--output", "app/src/main/cpp/rewritten-bootstrap-${m.arch}.zip",
+                    "--arch", m.arch,
+                    "--abi", m.abi,
+                    "--package-name", project.ext.bootstrapMetadataPackageName,
+                    "--prefix", "/data/data/${project.ext.bootstrapMetadataPackageName}/files/usr",
+                    "--home", "/data/data/${project.ext.bootstrapMetadataPackageName}/files/home",
+                    "--page-size", project.ext.bootstrapRequiredPageSize,
+                    "--variant", project.ext.packageVariant
+            }
+        }
+    }
+}
+
+tasks.register("validateRewrittenBootstraps") {
+    group = "verification"
+    description = "Validates rewritten bootstrap metadata and runtime readiness contract."
+    dependsOn(tasks.named("rewriteBootstraps"))
+    doLast {
+        ["arm","aarch64","i686","x86_64"].each { arch ->
+            def f = new File(projectDir, "src/main/cpp/rewritten-bootstrap-${arch}.zip")
+            if (!f.exists()) throw new GradleException("Missing rewritten bootstrap: ${f}")
+            def z = new java.util.zip.ZipFile(f)
+            try {
+                def info = z.getInputStream(z.getEntry("BOOTSTRAP_INFO")).getText("UTF-8")
+                if (!info.contains("BOOTSTRAP_RUNTIME_READY=1")) throw new GradleException("BOOTSTRAP_RUNTIME_READY invalid for ${arch}")
+                if (!info.contains("BOOTSTRAP_KIND=rewritten")) throw new GradleException("BOOTSTRAP_KIND invalid for ${arch}")
+                if (z.getEntry("BUILD_ONLY") != null) {
+                    def v = z.getInputStream(z.getEntry("BUILD_ONLY")).getText("UTF-8").trim()
+                    if (v == "1") throw new GradleException("BUILD_ONLY=1 on ${arch}")
+                }
+                if (z.getEntry("bin/sh") == null) throw new GradleException("bin/sh missing on ${arch}")
+                if (z.getEntry("bin/pkg") == null) throw new GradleException("bin/pkg missing on ${arch}")
+            } finally { z.close() }
+        }
+    }
+}
+
 tasks.register("buildDeveloperBootstraps", Exec) {
     workingDir rootProject.projectDir
     commandLine "bash", "scripts/generate_developer_bootstraps.sh"
@@ -474,7 +529,7 @@ tasks.register("ensureBootstrapArchives") {
     description = 'Downloads and validates all bootstrap zip artifacts required by native bootstrap ASM embedding.'
     group = 'build setup'
     def useDevBootstrap = (project.findProperty("RAF_BOOTSTRAP_SOURCE") ?: System.getenv("RAF_BOOTSTRAP_SOURCE") ?: "").toString().toLowerCase() == "local"
-    dependsOn(useDevBootstrap ? tasks.named("buildDeveloperBootstraps") : tasks.named("verifyBootstrapZipsPresent"))
+    dependsOn(useDevBootstrap ? tasks.named("buildDeveloperBootstraps") : tasks.named("validateRewrittenBootstraps"))
     dependsOn(tasks.named("validateBootstrapBlake3Config"))
 }
 def requiredBootstrapMetadata(File file, String expectedPackageName, String expectedPageSize, String validationMode) {
@@ -531,6 +586,7 @@ def requiredBootstrapMetadata(File file, String expectedPackageName, String expe
 afterEvaluate {
     android.applicationVariants.all { variant ->
         variant.preBuildProvider.get().dependsOn(ensureBootstrapArchives)
+        variant.preBuildProvider.get().dependsOn(tasks.named("validateRewrittenBootstraps"))
         variant.javaCompileProvider.get().dependsOn(ensureBootstrapArchives)
     }
 
@@ -540,11 +596,13 @@ afterEvaluate {
 
     tasks.matching(shouldWireBootstrapDeps).configureEach {
         dependsOn(ensureBootstrapArchives)
+        dependsOn(tasks.named("validateRewrittenBootstraps"))
     }
 
     tasks.whenTaskAdded { task ->
         if (shouldWireBootstrapDeps(task)) {
             task.dependsOn(ensureBootstrapArchives)
+            task.dependsOn(tasks.named("validateRewrittenBootstraps"))
         }
     }
 }
