@@ -15,6 +15,7 @@ typedef struct {
 
 void rafaelia_pss3_init(rafaelia_pss3_state *s);
 void rafaelia_pss3_step(rafaelia_pss3_state *s, uint32_t recurrence_q16, uint32_t severity_q16, uint32_t stability_q16, uint32_t gate);
+void rafaelia_pss3_step_asm(rafaelia_pss3_state *s, uint32_t recurrence_q16, uint32_t severity_q16, uint32_t stability_q16, uint32_t gate);
 uint32_t rafaelia_pss3_delta(const rafaelia_pss3_state *s);
 uint32_t rafaelia_pss3_delta_q16_asm(uint32_t recurrence_q16, uint32_t severity_q16, uint32_t stability_q16);
 uint32_t rafaelia_pss3_token_invariant_q16_asm(uint32_t delta_q16);

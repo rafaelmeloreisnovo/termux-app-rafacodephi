@@ -20,6 +20,8 @@ jobs:
           cc -O2 -Wall -Wextra -std=c11 -Irmr/Rrr -o pss3_selftest tools/pss3_failure_lab_selftest.c rmr/Rrr/rafaelia_pss3.c
       - name: build asm object (aarch64)
         run: clang -target aarch64-linux-android21 -c rmr/Rrr/rafaelia_pss3_aarch64.S -o pss3_aarch64.o
+      - name: verify aarch64 symbols
+        run: nm pss3_aarch64.o | grep -E 'rafaelia_pss3_(delta_q16_asm|token_invariant_q16_asm|step_asm)'
       - name: run selftest
         run: ./pss3_selftest
       - name: run report if csv exists

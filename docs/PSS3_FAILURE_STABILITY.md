@@ -15,3 +15,7 @@ PSS3 (Problem Stability System 3) usa três variáveis centrais: recorrência, s
 ## AArch64 ASM path
 - Núcleo low-level em `rmr/Rrr/rafaelia_pss3_aarch64.S` com rotinas `umull/lsr/sub/csel` para delta e token invariance.
 - Em `__aarch64__`, `rafaelia_pss3_step` usa o caminho ASM; demais arquiteturas usam fallback C equivalente.
+
+
+## Hex + Flags
+- Caminho AArch64 usa decisões por flags NZCV (`cmp`, `csel`, `b.hi`) e inclui instruções em forma hexadecimal via `.inst` para auditoria de baixo nível.
