@@ -24,48 +24,118 @@ jobs:
 
       - name: Publish APK size report in workflow summary
         run: |
-          {
-            echo '## APK Matrix Size Report'
-            echo '```text'
-            cat dist/apk-matrix/APK_SIZE_REPORT.tsv
-            echo '```'
-            echo '## Release Signed vs Unsigned Size Diff'
-            echo '```text'
-            cat dist/apk-matrix/APK_SIZE_DIFF_RELEASE.tsv
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "## APK Matrix Size Report" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          cat dist/apk-matrix/APK_SIZE_REPORT.tsv >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo "## Release Signed vs Unsigned Size Diff" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          cat dist/apk-matrix/APK_SIZE_DIFF_RELEASE.tsv >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload unsigned APK artifacts
+      - name: Upload unsigned debug arm64 APK
         uses: actions/upload-artifact@v4
         with:
-          name: termux-apk-matrix-unsigned-${{ github.sha }}
-          path: |
-            dist/apk-matrix/unsigned/*.apk
+          name: termux-unsigned-debug-arm64-v8a-${{ github.sha }}
+          path: dist/apk-matrix/unsigned/*debug*arm64-v8a*.apk
           if-no-files-found: error
 
-      - name: Upload signed APK artifacts
+      - name: Upload unsigned debug arm32 APK
         uses: actions/upload-artifact@v4
         with:
-          name: termux-apk-matrix-signed-${{ github.sha }}
-          path: |
-            dist/apk-matrix/signed/*.apk
+          name: termux-unsigned-debug-armeabi-v7a-${{ github.sha }}
+          path: dist/apk-matrix/unsigned/*debug*armeabi-v7a*.apk
           if-no-files-found: error
 
-      - name: Upload reports and checksums
+      - name: Upload unsigned debug universal APK
         uses: actions/upload-artifact@v4
         with:
-          name: termux-apk-matrix-reports-${{ github.sha }}
+          name: termux-unsigned-debug-universal-${{ github.sha }}
           path: |
-            dist/apk-matrix/APK_SIZE_REPORT.tsv
-            dist/apk-matrix/APK_SIZE_DIFF_RELEASE.tsv
-            dist/apk-matrix/SHA256SUMS.txt
-            dist/apk-matrix/ARTIFACT_MANIFEST.txt
+            dist/apk-matrix/unsigned/*debug*.apk
+            !dist/apk-matrix/unsigned/*debug*arm64-v8a*.apk
+            !dist/apk-matrix/unsigned/*debug*armeabi-v7a*.apk
+          if-no-files-found: error
+
+      - name: Upload unsigned release arm64 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-unsigned-release-arm64-v8a-${{ github.sha }}
+          path: dist/apk-matrix/unsigned/*release*arm64-v8a*.apk
+          if-no-files-found: error
+
+      - name: Upload unsigned release arm32 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-unsigned-release-armeabi-v7a-${{ github.sha }}
+          path: dist/apk-matrix/unsigned/*release*armeabi-v7a*.apk
+          if-no-files-found: error
+
+      - name: Upload unsigned release universal APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-unsigned-release-universal-${{ github.sha }}
+          path: |
+            dist/apk-matrix/unsigned/*release*.apk
+            !dist/apk-matrix/unsigned/*release*arm64-v8a*.apk
+            !dist/apk-matrix/unsigned/*release*armeabi-v7a*.apk
+          if-no-files-found: error
+
+      - name: Upload signed release arm64 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-signed-release-arm64-v8a-${{ github.sha }}
+          path: dist/apk-matrix/signed/*release*arm64-v8a*-signed.apk
+          if-no-files-found: error
+
+      - name: Upload signed release arm32 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-signed-release-armeabi-v7a-${{ github.sha }}
+          path: dist/apk-matrix/signed/*release*armeabi-v7a*-signed.apk
+          if-no-files-found: error
+
+      - name: Upload signed release universal APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-signed-release-universal-${{ github.sha }}
+          path: |
+            dist/apk-matrix/signed/*release*-signed.apk
+            !dist/apk-matrix/signed/*release*arm64-v8a*-signed.apk
+            !dist/apk-matrix/signed/*release*armeabi-v7a*-signed.apk
+          if-no-files-found: error
+
+      - name: Upload APK size report
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-report-apk-size-${{ github.sha }}
+          path: dist/apk-matrix/APK_SIZE_REPORT.tsv
+          if-no-files-found: error
+
+      - name: Upload release size diff report
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-report-apk-size-diff-${{ github.sha }}
+          path: dist/apk-matrix/APK_SIZE_DIFF_RELEASE.tsv
+          if-no-files-found: error
+
+      - name: Upload SHA256 checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-report-sha256sums-${{ github.sha }}
+          path: dist/apk-matrix/SHA256SUMS.txt
+          if-no-files-found: error
+
+      - name: Upload artifact manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-report-artifact-manifest-${{ github.sha }}
+          path: dist/apk-matrix/ARTIFACT_MANIFEST.txt
           if-no-files-found: error
 
       - name: Upload local signing keystore
         uses: actions/upload-artifact@v4
         with:
           name: termux-apk-matrix-local-keystore-${{ github.sha }}
-          path: |
-            dist/local-release.keystore
+          path: dist/local-release.keystore
           if-no-files-found: error
