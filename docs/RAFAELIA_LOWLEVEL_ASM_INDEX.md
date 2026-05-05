@@ -1,65 +1,17 @@
-# RAFAELIA Low-Level / ASM Index
-
-## Escopo
-Inventário factual de arquivos `.s/.S`, inline ASM e fontes low-level com classificação Pontos S.
-
-## Arquivos ASM/inline/low-level
-
-### 1) app/src/main/cpp/termux-bootstrap-zip.S
-- build oficial: SIM (`libtermux-bootstrap`, Android.mk)
-- ABI alvo: multi-ABI (via NDK build do app)
-- instruções/funções: bootstrap unzip helpers em ASM
-- cache/L1/L2: sem modelagem explícita
-- Hz/tick/phase/TTL: ausente
-- branchless: não declarado
-- CRC/seal: não declarado
-- benchmark: sem integração direta
-- Pontos S: S1=OFICIAL/IMPLEMENTADO; S3=SYNCED; S12=sem claim não comprovada
-
-### 2) app/src/main/cpp/lowlevel/baremetal_asm.S
-- build oficial: SIM (`termux-baremetal`, arm64-v8a e armeabi-v7a)
-- ABI alvo: ARM32/ARM64 (NEON quando habilitado)
-- instruções/funções: rotinas ASM para path baremetal
-- cache/L1/L2: relação indireta via otimização hot path
-- Hz/tick/phase/TTL: não é scheduler primário
-- branchless: parcial (redução de branches em path SIMD)
-- CRC/seal: suporte indireto por pipeline baremetal
-- benchmark: usado em suíte low-level/top42
-- Pontos S: S1=OFICIAL/IMPLEMENTADO; S3=CODE_AHEAD_DOC parcial
-
-### 3) mvp/rafaelia_mvp_puro.s
-- build oficial: NÃO
-- módulo: MVP
-- ABI: ARM syntax didática
-- cache/L1/L2: claim de alinhamento L1 em comentários
-- Hz/tick/phase/TTL: conceitual
-- branchless: não comprovado
-- CRC/seal: não comprovado
-- benchmark: sem artifact oficial
-- Pontos S: S1=MVP/EXPERIMENTAL; S3=CLAIM_WITHOUT_ARTIFACT
-
-### 4) rmr/Rrr/rafaelia_b1.S
-- build oficial: NÃO
-- módulo: SOLTO_Rrr
-- ABI: ARM
-- instruções/funções: pipeline toroidal, CRC32C SW
-- cache/L1/L2: sem integração oficial
-- Hz/tick/phase/TTL: phase/cycle explícitos
-- branchless: misto (tem branches)
-- CRC/seal: sim, CRC32C
-- benchmark: sem CI artifact oficial
-- Pontos S: S1=SOLTO/Rrr/PARCIAL
-
-### 5) rmr/src/main/cpp/rmr.c (inline asm)
-- build oficial: SIM (módulo rmr)
-- inline asm: `__asm__ __volatile__("rev ...")`
-- ABI alvo: condicionais por arquitetura
-- cache/Hz/TTL: não aplicável diretamente
-- branchless: `rev` é instrucional, não pipeline branchless global
-- CRC/seal: não direto
-- benchmark: sem medição dedicada
-- Pontos S: S1=OFICIAL/IMPLEMENTADO; S3=SYNCED
-
-## Observações obrigatórias
-- TTL literal: não encontrado no núcleo oficial low-level; classificado como conceito não formalizado.
-- BitStack/ZipRAF/BitOmega: BitStack aparece em Rrr; ZipRAF e BitOmega sem implementação oficial comprovada.
+# RAFAELIA LowLevel ASM Index
+|arquivo|ZIP|GitHub|hash_ZIP|hash_GitHub|status|
+|---|---|---|---|---|---|
+|app/src/main/cpp/lowlevel/baremetal_asm.S|True|True|20b18fd4f833d1cb59bc7029584776d54559168cd37fd596fdd04f4f500bf787|20b18fd4f833d1cb59bc7029584776d54559168cd37fd596fdd04f4f500bf787|SYNCED|
+|app/src/main/cpp/termux-bootstrap-zip.S|True|True|edd3d2bf847f64c2ac5eb1387952be51b2fac49bfbee4287303b297c4dc372cc|edd3d2bf847f64c2ac5eb1387952be51b2fac49bfbee4287303b297c4dc372cc|SYNCED|
+|mvp/rafaelia_mvp_puro.s|True|True|58e55b7493150a6d9ccd7b050f647d3d198ec22f4463c12628e2f5451f02acf5|58e55b7493150a6d9ccd7b050f647d3d198ec22f4463c12628e2f5451f02acf5|SYNCED|
+|rafaelia/old/rafaelia_v19.s|True|True|0fb6ccf01b94e59a9e1b9bb39a09200abdfc5be358f95581b0fd1d9176c345a0|0fb6ccf01b94e59a9e1b9bb39a09200abdfc5be358f95581b0fd1d9176c345a0|SYNCED|
+|rmr/Rrr/raf_asm_b1.S|True|True|b3f35973c9fbd6e5441369f9305b37313f3ad61671f25db3e7caacd9815d2138|b3f35973c9fbd6e5441369f9305b37313f3ad61671f25db3e7caacd9815d2138|SYNCED|
+|rmr/Rrr/rafaelia_b1.S|True|True|2d9c0bc10ecac0c9b62333c3e6e19305f54485acb41020a82e4367b57988f7df|2d9c0bc10ecac0c9b62333c3e6e19305f54485acb41020a82e4367b57988f7df|SYNCED|
+|rmr/Rrr/rafaelia_b2.S|True|True|420dd863be80b674d6067dfe20216762bbd57b98ae086c34cab66d67e7efd6b6|420dd863be80b674d6067dfe20216762bbd57b98ae086c34cab66d67e7efd6b6|SYNCED|
+|rmr/Rrr/rafaelia_b3.S|True|True|6e7f3bd15d1f6b74b3010f27e2ff23caeec55e317b2f13f2f388a304e488903d|6e7f3bd15d1f6b74b3010f27e2ff23caeec55e317b2f13f2f388a304e488903d|SYNCED|
+|rmr/Rrr/rafaelia_b4.S|True|True|8c4aa84abe422c75ae5c28449a19a84a6bbf16b54be588ea1a34d2125883664b|8c4aa84abe422c75ae5c28449a19a84a6bbf16b54be588ea1a34d2125883664b|SYNCED|
+|rmr/Rrr/rafaelia_b5.S|True|True|8fe8dd363c07adda04b359a8b833c62e804f8c23b12021374763ba29ae7bdffe|8fe8dd363c07adda04b359a8b833c62e804f8c23b12021374763ba29ae7bdffe|SYNCED|
+|rmr/Rrr/rafaelia_b6.S|True|True|3c16f47c0fbdbe50cf59d18a4c5191921dc0bea89c97aac056e186314162334b|3c16f47c0fbdbe50cf59d18a4c5191921dc0bea89c97aac056e186314162334b|SYNCED|
+|rmr/Rrr/rafaelia_b7.S|True|True|06288c8fb552632391b78a3690f3064cad6d5a1060550640e7186bd05f535c99|06288c8fb552632391b78a3690f3064cad6d5a1060550640e7186bd05f535c99|SYNCED|
+|rmr/Rrr/rafaelia_b8.S|True|True|6faf804ad751d76eb15391d7b70656299b8c90fbb5611bbc86bb21e071ec6f5d|6faf804ad751d76eb15391d7b70656299b8c90fbb5611bbc86bb21e071ec6f5d|SYNCED|
+|rmr/src/main/cpp/rmr.c|True|True|dad9dc27c745af93695c4d3633157df1a5e58b2b1943f2695ba931afb03585ef|dad9dc27c745af93695c4d3633157df1a5e58b2b1943f2695ba931afb03585ef|SYNCED|
