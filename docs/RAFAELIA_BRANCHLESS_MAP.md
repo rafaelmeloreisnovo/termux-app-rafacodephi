@@ -1,10 +1,12 @@
 # RAFAELIA Branchless Map
 
-- `rmr/src/main/cpp/rmr.c`: **ARCH_SELECTED** (asm `rev` por arquitetura + fallback C).
-- `app/src/main/cpp/lowlevel/baremetal_asm.S`: **BRANCH_REDUCED** (vetorização/ISA, não comprovado branchless total).
-- `rmr/Rrr/rafaelia_core.c`: **HAS_BRANCH** (ifs/loops explícitos apesar de trechos aritméticos por máscara).
-- `mvp/rafaelia_mvp_puro.s`: **DOC_ONLY/EXPERIMENTAL** sem integração para comprovar classificação operacional.
-- Termo “branchless” literal: **ABSENT** na maior parte do código.
+| Local | Classificação | Nota |
+|---|---|---|
+| `rmr/src/main/cpp/rmr.c` (`rev` inline asm) | ARCH_SELECTED | seleção por arquitetura + instrução específica |
+| `app/src/main/cpp/lowlevel/baremetal_asm.S` | BRANCH_REDUCED | hot path otimizado, não prova branchless total |
+| `app/src/main/cpp/lowlevel/*.c` | HAS_BRANCH | há if/loops explícitos |
+| `rmr/Rrr/*.S` | HAS_BRANCH/BRANCH_REDUCED | mistura execução condicional e desvios |
+| docs com termo branchless sem código | DOC_ONLY | claim documental |
+| termo ausente em módulos | ABSENT | sem ocorrência literal |
 
-## Pontos S
-S0 arquivos acima; S1 misto OFICIAL/SOLTO/MVP; S3 SYNCED parcial; S12 sem prova => PRECISA_MEDIÇÃO.
+Regra: não classificar como BRANCHLESS_REAL quando houver branch explícito no caminho analisado.

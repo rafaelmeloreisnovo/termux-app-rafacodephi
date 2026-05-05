@@ -1,35 +1,30 @@
 # RAFAELIA Source Status Map
 
 ## OFICIAL_BUILD
-- `app/src/main/cpp/Android.mk` + fontes referenciadas (`termux-bootstrap-zip.S`, `termux-bootstrap.c`, `lowlevel/*.c`, `lowlevel/baremetal_asm.S`, `raf_*`).
-- `rmr/src/main/cpp/rmr.c`.
-- Pontos S: S1=OFICIAL/IMPLEMENTADO; S3=SYNCED parcial; S11=código+build.
+- `app/src/main/cpp/Android.mk` + `app/build.gradle` + `rafaelia/src/main/cpp/Android.mk`.
+- Inclui bootstrap, baremetal, JNI direct, vCPU/clock/memory layers/bitraf/gp dimension.
+- S1=OFICIAL/IMPLEMENTADO.
 
 ## OFICIAL_JAVA_API
-- `rmr/src/main/java/com/termux/rmr/RmrCore.java`.
-- `rafaelia/src/main/java/com/termux/rafaelia/RafaeliaCore.java`.
-- `rafaelia/src/main/java/com/termux/rafaelia/runtime/*`.
-- Pontos S: S1=OFICIAL/PARCIAL; S3=CODE_AHEAD_DOC em partes.
+- `rafaelia/src/main/java/com/termux/rafaelia/RafaeliaCore.java` e `runtime/*`.
+- Wrappers JNI + scheduler/worker.
+- S1=OFICIAL/IMPLEMENTADO.
 
 ## SOLTO_Rrr
-- `rmr/Rrr/rafaelia_types.h`
-- `rmr/Rrr/rafaelia_arena.h`
-- `rmr/Rrr/rafaelia_core.c`
-- `rmr/Rrr/rafaelia_b1.S`
-- Pontos S: S1=SOLTO/Rrr+EXPERIMENTAL; S3=DOC_AHEAD_CODE (núcleo oficial não usa direto).
+- `rmr/Rrr/*` (ex.: `rafaelia_core.c`, `rafaelia_b1.S`, `rafaelia_arena.h`, etc.).
+- S1=SOLTO/Rrr, em geral EXPERIMENTAL/PARCIAL.
 
 ## MVP
-- `mvp/rafaelia_mvp_puro.s`
-- `mvp/rafaelia_opcodes.hex`
-- Pontos S: S1=MVP; S3=DOC_AHEAD_CODE; S12=HIPÓTESE/EXPERIMENTAL.
+- `mvp/rafaelia_mvp_puro.s`, `mvp/rafaelia_opcodes.hex`.
+- S1=MVP/EXPERIMENTAL.
 
 ## OLD_LEGACY
-- `rafaelia/old/*`
-- Pontos S: S1=LEGADO; S3=CODE_AHEAD_DOC local; S9=não usar em trilha oficial.
+- `rafaelia/old/*`.
+- S1=LEGADO.
 
 ## DOC_ONLY
-- ZipRAF/BitOmega (quando não localizados em código operacional oficial).
-- MissHit como taxonomia formal (sem módulo executável dedicado atual).
+- Conceitos sem símbolo/código oficial confirmado: ZipRAF (quando citado sem código), BitOmega (idem), TTL literal no core oficial.
 
 ## BENCH_ONLY
-- Documentos/scripts de benchmark fora da integração CI artifact obrigatória (ex.: partes de `BENCHMARKS_COMPARISON.md`, `docs/RAFAELIA_TOP42_BENCHMARKS.md` sem artefato vinculado).
+- `scripts/run_top42_bench.sh`, `.github/workflows/top42_bench.yml`, `top42.csv/json` placeholders.
+- S1=PRECISA_ARTIFACT/NEEDS_DEVICE para métricas device-dependent.

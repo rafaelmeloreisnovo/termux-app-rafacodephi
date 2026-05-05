@@ -1,35 +1,34 @@
-# RAFAELIA Low-Level Total Analysis Report
+# RAFAELIA Lowlevel Total Analysis Report
 
 ## F_ok
-- Build oficial low-level definido em `app/src/main/cpp/Android.mk`.
-- ASM oficial identificado (`termux-bootstrap-zip.S`, `baremetal_asm.S`) e inline asm em `rmr.c`.
-- Núcleo BitRAF/vCPU/clock/memory layers existente no código oficial.
+- Núcleo low-level oficial presente: baremetal, JNI direct, vCPU, clock, memory layers, bitraf, commit gate.
+- Build oficial com Android.mk/Gradle e ABIs arm32/arm64/x86/x86_64.
+- TOP42 pipeline CI inicial presente (placeholder + upload).
 
 ## F_gap
-- BitStack está em Rrr, fora do build oficial.
-- ZipRAF/BitOmega sem módulo oficial verificável.
-- MissHit cache ainda taxonomia documental, sem implementação formal integrada.
-- TOP42 sem artifact completo CI/device por métrica.
+- ZipRAF e BitOmega sem implementação oficial comprovada.
+- BitStack robusto concentrado em Rrr, não integrado no core oficial.
+- TTL literal não formalizado como símbolo de código no núcleo oficial.
+- Vários claims de performance sem artifact de device.
 
 ## F_noise
-- divergência entre claims de docs e artifacts benchmark reproduzíveis.
-- divergência entre modelo Hz/layers em Rrr e núcleo oficial.
+- Divergência entre documentação conceitual ampla e implementação oficial enxuta.
+- Rrr contém lógica avançada (camadas/CRC/ASM) não refletida integralmente no build oficial.
 
 ## F_error
-- Não identificado erro de compilação nesta etapa documental.
-- Erro contratual potencial: promover claim de performance sem artifact.
+- Não foi encontrado erro de build introduzido nesta etapa documental.
+- Erro potencial de governança: claims sem artifact quando tratados como fatos.
 
 ## F_next
-1. Consolidar artifacts CI para scheduler/memory/logical benchmarks.
-2. Criar testes de equivalência entre Rrr e oficial para Hz→Layer e CRC chain.
-3. Formalizar schema único (JSON/CSV) para TOP42.
-4. Só depois decidir portar BitStack/ZipRAF/BitOmega.
+- Executar suite TOP42 em dispositivo real e anexar artifacts.
+- Promover partes Rrr com testes de contrato para oficial.
+- Formalizar schema único para scheduler/cache/misshit.
 
-## Tabela final
-| arquivo | status | build | low-level | asm | inline asm | cache | TTL | branchless | benchmark | Pontos S |
-|---|---|---|---|---|---|---|---|---|---|---|
-| app/src/main/cpp/termux-bootstrap-zip.S | OFICIAL | sim | sim | sim | não | parcial | ausente | HAS_BRANCH | não | S completos no ASM_INDEX |
-| app/src/main/cpp/lowlevel/baremetal_asm.S | OFICIAL/PARCIAL | sim condicional | sim | sim | não | sim | ausente | BRANCH_REDUCED | indireto | S completos no ASM_INDEX |
-| rmr/src/main/cpp/rmr.c | OFICIAL | sim | parcial | não | sim | não explícito | ausente | ARCH_SELECTED | não | S completos no ASM_INDEX |
-| rmr/Rrr/rafaelia_b1.S | SOLTO/Rrr | não | sim | sim | não | conceitual | conceitual | EXPERIMENTAL | não | S completos no ASM_INDEX |
-| mvp/rafaelia_mvp_puro.s | MVP | não | sim | sim | não | conceitual | conceitual | EXPERIMENTAL | não | S completos no ASM_INDEX |
+## Tabela final resumida
+| arquivo | status | build | low-level | asm | inline asm | cache | TTL | branchless | benchmark |
+|---|---|---|---|---|---|---|---|---|---|
+| app/src/main/cpp/termux-bootstrap-zip.S | OFICIAL | SIM | SIM | SIM | NÃO | parcial | ausente | HAS_BRANCH | não direto |
+| app/src/main/cpp/lowlevel/baremetal_asm.S | OFICIAL | SIM | SIM | SIM | NÃO | parcial | ausente | BRANCH_REDUCED | indireto |
+| rmr/src/main/cpp/rmr.c | OFICIAL | SIM | parcial | NÃO | SIM | não | ausente | ARCH_SELECTED | não direto |
+| rmr/Rrr/rafaelia_b1.S | SOLTO/Rrr | NÃO | SIM | SIM | NÃO | parcial | conceitual | HAS_BRANCH | sem artifact |
+| mvp/rafaelia_mvp_puro.s | MVP | NÃO | SIM | SIM | NÃO | claim L1 | conceitual | DOC_ONLY | sem artifact |
