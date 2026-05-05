@@ -34,7 +34,7 @@ else
 LOCAL_SRC_FILES := lowlevel/baremetal.c
 endif
 endif
-LOCAL_SRC_FILES += lowlevel/baremetal_jni.c lowlevel/rafaelia_gpu_orchestrator.c lowlevel/rafaelia_commit_gate_ll.c
+LOCAL_SRC_FILES += lowlevel/baremetal_jni.c lowlevel/rafaelia_gpu_orchestrator.c lowlevel/rafaelia_commit_gate_ll.c lowlevel/bootstrap_baremetal_guard.c lowlevel/bootstrap_baremetal_jni.c
 # Assembly optimizations enabled when the target ABI guarantees SIMD support
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
     LOCAL_SRC_FILES += lowlevel/baremetal_asm.S

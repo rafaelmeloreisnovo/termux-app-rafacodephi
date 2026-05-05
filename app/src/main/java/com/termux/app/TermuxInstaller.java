@@ -263,6 +263,8 @@ final class TermuxInstaller {
                     }
 
                     Logger.logInfo(LOG_TAG, "Bootstrap packages installed successfully.");
+                    BootstrapBaremetalGuard.selftest();
+                    BootstrapBaremetalGuard.validateAfterBootstrap(TERMUX_PREFIX_DIR_PATH);
 
                     // Recreate env file since termux prefix was wiped earlier
                     TermuxShellEnvironment.writeEnvironmentToFile(activity);
