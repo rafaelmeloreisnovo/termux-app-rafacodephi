@@ -1,0 +1,3 @@
+#!/system/bin/sh
+echo "RAFCODEPHI developer bootstrap pkg"
+exit 0

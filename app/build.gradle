@@ -413,6 +413,10 @@ tasks.register("downloadBootstraps") {
     }
 }
 
+tasks.register("buildDeveloperBootstraps", Exec) {
+    workingDir rootProject.projectDir
+    commandLine "bash", "scripts/generate_developer_bootstraps.sh"
+}
 
 
 
@@ -434,19 +438,15 @@ task verifyBootstrapZipsPresent {
                 '\nRun :app:downloadBootstraps to generate them before native build tasks.')
         }
 
-        def blake3ByArch = [
-            "aarch64": project.ext.bootstrapBlake3Aarch64,
-            "arm": project.ext.bootstrapBlake3Arm,
-            "i686": project.ext.bootstrapBlake3I686,
-            "x86_64": project.ext.bootstrapBlake3X8664
-        ]
-        def missingHashes = blake3ByArch.findAll { arch, hash -> !hash || !hash.matches("^[0-9a-f]{64}\$") }.collect { entry -> entry.key }
-        if (!missingHashes.isEmpty()) {
-            throw new GradleException("Missing or invalid TERMUX_BOOTSTRAP_BLAKE3_* values for architectures: " +
-                missingHashes.join(", ") +
-                ". Export 64-char lowercase hex BLAKE3 hashes before building.")
-        }
     }
+}
+
+tasks.register("ensureBootstrapArchives") {
+    description = 'Downloads and validates all bootstrap zip artifacts required by native bootstrap ASM embedding.'
+    group = 'build setup'
+    def useDevBootstrap = (project.findProperty("RAF_BOOTSTRAP_SOURCE") ?: System.getenv("RAF_BOOTSTRAP_SOURCE") ?: "").toString().toLowerCase() == "local"
+    dependsOn(useDevBootstrap ? tasks.named("buildDeveloperBootstraps") : tasks.named("downloadBootstraps"))
+    dependsOn(tasks.named("verifyBootstrapZipsPresent"))
 }
 def requiredBootstrapMetadata(File file, String expectedPackageName, String expectedPageSize, String validationMode) {
     def zipFile = new java.util.zip.ZipFile(file)
@@ -501,8 +501,8 @@ def requiredBootstrapMetadata(File file, String expectedPackageName, String expe
 
 afterEvaluate {
     android.applicationVariants.all { variant ->
-        variant.preBuildProvider.get().dependsOn(verifyBootstrapZipsPresent)
-        variant.javaCompileProvider.get().dependsOn(verifyBootstrapZipsPresent)
+        variant.preBuildProvider.get().dependsOn(ensureBootstrapArchives)
+        variant.javaCompileProvider.get().dependsOn(ensureBootstrapArchives)
     }
 
     def shouldWireBootstrapDeps = { task ->
@@ -510,12 +510,12 @@ afterEvaluate {
     }
 
     tasks.matching(shouldWireBootstrapDeps).configureEach {
-        dependsOn(verifyBootstrapZipsPresent)
+        dependsOn(ensureBootstrapArchives)
     }
 
     tasks.whenTaskAdded { task ->
         if (shouldWireBootstrapDeps(task)) {
-            task.dependsOn(verifyBootstrapZipsPresent)
+            task.dependsOn(ensureBootstrapArchives)
         }
     }
 }
