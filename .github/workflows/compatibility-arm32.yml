@@ -1,0 +1,104 @@
+name: Android ARM32 Compatibility
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  compatibility-arm32:
+    runs-on: ubuntu-latest
+    env:
+      TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK/NDK
+        run: ./scripts/setup_android_toolchain.sh
+
+      - name: Build debug APKs
+        run: ./gradlew clean :app:assembleDebug
+
+      - name: Validate Gradle SDK/NDK contract
+        run: |
+          test "$(awk -F= '/^minSdkVersion=/{print $2}' gradle.properties)" = "21"
+          test "$(awk -F= '/^targetSdkVersion=/{print $2}' gradle.properties)" = "34"
+          test "$(awk -F= '/^compileSdkVersion=/{print $2}' gradle.properties)" = "35"
+          test "$(awk -F= '/^ndkVersion=/{print $2}' gradle.properties)" = "26.3.11579264"
+
+      - name: Collect APK paths
+        id: apks
+        run: |
+          ARM32_APK=$(find app/build/outputs/apk/debug -name 'termux-rafcodephi-debug-armeabi-v7a.apk' | head -n1)
+          ARM64_APK=$(find app/build/outputs/apk/debug -name 'termux-rafcodephi-debug-arm64-v8a.apk' | head -n1)
+          UNIVERSAL_APK=$(find app/build/outputs/apk/debug -name 'termux-rafcodephi-debug-universal.apk' | head -n1)
+          test -n "$ARM32_APK" && test -n "$ARM64_APK" && test -n "$UNIVERSAL_APK"
+          echo "arm32=$ARM32_APK" >> "$GITHUB_OUTPUT"
+          echo "arm64=$ARM64_APK" >> "$GITHUB_OUTPUT"
+          echo "universal=$UNIVERSAL_APK" >> "$GITHUB_OUTPUT"
+
+      - name: Generate ARM32 compatibility report
+        run: |
+          mkdir -p dist/arm32-compatibility
+          aapt dump badging "${{ steps.apks.outputs.arm32 }}" | tee dist/arm32-compatibility/apk-badging.txt
+          unzip -l "${{ steps.apks.outputs.arm32 }}" | tee dist/arm32-compatibility/native-libs.txt
+          unzip -l "${{ steps.apks.outputs.universal }}" > dist/arm32-compatibility/universal-libs.txt
+          lib_path=$(unzip -Z1 "${{ steps.apks.outputs.arm32 }}" | grep '^lib/armeabi-v7a/.*\.so$' | head -n1)
+          test -n "$lib_path"
+          unzip -p "${{ steps.apks.outputs.arm32 }}" "$lib_path" > /tmp/arm32-lib.so
+          readelf -h /tmp/arm32-lib.so > dist/arm32-compatibility/readelf-arm32.txt
+          readelf -A /tmp/arm32-lib.so >> dist/arm32-compatibility/readelf-arm32.txt
+          apksigner verify --verbose "${{ steps.apks.outputs.arm32 }}" | tee dist/arm32-compatibility/apk-signature.txt
+
+      - name: Enforce compatibility gates
+        run: |
+          grep -q "package: name='com.termux.rafacodephi'" dist/arm32-compatibility/apk-badging.txt
+          grep -q "sdkVersion:'21'" dist/arm32-compatibility/apk-badging.txt
+          grep -q "targetSdkVersion:'34'" dist/arm32-compatibility/apk-badging.txt
+          grep -q 'native-code:.*armeabi-v7a' dist/arm32-compatibility/apk-badging.txt
+          grep -q 'lib/armeabi-v7a/' dist/arm32-compatibility/native-libs.txt
+          grep -q 'lib/armeabi-v7a/' dist/arm32-compatibility/universal-libs.txt
+
+      - name: Validate bootstrap ARM32 presence
+        run: |
+          test -f app/src/main/cpp/bootstrap-arm.zip
+          stat app/src/main/cpp/bootstrap-arm.zip > dist/arm32-compatibility/bootstrap-arm.txt
+
+      - name: Install notes for Moto E7 Power 32-bit
+        run: |
+          cp INSTALL_ARM32.md dist/arm32-compatibility/install-notes-moto-e7-power.md
+
+      - name: Validate release artifact policy
+        run: |
+          if find dist -name '*release*unsigned*.apk' | grep -q .; then
+            echo "Unsigned release artifact found in principal output path." >&2
+            exit 1
+          fi
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-rafcodephi-debug-apks-${{ github.sha }}
+          path: |
+            ${{ steps.apks.outputs.arm32 }}
+            ${{ steps.apks.outputs.arm64 }}
+            ${{ steps.apks.outputs.universal }}
+
+      - name: Upload ARM32 compatibility report
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-rafcodephi-arm32-compat-report-${{ github.sha }}
+          path: |
+            dist/arm32-compatibility/apk-badging.txt
+            dist/arm32-compatibility/native-libs.txt
+            dist/arm32-compatibility/readelf-arm32.txt
+            dist/arm32-compatibility/apk-signature.txt
+            dist/arm32-compatibility/install-notes-moto-e7-power.md
+            dist/arm32-compatibility/bootstrap-arm.txt
