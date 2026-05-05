@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "../include/rmr_hex_const.h"
 
 /* ── Tipos sem ambiguidade ────────────────────────────────────────────── */
 typedef uint8_t   u8;
@@ -27,14 +28,14 @@ typedef float     f32;
 /* f64 PROIBIDO no hot path: 2x custo em softfp ARM32   */
 
 /* ── Constantes Q16.16 ────────────────────────────────────────────────── */
-#define Q16_ONE     65536u
-#define Q16_HALF    32768u
-#define Q16_SPIRAL  56755u   /* sqrt(3)/2 */
-#define Q16_PHI     105965u  /* (1+sqrt(5))/2 */
-#define Q16_PI      205887u  /* pi */
-#define Q16_2PI     411774u  /* 2*pi */
-#define Q16_INV6    10923u   /* 1/6 */
-#define Q16_INV120  546u     /* 1/120 */
+#define Q16_ONE     RMR_Q16_ONE
+#define Q16_HALF    RMR_Q16_HALF
+#define Q16_SPIRAL  RMR_Q16_SQRT3_2
+#define Q16_PHI     RMR_Q16_PHI
+#define Q16_PI      RMR_Q16_PI
+#define Q16_2PI     RMR_Q16_2PI
+#define Q16_INV6    RMR_Q16_INV6
+#define Q16_INV120  RMR_Q16_INV120
 
 /* ── Status ───────────────────────────────────────────────────────────── */
 #define RAF_OK    0
@@ -49,12 +50,12 @@ typedef float     f32;
 #define PACKED   __attribute__((packed))
 
 /* ── Constantes do sistema ────────────────────────────────────────────── */
-#define PERIOD      42u
-#define TORUS_DIM   7u
+#define PERIOD      RMR_PERIOD_42
+#define TORUS_DIM   RMR_TORUS_DIM_7
 #define N_VCPU      8u
-#define N_STACKS    1000u
-#define N_EXTRA     8u
-#define N_TOTAL     1008u
+#define N_STACKS    RMR_N_STACKS_1000
+#define N_EXTRA     RMR_N_EXTRA_8
+#define N_TOTAL     RMR_N_TOTAL_1008
 #define CACHE_LINE  64u
 
 /* ── Q16.16 ops ───────────────────────────────────────────────────────── */

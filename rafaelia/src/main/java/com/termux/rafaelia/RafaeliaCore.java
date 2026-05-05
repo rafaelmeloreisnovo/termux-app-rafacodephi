@@ -20,6 +20,7 @@ public final class RafaeliaCore {
     public static final ByteBuffer IN_BUF;
     public static final ByteBuffer OUT_BUF;
     public static final ByteBuffer STATE_BUF;
+    private static final boolean _libLoaded;
 
     static {
         // allocateDirect não vai para o heap Java — usa memória nativa
@@ -28,15 +29,15 @@ public final class RafaeliaCore {
         STATE_BUF = ByteBuffer.allocateDirect(STATE_CAP).order(ByteOrder.nativeOrder());
 
         // Inicializa estado no buffer nativo
+        boolean libLoaded;
         try {
             System.loadLibrary("termux_rafaelia_direct");
-            _libLoaded = true;
+            libLoaded = true;
         } catch (UnsatisfiedLinkError e) {
-            _libLoaded = false;
+            libLoaded = false;
         }
+        _libLoaded = libLoaded;
     }
-
-    private static final boolean _libLoaded;
     private static int _cycle = 0;
 
 
@@ -99,6 +100,16 @@ public final class RafaeliaCore {
 
     /** Single-step de depuração com dump textual 7D em outDebug. */
     public static native int debugStepNative(ByteBuffer state, int cycle, ByteBuffer outDebug, int cap);
+    public static native int initVcpuSchedulerNative(int targetHz);
+    public static native int stepVcpuNative(int vcpuId);
+    public static native int stepAllVcpusNative();
+    public static native int getVcpuTelemetryNative(ByteBuffer out, int cap);
+    public static native int getClockProfileNative(ByteBuffer out, int cap);
+    public static native int initVcpuNative(int targetHz);
+    public static native int stepAllVcpuNative();
+    public static native int getVcpuMapNative(ByteBuffer out, int cap);
+    public static native int getMemoryLayersNative(ByteBuffer out, int cap);
+    public static native int getClockNative(ByteBuffer out, int cap);
 
     // ── API pública — sem alocações ────────────────────────────────────
 
@@ -187,8 +198,10 @@ public final class RafaeliaCore {
      * CRC32C de byte array — sem criar ByteBuffer temporário.
      */
     public static int crc32(byte[] data, int len) {
-        if (!_libLoaded || data == null) return 0;
+        if (!_libLoaded || data == null || len <= 0) return 0;
+        if (len > data.length) len = data.length;
         if (len > IN_CAP) len = IN_CAP;
+        if (len <= 0) return 0;
         IN_BUF.clear();
         IN_BUF.put(data, 0, len);
         return crc32Native(IN_BUF, len);
@@ -217,4 +230,38 @@ public final class RafaeliaCore {
     public static boolean isNativeAvailable() { return _libLoaded; }
     public static int     getNativeArenaUsed() { return _libLoaded ? arenaSizeNative() : 0; }
     public static int     getCurrentCycle()    { return _cycle; }
+    public static int initVcpuScheduler(int targetHz) { return _libLoaded ? initVcpuSchedulerNative(targetHz) : -1; }
+    public static int stepVcpu(int id) { return _libLoaded ? stepVcpuNative(id) : -1; }
+    public static int stepAllVcpus() { return _libLoaded ? stepAllVcpusNative() : -1; }
+    public static String getVcpuTelemetry() {
+        if (!_libLoaded) return "{}";
+        OUT_BUF.clear();
+        int n = getVcpuTelemetryNative(OUT_BUF, OUT_CAP);
+        if (n <= 0) return "{}";
+        byte[] tmp = new byte[n];
+        OUT_BUF.position(0);
+        OUT_BUF.get(tmp, 0, n);
+        return new String(tmp);
+    }
+    public static String getClockProfile() {
+        if (!_libLoaded) return "{}";
+        OUT_BUF.clear();
+        int n = getClockProfileNative(OUT_BUF, OUT_CAP);
+        if (n <= 0) return "{}";
+        byte[] tmp = new byte[n];
+        OUT_BUF.position(0);
+        OUT_BUF.get(tmp, 0, n);
+        return new String(tmp);
+    }
+    public static int getTargetHz() { return gjsonInt(getClockProfile(), "\"target_hz\":"); }
+    public static int getActualHz() { return gjsonInt(getClockProfile(), "\"actual_hz_q16\":"); }
+    private static int gjsonInt(String s, String key) {
+        int i = s.indexOf(key);
+        if (i < 0) return 0;
+        i += key.length();
+        int j = i;
+        while (j < s.length() && Character.isDigit(s.charAt(j))) j++;
+        if (j <= i) return 0;
+        try { return Integer.parseInt(s.substring(i, j)); } catch (Exception e) { return 0; }
+    }
 }

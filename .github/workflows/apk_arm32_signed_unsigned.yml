@@ -1,0 +1,96 @@
+name: APK ARM32 Build (signed/unsigned)
+
+on:
+  workflow_dispatch:
+    inputs:
+      signing_mode:
+        description: Which ARM32 release artifacts to upload
+        required: true
+        type: choice
+        default: both
+        options:
+          - both
+          - signed-only
+          - unsigned-only
+      upload_debug_unsigned_arm32:
+        description: Upload unsigned debug ARM32 APK
+        type: boolean
+        default: true
+      upload_reports:
+        description: Upload APK build reports
+        type: boolean
+        default: true
+      upload_local_keystore:
+        description: Upload generated local signing keystore
+        type: boolean
+        default: false
+
+jobs:
+  build-apk-arm32:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK/NDK
+        run: ./scripts/setup_android_toolchain.sh
+
+      - name: Build signed + unsigned APK matrix
+        run: ./scripts/build_apk_matrix.sh
+
+      - name: Publish ARM32 size report in workflow summary
+        run: |
+          echo "## ARM32 APK Size Report" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          awk 'NR==1 || /armeabi-v7a/' dist/apk-matrix/APK_SIZE_REPORT.tsv >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload unsigned debug ARM32 APK
+        if: ${{ inputs.upload_debug_unsigned_arm32 }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-unsigned-debug-armeabi-v7a-${{ github.sha }}
+          path: dist/apk-matrix/unsigned/*debug*armeabi-v7a*.apk
+          if-no-files-found: error
+
+      - name: Upload unsigned release ARM32 APK
+        if: ${{ inputs.signing_mode == 'both' || inputs.signing_mode == 'unsigned-only' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-unsigned-release-armeabi-v7a-${{ github.sha }}
+          path: dist/apk-matrix/unsigned/*release*armeabi-v7a*.apk
+          if-no-files-found: error
+
+      - name: Upload signed release ARM32 APK
+        if: ${{ inputs.signing_mode == 'both' || inputs.signing_mode == 'signed-only' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-signed-release-armeabi-v7a-${{ github.sha }}
+          path: dist/apk-matrix/signed/*release*armeabi-v7a*-signed.apk
+          if-no-files-found: error
+
+      - name: Upload ARM32 reports
+        if: ${{ inputs.upload_reports }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-report-arm32-${{ github.sha }}
+          path: |
+            dist/apk-matrix/APK_SIZE_REPORT.tsv
+            dist/apk-matrix/APK_SIZE_DIFF_RELEASE.tsv
+            dist/apk-matrix/SHA256SUMS.txt
+            dist/apk-matrix/ARTIFACT_MANIFEST.txt
+          if-no-files-found: error
+
+      - name: Upload local signing keystore
+        if: ${{ inputs.upload_local_keystore }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-apk-arm32-local-keystore-${{ github.sha }}
+          path: dist/local-release.keystore
+          if-no-files-found: error

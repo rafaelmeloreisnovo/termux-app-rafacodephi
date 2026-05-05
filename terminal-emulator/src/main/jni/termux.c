@@ -1,4 +1,5 @@
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <jni.h>
 #include <signal.h>
@@ -9,6 +10,7 @@
 #include <sys/wait.h>
 #include <termios.h>
 #include <unistd.h>
+#include <limits.h>
 
 #define TERMUX_UNUSED(x) x __attribute__((__unused__))
 #ifdef __APPLE__
@@ -48,6 +50,7 @@ static int create_subprocess(JNIEnv* env,
             ptsname_r(ptm, devname, sizeof(devname))
 #endif
        ) {
+        close(ptm);
         return throw_runtime_exception(env, "Cannot grantpt()/unlockpt()/ptsname_r() on /dev/ptmx");
     }
 
@@ -64,6 +67,7 @@ static int create_subprocess(JNIEnv* env,
 
     pid_t pid = fork();
     if (pid < 0) {
+        close(ptm);
         return throw_runtime_exception(env, "Fork failed");
     } else if (pid > 0) {
         *pProcessId = (int) pid;
@@ -128,6 +132,13 @@ JNIEXPORT jint JNICALL Java_com_termux_terminal_JNI_createSubprocess(
         jint cell_height)
 {
     jsize size = args ? (*env)->GetArrayLength(env, args) : 0;
+    if (!processIdArray || (*env)->GetArrayLength(env, processIdArray) < 1) {
+        return throw_runtime_exception(env, "processIdArray must have length >= 1");
+    }
+    if (rows <= 0 || columns <= 0 || cell_width <= 0 || cell_height <= 0 ||
+        rows > USHRT_MAX || columns > USHRT_MAX) {
+        return throw_runtime_exception(env, "Invalid terminal geometry");
+    }
     char** argv = NULL;
     if (size > 0) {
         argv = (char**) malloc((size + 1) * sizeof(char*));
@@ -143,6 +154,7 @@ JNIEXPORT jint JNICALL Java_com_termux_terminal_JNI_createSubprocess(
             }
             argv[i] = strdup(arg_utf8);
             (*env)->ReleaseStringUTFChars(env, arg_java_string, arg_utf8);
+            (*env)->DeleteLocalRef(env, arg_java_string);
         }
         argv[size] = NULL;
     }
@@ -175,6 +187,7 @@ JNIEXPORT jint JNICALL Java_com_termux_terminal_JNI_createSubprocess(
             }
             envp[i] = strdup(env_utf8);
             (*env)->ReleaseStringUTFChars(env, env_java_string, env_utf8);
+            (*env)->DeleteLocalRef(env, env_java_string);
         }
         envp[size] = NULL;
     }
@@ -248,7 +261,17 @@ JNIEXPORT void JNICALL Java_com_termux_terminal_JNI_setPtyUTF8Mode(JNIEnv* TERMU
 JNIEXPORT jint JNICALL Java_com_termux_terminal_JNI_waitFor(JNIEnv* TERMUX_UNUSED(env), jclass TERMUX_UNUSED(clazz), jint pid)
 {
     int status;
-    waitpid(pid, &status, 0);
+    pid_t result;
+    do {
+        result = waitpid(pid, &status, 0);
+    } while (result == -1 && errno == EINTR);
+
+    if (result == -1) {
+        // The Java side treats negative values as signal-style abnormal termination.
+        // Preserve a clean return path instead of leaving status uninitialized.
+        return -1;
+    }
+
     if (WIFEXITED(status)) {
         return WEXITSTATUS(status);
     } else if (WIFSIGNALED(status)) {

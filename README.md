@@ -1,5 +1,7 @@
 # Termux Application - RafaCodePhi Fork
 
+> 📚 **Mapa rápido em nível L/L2**: veja [`DOCS_L2_TREE.md`](./DOCS_L2_TREE.md).
+
 ## Fork Notice and Attribution
 
 **This is a fork of the original [Termux](https://github.com/termux/termux-app) project.**
@@ -596,3 +598,39 @@ Every contribution, no matter how small, is significant and acknowledged. Even a
 - Hashes de bootstrap BLAKE3 e SHA256 são gerados por `scripts/prepare_bootstrap_env.sh`.
 
 ABIs validadas na trilha de build local: `armeabi-v7a`, `arm64-v8a` e `x86_64`.
+
+## Manifesto: Parábola do Zero e do Um
+
+> O sábio não chamou o vazio de inútil, nem chamou o cheio de verdade. Ele colocou os dois na balança da coerência.
+
+Neste fork, tratamos linguagem, build e execução como estados coerentes de um mesmo sistema:
+
+- **0 = campo de possibilidade** (silêncio útil, estado ainda não provado).
+- **1 = manifestação validada** (ação comprovada, estado executável).
+- **Ruído = diferença entre esperado e vivido** (fronteira de ajuste fino).
+- **Erro = quebra de aliança do sistema** (contrato rompido entre camadas).
+
+Princípios operacionais do manifesto:
+
+1. Não confundir ausência com inutilidade e presença com verdade automática.
+2. Medir transições entre estado potencial e estado validado com provas reprodutíveis.
+3. Preservar coerência entre Gradle, CMake, NDK, JNI, CI e artefatos.
+4. Tratar rollback como parte legítima da engenharia de confiabilidade.
+5. Manter o caminho oficial de release íntegro, com trilhas explícitas para validação interna.
+
+Mapeamento semântico adotado neste projeto:
+
+```text
+0 = campo de possibilidade
+1 = manifestação validada
+Arché = origem da estrutura
+Elohim = inteligência ordenadora
+Qudra = potência de execução
+Tao = caminho da transição
+Zen = silêncio que não falsifica
+Torá = ordem pela palavra
+Alcorão = comando que faz ser
+RAFAELIA = tentativa de medir a passagem entre possibilidade, estado e prova
+```
+
+Este manifesto define o compromisso do repositório com coerência estrutural, validação técnica e evolução semântica responsável.

@@ -1,0 +1,43 @@
+# RAFAELIA Code Doc Sync
+|arquivo|A|B|hash_A|hash_B|doc|teste|benchmark|status|divergência|ação|
+|---|---|---|---|---|---|---|---|---|---|---|
+|.editorconfig|True|False|7ee28d82bb78e171c4dcb58ab11265f5429357bddf41ce99cf5daf0e519a0db2|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.gitattributes|True|False|2920101dfb2d1fcdef31b07f7b270b4466f20406db7253559124ebcd2ea4be64|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/FUNDING.yml|True|False|9e5baba37585400e4b8c0c52151a59303ec6dc6d04bc866b991095a9aafb885e|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/ISSUE_TEMPLATE/01-bug-report.yml|True|False|55c873e0b2c20e2fa6b5a396f6ee82935a4269800d99023a22908b58524c3650|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/ISSUE_TEMPLATE/02-feature-request.yml|True|False|862c966b268fbb808089402d9b36eb4f038ff507c9ae198249ff95de37b5ef95|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/ISSUE_TEMPLATE/config.yml|True|False|a4c1497dde418fc6cff15b5a55669ceea423ed283b8621b9e8e0773f98f9b34f|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/dependabot.yml|True|False|6cf944e509e529f7b0f961822214ede1aeee4ed32724070c682c27d307b87ad4|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/workflows/android15_arm64_build.yml|True|False|97ad22220727324f6130cd6dbe304777740af6e3a3372de393fd085de759383a|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/workflows/apk_matrix_build.yml|True|False|e39776d9dc7f17113eba59e074e7cdbfa1f87f5e5fb0d36985dd836e574c2404|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/workflows/attach_debug_apks_to_release.yml|True|False|87900bd4af7b4340d405c3555608a480b15cced83585e2b0da215e82629725b8|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/workflows/debug_build.yml|True|False|c0aadb3af1da19cacd856850680cc228442631c55a13a9e99afd48bff6c802a2|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/workflows/dependency-submission.yml|True|False|9fd72524e9425247262f9c353a9f1887d7f6d89d89e392a238080562be4dedf1|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/workflows/gradle-wrapper-validation.yml|True|False|1ae54ba6da7b4412c05a1464aa0f8504332e127bff204047cc01a1d2b6c139f4|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/workflows/manual_release_cleanup.yml|True|False|588104726c3664cd336b749d610f31a6862b3aeaae72fbbf8d426bfce581a7a9|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/workflows/rafaelia-generated.yml|True|False|1cfd06b174a3bc897d5bc468ddae5009cbcaf0bff5f846decc9fa0adb0a15227|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/workflows/rafaelia_pipeline.yml|True|False|43e9a5d7d0c1b2f294ea1e9ba0a636e3fe60d080bf71327b0bab5297f61b5672|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/workflows/run_tests.yml|True|False|b99a0f42af5ede0bd50d8264a7b35fc0253b0718e146bc9ef60b2f0b3f6c69b4|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/workflows/top42_bench.yml|True|False|67ca6906417db7391044959d35f40480645e2a3d5a206bf7961c2a73f44fb9c1|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.github/workflows/trigger_library_builds_on_jitpack.yml|True|False|dc92a8726a1490c3e94c562c4e60d905d83099db914a811d8e7be62e0a57ea27|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.gitignore|True|False|445ec358019a03c3e7667971cb73cc262db284c90182ce794cc2087cf51a7e53|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.gradle/8.14.3/checksums/checksums.lock|True|False|7cbe35563fb4475351d6de82fbf12d6f1d9f328c7c6ff773347cf025ab60ce91|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.gradle/8.14.3/checksums/md5-checksums.bin|True|False|e7a02a6181351c2343e35709894d64e6e9f38c777341777ba34e8694a4462590|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.gradle/8.14.3/checksums/sha1-checksums.bin|True|False|0dd51bf11ec9c48c5fa06afe4571ab3807a7271804c70957310932891d2ba33f|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.gradle/8.14.3/fileChanges/last-build.bin|True|False|6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.gradle/8.14.3/fileHashes/fileHashes.lock|True|False|5cc4db1ece6c5086c40928ec86b81937bbdf104831dad16ab6a6c8497059440d|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.gradle/8.14.3/gc.properties|True|False|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.gradle/buildOutputCleanup/buildOutputCleanup.lock|True|False|600f0959a992c7a2c9994f22e4d2aba866a1c494e2d283309c24920899c92750|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.gradle/buildOutputCleanup/cache.properties|True|False|579f8f083c32c8c98e59c2f2223fc388303664179f38f6fdcac35988c044bbd2|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|.gradle/vcs-1/gc.properties|True|False|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|ANALISE_MERCADO.md|True|False|1f767bce956dda397bee0649b88f5b1ee740f060c933b4537921d138f883ec46|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|ANDROID15_AUDIT_REPORT.md|True|False|2b3145f34e45a48c626f6de8947cc3f05179af1c044e8ce550e255c279aebb6a|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|ANDROID15_COMPATIBILITY_REPORT.md|True|False|64a092aee632f71915022ad34c6d19540f1aa9afaf16539f219131b705b99ca4|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|ANDROID15_RELATORIO_COMPATIBILIDADE.md|True|False|559738f6ef1295c0956e631a45dd5671ef914f230df68aa7a6d55a835b861bd5|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|ANDROID16_PAGE_SIZE_FIX.md|True|False|6cdbf95289d9fd016c641cf2be0a8e150ff2ddd4b392c019194f6eeb17e580a3|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|ARQUIVOS_SOLTOS_INVENTARIO.md|True|False|20eb55d13b0c95f1de8242bb7222ce2ccb1aba5e99ee9f9bc17a5b82fbb1382d|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|ASSINATURA_AUTORIA.md|True|False|c98cb71079d03df3b082dd9494cabf6a2bba0fa81bce385f2d2edcb9d21590aa|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|AUDITORIA.md|True|False|5e16835390d565920a0aa38bc5ee5743d5cde7324e28a2a337ce57167abcacae|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|AUDITORIA_TAREFAS.md|True|False|210aaef952d327ab4c2885a87646b92e9a4c846509e65192847be1c94a09c6e8|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|BENCHMARKS_COMPARISON.md|True|False|8718e071b273e27cd61b40bc543f6f3302fa16f3376df00e0f4b10d0db316d74|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
+|BOOSTERS.md|True|False|b89d2accdc933d985d97b618f76b64ad8180fd102865a64c6a5f7c2c8f2de810|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|
