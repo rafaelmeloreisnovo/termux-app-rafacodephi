@@ -24,6 +24,26 @@ jobs:
       - name: Build signed + unsigned APK matrix (arm32 + arm64)
         run: ./scripts/build_apk_matrix.sh
 
+      - name: Build PSS3 failure lab tool
+        run: |
+          cc -O2 -Wall -Wextra -o tools/pss3_failure_lab tools/pss3_failure_lab.c
+
+      - name: Run optional PSS3 failure audit
+        run: |
+          mkdir -p out
+          if [ -f out/failure_trace.csv ]; then
+            printf '1\n2\n3\n5\n0\n' | tools/pss3_failure_lab out/failure_trace.csv | tee out/pss3_failure_report.txt
+          else
+            echo 'failure_trace.csv absent; skipping PSS3 audit' | tee out/pss3_failure_report.txt
+          fi
+
+      - name: Enforce BLOCKER_BETA gate only when report exists
+        run: |
+          if [ -f out/pss3_failure_report.txt ] && grep -q 'BLOCKER_BETA' out/pss3_failure_report.txt; then
+            echo 'BLOCKER_BETA detected in PSS3 report';
+            exit 1;
+          fi
+
       - name: Publish matrix summary
         run: |
           echo "## APK Matrix Size Report" >> $GITHUB_STEP_SUMMARY
@@ -44,4 +64,5 @@ jobs:
             dist/local-release.keystore
             docs/BETA_BUILD_REPORT.md
             docs/BETA_READINESS_REPORT.md
+            out/pss3_failure_report.txt
           if-no-files-found: error
