@@ -13,10 +13,12 @@
 - macro `RAF_LOG_WRN` adicionada.
 - entry separado em `entry_arm64.S`.
 - `RAF_TERMUX_PREFIX` configurável por macro.
+- selftest expandido com vetores golden de CRC32C/FNV-1a.
 
 ## Experimental
 - ZIPRAF apenas round-trip de formato próprio.
 - sem substituir bootstrap real do Termux.
+- workflow NDK dedicado para objetos freestanding AArch64 com upload de artifacts.
 
 ## Pode entrar na beta
 - apenas como módulo isolado e opcional.
@@ -29,5 +31,5 @@
 - tentar usar freestanding fora da trilha experimental.
 
 ## Próximos passos
-- adicionar testes de golden vectors adicionais.
-- validar toolchain NDK em CI com runner Android/NDK.
+- adicionar target freestanding sem libc para selftest binário mínimo (sem printf).
+- validar execução em dispositivo ARM64 via shell de teste isolado.
