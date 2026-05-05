@@ -78,4 +78,4 @@ MIN_FREE_MB=2048 bash scripts/verify_bootstrap_contract.sh --prepare
 
 ## Implementação lowlevel
 
-A verificação usa utilitários lowlevel de sistema (`od`, `tail`, `sed`, `sha256sum`, `b3sum`) sem dependência em módulos Python ou validação via bibliotecas ZIP de alto nível.
+A verificação usa um checker lowlevel em C (`scripts/bootstrap_zip_contract_check.c`) compilado no ato e executado sem heap/malloc para validar assinatura local + EOCD do ZIP, junto de `sha256sum` e `b3sum` opcional.

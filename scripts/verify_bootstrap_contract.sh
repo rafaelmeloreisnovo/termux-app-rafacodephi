@@ -24,13 +24,7 @@ check_zip_valid_lowlevel(){
   local f="$1"
   [[ -f "$f" ]] || fail "Missing bootstrap archive: $f"
   [[ -s "$f" ]] || fail "Bootstrap archive is empty: $f"
-
-  local sig_lh sig_eocd
-  sig_lh="$(od -An -tx1 -N4 "$f" | tr -d ' \n')"
-  [[ "$sig_lh" == "504b0304" ]] || fail "Invalid local header signature in $f"
-
-  sig_eocd="$(tail -c 65557 "$f" | od -An -tx1 -v | tr -d ' \n' | sed 's/.*504b0506/504b0506/')"
-  [[ "$sig_eocd" == 504b0506* ]] || fail "Missing EOCD signature in $f"
+  /tmp/bootstrap_zip_contract_check "$f" >/dev/null 2>&1 || fail "Invalid ZIP structure in $f"
 }
 
 emit_hashes_lowlevel(){
@@ -62,7 +56,8 @@ check_runtime_prefix(){
 }
 
 check_bootstraps(){
-  need od; need tail; need sed; need awk
+  need cc
+  cc -O2 -std=c11 -Wall -Wextra -Werror scripts/bootstrap_zip_contract_check.c -o /tmp/bootstrap_zip_contract_check
   check_free_space
   local z
   for z in "${BOOTSTRAPS[@]}"; do
