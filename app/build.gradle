@@ -413,6 +413,10 @@ tasks.register("downloadBootstraps") {
     }
 }
 
+tasks.register("buildDeveloperBootstraps", Exec) {
+    workingDir rootProject.projectDir
+    commandLine "bash", "scripts/generate_developer_bootstraps.sh"
+}
 
 
 
@@ -440,7 +444,8 @@ task verifyBootstrapZipsPresent {
 tasks.register("ensureBootstrapArchives") {
     description = 'Downloads and validates all bootstrap zip artifacts required by native bootstrap ASM embedding.'
     group = 'build setup'
-    dependsOn(tasks.named("downloadBootstraps"))
+    def useDevBootstrap = (project.findProperty("RAF_BOOTSTRAP_SOURCE") ?: System.getenv("RAF_BOOTSTRAP_SOURCE") ?: "").toString().toLowerCase() == "local"
+    dependsOn(useDevBootstrap ? tasks.named("buildDeveloperBootstraps") : tasks.named("downloadBootstraps"))
     dependsOn(tasks.named("verifyBootstrapZipsPresent"))
 }
 def requiredBootstrapMetadata(File file, String expectedPackageName, String expectedPageSize, String validationMode) {

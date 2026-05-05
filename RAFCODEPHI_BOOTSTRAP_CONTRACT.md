@@ -86,3 +86,19 @@ MIN_FREE_MB=2048 bash scripts/verify_bootstrap_contract.sh --prepare
 ## Implementação lowlevel
 
 A verificação usa um checker lowlevel em C (`scripts/bootstrap_zip_contract_check.c`) compilado no ato e executado sem heap/malloc para validar assinatura local + EOCD do ZIP, junto de `sha256sum` e `b3sum` opcional.
+
+## Bootstrap próprio (source)
+
+Fonte bootstrap developer no repositório:
+
+```text
+bootstrap_src/common/bin/sh
+bootstrap_src/common/bin/pkg
+bootstrap_src/common/etc/motd
+```
+
+Para build Gradle usando bootstrap local (sem download remoto):
+
+```bash
+RAF_BOOTSTRAP_SOURCE=local ./gradlew :app:ensureBootstrapArchives --no-daemon
+```
