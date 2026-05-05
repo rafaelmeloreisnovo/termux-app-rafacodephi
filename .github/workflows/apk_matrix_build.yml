@@ -76,6 +76,9 @@ jobs:
       - name: Setup Android SDK/NDK
         run: ./scripts/setup_android_toolchain.sh
 
+      - name: Validate lowlevel bootstrap spec sync
+        run: ./scripts/bootstrap_lowlevel_sync_check.sh
+
       - name: Build signed + unsigned APK matrix
         run: ./scripts/build_apk_matrix.sh
 
