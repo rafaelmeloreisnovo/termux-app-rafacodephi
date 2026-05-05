@@ -178,6 +178,8 @@ Uso:
 - 📖 [Complete Documentation](./DOCUMENTACAO.md) - Full technical documentation
 - 🧩 [Total Dependencies Inventory](./docs/DEPENDENCIAS_TOTAIS.md) - Consolidated Gradle/modules dependencies
 - 🗂️ [Loose Files Inventory](./ARQUIVOS_SOLTOS_INVENTARIO.md) - Audit of `.md` and root loose files
+- 🔗 [External Integration Map](./docs/EXTERNAL_INTEGRATION_MAP.md)
+- 🔗 [Symbol Encoding Policy](./docs/SYMBOL_ENCODING_POLICY.md)
 
 ***
 

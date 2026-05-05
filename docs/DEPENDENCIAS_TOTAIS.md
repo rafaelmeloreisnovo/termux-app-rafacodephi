@@ -236,3 +236,18 @@ Resultado: **OK** (dependências encontradas em `build.gradle`, `app/build.gradl
 
 A execução de tasks Gradle que exigem Android SDK falha sem `local.properties`/`ANDROID_HOME` configurado, portanto a verificação desta rodada foi feita por inspeção estática dos arquivos versionados.
 
+
+
+## 14. Dependencias externas opcionais de integracao
+
+### BLAKE3/RMR
+- Nao e vendored por padrao.
+- Integracao por script, artifact externo, ou path local configuravel.
+- Release nao deve depender de caminho local implicito.
+- Debug pode usar fallback com `python-blake3`.
+
+### Vectra/RMR
+- Nao e vendored por padrao.
+- Integracao por script, artifact externo, ou path local configuravel.
+- Release/CI estrito falha quando obrigatorio e ausente.
+- Debug pode seguir com warning e fallback de contrato.
