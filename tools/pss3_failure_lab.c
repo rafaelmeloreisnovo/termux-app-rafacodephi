@@ -17,9 +17,18 @@ typedef struct {
 
 typedef struct {
     char *signature_hash;
-    int count, recurring_count, stable_count, attempts_after_fix;
+    int count;
     double severity_sum;
-    double recurrence_rate, fix_stability, beta_risk;
+    int recurring_count;
+    int stable_after_fix_count;
+    int attempts_after_fix;
+    int rollback_count;
+    int zombie_count;
+    char *domain;
+    char *event_type;
+    double recurrence_rate;
+    double fix_stability;
+    double beta_risk;
     int status_gate;
 } failure_bucket;
 
@@ -29,11 +38,11 @@ static const int fibo_001123[] = {0,0,1,1,2,3};
 
 static char *dup_s(const char *s){ size_t n=strlen(s)+1; char *p=(char*)malloc(n); if(p) memcpy(p,s,n); return p; }
 static int to_i(const char *s){ return s?atoi(s):0; }
+static double to_d(const char *s){ return s?atof(s):0.0; }
 
 static const char *cell_at(char **cells, int n, int idx){ return (idx>=0 && idx<n && cells[idx])?cells[idx]:""; }
 
 static int csv_split_simple(char *line, char **cells, int max_cells) {
-    /* CSV simples: nao suporta aspas escapadas nem virgula dentro de campo. */
     int c = 0;
     char *tok = strtok(line, ",\n\r");
     while (tok && c < max_cells) { cells[c++] = tok; tok = strtok(NULL, ",\n\r"); }
@@ -98,10 +107,84 @@ static int pss3_failure_gate(int tick, int severity, int recurring, int rollback
     return 3;
 }
 
+static int find_or_create_bucket(failure_bucket **buckets, int *bucket_count, int *bucket_cap, const char *signature_hash){
+    for(int i=0;i<*bucket_count;i++){
+        if(!strcmp((*buckets)[i].signature_hash, signature_hash)) return i;
+    }
+    if(*bucket_count >= *bucket_cap){
+        int new_cap = (*bucket_cap==0)?64:(*bucket_cap*2);
+        failure_bucket *tmp = (failure_bucket*)realloc(*buckets, (size_t)new_cap * sizeof(failure_bucket));
+        if(!tmp) return -1;
+        *buckets = tmp;
+        *bucket_cap = new_cap;
+    }
+    failure_bucket *b = &(*buckets)[*bucket_count];
+    memset(b, 0, sizeof(*b));
+    b->signature_hash = dup_s(signature_hash ? signature_hash : "");
+    (*bucket_count)++;
+    return (*bucket_count)-1;
+}
+
+static int build_buckets(failure_event *ev, int n, failure_bucket **out, int *out_count){
+    failure_bucket *buckets = NULL;
+    int bucket_count = 0, bucket_cap = 0;
+    for(int i=0;i<n;i++){
+        const char *sig = ev[i].signature_hash ? ev[i].signature_hash : "";
+        int bi = find_or_create_bucket(&buckets, &bucket_count, &bucket_cap, sig);
+        if(bi < 0) return 0;
+        failure_bucket *b = &buckets[bi];
+        int recurring = to_i(ev[i].recurring) > 0;
+        int stable = to_i(ev[i].stable_after_fix) > 0;
+        int rollback = to_i(ev[i].rollback) > 0;
+        int zombie = to_i(ev[i].zombie_detected) > 0;
+        b->count++;
+        b->severity_sum += to_d(ev[i].severity);
+        b->recurring_count += recurring;
+        b->stable_after_fix_count += stable;
+        b->attempts_after_fix += (ev[i].stable_after_fix && ev[i].stable_after_fix[0]) ? 1 : 0;
+        b->rollback_count += rollback;
+        b->zombie_count += zombie;
+        if(!b->domain || !b->domain[0]) b->domain = ev[i].domain;
+        if(!b->event_type || !b->event_type[0]) b->event_type = ev[i].event_type;
+    }
+
+    for(int i=0;i<bucket_count;i++){
+        failure_bucket *b = &buckets[i];
+        double severity_avg = (b->count > 0) ? (b->severity_sum / (double)b->count) : 0.0;
+        b->recurrence_rate = (n > 0) ? ((double)b->count / (double)n) : 0.0;
+        b->fix_stability = (b->attempts_after_fix > 0)
+            ? ((double)b->stable_after_fix_count / (double)b->attempts_after_fix)
+            : 0.0;
+        b->beta_risk = severity_avg * b->recurrence_rate * (1.0 - b->fix_stability);
+        b->status_gate = pss3_failure_gate(i, (int)(severity_avg+0.5), b->recurring_count > 0, b->rollback_count > 0, b->zombie_count > 0);
+    }
+
+    *out = buckets;
+    *out_count = bucket_count;
+    return 1;
+}
+
+static int cmp_count_desc(const void *a, const void *b){
+    const failure_bucket *x = (const failure_bucket*)a, *y = (const failure_bucket*)b;
+    if(y->count != x->count) return y->count - x->count;
+    return strcmp(x->signature_hash, y->signature_hash);
+}
+
+static int cmp_beta_desc(const void *a, const void *b){
+    const failure_bucket *x = (const failure_bucket*)a, *y = (const failure_bucket*)b;
+    if(y->beta_risk > x->beta_risk) return 1;
+    if(y->beta_risk < x->beta_risk) return -1;
+    return strcmp(x->signature_hash, y->signature_hash);
+}
+
 int main(int argc, char **argv){
     const char *path = (argc>1)?argv[1]:"out/failure_trace.csv";
     failure_event *ev=NULL; int n=0;
     if(!load_csv(path,&ev,&n)){ fprintf(stderr,"failed to load %s\n",path); return 1; }
+
+    failure_bucket *buckets = NULL; int bucket_count = 0;
+    if(!build_buckets(ev, n, &buckets, &bucket_count)){ fprintf(stderr,"failed to aggregate buckets\n"); return 1; }
+
     printf("PSS3 loaded %d events from %s\n",n,path);
     printf("1.failure stats 2.top recurring failures 3.beta risk ranking 4.fix stability 5.gate/fibo view 6.arena failure map p.paths c.color e.emoji 0.exit\n");
 
@@ -117,10 +200,52 @@ int main(int argc, char **argv){
                 low += ev[i].domain && (!strcasecmp(ev[i].domain,"lowlevel") || !strcasecmp(ev[i].domain,"rmr"));
             }
             printf("total_events=%d total_failures=%d recurring_failures=%d zombie_events=%d rollback_events=%d crash_events=%d build_failures=%d terminal_failures=%d lowlevel_failures=%d\n",n,fail,rec,zom,roll,crash,build,term,low);
-            double pfr = (rec>0)?1.0:0.0, pfn = ((fail-rec)>0)?1.0:0.0; /* para dataset de falhas, p(fail|*)=1 */
+            double pfr = (rec>0)?1.0:0.0, pfn = ((fail-rec)>0)?1.0:0.0;
             printf("delta_failure=%.3f\n", pfr-pfn);
-        } else if(opt=='2' || opt=='3' || opt=='4' || opt=='6'){
-            printf("view %c ready (dataset-dependent)\n",opt);
+        } else if(opt=='2'){
+            failure_bucket *tmp = (failure_bucket*)malloc((size_t)bucket_count * sizeof(failure_bucket));
+            if(!tmp) continue;
+            memcpy(tmp, buckets, (size_t)bucket_count * sizeof(failure_bucket));
+            qsort(tmp, (size_t)bucket_count, sizeof(failure_bucket), cmp_count_desc);
+            for(int i=0;i<bucket_count;i++){
+                printf("OPT2|rank=%d|signature_hash=%s|count=%d|recurrence_rate=%.6f|severity_sum=%.3f|recurring_count=%d|rollback_count=%d|zombie_count=%d|domain=%s|event_type=%s\n",
+                    i+1, tmp[i].signature_hash, tmp[i].count, tmp[i].recurrence_rate, tmp[i].severity_sum, tmp[i].recurring_count, tmp[i].rollback_count, tmp[i].zombie_count,
+                    tmp[i].domain?tmp[i].domain:"", tmp[i].event_type?tmp[i].event_type:"");
+            }
+            free(tmp);
+        } else if(opt=='3'){
+            failure_bucket *tmp = (failure_bucket*)malloc((size_t)bucket_count * sizeof(failure_bucket));
+            if(!tmp) continue;
+            memcpy(tmp, buckets, (size_t)bucket_count * sizeof(failure_bucket));
+            qsort(tmp, (size_t)bucket_count, sizeof(failure_bucket), cmp_beta_desc);
+            for(int i=0;i<bucket_count;i++){
+                const char *status = (tmp[i].status_gate>=3)?"BLOCKER":(tmp[i].status_gate==2)?"HIGH":(tmp[i].status_gate==1)?"MEDIUM":"LOW";
+                printf("OPT3|rank=%d|signature_hash=%s|beta_risk=%.6f|status=%s|gate=%d|severity_avg=%.3f|recurrence_rate=%.6f|fix_stability=%.6f|count=%d|attempts_after_fix=%d|stable_after_fix_count=%d\n",
+                    i+1, tmp[i].signature_hash, tmp[i].beta_risk, status, tmp[i].status_gate,
+                    tmp[i].count?tmp[i].severity_sum/(double)tmp[i].count:0.0, tmp[i].recurrence_rate, tmp[i].fix_stability,
+                    tmp[i].count, tmp[i].attempts_after_fix, tmp[i].stable_after_fix_count);
+            }
+            free(tmp);
+        } else if(opt=='4'){
+            for(int i=0;i<bucket_count;i++){
+                printf("OPT4|signature_hash=%s|fix_stability=%.6f|stable_after_fix_count=%d|attempts_after_fix=%d|count=%d|rollback_count=%d|zombie_count=%d\n",
+                    buckets[i].signature_hash, buckets[i].fix_stability, buckets[i].stable_after_fix_count,
+                    buckets[i].attempts_after_fix, buckets[i].count, buckets[i].rollback_count, buckets[i].zombie_count);
+            }
+        } else if(opt=='6'){
+            int grid[4][4] = {{0}};
+            for(int i=0;i<bucket_count;i++){
+                int gate = buckets[i].status_gate;
+                int status = (buckets[i].beta_risk > 0.75)?3:(buckets[i].beta_risk > 0.30)?2:(buckets[i].beta_risk > 0.10)?1:0;
+                if(gate<0) gate=0;
+                if(gate>3) gate=3;
+                grid[gate][status]++;
+            }
+            for(int g=0;g<4;g++){
+                for(int s=0;s<4;s++){
+                    printf("OPT6|gate=%d|status=%d|bucket_count=%d\n", g, s, grid[g][s]);
+                }
+            }
         } else if(opt=='5'){
             for(int i=0;i<n && i<8;i++){
                 int g=pss3_failure_gate(i,to_i(ev[i].severity),to_i(ev[i].recurring),to_i(ev[i].rollback),to_i(ev[i].zombie_detected));
