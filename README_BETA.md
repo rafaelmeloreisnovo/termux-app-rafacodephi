@@ -38,3 +38,18 @@ Esta trilha fecha uma versão pequena, honesta e funcional do Termux Rafacodephi
 - `docs/BETA_READINESS_REPORT.md` e `docs/BETA_KNOWN_LIMITATIONS.md` atualizados.
 - `INVENTARIO.md` lista fontes de verdade, artifacts, scripts e riscos.
 - Hashes dos APKs publicados em `dist/apk-matrix/SHA256SUMS.txt` quando o build é executado.
+
+
+## Certification and audit claim notice
+
+This repository does not claim ISO certification, formal ISO compliance, or accredited external audit status. Any ISO/IEC references are internal checklist references or methodological alignment notes only. Certification requires an external accredited audit process and is outside the scope of this repository.
+
+Este repositório não declara certificação formal baseada em ISO, conformidade ISO formal nem auditoria externa acreditada. Qualquer referência a ISO/IEC é apenas checklist interno, referência metodológica ou alinhamento preliminar de boas práticas. Certificação exige processo externo acreditado e está fora do escopo deste repositório.
+
+### Audit/benchmark/runtime trail
+- `docs/AUDIT_CLAIMS_POLICY.md`
+- `reports/vectra_grade_benchmarks.md`
+- `reports/device_runtime_smoke.md`
+- `reports/rmr_equivalence.md`
+- CI validação não equivale a validação em device real.
+- Benchmark definido não equivale a benchmark medido.

@@ -1,0 +1,18 @@
+name: device-runtime-smoke
+on:
+  workflow_dispatch:
+    inputs:
+      apk_path:
+        description: 'APK path'
+        required: false
+        type: string
+jobs:
+  device-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/device_runtime_smoke.sh "${{ inputs.apk_path }}" || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: device-runtime-reports
+          path: reports/*

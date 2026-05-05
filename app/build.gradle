@@ -853,3 +853,30 @@ tasks.register("validateVectraGradeBenchContract") {
         }
     }
 }
+
+def rafEnvTrue = { String name, boolean defVal=false ->
+    def v = System.getenv(name)
+    return v == null ? defVal : v.equalsIgnoreCase('true')
+}
+
+tasks.register('validateAuditClaims', Exec) {
+    commandLine 'bash', "$rootDir/scripts/validate_audit_claims.sh"
+}
+
+tasks.register('collectVectraGradeBenchmarks', Exec) {
+    onlyIf { rafEnvTrue('RAF_ENABLE_VECTRA_BENCH', true) }
+    commandLine 'bash', "$rootDir/scripts/collect_vectra_grade_benchmarks.sh"
+}
+
+tasks.register('validateRmrEquivalence', Exec) {
+    onlyIf { rafEnvTrue('RAF_REQUIRE_RMR_EQUIVALENCE', false) || rafEnvTrue('RAF_ENABLE_VECTRA_BENCH', true) }
+    commandLine 'bash', "$rootDir/scripts/rmr_equivalence_check.sh"
+}
+
+tasks.register('deviceRuntimeSmoke') {
+    doLast {
+        def strict = rafEnvTrue('RAF_REQUIRE_DEVICE_RUNTIME', false)
+        def result = exec { commandLine 'bash', "$rootDir/scripts/device_runtime_smoke.sh"; ignoreExitValue true }
+        if (strict && result.exitValue != 0) throw new GradleException('device runtime smoke failed under strict mode')
+    }
+}
