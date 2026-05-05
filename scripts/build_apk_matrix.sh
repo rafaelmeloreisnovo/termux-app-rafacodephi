@@ -23,6 +23,12 @@ mkdir -p "${UNSIGNED_DIR}" "${SIGNED_DIR}" "$(dirname "${KEYSTORE_PATH}")"
 info "Preparing bootstrap environment and BLAKE3 vars"
 eval "$(./scripts/prepare_bootstrap_env.sh --print-env)"
 
+for v in AARCH64 ARM I686 X86_64; do
+  var="TERMUX_BOOTSTRAP_BLAKE3_${v}"
+  val="${!var:-}"
+  [[ "$val" =~ ^[0-9a-f]{64}$ ]] || fail "${var} missing/invalid before final build"
+done
+
 info "Running debug unit tests"
 ./gradlew :app:testDebugUnitTest --no-daemon
 
@@ -59,7 +65,7 @@ done < <(find "${UNSIGNED_DIR}" -maxdepth 1 -type f -name '*release*.apk' -print
 signed_arm64_count=$(find "${SIGNED_DIR}" -maxdepth 1 -type f -name '*arm64-v8a*-signed.apk' | wc -l | tr -d ' ')
 signed_arm32_count=$(find "${SIGNED_DIR}" -maxdepth 1 -type f -name '*armeabi-v7a*-signed.apk' | wc -l | tr -d ' ')
 [[ "${signed_arm64_count}" -gt 0 ]] || fail "signed arm64-v8a release APK missing"
-[[ "${signed_arm32_count}" -gt 0 ]] || fail "signed armeabi-v7a release APK missing"
+[[ "${signed_arm32_count}" -gt 0 ]] || fail "signed arm32-v7a release APK missing"
 
 ( cd "${OUT_DIR}" && find unsigned signed -type f -name '*.apk' -print0 | xargs -0 sha256sum > SHA256SUMS.txt )
 

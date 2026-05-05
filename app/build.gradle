@@ -421,6 +421,7 @@ tasks.register("buildDeveloperBootstraps", Exec) {
 
 
 task verifyBootstrapZipsPresent {
+    dependsOn(tasks.named("downloadBootstraps"))
     description = 'Verifies required bootstrap zip artifacts are present in src/main/cpp.'
     group = 'verification'
 
@@ -445,8 +446,7 @@ tasks.register("ensureBootstrapArchives") {
     description = 'Downloads and validates all bootstrap zip artifacts required by native bootstrap ASM embedding.'
     group = 'build setup'
     def useDevBootstrap = (project.findProperty("RAF_BOOTSTRAP_SOURCE") ?: System.getenv("RAF_BOOTSTRAP_SOURCE") ?: "").toString().toLowerCase() == "local"
-    dependsOn(useDevBootstrap ? tasks.named("buildDeveloperBootstraps") : tasks.named("downloadBootstraps"))
-    dependsOn(tasks.named("verifyBootstrapZipsPresent"))
+    dependsOn(useDevBootstrap ? tasks.named("buildDeveloperBootstraps") : tasks.named("verifyBootstrapZipsPresent"))
 }
 def requiredBootstrapMetadata(File file, String expectedPackageName, String expectedPageSize, String validationMode) {
     def zipFile = new java.util.zip.ZipFile(file)
