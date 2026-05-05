@@ -164,17 +164,40 @@ static int build_buckets(failure_event *ev, int n, failure_bucket **out, int *ou
     return 1;
 }
 
-static int cmp_count_desc(const void *a, const void *b){
-    const failure_bucket *x = (const failure_bucket*)a, *y = (const failure_bucket*)b;
+
+static int cmp_count_idx(const failure_bucket *x, const failure_bucket *y){
     if(y->count != x->count) return y->count - x->count;
     return strcmp(x->signature_hash, y->signature_hash);
 }
 
-static int cmp_beta_desc(const void *a, const void *b){
-    const failure_bucket *x = (const failure_bucket*)a, *y = (const failure_bucket*)b;
+static int cmp_beta_idx(const failure_bucket *x, const failure_bucket *y){
     if(y->beta_risk > x->beta_risk) return 1;
     if(y->beta_risk < x->beta_risk) return -1;
     return strcmp(x->signature_hash, y->signature_hash);
+}
+
+static void sort_bucket_index_by_count(const failure_bucket *buckets, int *idx, int n){
+    for(int i=1;i<n;i++){
+        int key = idx[i];
+        int j = i - 1;
+        while(j >= 0 && cmp_count_idx(&buckets[key], &buckets[idx[j]]) < 0){
+            idx[j+1] = idx[j];
+            j--;
+        }
+        idx[j+1] = key;
+    }
+}
+
+static void sort_bucket_index_by_beta(const failure_bucket *buckets, int *idx, int n){
+    for(int i=1;i<n;i++){
+        int key = idx[i];
+        int j = i - 1;
+        while(j >= 0 && cmp_beta_idx(&buckets[key], &buckets[idx[j]]) < 0){
+            idx[j+1] = idx[j];
+            j--;
+        }
+        idx[j+1] = key;
+    }
 }
 
 int main(int argc, char **argv){
@@ -203,29 +226,27 @@ int main(int argc, char **argv){
             double pfr = (rec>0)?1.0:0.0, pfn = ((fail-rec)>0)?1.0:0.0;
             printf("delta_failure=%.3f\n", pfr-pfn);
         } else if(opt=='2'){
-            failure_bucket *tmp = (failure_bucket*)malloc((size_t)bucket_count * sizeof(failure_bucket));
-            if(!tmp) continue;
-            memcpy(tmp, buckets, (size_t)bucket_count * sizeof(failure_bucket));
-            qsort(tmp, (size_t)bucket_count, sizeof(failure_bucket), cmp_count_desc);
+            int idx[bucket_count];
+            for(int i=0;i<bucket_count;i++) idx[i]=i;
+            sort_bucket_index_by_count(buckets, idx, bucket_count);
             for(int i=0;i<bucket_count;i++){
+                failure_bucket *b = &buckets[idx[i]];
                 printf("OPT2|rank=%d|signature_hash=%s|count=%d|recurrence_rate=%.6f|severity_sum=%.3f|recurring_count=%d|rollback_count=%d|zombie_count=%d|domain=%s|event_type=%s\n",
-                    i+1, tmp[i].signature_hash, tmp[i].count, tmp[i].recurrence_rate, tmp[i].severity_sum, tmp[i].recurring_count, tmp[i].rollback_count, tmp[i].zombie_count,
-                    tmp[i].domain?tmp[i].domain:"", tmp[i].event_type?tmp[i].event_type:"");
+                    i+1, b->signature_hash, b->count, b->recurrence_rate, b->severity_sum, b->recurring_count, b->rollback_count, b->zombie_count,
+                    b->domain?b->domain:"", b->event_type?b->event_type:"");
             }
-            free(tmp);
         } else if(opt=='3'){
-            failure_bucket *tmp = (failure_bucket*)malloc((size_t)bucket_count * sizeof(failure_bucket));
-            if(!tmp) continue;
-            memcpy(tmp, buckets, (size_t)bucket_count * sizeof(failure_bucket));
-            qsort(tmp, (size_t)bucket_count, sizeof(failure_bucket), cmp_beta_desc);
+            int idx[bucket_count];
+            for(int i=0;i<bucket_count;i++) idx[i]=i;
+            sort_bucket_index_by_beta(buckets, idx, bucket_count);
             for(int i=0;i<bucket_count;i++){
-                const char *status = (tmp[i].status_gate>=3)?"BLOCKER":(tmp[i].status_gate==2)?"HIGH":(tmp[i].status_gate==1)?"MEDIUM":"LOW";
+                failure_bucket *b = &buckets[idx[i]];
+                const char *status = (b->status_gate>=3)?"BLOCKER":(b->status_gate==2)?"HIGH":(b->status_gate==1)?"MEDIUM":"LOW";
                 printf("OPT3|rank=%d|signature_hash=%s|beta_risk=%.6f|status=%s|gate=%d|severity_avg=%.3f|recurrence_rate=%.6f|fix_stability=%.6f|count=%d|attempts_after_fix=%d|stable_after_fix_count=%d\n",
-                    i+1, tmp[i].signature_hash, tmp[i].beta_risk, status, tmp[i].status_gate,
-                    tmp[i].count?tmp[i].severity_sum/(double)tmp[i].count:0.0, tmp[i].recurrence_rate, tmp[i].fix_stability,
-                    tmp[i].count, tmp[i].attempts_after_fix, tmp[i].stable_after_fix_count);
+                    i+1, b->signature_hash, b->beta_risk, status, b->status_gate,
+                    b->count?b->severity_sum/(double)b->count:0.0, b->recurrence_rate, b->fix_stability,
+                    b->count, b->attempts_after_fix, b->stable_after_fix_count);
             }
-            free(tmp);
         } else if(opt=='4'){
             for(int i=0;i<bucket_count;i++){
                 printf("OPT4|signature_hash=%s|fix_stability=%.6f|stable_after_fix_count=%d|attempts_after_fix=%d|count=%d|rollback_count=%d|zombie_count=%d\n",
