@@ -1,10 +1,11 @@
-name: APK Matrix Build (signed + unsigned)
+name: RafCodePhi Beta Build
 
 on:
+  push:
   workflow_dispatch:
 
 jobs:
-  build-apk-matrix:
+  beta-build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -15,14 +16,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
 
       - name: Setup Android SDK/NDK
         run: ./scripts/setup_android_toolchain.sh
 
-      - name: Build signed + unsigned APK matrix
+      - name: Build signed + unsigned APK matrix (arm32 + arm64)
         run: ./scripts/build_apk_matrix.sh
 
-      - name: Publish APK size report in workflow summary
+      - name: Publish matrix summary
         run: |
           echo "## APK Matrix Size Report" >> $GITHUB_STEP_SUMMARY
           echo "```" >> $GITHUB_STEP_SUMMARY
@@ -33,11 +35,13 @@ jobs:
           cat dist/apk-matrix/APK_SIZE_DIFF_RELEASE.tsv >> $GITHUB_STEP_SUMMARY
           echo "```" >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload APK matrix artifacts
+      - name: Upload beta artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: termux-apk-matrix-${{ github.sha }}
+          name: rafcodephi-beta-artifacts-${{ github.sha }}
           path: |
             dist/apk-matrix/**
             dist/local-release.keystore
+            docs/BETA_BUILD_REPORT.md
+            docs/BETA_READINESS_REPORT.md
           if-no-files-found: error
