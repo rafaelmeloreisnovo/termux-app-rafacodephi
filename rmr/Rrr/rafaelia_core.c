@@ -35,7 +35,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#ifndef RMR_PURE_CORE
 #include <dlfcn.h>
+#endif
 #include <time.h>
 
 #ifdef HAS_NEON
@@ -51,6 +53,7 @@ int         g_crc_ready  = 0;
 #include "rafaelia_arena.h"
 
 /* ── Output sem printf (bionic printf tem overhead) ─────────────────── */
+#ifndef RMR_PURE_CORE
 static const char HEX[] = "0123456789ABCDEF";
 static void ws(const char *s){
     if(!s) return;
@@ -70,6 +73,14 @@ static void whex(u32 v){
 }
 static void wlabel(const char *l, u32 v){ ws(l); whex(v); wn(); }
 static void wline(const char *a, const char *b){ ws(a); ws(b); wn(); }
+#else
+static void ws(const char *s){ (void)s; }
+static void wn(void){}
+static void wu32(u32 v){ (void)v; }
+static void whex(u32 v){ (void)v; }
+static void wlabel(const char *l, u32 v){ (void)l; (void)v; }
+static void wline(const char *a, const char *b){ (void)a; (void)b; }
+#endif
 
 /* ── HW probe via /proc — sem sysconf no hot path ───────────────────── */
 typedef struct {
@@ -94,6 +105,7 @@ static u32 rd_u32_file(const char *p){
     return v;
 }
 
+#ifndef RMR_PURE_CORE
 /* GPU paths Android/Termux — por fabricante                              */
 /* Referência: Android VNDK spec, Khronos OpenCL 3.0 ICD loader spec     */
 static const char *GPU_PATHS[] = {
@@ -111,9 +123,11 @@ static const char *GPU_PATHS[] = {
     "/system/lib/libOpenCL.so",
     NULL
 };
+#endif
 
 static void hw_probe(hw_t *h){
     memset(h,0,sizeof(*h));
+#ifndef RMR_PURE_CORE
     h->n_cpu   = rd_u32_file("/sys/devices/system/cpu/present");
     if(!h->n_cpu) h->n_cpu = N_VCPU;
     h->freq0_khz = rd_u32_file(
@@ -147,6 +161,19 @@ static void hw_probe(hw_t *h){
         }
         dlclose(lib);
     }
+#else
+    h->n_cpu = N_VCPU;
+    h->freq0_khz = 2000000u;
+    h->freq1_khz = 1500000u;
+    h->page_sz = 4096u;
+    h->cache_line = CACHE_LINE;
+#ifdef HAS_NEON
+    h->has_neon = 1;
+#endif
+#ifdef __ARM_FEATURE_CRC32
+    h->has_crc32_hw = 1;
+#endif
+#endif
 }
 
 /* ── vCPU model ─────────────────────────────────────────────────────── */
