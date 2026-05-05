@@ -1,5 +1,11 @@
 # Release Notes (Rafaelia Integration)
 
+## v0.11.0-unreleased
+- `app/src/main/cpp/Android.mk` atualizado com bloco `RMR_PURE_CORE` para modo puro do core low-level.
+- Modo puro aplica define/flags: `RAFAELIA_NO_MALLOC`, `RMR_NO_HEAP`, `RMR_NO_STDIO`, `RMR_NO_LIBM`, `RMR_NO_DEBUG_STRING`, `RMR_USE_Q16`, `RMR_ENABLE_ASM`, `RMR_ENABLE_BRANCHLESS`, `-fvisibility=hidden`, `-fno-unwind-tables`, `-fno-asynchronous-unwind-tables`, `-fno-ident`.
+- `termux-baremetal` força `lowlevel/baremetal_nomalloc.c` quando `RMR_PURE_CORE=1` e mantém compatibilidade JNI/Android no modo não puro.
+- `-lm` passou a ser condicional por `RMR_NO_LIBM` em `termux-baremetal` e `termux_rafaelia_direct` (hot path).
+
 ## v0.9.0-unreleased
 - `RafaeliaAuditManifest` adicionado para gerar hashes SHA-256 de `audit_json`/`audit_svg` e raiz merkle-like.
 - `RafaeliaAuditStore.saveManifest(...)` adicionado para persistência de manifesto.
