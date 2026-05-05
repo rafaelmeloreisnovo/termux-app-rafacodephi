@@ -66,32 +66,36 @@ public final class RafaeliaPipelineWorker {
     }
 
     public Snapshot snapshot() {
-        return new Snapshot(total, committed, rolledBack, lastPhiQ16, lastPhase, lastStep, RafaeliaCore.getCurrentCycle());
+        return new Snapshot(total, committed, rolledBack, lastPhiQ16, lastPhase, lastStep, safeCurrentCycle());
+    }
+
+    private int safeCurrentCycle() {
+        try {
+            return RafaeliaCore.getCurrentCycle();
+        } catch (Throwable ignored) {
+            return 0;
+        }
     }
 
 
     public String exportAuditJson() {
-        try {
-            Snapshot s = snapshot();
-            JSONObject root = new JSONObject();
-            root.put("schemaVersion", 1);
-            root.put("total", s.total);
-            root.put("committed", s.committed);
-            root.put("rolledBack", s.rolledBack);
-            root.put("commitRate", s.commitRate());
-            root.put("rollbackRate", s.rollbackRate());
-            root.put("lastPhiQ16", s.lastPhiQ16);
-            root.put("lastPhase", s.lastPhase);
-            root.put("lastStep", s.lastStep);
-            root.put("currentCycle", s.currentCycle);
+        Snapshot s = snapshot();
+        JSONObject root = new JSONObject();
+        root.put("schemaVersion", 1);
+        root.put("total", s.total);
+        root.put("committed", s.committed);
+        root.put("rolledBack", s.rolledBack);
+        root.put("commitRate", s.commitRate());
+        root.put("rollbackRate", s.rollbackRate());
+        root.put("lastPhiQ16", s.lastPhiQ16);
+        root.put("lastPhase", s.lastPhase);
+        root.put("lastStep", s.lastStep);
+        root.put("currentCycle", s.currentCycle);
 
-            JSONArray arr = new JSONArray();
-            for (int v : getPhiWindowOrdered()) arr.put(v);
-            root.put("phiWindow", arr);
-            return root.toString();
-        } catch (Exception e) {
-            return "{}";
-        }
+        JSONArray arr = new JSONArray();
+        for (int v : getPhiWindowOrdered()) arr.put(v);
+        root.put("phiWindow", arr);
+        return root.toString();
     }
 
     public int[] getPhiWindowCopy() {
