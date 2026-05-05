@@ -29,6 +29,39 @@ static const int fibo_001123[] = {0,0,1,1,2,3};
 
 static char *dup_s(const char *s){ size_t n=strlen(s)+1; char *p=(char*)malloc(n); if(p) memcpy(p,s,n); return p; }
 static int to_i(const char *s){ return s?atoi(s):0; }
+static int str_eq(const char *a, const char *b){ return a && b && !strcasecmp(a,b); }
+
+static int parse_fail_flag(const char *s, int *has_flag){
+    if(!s || !*s) return -1;
+    *has_flag = 1;
+    if(str_eq(s,"1") || str_eq(s,"true") || str_eq(s,"yes") || str_eq(s,"fail") || str_eq(s,"failed")) return 1;
+    if(str_eq(s,"0") || str_eq(s,"false") || str_eq(s,"no") || str_eq(s,"ok") || str_eq(s,"success")) return 0;
+    *has_flag = 0;
+    return -1;
+}
+
+static int classify_attempt(const failure_event *e){
+    if(!e || !e->event_type || !*e->event_type) return 1;
+    return !str_eq(e->event_type,"meta") && !str_eq(e->event_type,"summary");
+}
+
+static int classify_failure(const failure_event *e, int *evidence){
+    int has_flag = 0;
+    int flag = parse_fail_flag(e->gate, &has_flag);
+    if(has_flag){ *evidence = 1; return flag; }
+    if(e->exit_code && *e->exit_code){ *evidence = 1; if(to_i(e->exit_code)!=0) return 1; }
+    if(e->signal && *e->signal){ *evidence = 1; if(to_i(e->signal)!=0) return 1; }
+    if(e->errno_s && *e->errno_s){ *evidence = 1; if(to_i(e->errno_s)!=0) return 1; }
+    if(e->event_type && *e->event_type){
+        if(str_eq(e->event_type,"crash") || str_eq(e->event_type,"failure") || str_eq(e->event_type,"fail") || str_eq(e->event_type,"error")){
+            *evidence = 1; return 1;
+        }
+        if(str_eq(e->event_type,"success") || str_eq(e->event_type,"ok")){
+            *evidence = 1; return 0;
+        }
+    }
+    return 0;
+}
 
 static const char *cell_at(char **cells, int n, int idx){ return (idx>=0 && idx<n && cells[idx])?cells[idx]:""; }
 
@@ -54,7 +87,7 @@ static int append_event(failure_event **ev, int *n, int *cap, failure_event e){
 static int load_csv(const char *path, failure_event **events, int *count){
     FILE *fp = fopen(path, "r"); if(!fp) return 0;
     char line[MAX_LINE]; char *cells[MAX_CELLS];
-    int idx_sig=-1, idx_sev=-1, idx_rec=-1, idx_stf=-1, idx_roll=-1, idx_evt=-1, idx_dom=-1, idx_gate=-1, idx_zom=-1;
+    int idx_sig=-1, idx_sev=-1, idx_rec=-1, idx_stf=-1, idx_roll=-1, idx_evt=-1, idx_dom=-1, idx_gate=-1, idx_zom=-1, idx_exit=-1, idx_signal=-1, idx_errno=-1;
     if(!fgets(line,sizeof(line),fp)){ fclose(fp); return 0; }
     int hc = csv_split_simple(line,cells,MAX_CELLS);
     for(int i=0;i<hc;i++){
@@ -67,6 +100,9 @@ static int load_csv(const char *path, failure_event **events, int *count){
         else if(!strcasecmp(cells[i],"domain")) idx_dom=i;
         else if(!strcasecmp(cells[i],"gate")) idx_gate=i;
         else if(!strcasecmp(cells[i],"zombie_detected")) idx_zom=i;
+        else if(!strcasecmp(cells[i],"exit_code")) idx_exit=i;
+        else if(!strcasecmp(cells[i],"signal")) idx_signal=i;
+        else if(!strcasecmp(cells[i],"errno") || !strcasecmp(cells[i],"errno_s")) idx_errno=i;
     }
     if(idx_sig<0){ fclose(fp); return 0; }
 
@@ -83,6 +119,9 @@ static int load_csv(const char *path, failure_event **events, int *count){
         e.domain=dup_s(cell_at(cells,cc,idx_dom));
         e.gate=dup_s(cell_at(cells,cc,idx_gate));
         e.zombie_detected=dup_s(cell_at(cells,cc,idx_zom));
+        e.exit_code=dup_s(cell_at(cells,cc,idx_exit));
+        e.signal=dup_s(cell_at(cells,cc,idx_signal));
+        e.errno_s=dup_s(cell_at(cells,cc,idx_errno));
         if(!append_event(&arr,&n,&cap,e)){ fclose(fp); return 0; }
     }
     fclose(fp); *events=arr; *count=n; return 1;
@@ -117,8 +156,27 @@ int main(int argc, char **argv){
                 low += ev[i].domain && (!strcasecmp(ev[i].domain,"lowlevel") || !strcasecmp(ev[i].domain,"rmr"));
             }
             printf("total_events=%d total_failures=%d recurring_failures=%d zombie_events=%d rollback_events=%d crash_events=%d build_failures=%d terminal_failures=%d lowlevel_failures=%d\n",n,fail,rec,zom,roll,crash,build,term,low);
-            double pfr = (rec>0)?1.0:0.0, pfn = ((fail-rec)>0)?1.0:0.0; /* para dataset de falhas, p(fail|*)=1 */
-            printf("delta_failure=%.3f\n", pfr-pfn);
+            int recurring_attempts=0, recurring_failures=0, nonrec_attempts=0, nonrec_failures=0;
+            int fail_evidence=0;
+            for(int i=0;i<n;i++){
+                if(!classify_attempt(&ev[i])) continue;
+                int recurring = to_i(ev[i].recurring)>0;
+                int evidence = 0;
+                int is_fail = classify_failure(&ev[i], &evidence);
+                fail_evidence += evidence;
+                if(recurring){ recurring_attempts++; recurring_failures += is_fail; }
+                else { nonrec_attempts++; nonrec_failures += is_fail; }
+            }
+            double p_rec = recurring_attempts ? ((double)recurring_failures / (double)recurring_attempts) : 0.0;
+            double p_nonrec = nonrec_attempts ? ((double)nonrec_failures / (double)nonrec_attempts) : 0.0;
+            double delta_failure = p_rec - p_nonrec;
+            printf("recurring_attempts=%d recurring_failures=%d nonrec_attempts=%d nonrec_failures=%d\n",
+                   recurring_attempts, recurring_failures, nonrec_attempts, nonrec_failures);
+            printf("p_fail_given_recurring=%.6f p_fail_given_non_recurring=%.6f delta_failure=%.6f\n",
+                   p_rec, p_nonrec, delta_failure);
+            if(fail_evidence==0){
+                printf("failure_evidence=insufficient evidence (fallback: no explicit success/fail columns and no usable exit_code/signal/errno/event_type markers)\n");
+            }
         } else if(opt=='2' || opt=='3' || opt=='4' || opt=='6'){
             printf("view %c ready (dataset-dependent)\n",opt);
         } else if(opt=='5'){
