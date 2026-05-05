@@ -27,6 +27,17 @@ jobs:
       - name: Build signed + unsigned APK matrix (arm32 + arm64)
         run: ./scripts/build_apk_matrix.sh
 
+      - name: Build bootstrap baremetal guard smoke
+        run: |
+          cc -O2 -Wall -Wextra -Iapp/src/main/cpp/lowlevel             tools/bootstrap_baremetal_guard_smoke.c             app/src/main/cpp/lowlevel/bootstrap_baremetal_guard.c             -o tools/bootstrap_baremetal_guard_smoke
+
+      - name: Run bootstrap baremetal guard selftest (non-blocking)
+        run: |
+          set +e
+          mkdir -p out
+          tools/bootstrap_baremetal_guard_smoke | tee out/bootstrap_baremetal_guard_smoke.txt
+          exit 0
+
       - name: Build PSS3 failure lab tool
         run: |
           cc -O2 -Wall -Wextra -o tools/pss3_failure_lab tools/pss3_failure_lab.c
@@ -67,4 +78,7 @@ jobs:
             docs/BETA_BUILD_REPORT.md
             docs/BETA_READINESS_REPORT.md
             out/pss3_failure_report.txt
+            out/bootstrap_baremetal_guard_smoke.txt
+            docs/BETA_BOOTSTRAP_BAREMETAL_GUARD.md
+            docs/BETA_BOOTSTRAP_BAREMETAL_STATUS.md
           if-no-files-found: error
