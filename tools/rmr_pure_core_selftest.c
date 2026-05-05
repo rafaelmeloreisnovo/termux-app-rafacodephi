@@ -1,35 +1,26 @@
-#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-
+#include <string.h>
+#include "../app/src/main/cpp/lowlevel/raf_bitraf.h"
+#include "../app/src/main/cpp/lowlevel/raf_vcpu.h"
 #include "../rmr/include/rmr_hex_const.h"
 
-static uint32_t ref_q16_sqrt3_2(void) {
-    const double ref = sqrt(3.0) / 2.0;
-    return (uint32_t)llround(ref * 65536.0);
-}
+static inline uint32_t rmr_mask_if_u32(uint32_t c){ return (uint32_t)-(int32_t)(c!=0u); }
+static inline uint32_t rmr_select_u32(uint32_t m,uint32_t a,uint32_t b){ return (a&m)|(b&~m); }
+static inline uint32_t rmr_absdiff_u32(uint32_t a,uint32_t b){ uint32_t m=(uint32_t)-((int32_t)(a<b)); return (a-b+m)^m; }
+static inline uint32_t rmr_crc32c_step(uint32_t c){ return (c>>1) ^ (RMR_CRC32C_POLY_REV & (uint32_t)(-(int32_t)(c&1u))); }
 
-int main(void) {
-    const uint32_t candidate_a = UINT32_C(0x0000DDB3);
-    const uint32_t candidate_b = UINT32_C(0x0000DDB4);
-    const uint32_t ref = ref_q16_sqrt3_2();
+static uint32_t crc32c(const void* b,size_t n){ const uint8_t* p=b; uint32_t c=~0u; while(n--){ c^=*p++; for(int i=0;i<8;i++) c=rmr_crc32c_step(c);} return ~c; }
 
-    const uint32_t err_a = (candidate_a > ref) ? (candidate_a - ref) : (ref - candidate_a);
-    const uint32_t err_b = (candidate_b > ref) ? (candidate_b - ref) : (ref - candidate_b);
-    const uint32_t official = RMR_Q16_SQRT3_2;
-
-    printf("RMR pure-core Q16 sqrt(3)/2 decision test\n");
-    printf("ref_q16=0x%08X\n", ref);
-    printf("candidate 0x0000DDB3 abs_err=%u\n", err_a);
-    printf("candidate 0x0000DDB4 abs_err=%u\n", err_b);
-    printf("official RMR_Q16_SQRT3_2=0x%08X\n", official);
-
-    if (err_b < err_a && official == candidate_b) {
-        printf("PASS: selected 0x0000DDB4 as single official constant.\n");
-        return 0;
-    }
-
-    fprintf(stderr, "FAIL: official constant is not aligned with minimum abs error criterion.\n");
-    return 1;
+int main(void){
+ uint64_t x=bitraf_encode(1,2,3,4,5); if(bitraf_validate(x)!=0) return 11;
+ uint8_t o,d; uint16_t l,m,f; bitraf_decode(x,&o,&d,&l,&m,&f); if(o!=1||d!=2||l!=3||m!=4||f!=5) return 12;
+ if(RMR_PSS3_DELTA_Q16!=0x00002E14u) return 13;
+ if(RMR_Q16_SQRT3_2!=0x0000DDB4u) return 14;
+ uint32_t d3=rmr_absdiff_u32(0xDDB3u,56756u), d4=rmr_absdiff_u32(0xDDB4u,56756u); if(!(d4<d3)) return 15;
+ raf_vcpu_init(60); if(raf_vcpu_step(0,1000)!=0) return 16; if(raf_vcpu_validate(0)!=0) return 17;
+ uint32_t c = crc32c("RMR",3); if(c==0) return 18;
+ uint32_t mask=rmr_mask_if_u32(1); if(rmr_select_u32(mask,7,9)!=7) return 19;
+ puts("RMR pure core selftest OK");
+ return 0;
 }
