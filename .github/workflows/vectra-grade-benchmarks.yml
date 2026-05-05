@@ -1,0 +1,67 @@
+name: Vectra-grade Benchmarks
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - 'app/**'
+      - 'rmr/**'
+      - 'rafaelia/**'
+      - 'scripts/**'
+      - 'docs/VECTRA_GRADE_BENCHMARKS.md'
+      - 'DOCS_L2_TREE.md'
+      - '.github/workflows/vectra-grade-benchmarks.yml'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'app/**'
+      - 'rmr/**'
+      - 'rafaelia/**'
+      - 'scripts/**'
+      - 'docs/VECTRA_GRADE_BENCHMARKS.md'
+      - 'DOCS_L2_TREE.md'
+      - '.github/workflows/vectra-grade-benchmarks.yml'
+
+jobs:
+  vectra-grade-benchmarks:
+    name: Generate industrial benchmark artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Prepare Android toolchain
+        run: |
+          chmod +x ./scripts/ci_android_preflight.sh || true
+          ./scripts/ci_android_preflight.sh
+
+      - name: Build debug APK
+        run: |
+          chmod +x ./gradlew
+          eval "$(./scripts/prepare_bootstrap_env.sh --print-env)"
+          ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon
+
+      - name: Generate Vectra-grade benchmark artifacts
+        if: always()
+        run: |
+          chmod +x ./scripts/run_vectra_grade_benchmarks.sh
+          ./scripts/run_vectra_grade_benchmarks.sh
+
+      - name: Upload Vectra-grade benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vectra-grade-benchmarks-${{ github.sha }}
+          path: dist/vectra-benchmarks/
+          if-no-files-found: error
