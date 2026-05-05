@@ -1,0 +1,3 @@
+#!/system/bin/sh
+echo "RAFCODEPHI bootstrap shell"
+exec /system/bin/sh "$@"
