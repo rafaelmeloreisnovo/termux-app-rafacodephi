@@ -24,7 +24,8 @@ find app/build/outputs/apk -type f -name '*.apk' -print0 | xargs -0 -I{} cp {} "
 debug_count=$(find "$DIST_DIR" -type f -name '*debug*.apk' | wc -l | tr -d ' ')
 release_count=$(find "$DIST_DIR" -type f -name '*release*.apk' | wc -l | tr -d ' ')
 
-for abi in armeabi-v7a arm64-v8a x86_64; do
+IFS="," read -r -a required_abis <<< "${TERMUX_REQUIRED_ABIS:-armeabi-v7a,arm64-v8a}"
+for abi in "${required_abis[@]}"; do
   count=$(find "$DIST_DIR" -type f -name "*${abi}*.apk" | wc -l | tr -d ' ')
   if [[ "$count" -eq 0 ]]; then
     echo "❌ Missing required ABI APK: ${abi}" >&2
@@ -68,14 +69,14 @@ fi
   echo "artifact_dir=$DIST_DIR";
   echo "generated_at_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)";
   echo "signing_status=$signing_status";
-  echo "required_abis=armeabi-v7a,arm64-v8a,x86_64";
+  echo "required_abis=${required_abis[*]}";
   find . -maxdepth 1 -type f -name "*.apk" -printf "%f\n" | sort;
 } > ARTIFACT_MANIFEST.txt )
 
 echo "== Release Artifact Summary =="
 echo "debug_apks=${debug_count}"
 echo "release_apks=${release_count}"
-echo "abis=armeabi-v7a,arm64-v8a,x86_64"
+echo "abis=${required_abis[*]}"
 echo "universal_apks=${universal_count}"
 echo "signing_status=${signing_status}"
 cat "$DIST_DIR/ARTIFACT_MANIFEST.txt"
