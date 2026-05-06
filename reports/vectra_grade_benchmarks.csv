@@ -1,0 +1,6 @@
+id,category,name,unit,value,status,source,notes
+build.clean_time,build_metrics,Clean build time,s,pending,pending,gradle,not measured
+binary.apk_size,binary_metrics,APK size,bytes,pending,pending,filesystem,artifact inspection
+binary.sha256,binary_metrics,APK sha256,hex,pending,pending,sha256sum,artifact inspection
+runtime.cold_start,runtime_metrics,Cold start,ms,pending,pending,adb,requires real device
+rmr.equivalence,rmr_equivalence_metrics,RMR equivalence,hash,pending,documented,scripts/rmr_equivalence_check.sh,see dedicated report
