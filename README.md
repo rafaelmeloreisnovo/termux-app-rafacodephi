@@ -651,3 +651,10 @@ Este repositório não declara certificação formal baseada em ISO, conformidad
 - `reports/rmr_equivalence.md`
 - CI validação não equivale a validação em device real.
 - Benchmark definido não equivale a benchmark medido.
+
+## Estado do target bootstrap_rafaelia
+
+- O target atual deste núcleo é **Termux/userland** (processo normal em userspace).
+- Este estágio **não** é freestanding com `_raf_start` como entrypoint final de produto.
+- Este estágio **não** é uma biblioteca `.so` JNI para consumo Android app.
+- Próximo target planejado: trilhas dedicadas para **freestanding** e **`librmr.so`**.
