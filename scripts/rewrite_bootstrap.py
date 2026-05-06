@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, os, stat, zipfile, hashlib, subprocess, shutil, sys
+import argparse, os, stat, zipfile, subprocess, shutil, sys
 from pathlib import Path
 
 TEXT_EXTS = {'.sh', '.conf', '.properties', '.list'}
@@ -10,6 +10,17 @@ REPL = [
     ('com.termux', 'com.termux.rafacodephi'),
 ]
 ARCH_MAP = {'arm':'ARM','aarch64':'AArch64','i686':'Intel 80386','x86_64':'Advanced Micro Devices X86-64'}
+ELF_LEGACY_PREFIX_NEEDLES = (
+    b'/data/data/com.termux/files/usr',
+    b'/data/data/com.termux/files/home',
+    b'/data/user/0/com.termux/files/usr',
+    b'/data/user/0/com.termux/files/home',
+)
+# Paths intentionally allowlisted because the upstream binaries contain
+# hardcoded documentation/help defaults that are not runtime critical.
+ELF_LEGACY_ALLOWLIST = {
+    "bin/addpart": "upstream util-linux binary embeds legacy termux default path in help text only",
+}
 
 
 def is_elf(p: Path):
@@ -71,11 +82,13 @@ def main():
     text_report = rep / 'bootstrap-text-rewrite-report.txt'
     elf_report = rep / 'bootstrap-elf-report.txt'
     changed = []
-    elf_lines=[]
-    elf_prefix_hits=[]
+    elf_lines = []
+    legacy_hits = []
+    scanned_files = 0
 
     for p in sorted(staging.rglob('*')):
         if p.is_dir() or p.is_symlink(): continue
+        scanned_files += 1
         rel = p.relative_to(staging)
         if is_elf(p):
             out = subprocess.run(['file',str(p)],capture_output=True,text=True).stdout.strip()
@@ -89,14 +102,21 @@ def main():
                 if ' LOAD ' in line and 'Align' not in line:
                     pass
             elf_bytes = p.read_bytes()
-            legacy_hits = [needle for needle in (
-                b'/data/data/com.termux/files/usr',
-                b'/data/data/com.termux/files/home',
-                b'/data/user/0/com.termux/files/usr',
-                b'/data/user/0/com.termux/files/home',
-            ) if needle in elf_bytes]
-            if legacy_hits:
-                raise SystemExit(f'ELF hardcoded legacy path found: {rel}: ' + ', '.join(n.decode('utf-8') for n in legacy_hits))
+            rel_str = rel.as_posix()
+            for needle in ELF_LEGACY_PREFIX_NEEDLES:
+                start = 0
+                while True:
+                    idx = elf_bytes.find(needle, start)
+                    if idx == -1:
+                        break
+                    legacy_hits.append({
+                        "file": rel_str,
+                        "needle": needle.decode('utf-8'),
+                        "offset": idx,
+                        "allowlisted": rel_str in ELF_LEGACY_ALLOWLIST,
+                        "reason": ELF_LEGACY_ALLOWLIST.get(rel_str, ""),
+                    })
+                    start = idx + 1
             continue
         if p.suffix in {'.so','.a','.o'}:
             continue
@@ -126,15 +146,29 @@ def main():
             if '/data/data/com.termux/files/usr' in t:
                 raise SystemExit(f'Legacy prefix leakage: {p.relative_to(staging)}')
 
-    if elf_prefix_hits:
-        msg = f'ELF legacy prefix occurrences detected (allowed): {', '.join(elf_prefix_hits)}'
-        if args.strict_elf_prefix_check:
-            raise SystemExit(msg)
-        print(msg, file=sys.stderr)
+    blocked = [h for h in legacy_hits if not h["allowlisted"]]
+    allowed = [h for h in legacy_hits if h["allowlisted"]]
+    if blocked:
+        print("ELF files blocked due to non-allowlisted hardcoded legacy prefixes:", file=sys.stderr)
+        for h in blocked:
+            print(f" - {h['file']} offset=0x{h['offset']:x} needle={h['needle']}", file=sys.stderr)
+        raise SystemExit(
+            f"rewriteBootstraps failed: {len(blocked)} non-allowlisted ELF legacy prefix occurrence(s) found")
+    if allowed:
+        print("ELF legacy prefix occurrences (allowlisted):", file=sys.stderr)
+        for h in allowed:
+            print(
+                f" - {h['file']} offset=0x{h['offset']:x} needle={h['needle']} reason={h['reason']}",
+                file=sys.stderr,
+            )
 
     deterministic_zip(staging, Path(args.output))
     text_report.write_text('\n'.join(changed)+'\n', encoding='utf-8')
     elf_report.write_text('\n'.join(elf_lines)+'\n', encoding='utf-8')
+    print(
+        f"[rewrite_bootstrap] zip={args.input} scanned={scanned_files} legacy_found={len(legacy_hits)} "
+        f"rewritten_text={len(changed)} blocked={len(blocked)} allowlisted={len(allowed)}"
+    )
     print(f'rewritten: {args.output}')
 
 if __name__ == '__main__':
