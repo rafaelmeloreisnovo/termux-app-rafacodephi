@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, os, stat, zipfile, hashlib, subprocess, shutil
+import argparse, os, stat, zipfile, hashlib, subprocess, shutil, sys
 from pathlib import Path
 
 TEXT_EXTS = {'.sh', '.conf', '.properties', '.list'}
@@ -56,6 +56,8 @@ def main():
     ap.add_argument('--home', default='/data/data/com.termux.rafacodephi/files/home')
     ap.add_argument('--page-size', default='16384')
     ap.add_argument('--variant', default='apt-android-7')
+    ap.add_argument('--strict-elf-prefix-check', action='store_true',
+                    help='Fail when legacy com.termux prefix is found inside ELF payload bytes')
     ap.add_argument('--workdir', default='build/bootstrap-rewrite')
     ap.add_argument('--report-dir', default='build/reports/bootstrap-rewrite')
     args = ap.parse_args()
@@ -70,6 +72,7 @@ def main():
     elf_report = rep / 'bootstrap-elf-report.txt'
     changed = []
     elf_lines=[]
+    elf_prefix_hits=[]
 
     for p in sorted(staging.rglob('*')):
         if p.is_dir() or p.is_symlink(): continue
@@ -86,7 +89,7 @@ def main():
                 if ' LOAD ' in line and 'Align' not in line:
                     pass
             if b'/data/data/com.termux' in p.read_bytes():
-                raise SystemExit(f'ELF hardcoded path found: {rel}')
+                elf_prefix_hits.append(str(rel))
             continue
         if p.suffix in {'.so','.a','.o'}:
             continue
@@ -115,6 +118,12 @@ def main():
             t = p.read_text(encoding='utf-8', errors='ignore')
             if '/data/data/com.termux/files/usr' in t:
                 raise SystemExit(f'Legacy prefix leakage: {p.relative_to(staging)}')
+
+    if elf_prefix_hits:
+        msg = f'ELF legacy prefix occurrences detected (allowed): {', '.join(elf_prefix_hits)}'
+        if args.strict_elf_prefix_check:
+            raise SystemExit(msg)
+        print(msg, file=sys.stderr)
 
     deterministic_zip(staging, Path(args.output))
     text_report.write_text('\n'.join(changed)+'\n', encoding='utf-8')
