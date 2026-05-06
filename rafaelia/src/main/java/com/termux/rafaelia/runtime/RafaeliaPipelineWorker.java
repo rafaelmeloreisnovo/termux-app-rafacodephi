@@ -4,6 +4,7 @@ import com.termux.rafaelia.RafaeliaCore;
 import com.termux.rafaelia.RafaeliaUtils;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -80,22 +81,26 @@ public final class RafaeliaPipelineWorker {
 
     public String exportAuditJson() {
         Snapshot s = snapshot();
-        JSONObject root = new JSONObject();
-        root.put("schemaVersion", 1);
-        root.put("total", s.total);
-        root.put("committed", s.committed);
-        root.put("rolledBack", s.rolledBack);
-        root.put("commitRate", s.commitRate());
-        root.put("rollbackRate", s.rollbackRate());
-        root.put("lastPhiQ16", s.lastPhiQ16);
-        root.put("lastPhase", s.lastPhase);
-        root.put("lastStep", s.lastStep);
-        root.put("currentCycle", s.currentCycle);
+        try {
+            JSONObject root = new JSONObject();
+            root.put("schemaVersion", 1);
+            root.put("total", s.total);
+            root.put("committed", s.committed);
+            root.put("rolledBack", s.rolledBack);
+            root.put("commitRate", s.commitRate());
+            root.put("rollbackRate", s.rollbackRate());
+            root.put("lastPhiQ16", s.lastPhiQ16);
+            root.put("lastPhase", s.lastPhase);
+            root.put("lastStep", s.lastStep);
+            root.put("currentCycle", s.currentCycle);
 
-        JSONArray arr = new JSONArray();
-        for (int v : getPhiWindowOrdered()) arr.put(v);
-        root.put("phiWindow", arr);
-        return root.toString();
+            JSONArray arr = new JSONArray();
+            for (int v : getPhiWindowOrdered()) arr.put(v);
+            root.put("phiWindow", arr);
+            return root.toString();
+        } catch (JSONException e) {
+            return "{\"schemaVersion\":1,\"error\":\"json_serialize_failed\"}";
+        }
     }
 
     public int[] getPhiWindowCopy() {
