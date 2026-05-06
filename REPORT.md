@@ -1,0 +1,22 @@
+# REPORT
+
+- Arquitetura detectada: `x86_64` (modo `host`) via `uname -m`.
+- Comandos usados:
+  - `make clean`
+  - `make CC=clang diagnose`
+  - `./build_termux.sh`
+- Erros encontrados:
+  - `make CC=clang diagnose` inicialmente falhou por ausência de alvo `diagnose` no `Makefile` raiz.
+  - `ARCH=host` inicialmente rejeitado no `bootstrap_rafaelia/Makefile`.
+- Arquivos alterados:
+  - `Makefile`
+  - `bootstrap_rafaelia/Makefile`
+  - `bootstrap_rafaelia/raf_hash.h`
+  - `build_termux.sh`
+  - `README.md`
+  - `REPORT.md`
+- Resultado final dos selftests:
+  - `ok=21 fail=0`
+  - `SELFTEST total_fail 0`
+- Próximos gaps:
+  - Validar execução nativa em dispositivo Termux real `aarch64` e `armv7l/armv8l` para confirmar flags por arquitetura in-device.

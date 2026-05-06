@@ -1,8 +1,20 @@
-.PHONY: all clean
+CC ?= clang
+CFLAGS_BASE ?= -O2 -fno-strict-aliasing -Wall -Wextra -Werror=implicit-function-declaration
+ARCH ?= host
+EXTRA_CFLAGS ?=
 
-all:
-	@echo "Engine build shim: no standalone Make targets are defined in this repository."
+.PHONY: all clean diagnose selftest
+
+all: diagnose
+
+diagnose:
+	$(MAKE) -C bootstrap_rafaelia clean
+	$(MAKE) -C bootstrap_rafaelia CC=$(CC) ARCH=$(ARCH) CFLAGS_COMMON="$(CFLAGS_BASE) $(EXTRA_CFLAGS) -I." selftest
+
+selftest: diagnose
 
 clean:
-	@rm -rf build
+	$(MAKE) -C bootstrap_rafaelia clean || true
+	rm -rf build
+	rm -f bootstrap_rafaelia/selftest.log
 	@echo "Cleaned top-level build artifacts."

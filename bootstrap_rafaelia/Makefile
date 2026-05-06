@@ -1,5 +1,5 @@
 CC ?= cc
-CFLAGS_COMMON := -Wall -Wextra -I.
+CFLAGS_COMMON ?= -O2 -fno-strict-aliasing -Wall -Wextra -Werror=implicit-function-declaration -I.
 ANDROID_API ?= 24
 NDK_CLANG ?= clang
 ARCH ?= arm64
@@ -25,6 +25,9 @@ else ifeq ($(ARCH),armv7a-neon)
 TARGET_TRIPLE := armv7a-linux-androideabi$(ANDROID_API)
 ENTRY_ASM :=
 ARCH_CFLAGS := -mfpu=neon
+else ifeq ($(ARCH),host)
+TARGET_TRIPLE :=
+ENTRY_ASM :=
 else
 $(error Unsupported ARCH=$(ARCH))
 endif
