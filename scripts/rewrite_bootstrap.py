@@ -39,6 +39,31 @@ def is_text(path: Path):
     except Exception:
         return False
 
+
+
+def extract_zip_preserve_symlinks(zip_path: Path, dest: Path):
+    with zipfile.ZipFile(zip_path) as zf:
+        for info in zf.infolist():
+            out = dest / info.filename
+            if info.is_dir():
+                out.mkdir(parents=True, exist_ok=True)
+                continue
+            out.parent.mkdir(parents=True, exist_ok=True)
+            mode = (info.external_attr >> 16) & 0o170000
+            is_link = mode == 0o120000
+            data = zf.read(info)
+            if is_link:
+                target = data.decode('utf-8')
+                if out.exists() or out.is_symlink():
+                    out.unlink()
+                os.symlink(target, out)
+            else:
+                with out.open('wb') as f:
+                    f.write(data)
+                perm = (info.external_attr >> 16) & 0o777
+                if perm:
+                    out.chmod(perm)
+
 def deterministic_zip(src: Path, outzip: Path):
     with zipfile.ZipFile(outzip, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         for p in sorted(src.rglob('*')):
@@ -76,7 +101,7 @@ def main():
     staging = Path(args.workdir) / args.arch
     if staging.exists(): shutil.rmtree(staging)
     staging.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(args.input) as zf: zf.extractall(staging)
+    extract_zip_preserve_symlinks(Path(args.input), staging)
 
     rep = Path(args.report_dir); rep.mkdir(parents=True, exist_ok=True)
     text_report = rep / 'bootstrap-text-rewrite-report.txt'
