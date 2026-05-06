@@ -88,8 +88,15 @@ def main():
             for line in ph.splitlines():
                 if ' LOAD ' in line and 'Align' not in line:
                     pass
-            if b'/data/data/com.termux' in p.read_bytes():
-                elf_prefix_hits.append(str(rel))
+            elf_bytes = p.read_bytes()
+            legacy_hits = [needle for needle in (
+                b'/data/data/com.termux/files/usr',
+                b'/data/data/com.termux/files/home',
+                b'/data/user/0/com.termux/files/usr',
+                b'/data/user/0/com.termux/files/home',
+            ) if needle in elf_bytes]
+            if legacy_hits:
+                raise SystemExit(f'ELF hardcoded legacy path found: {rel}: ' + ', '.join(n.decode('utf-8') for n in legacy_hits))
             continue
         if p.suffix in {'.so','.a','.o'}:
             continue
