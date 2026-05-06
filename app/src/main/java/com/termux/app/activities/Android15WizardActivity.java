@@ -45,7 +45,7 @@ import java.util.List;
  * - Battery optimization exemption setup
  * - Phantom Process Killer mitigation
  * - Bootstrap installation verification
- * - ISO 8000/9001 compliance tracking
+ * - ISO 8000/9001 internal alignment tracking
  * 
  * @author Termux RAFCODEΦ Team
  * @version 1.0.0
@@ -109,7 +109,7 @@ public class Android15WizardActivity extends AppCompatActivity {
             "• 16KB page size alignment for stability\n" +
             "• Phantom Process Killer mitigation\n" +
             "• Battery optimization exemption\n" +
-            "• ISO 8000/9001 compliance tracking\n" +
+            "• ISO 8000/9001 internal alignment tracking\n" +
             "• Hardware/software compatibility audit\n\n" +
             "Your Android Version: " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")",
             this::checkAndroidVersion
