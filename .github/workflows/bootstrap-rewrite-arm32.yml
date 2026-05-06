@@ -1,0 +1,33 @@
+name: bootstrap-rewrite-arm32
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/rewrite_bootstrap.py'
+      - 'app/build.gradle'
+      - '.github/workflows/bootstrap-rewrite-arm32.yml'
+jobs:
+  rewrite-arm32:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Rewrite ARM bootstrap
+        run: ./gradlew :app:rewriteBootstraps :app:validateRewrittenBootstraps
+      - name: Collect reports
+        run: |
+          cp app/src/main/cpp/rewritten-bootstrap-arm.zip rewritten-bootstrap-arm.zip
+          cp build/reports/bootstrap-rewrite/bootstrap-elf-report.txt bootstrap-elf-report.txt
+          cp build/reports/bootstrap-rewrite/bootstrap-text-rewrite-report.txt bootstrap-text-rewrite-report.txt
+          cp build/reports/bootstrap-rewrite/bootstrap-text-rewrite-report.txt bootstrap-rewrite-report-arm.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-rewrite-arm
+          path: |
+            rewritten-bootstrap-arm.zip
+            bootstrap-rewrite-report-arm.txt
+            bootstrap-elf-report.txt
+            bootstrap-text-rewrite-report.txt

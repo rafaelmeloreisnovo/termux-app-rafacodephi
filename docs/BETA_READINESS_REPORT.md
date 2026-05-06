@@ -1,31 +1,31 @@
 # BETA_READINESS_REPORT
 
-## Current status
-- `CI_BETA_BUILD_READY`: **YES**
-- `BETA_RUNTIME_READY`: **NO** (depends on real device runtime execution)
+## Estados oficiais (2026-05-05 UTC)
+- CI remoto = **READY**
+- build local sem SDK = **BLOCKED**
+- runtime device (ADB real) = **PENDING**
 
-## CI reference
-- GitHub Actions run: `25354676970`
-- Commit: `20f164d1cfbfd9ace47758734c95d33b78e31c81`
-- Artifact ID: `6797725229`
-- Artifact digest: `sha256:cb5831988989b81bc66a8abe54d3021bdb733ac1fc5984dde08fa5b28c9ea900`
+## Gate atual
+- **BOOTSTRAP_BUILD_READY**: YES
+- **BOOTSTRAP_NATIVE_EMBED_READY**: YES
+- **BOOTSTRAP_BLAKE3_READY**: YES
+- **BOOTSTRAP_RUNTIME_PENDING**: YES
+- **BOOTSTRAP_ARTIFACT_HYGIENE_READY**: YES
 
-## Generated APK sets
-- unsigned matrix (`dist/apk-matrix/unsigned/*.apk`)
-- signed release matrix (`dist/apk-matrix/signed/*-signed.apk`)
-- hashes (`dist/apk-matrix/SHA256SUMS.txt`)
+## Decisão
+Status esperado mantido: **BOOTSTRAP_BUILD_READY com runtime ainda pendente até teste ADB real**.
 
-## Non-blocking warnings
-- Previous workflow summary step had bad markdown quoting/backticks; fixed.
-- Artifact hygiene improved to exclude `dist/local-release.keystore` from upload.
 
-## Remaining risks
-- Runtime behavior not yet validated on physical Android devices.
-- Zombie/orphan process check depends on real device observation.
-- Long session churn (20/100) pending execution evidence.
+## Certification and audit claim notice
 
-## Next steps
-1. Run `scripts/beta_runtime_smoke_adb.sh <arm64-signed-apk>` on real device.
-2. Run `scripts/beta_process_cleanup_probe.sh` during terminal lifecycle checks.
-3. Attach `dist/runtime-smoke/*` evidence to beta report.
-4. Promote to `BETA_RUNTIME_READY` only if all acceptance criteria pass.
+This repository does not claim ISO certification, formal ISO compliance, or accredited external audit status. Any ISO/IEC references are internal checklist references or methodological alignment notes only. Certification requires an external accredited audit process and is outside the scope of this repository.
+
+Este repositório não declara certificação formal baseada em ISO, conformidade ISO formal nem auditoria externa acreditada. Qualquer referência a ISO/IEC é apenas checklist interno, referência metodológica ou alinhamento preliminar de boas práticas. Certificação exige processo externo acreditado e está fora do escopo deste repositório.
+
+### Audit/benchmark/runtime trail
+- `docs/AUDIT_CLAIMS_POLICY.md`
+- `reports/vectra_grade_benchmarks.md`
+- `reports/device_runtime_smoke.md`
+- `reports/rmr_equivalence.md`
+- CI validação não equivale a validação em device real.
+- Benchmark definido não equivale a benchmark medido.

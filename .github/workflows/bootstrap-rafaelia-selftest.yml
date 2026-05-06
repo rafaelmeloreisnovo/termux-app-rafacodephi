@@ -21,6 +21,34 @@ jobs:
           name: bootstrap-rafaelia-selftest-log
           path: bootstrap_rafaelia/selftest.log
 
+  termux-compat-arm32-arm64:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: android-actions/setup-android@v3
+      - name: Resolve NDK version
+        id: ndk
+        run: |
+          NDK_VERSION=$(grep -E '^ndkVersion=' gradle.properties | head -n1 | cut -d= -f2- | tr -d '[:space:]')
+          echo "ndk=$NDK_VERSION" >> "$GITHUB_OUTPUT"
+      - name: Install NDK
+        run: sdkmanager "ndk;${{ steps.ndk.outputs.ndk }}"
+      - name: Build Termux compat payload
+        env:
+          NDK: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ steps.ndk.outputs.ndk }}
+        run: |
+          export PATH="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
+          make -C bootstrap_rafaelia clean termux-compat
+      - name: Upload Termux compat artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-rafaelia-termux-compat
+          path: |
+            bootstrap_rafaelia/libbootstrap_rafaelia_arm32.a
+            bootstrap_rafaelia/libbootstrap_rafaelia_arm64.a
+            bootstrap_rafaelia/out-termux-compat/**
+
   ndk-freestanding-matrix:
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -43,7 +71,11 @@ jobs:
           NDK: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ steps.ndk.outputs.ndk }}
         run: |
           export PATH="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
-          make -C bootstrap_rafaelia clean arm-freestanding ARCH=${{ matrix.arch }}
+          if bootstrap_rafaelia/check_target_support.sh "${{ matrix.arch }}" 24; then
+            make -C bootstrap_rafaelia clean arm-freestanding ARCH=${{ matrix.arch }}
+          else
+            echo "SKIP_UNSUPPORTED_ARCH=${{ matrix.arch }}" | tee bootstrap_rafaelia/skip_${{ matrix.arch }}.log
+          fi
       - name: Upload objects (${{ matrix.arch }})
         uses: actions/upload-artifact@v4
         with:
@@ -51,4 +83,5 @@ jobs:
           path: |
             bootstrap_rafaelia/raf_main.${{ matrix.arch }}.o
             bootstrap_rafaelia/entry_${{ matrix.arch }}.o
+            bootstrap_rafaelia/skip_${{ matrix.arch }}.log
           if-no-files-found: ignore

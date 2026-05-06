@@ -39,7 +39,7 @@ import java.util.Locale;
  * Comprehensive audit activity for Termux RAFCODEΦ that provides:
  * - Hardware compatibility analysis
  * - Software compatibility verification
- * - ISO standards compliance tracking
+ * - ISO standards internal alignment tracking
  * - Android 15 specific audit
  * - Performance metrics
  * - Security status
@@ -331,7 +331,7 @@ public class SystemAuditActivity extends AppCompatActivity {
     private String generateISOCompliance() {
         StringBuilder sb = new StringBuilder();
         
-        sb.append("This section tracks compliance with international standards:\n\n");
+        sb.append("This section tracks internal checklist alignment references inspired by international standards:\n\n");
         
         // ISO 8000 - Data Quality
         sb.append("📋 ISO 8000 (Data Quality):\n");

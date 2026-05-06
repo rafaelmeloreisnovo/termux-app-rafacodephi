@@ -178,6 +178,8 @@ Uso:
 - 📖 [Complete Documentation](./DOCUMENTACAO.md) - Full technical documentation
 - 🧩 [Total Dependencies Inventory](./docs/DEPENDENCIAS_TOTAIS.md) - Consolidated Gradle/modules dependencies
 - 🗂️ [Loose Files Inventory](./ARQUIVOS_SOLTOS_INVENTARIO.md) - Audit of `.md` and root loose files
+- 🔗 [External Integration Map](./docs/EXTERNAL_INTEGRATION_MAP.md)
+- 🔗 [Symbol Encoding Policy](./docs/SYMBOL_ENCODING_POLICY.md)
 
 ***
 
@@ -634,3 +636,25 @@ RAFAELIA = tentativa de medir a passagem entre possibilidade, estado e prova
 ```
 
 Este manifesto define o compromisso do repositório com coerência estrutural, validação técnica e evolução semântica responsável.
+
+
+## Certification and audit claim notice
+
+This repository does not claim ISO certification, formal ISO compliance, or accredited external audit status. Any ISO/IEC references are internal checklist references or methodological alignment notes only. Certification requires an external accredited audit process and is outside the scope of this repository.
+
+Este repositório não declara certificação formal baseada em ISO, conformidade ISO formal nem auditoria externa acreditada. Qualquer referência a ISO/IEC é apenas checklist interno, referência metodológica ou alinhamento preliminar de boas práticas. Certificação exige processo externo acreditado e está fora do escopo deste repositório.
+
+### Audit/benchmark/runtime trail
+- `docs/AUDIT_CLAIMS_POLICY.md`
+- `reports/vectra_grade_benchmarks.md`
+- `reports/device_runtime_smoke.md`
+- `reports/rmr_equivalence.md`
+- CI validação não equivale a validação em device real.
+- Benchmark definido não equivale a benchmark medido.
+
+## Estado do target bootstrap_rafaelia
+
+- O target atual deste núcleo é **Termux/userland** (processo normal em userspace).
+- Este estágio **não** é freestanding com `_raf_start` como entrypoint final de produto.
+- Este estágio **não** é uma biblioteca `.so` JNI para consumo Android app.
+- Próximo target planejado: trilhas dedicadas para **freestanding** e **`librmr.so`**.

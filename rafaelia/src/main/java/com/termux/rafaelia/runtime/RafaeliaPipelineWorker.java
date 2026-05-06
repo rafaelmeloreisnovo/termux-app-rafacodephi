@@ -4,6 +4,7 @@ import com.termux.rafaelia.RafaeliaCore;
 import com.termux.rafaelia.RafaeliaUtils;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -66,13 +67,21 @@ public final class RafaeliaPipelineWorker {
     }
 
     public Snapshot snapshot() {
-        return new Snapshot(total, committed, rolledBack, lastPhiQ16, lastPhase, lastStep, RafaeliaCore.getCurrentCycle());
+        return new Snapshot(total, committed, rolledBack, lastPhiQ16, lastPhase, lastStep, safeCurrentCycle());
+    }
+
+    private int safeCurrentCycle() {
+        try {
+            return RafaeliaCore.getCurrentCycle();
+        } catch (Throwable ignored) {
+            return 0;
+        }
     }
 
 
     public String exportAuditJson() {
+        Snapshot s = snapshot();
         try {
-            Snapshot s = snapshot();
             JSONObject root = new JSONObject();
             root.put("schemaVersion", 1);
             root.put("total", s.total);
@@ -89,8 +98,8 @@ public final class RafaeliaPipelineWorker {
             for (int v : getPhiWindowOrdered()) arr.put(v);
             root.put("phiWindow", arr);
             return root.toString();
-        } catch (Exception e) {
-            return "{}";
+        } catch (JSONException e) {
+            return "{\"schemaVersion\":1,\"error\":\"json_serialize_failed\"}";
         }
     }
 

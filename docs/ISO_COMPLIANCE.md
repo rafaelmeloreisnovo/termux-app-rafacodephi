@@ -1,8 +1,8 @@
-# ISO Standards Compliance Documentation
+# ISO/IEC Methodological Reference Documentation
 
 ## Termux RAFCODEΦ - Quality Management System
 
-This document outlines the compliance alignment of Termux RAFCODEΦ with international ISO standards and operational best practices.
+This document outlines the methodological alignment of Termux RAFCODEΦ with international ISO standards and operational best practices.
 
 ---
 
@@ -351,7 +351,7 @@ The app includes a comprehensive System Audit activity that provides:
 
 - Hardware compatibility analysis
 - Software compatibility verification
-- ISO standards compliance tracking
+- ISO/IEC internal reference tracking
 - Android 15 specific audit
 - Performance metrics
 - Security status
