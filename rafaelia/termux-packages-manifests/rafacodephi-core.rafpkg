@@ -1,0 +1,9 @@
+seal=RAFPKG
+name=rafacodephi-core
+id=0x05a0c9f1
+name_len=16
+version=1
+homepage=https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi
+description=RAFCODEPHI runtime package manifest for Termux app integration
+source=rafaelmeloreisnovo/termux-app-rafacodephi
+path=rafaelia/src/main/cpp/rafaelia.c
