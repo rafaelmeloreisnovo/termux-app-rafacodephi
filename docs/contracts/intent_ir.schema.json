@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rafaelia.intent.v1",
+  "title": "IntentIR",
+  "description": "Typed Intermediate Representation of an intent derived from context. Passed through the governance gate before execution.",
+  "type": "object",
+  "required": [
+    "schema",
+    "intent_id",
+    "action",
+    "target",
+    "inputs",
+    "constraints",
+    "evidence_refs",
+    "requested_capabilities",
+    "risk",
+    "execution_gate"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "rafaelia.intent.v1"
+    },
+    "intent_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{8,64}$",
+      "description": "Unique identifier for this intent instance"
+    },
+    "action": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Canonical action name, e.g. git.status, git.diff_stat"
+    },
+    "target": {
+      "type": "object",
+      "description": "Structured target of the action (repo path, branch, etc.)",
+      "properties": {
+        "repo_path": { "type": "string" },
+        "branch": { "type": ["string", "null"] },
+        "ref": { "type": ["string", "null"] }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "description": "Ordered list of typed input parameters",
+      "items": {
+        "type": "object",
+        "required": ["name", "value"],
+        "properties": {
+          "name": { "type": "string" },
+          "value": {}
+        }
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "description": "Runtime constraints that must hold (e.g. read_only: true)",
+      "items": {
+        "type": "object",
+        "required": ["key", "value"],
+        "properties": {
+          "key": { "type": "string" },
+          "value": {}
+        }
+      }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "description": "References to ConversationChunks that justify this intent",
+      "items": {
+        "type": "object",
+        "required": ["chunk_id"],
+        "properties": {
+          "chunk_id": { "type": "string" },
+          "relevance": { "type": "string" }
+        }
+      }
+    },
+    "requested_capabilities": {
+      "type": "array",
+      "description": "Capabilities required to execute this intent",
+      "items": {
+        "type": "string",
+        "enum": [
+          "git.read",
+          "git.diff",
+          "filesystem.read",
+          "termux.command.safe"
+        ]
+      }
+    },
+    "risk": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"],
+      "description": "Risk classification of this intent"
+    },
+    "execution_gate": {
+      "type": "string",
+      "enum": ["allow", "sandbox_only", "human_review", "blocked"],
+      "description": "Gate decision for this intent"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_bundle_id": {
+      "type": ["string", "null"],
+      "description": "Bundle that originated this intent"
+    }
+  }
+}

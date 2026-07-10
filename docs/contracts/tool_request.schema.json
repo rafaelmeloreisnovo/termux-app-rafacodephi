@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rafaelia.tool_request.v1",
+  "title": "ToolRequest",
+  "description": "A single compiled tool invocation derived from an approved IntentIR. Only read-only commands are permitted in v1.",
+  "type": "object",
+  "required": ["request_id", "intent_id", "command", "args", "working_directory", "capability", "read_only"],
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{8,64}$"
+    },
+    "intent_id": {
+      "type": "string",
+      "description": "Back-reference to the IntentIR that generated this request"
+    },
+    "command": {
+      "type": "string",
+      "enum": ["git"],
+      "description": "Executable name. Only 'git' permitted in v1."
+    },
+    "args": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Argument list. No shell expansion permitted.",
+      "maxItems": 16
+    },
+    "working_directory": {
+      "type": "string",
+      "description": "Absolute path where the command will run"
+    },
+    "capability": {
+      "type": "string",
+      "enum": ["git.read", "git.diff", "filesystem.read", "termux.command.safe"]
+    },
+    "read_only": {
+      "type": "boolean",
+      "const": true,
+      "description": "Must always be true in v1"
+    },
+    "timeout_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 30,
+      "default": 10
+    }
+  }
+}

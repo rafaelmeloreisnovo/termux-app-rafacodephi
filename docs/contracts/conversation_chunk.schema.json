@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rafaelia.conversation_chunk.v1",
+  "title": "ConversationChunk",
+  "description": "Atomic unit from CONVERSATIONS_CHUNKS_PRIVATE. Represents one segment of a conversation that can be used as context evidence.",
+  "type": "object",
+  "required": ["chunk_id", "source_repo", "sequence_index", "content", "created_at"],
+  "additionalProperties": false,
+  "properties": {
+    "chunk_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{8,64}$",
+      "description": "Unique identifier for this chunk"
+    },
+    "source_repo": {
+      "type": "string",
+      "enum": [
+        "rafaelmeloreisnovo/CONVERSATIONS_CHUNKS_PRIVATE",
+        "rafaelmeloreisnovo/termux-app-rafacodephi",
+        "rafaelmeloreisnovo/RafGitTools",
+        "rafaelmeloreisnovo/llamaRafaelia",
+        "rafaelmeloreisnovo/RafPolimata"
+      ]
+    },
+    "sequence_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "content": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 65536
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["user", "assistant", "system", "tool"]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "parent_chunk_id": {
+      "type": ["string", "null"]
+    }
+  }
+}

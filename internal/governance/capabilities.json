@@ -1,0 +1,36 @@
+{
+  "schema": "rafaelia.governance.capabilities.v1",
+  "description": "Capability allowlist for the governance gate. Any capability not listed here is BLOCKED by default.",
+  "capabilities": [
+    {
+      "id": "git.read",
+      "description": "Read git repository state (git status, git log, git show)",
+      "classification": "allow",
+      "allowed_commands": ["git status", "git log", "git show", "git branch", "git rev-parse"],
+      "requires_read_only": true
+    },
+    {
+      "id": "git.diff",
+      "description": "Inspect git differences (git diff --stat, git diff --name-only)",
+      "classification": "allow",
+      "allowed_commands": ["git diff --stat", "git diff --name-only", "git diff --cached --stat"],
+      "requires_read_only": true
+    },
+    {
+      "id": "filesystem.read",
+      "description": "Read files from the local filesystem (cat, ls, find -maxdepth 3)",
+      "classification": "sandbox_only",
+      "allowed_commands": ["cat", "ls", "find"],
+      "requires_read_only": true
+    },
+    {
+      "id": "termux.command.safe",
+      "description": "Safe Termux built-ins that produce no side effects",
+      "classification": "human_review",
+      "allowed_commands": ["uname", "id", "date", "pwd"],
+      "requires_read_only": true
+    }
+  ],
+  "default_policy": "blocked",
+  "free_text_to_shell": "blocked"
+}
