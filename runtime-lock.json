@@ -1,0 +1,68 @@
+{
+  "schema": "rafaelia.runtime-lock.v1",
+  "description": "Pinned repository commits and toolchain for reproducible builds. TOKEN_VAZIO entries must be filled before production use.",
+  "locked_at": "2026-07-10T21:33:38Z",
+  "repositories": [
+    {
+      "name": "termux-app-rafacodephi",
+      "url": "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi.git",
+      "branch": "main",
+      "commit": "59b0f8f1d33e8ea97578f4fe6e7990d74f334a6e",
+      "commit_hash_sha256": "TOKEN_VAZIO",
+      "role": "primary_integration"
+    },
+    {
+      "name": "CONVERSATIONS_CHUNKS_PRIVATE",
+      "url": "https://github.com/rafaelmeloreisnovo/CONVERSATIONS_CHUNKS_PRIVATE.git",
+      "branch": "main",
+      "commit": "TOKEN_VAZIO",
+      "commit_hash_sha256": "TOKEN_VAZIO",
+      "role": "conversation_chunk_source"
+    },
+    {
+      "name": "RafGitTools",
+      "url": "https://github.com/rafaelmeloreisnovo/RafGitTools.git",
+      "branch": "main",
+      "commit": "TOKEN_VAZIO",
+      "commit_hash_sha256": "TOKEN_VAZIO",
+      "role": "orchestration_tools"
+    },
+    {
+      "name": "llamaRafaelia",
+      "url": "https://github.com/rafaelmeloreisnovo/llamaRafaelia.git",
+      "branch": "main",
+      "commit": "TOKEN_VAZIO",
+      "commit_hash_sha256": "TOKEN_VAZIO",
+      "role": "llm_inference"
+    },
+    {
+      "name": "RafPolimata",
+      "url": "https://github.com/rafaelmeloreisnovo/RafPolimata.git",
+      "branch": "main",
+      "commit": "TOKEN_VAZIO",
+      "commit_hash_sha256": "TOKEN_VAZIO",
+      "role": "polymath_context"
+    }
+  ],
+  "abi": {
+    "primary": "arm64-v8a",
+    "fallback": "armeabi-v7a",
+    "android_api_min": 28
+  },
+  "toolchain": {
+    "ndk_version": "r26+",
+    "compiler": "clang",
+    "host": "aarch64-linux-android28",
+    "build_script": "./build.sh",
+    "page_size_flag": "-Wl,-z,max-page-size=16384",
+    "fixed_point": "Q16.16",
+    "neon": true
+  },
+  "expected_hashes": {
+    "docs/contracts/intent_ir.schema.json": "08bb5cb56fe2606f6d702784e5a49dd896a427f18e5c826563e59176a3e7f033",
+    "docs/contracts/execution_result.schema.json": "6e5e74d0977136d2ca3fbcb3e0da4aedf9fbfcf62a3dd2baec4f444fb3ca9536",
+    "internal/governance/capabilities.json": "b4f1fb7f671350ac53b7206432d0c4bd7c07bc509bbe8d70ce804db68d7ff6b3",
+    "internal/governance/policy.json": "5ccbb944c7624140ecee1dc34a4c16c75e98e7a02e7ac0f6971bbca97ae66a78",
+    "scripts/vertical_slice/run_readonly_flow.sh": "1c33f66ba54f810a23535ca8302b3e3e504c7f1efb0d752531c10477e6baa758"
+  }
+}

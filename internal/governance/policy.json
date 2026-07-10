@@ -1,0 +1,59 @@
+{
+  "schema": "rafaelia.governance.policy.v1",
+  "description": "Runtime enforcement policy for the governance gate.",
+  "version": "1.0.0",
+  "rules": [
+    {
+      "id": "RULE-001",
+      "description": "Block any capability not present in the capability allowlist",
+      "condition": "capability NOT IN allowlist",
+      "action": "blocked",
+      "rationale": "Default-deny prevents capability creep"
+    },
+    {
+      "id": "RULE-002",
+      "description": "Block free-text strings being sent directly to shell",
+      "condition": "input_type == free_text AND destination == shell",
+      "action": "blocked",
+      "rationale": "Only compiled plans with explicit read-only commands are permitted"
+    },
+    {
+      "id": "RULE-003",
+      "description": "Only allow git status and git diff --stat in v1 execution",
+      "condition": "stage == v1",
+      "action": "restrict_to_allowlist_v1",
+      "allowed_v1_commands": [
+        ["git", "status"],
+        ["git", "diff", "--stat"]
+      ],
+      "rationale": "v1 is strictly read-only probe to validate the pipeline"
+    },
+    {
+      "id": "RULE-004",
+      "description": "Block any intent with risk=critical or execution_gate=blocked",
+      "condition": "intent.risk == critical OR intent.execution_gate == blocked",
+      "action": "blocked",
+      "rationale": "Critical risk requires out-of-band human approval"
+    },
+    {
+      "id": "RULE-005",
+      "description": "Require human_review for intent with risk=high",
+      "condition": "intent.risk == high",
+      "action": "human_review",
+      "rationale": "High-risk intents need operator sign-off"
+    },
+    {
+      "id": "RULE-006",
+      "description": "Sandbox intents requesting filesystem.read capability",
+      "condition": "requested_capabilities CONTAINS filesystem.read",
+      "action": "sandbox_only",
+      "rationale": "Filesystem reads are sandboxed in v1"
+    }
+  ],
+  "audit_log": "required",
+  "token_vazio": {
+    "llm_invocation_policy": "TOKEN_VAZIO",
+    "remote_write_policy": "TOKEN_VAZIO",
+    "signature_verification": "TOKEN_VAZIO"
+  }
+}

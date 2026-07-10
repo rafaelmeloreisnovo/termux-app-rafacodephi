@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rafaelia.execution_result.v1",
+  "title": "ExecutionResult",
+  "description": "Auditable record of a single ToolRequest execution. Immutable after creation.",
+  "type": "object",
+  "required": [
+    "result_id",
+    "intent_id",
+    "executed_command",
+    "args",
+    "working_directory",
+    "started_at",
+    "ended_at",
+    "exit_code",
+    "stdout_truncated",
+    "stderr_truncated",
+    "stdout_sha256",
+    "stderr_sha256",
+    "artifacts",
+    "final_state",
+    "rollback_available",
+    "source_chunk_refs"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "result_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{8,64}$"
+    },
+    "intent_id": {
+      "type": "string"
+    },
+    "plan_id": {
+      "type": ["string", "null"]
+    },
+    "executed_command": {
+      "type": "string",
+      "description": "The exact executable that was run"
+    },
+    "args": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Exact argument list passed (no shell expansion)"
+    },
+    "working_directory": {
+      "type": "string",
+      "description": "Absolute path where the command ran"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "exit_code": {
+      "type": "integer"
+    },
+    "stdout_truncated": {
+      "type": "string",
+      "maxLength": 4096,
+      "description": "First 4096 chars of stdout"
+    },
+    "stderr_truncated": {
+      "type": "string",
+      "maxLength": 4096,
+      "description": "First 4096 chars of stderr"
+    },
+    "stdout_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 of complete stdout before truncation"
+    },
+    "stderr_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 of complete stderr before truncation"
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "List of output artifacts produced (paths, hashes)",
+      "items": {
+        "type": "object",
+        "required": ["name", "path"],
+        "properties": {
+          "name": { "type": "string" },
+          "path": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "final_state": {
+      "type": "string",
+      "enum": ["success", "failure", "timeout", "blocked"],
+      "description": "Terminal state of the execution"
+    },
+    "rollback_available": {
+      "type": "boolean",
+      "description": "Whether the operation can be rolled back (always false for read-only)"
+    },
+    "source_chunk_refs": {
+      "type": "array",
+      "description": "Chunk IDs that ultimately triggered this execution",
+      "items": { "type": "string" }
+    }
+  }
+}
