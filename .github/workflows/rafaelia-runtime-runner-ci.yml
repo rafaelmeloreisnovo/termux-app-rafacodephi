@@ -1,5 +1,6 @@
 name: RAFAELIA Runtime Runner CI
 
+# Validation branch exercises the integrated runner through pull_request.
 on:
   push:
     paths:
