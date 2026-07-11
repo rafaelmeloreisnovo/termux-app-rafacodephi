@@ -1,0 +1,56 @@
+name: RAFAELIA Runtime Runner CI
+
+on:
+  push:
+    paths:
+      - 'scripts/rafaelia/run_index_conversations.sh'
+      - '.github/workflows/rafaelia-runtime-runner-ci.yml'
+  pull_request:
+    paths:
+      - 'scripts/rafaelia/run_index_conversations.sh'
+      - '.github/workflows/rafaelia-runtime-runner-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runner-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare fixture and scanner stub
+        run: |
+          mkdir -p /tmp/raf-runner/out
+          printf '[{"id":"c1"}]\n' > /tmp/raf-runner/conversations.json
+          cat > /tmp/raf-runner/convscan <<'SH'
+          #!/bin/sh
+          bytes=$(wc -c < "$1" | tr -d ' ')
+          printf '{"state":"VERIFIED","bytes":%s}\n' "$bytes"
+          SH
+          chmod +x /tmp/raf-runner/convscan
+      - name: Execute runner
+        run: |
+          sh scripts/rafaelia/run_index_conversations.sh \
+            /tmp/raf-runner/conversations.json \
+            /tmp/raf-runner/out \
+            /tmp/raf-runner/convscan
+      - name: Verify closure artifacts
+        run: |
+          test -s /tmp/raf-runner/out/source.manifest.json
+          test -s /tmp/raf-runner/out/audit.jsonl
+          test -s /tmp/raf-runner/out/checkpoint.state
+          grep -q 'state=VERIFIED' /tmp/raf-runner/out/checkpoint.state
+          grep -q '"event":"START"' /tmp/raf-runner/out/audit.jsonl
+          grep -q '"event":"COMPLETE"' /tmp/raf-runner/out/audit.jsonl
+          test ! -d /tmp/raf-runner/out/.index_conversations.lock
+      - name: Verify lock refusal
+        run: |
+          mkdir /tmp/raf-runner/out/.index_conversations.lock
+          if sh scripts/rafaelia/run_index_conversations.sh \
+            /tmp/raf-runner/conversations.json \
+            /tmp/raf-runner/out \
+            /tmp/raf-runner/convscan; then
+            exit 1
+          fi
