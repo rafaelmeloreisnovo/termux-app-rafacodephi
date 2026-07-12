@@ -149,7 +149,20 @@ jobs:
         run: python3 -m pytest -q tests/test_readme_runtime_claim_boundary.py
 
       - name: Generate bootstrap packages for native incbin
-        run: bash scripts/build_rafaelia_bootstraps.sh
+        shell: bash
+        run: |
+          mkdir -p reports
+          set -o pipefail
+          bash scripts/build_rafaelia_bootstraps.sh 2>&1 | tee reports/bootstrap_generation.log
+
+      - name: Upload bootstrap generation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-generation-log
+          path: reports/bootstrap_generation.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Inspect generated installable bootstrap packages
         run: python3 tools/inspect_bootstrap_zips.py
