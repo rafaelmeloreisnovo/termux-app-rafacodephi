@@ -97,8 +97,35 @@ jobs:
       - name: Run busybox applet wrapper tests
         run: python3 -m pytest -q tests/test_bootstrap_busybox_applet_wrappers.py
 
-      - name: Run real ARM pkg core tests
-        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py
+      - name: Validate real ARM payload declaration
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_real_arm_core_builder_declares_required_payload_and_arches
+
+      - name: Validate real ARM rewrite and fallback
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_real_arm_core_builder_verifies_hashes_rewrites_prefix_and_fills_commands
+
+      - name: Validate default real ARM build wiring
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_main_bootstrap_build_uses_real_pkg_core_by_default_and_validates
+
+      - name: Validate real ARM required runtime contract
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_real_arm_core_validator_blocks_missing_runtime_contract
+
+      - name: Validate binary legacy-prefix audit
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_real_arm_core_validator_audits_binary_legacy_prefix_risk
+
+      - name: Validate runbook binary-risk gate
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_runbook_blocks_promotion_on_binary_prefix_risk
+
+      - name: Validate package truth table
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_truth_table_keeps_real_package_stack_unproved
+
+      - name: Validate binary-prefix rejection regression
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_validator_rejects_binary_zip_entry_with_legacy_prefix
+
+      - name: Validate package bridge scope
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_bridge_now_targets_arm_core_only_and_ca_certificates
+
+      - name: Validate pkg installation promotion sequence
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_runbook_requires_pkg_install_promotion_sequence
 
       - name: Run device pkg smoke contract tests
         run: python3 -m pytest -q tests/test_device_pkg_smoke_contract.py
