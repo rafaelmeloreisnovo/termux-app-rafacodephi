@@ -26,6 +26,7 @@ Este documento serve como índice mestre de toda a documentação do projeto Ter
 | Documento | Descrição | Público-Alvo | Prioridade |
 |-----------|-----------|--------------|------------|
 | [README.md](README.md) | Visão geral do projeto, instalação, uso básico | Todos | ⭐⭐⭐ Essencial |
+| [docs/README.md](docs/README.md) | Hub moderno de navegação, governança documental e leitura por objetivo | Todos | ⭐⭐⭐ Essencial |
 | [DOCUMENTACAO.md](DOCUMENTACAO.md) | Documentação completa e técnica | Desenvolvedores | ⭐⭐⭐ Essencial |
 | [LEIA-ME-DOCUMENTACAO.md](LEIA-ME-DOCUMENTACAO.md) | Guia de navegação da documentação | Todos | ⭐⭐ Importante |
 
@@ -102,6 +103,9 @@ Este documento serve como índice mestre de toda a documentação do projeto Ter
 | [docs/DEPENDENCIAS_TOTAIS.md](docs/DEPENDENCIAS_TOTAIS.md) | Inventário completo de dependências e repositórios | Desenvolvedores |
 | [docs/STATUS.md](docs/STATUS.md) | Status oficial e consolidado | Desenvolvedores |
 | [docs/ENGINEERING_SYSTEM_RUNBOOK.md](docs/ENGINEERING_SYSTEM_RUNBOOK.md) | Runbook canônico de build/release/CI | Engenharia de Build/Release |
+| [docs/EXCELENCIA_OPERACIONAL_MATRIX.md](docs/EXCELENCIA_OPERACIONAL_MATRIX.md) | Matriz formal de excelência operacional e evidência mínima por camada | Engenharia, Auditoria, Gestão |
+| [docs/RAFAELIA_CODE_DOC_SYNC.md](docs/RAFAELIA_CODE_DOC_SYNC.md) | Matriz de sincronização entre documentação, testes, benchmarks e artefatos | Engenharia, Auditoria |
+| [docs/RAFAELIA_CODE_DOC_SYNC_REPORT.md](docs/RAFAELIA_CODE_DOC_SYNC_REPORT.md) | Relatório resumido de convergência e próximos gaps entre código e documentação | Engenharia, Auditoria |
 | [docs/RAFAELIA_CONCEPT_CARRY_MAP.md](docs/RAFAELIA_CONCEPT_CARRY_MAP.md) | Contrato de leitura dos conceitos toroidais, 42 ciclos, Hz/memória, multilíngue e política SDK/ABI | IA/Desenvolvedores |
 | [docs/RAFAELIA_SESSION_TRUTH_NAVIGATION.md](docs/RAFAELIA_SESSION_TRUTH_NAVIGATION.md) | Navegação para sessões amplas: verdade operacional, token vazio, metáforas como parábolas, ciclos Ω/β e promoção por evidência | IA/Desenvolvedores |
 | [docs/RAFAELIA_5_LEVEL_DOCUMENTATION_NAVIGATION.md](docs/RAFAELIA_5_LEVEL_DOCUMENTATION_NAVIGATION.md) | Catálogo Markdown/TXT até 5 níveis por domínio e profundidade, sem mover arquivos existentes | IA/Desenvolvedores |

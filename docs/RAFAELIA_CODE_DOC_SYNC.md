@@ -1,4 +1,21 @@
 # RAFAELIA Code Doc Sync
+
+## Aplicação prioritária da coerência operacional
+
+Esta matriz deve começar pelos claims que orientam leitura, build, runtime e auditoria. Antes do inventário amplo, os seguintes pontos precisam permanecer sincronizados com o código-fonte e com a evidência executável.
+
+| Claim documental | Fonte no repositório | Evidência operacional atual | Estado epistêmico | Ação se divergir |
+|---|---|---|---|---|
+| `compileSdkVersion=35`, `targetSdkVersion=28` e política ABI ARM oficial | `gradle.properties`, `app/build.gradle`, `terminal-emulator/build.gradle`, `scripts/validate_abi_policy_consistency.sh` | validação estrutural por consumo direto das propriedades em Gradle/scripts | PROVADO ESTRUTURAL | corrigir documento ou propriedade canônica imediatamente |
+| package/applicationId canônico é `com.termux.rafacodephi` | `app/build.gradle`, `scripts/validate_side_by_side_contract.py`, `app/src/main/res/values/strings.xml` | `python3 scripts/validate_side_by_side_contract.py` passou em `./run_tests.sh` | PROVADO | rebaixar qualquer claim divergente e alinhar textos/artefatos |
+| runbook operacional principal é `docs/ENGINEERING_SYSTEM_RUNBOOK.md` | `README.md`, `docs/README.md`, `INDICE_DOCUMENTACAO.md`, arquivo do runbook | navegação documental atualizada para o hub e runbook canônico | PROVADO ESTRUTURAL | remover rotas antigas como entrada principal |
+| bootstrap/pkg ainda não equivalem a backend apt real completo | `docs/STATUS.md`, `docs/RUNTIME_TRUTH_TABLE.md`, `scripts/build_rafaelia_bootstraps.sh`, logs de `:app:generateRafcodephiBootstraps` | `./run_tests.sh` falhou em `:app:generateRafcodephiBootstraps` com `LEGACY_PREFIX_BINARY_RISK` | PARCIAL | manter gap explícito; não promover para pronto sem artifact real |
+| camada de coerência documental deve fechar o ciclo hub → status → runbook → runtime truth → sync report | `docs/README.md`, `docs/STATUS.md`, `docs/RAFAELIA_CODE_DOC_SYNC_REPORT.md` | links e leitura por objetivo revisados nesta trilha documental | PROVADO ESTRUTURAL | atualizar a rota curta sempre que um documento canônico mudar |
+
+## Inventário ampliado
+
+O quadro abaixo continua útil como inventário bruto de sincronização, mas não substitui a matriz operacional prioritária acima.
+
 |arquivo|A|B|hash_A|hash_B|doc|teste|benchmark|status|divergência|ação|
 |---|---|---|---|---|---|---|---|---|---|---|
 |.editorconfig|True|False|7ee28d82bb78e171c4dcb58ab11265f5429357bddf41ce99cf5daf0e519a0db2|-|-|-|-|ZIP_ONLY|hash/path|alinhar fonte de verdade e testes|

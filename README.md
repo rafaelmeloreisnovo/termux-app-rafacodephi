@@ -1,6 +1,17 @@
 # Termux Application - RafaCodePhi Fork
 
-> 📚 **Mapa rápido em nível L/L2**: veja [`DOCS_L2_TREE.md`](./DOCS_L2_TREE.md).
+> 📚 **Centro de documentação moderno**: veja [`docs/README.md`](./docs/README.md).  
+> 🧭 **Mapa rápido em nível L/L2**: veja [`DOCS_L2_TREE.md`](./DOCS_L2_TREE.md).
+
+## Documentação recomendada
+
+| Objetivo | Documento |
+|---|---|
+| Entrada principal | [`docs/README.md`](./docs/README.md) |
+| Verdade operacional atual | [`docs/STATUS.md`](./docs/STATUS.md) |
+| Navegação completa | [`INDICE_DOCUMENTACAO.md`](./INDICE_DOCUMENTACAO.md) |
+| Execução de build/release/CI | [`docs/ENGINEERING_SYSTEM_RUNBOOK.md`](./docs/ENGINEERING_SYSTEM_RUNBOOK.md) |
+| Excelência operacional | [`docs/EXCELENCIA_OPERACIONAL_MATRIX.md`](./docs/EXCELENCIA_OPERACIONAL_MATRIX.md) |
 
 ## Fork Notice and Attribution
 
