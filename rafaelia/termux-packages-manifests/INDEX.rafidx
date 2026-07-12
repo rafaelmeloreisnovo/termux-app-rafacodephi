@@ -4,3 +4,4 @@ total_upstream_packages=2055
 exported_packages=701
 format=.rafpkg
 local=1
+local_packages=rafacodephi-core

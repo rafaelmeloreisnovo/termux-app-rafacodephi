@@ -43,6 +43,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install test dependencies
+        run: pip install pytest
+
       - name: Run real pkg promotion contract tests
         run: |
           python3 -m pytest -q \
