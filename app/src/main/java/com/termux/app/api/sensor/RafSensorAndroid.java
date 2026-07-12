@@ -2,11 +2,11 @@ package com.termux.app.api.sensor;
 
 import android.hardware.Sensor;
 
-final class RafSensorAndroid {
+public final class RafSensorAndroid {
 
     private RafSensorAndroid() {}
 
-    static int toSensorType(String sensorName) {
+    public static int toSensorType(String sensorName) {
         if (RafSensorContract.SENSOR_ACCELEROMETER.equals(sensorName)) return Sensor.TYPE_ACCELEROMETER;
         if (RafSensorContract.SENSOR_GYROSCOPE.equals(sensorName)) return Sensor.TYPE_GYROSCOPE;
         if (RafSensorContract.SENSOR_MAGNETOMETER.equals(sensorName)) return Sensor.TYPE_MAGNETIC_FIELD;
@@ -18,7 +18,7 @@ final class RafSensorAndroid {
         return -1;
     }
 
-    static String reportingModeToString(Sensor sensor) {
+    public static String reportingModeToString(Sensor sensor) {
         if (sensor == null) return "unknown";
         switch (sensor.getReportingMode()) {
             case Sensor.REPORTING_MODE_CONTINUOUS:
