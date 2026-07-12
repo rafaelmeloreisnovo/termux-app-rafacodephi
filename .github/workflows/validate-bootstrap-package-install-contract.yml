@@ -85,6 +85,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install test dependencies
+        run: pip install pytest
+
       - name: Validate static bootstrap install contract
         run: python3 tools/validate_bootstrap_package_install_contract.py
 
