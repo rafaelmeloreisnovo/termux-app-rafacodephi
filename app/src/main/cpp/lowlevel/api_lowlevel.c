@@ -64,11 +64,20 @@ static __attribute__((noinline)) int32_t _ll_read(int fd, void *buf, uint32_t n)
     __asm__ volatile("svc #0" : "+r"(_x0) : "r"(_x8), "r"(_x1), "r"(_x2) : "memory");
     return (int32_t)_x0;
 #elif defined(__arm__)
-    register int32_t _r7 __asm__("r7") = 3;            /* __NR_read */
+    /* Thumb mode: r7 is frame pointer (reserved). Push/pop it around the syscall. */
     register int32_t _r0 __asm__("r0") = fd;
     register int32_t _r1 __asm__("r1") = (int32_t)(uintptr_t)buf;
     register int32_t _r2 __asm__("r2") = (int32_t)n;
-    __asm__ volatile("swi #0" : "+r"(_r0) : "r"(_r7), "r"(_r1), "r"(_r2) : "memory");
+    int32_t _nr = 3; /* __NR_read */
+    __asm__ volatile(
+        "push {r7}\n\t"
+        "mov r7, %[nr]\n\t"
+        "swi #0\n\t"
+        "pop {r7}"
+        : "+r"(_r0)
+        : [nr] "r"(_nr), "r"(_r1), "r"(_r2)
+        : "memory"
+    );
     return _r0;
 #else
     (void)fd; (void)buf; (void)n; return -1;
