@@ -81,10 +81,28 @@ def test_runbook_blocks_promotion_on_binary_prefix_risk():
 
 def test_truth_table_keeps_real_package_stack_unproved():
     text = TRUTH_TABLE.read_text(encoding='utf-8')
-    for token in ['`pkg` real | TOKEN_VAZIO', '`apt` | TOKEN_VAZIO', '`apt-get` | TOKEN_VAZIO', '`dpkg` | TOKEN_VAZIO', '`libapt` | TOKEN_VAZIO', '`proot` | TOKEN_VAZIO', 'certificados | TOKEN_VAZIO', 'DNS/network básico | TOKEN_VAZIO', 'repositório configurado | TOKEN_VAZIO']:
-        assert token in text
-    package_rows = [line for line in text.splitlines() if any(key in line for key in ('`pkg` real', '`apt`', '`apt-get`', '`dpkg`', '`libapt`', '`proot`', 'certificados', 'DNS/network básico', 'repositório configurado'))]
-    assert all('PROVADO' not in line for line in package_rows)
+    rows = {}
+    for line in text.splitlines():
+        if not line.startswith('|') or line.startswith('|---'):
+            continue
+        columns = [column.strip() for column in line.strip('|').split('|')]
+        if len(columns) < 2 or columns[0] == 'Recurso':
+            continue
+        rows[columns[0]] = columns[1]
+
+    expected_states = {
+        '`pkg` real': 'TOKEN_VAZIO',
+        '`apt`': 'TOKEN_VAZIO',
+        '`apt-get`': 'TOKEN_VAZIO',
+        '`dpkg`': 'TOKEN_VAZIO',
+        '`libapt`': 'TOKEN_VAZIO',
+        '`proot`': 'TOKEN_VAZIO',
+        'certificados': 'TOKEN_VAZIO',
+        'DNS/network básico': 'TOKEN_VAZIO',
+        'repositório configurado': 'TOKEN_VAZIO',
+    }
+    for resource, expected_state in expected_states.items():
+        assert rows.get(resource) == expected_state
 
 
 def test_validator_rejects_binary_zip_entry_with_legacy_prefix(tmp_path):
