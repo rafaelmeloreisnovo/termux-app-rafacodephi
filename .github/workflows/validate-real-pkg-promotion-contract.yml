@@ -46,8 +46,17 @@ jobs:
       - name: Install test dependencies
         run: python3 -m pip install --disable-pip-version-check pytest
 
-      - name: Validate device pkg smoke contract
-        run: python3 -m pytest -q tests/test_device_pkg_smoke_contract.py
+      - name: Validate smoke state separation
+        run: python3 -m pytest -q tests/test_device_pkg_smoke_contract.py::test_device_pkg_smoke_separates_minimal_layer_from_real_pkg
+
+      - name: Validate minimal command gate
+        run: python3 -m pytest -q tests/test_device_pkg_smoke_contract.py::test_device_pkg_smoke_keeps_minimal_commands_as_gate
+
+      - name: Validate runbook promotion gate
+        run: python3 -m pytest -q tests/test_device_pkg_smoke_contract.py::test_runbook_mentions_pkg_promotion_gate
+
+      - name: Validate truth-table epistemic state
+        run: python3 -m pytest -q tests/test_device_pkg_smoke_contract.py::test_truth_table_keeps_real_pkg_unproved_until_device_smoke
 
       - name: Validate real pkg promotion contract
         run: python3 -m pytest -q tests/test_real_pkg_promotion_contract.py
