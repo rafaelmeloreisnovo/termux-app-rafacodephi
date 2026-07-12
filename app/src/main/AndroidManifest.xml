@@ -17,6 +17,13 @@
         android:label="@string/permission_run_command_label"
         android:protectionLevel="dangerous" />
 
+    <permission
+        android:name="${TERMUX_PACKAGE_NAME}.permission.RAF_SENSOR_ACCESS"
+        android:description="@string/permission_raf_sensor_access_description"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/permission_raf_sensor_access_label"
+        android:protectionLevel="dangerous" />
+
     <!-- Network permissions -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -149,6 +156,12 @@
             android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
 
         <activity
+            android:name="com.termux.app.activities.VectraRuntimeActivity"
+            android:exported="false"
+            android:label="@string/title_activity_vectra_runtime"
+            android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
+
+        <activity
             android:name="com.termux.shared.activities.ReportActivity"
             android:theme="@style/Theme.MarkdownViewActivity.DayNight"
             android:documentLaunchMode="intoExisting" />
@@ -262,6 +275,16 @@
             <intent-filter>
                 <action android:name="${TERMUX_PACKAGE_NAME}.RUN_COMMAND" />
             </intent-filter>
+        </service>
+
+        <service
+            android:name="com.termux.app.api.sensor.RafSensorApiService"
+            android:exported="true"
+            android:foregroundServiceType="dataSync|specialUse"
+            android:permission="${TERMUX_PACKAGE_NAME}.permission.RAF_SENSOR_ACCESS">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="sensor_runtime" />
         </service>
 
 

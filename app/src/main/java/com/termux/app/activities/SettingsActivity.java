@@ -67,6 +67,7 @@ public class SettingsActivity extends AppCompatActivity {
                     configureAndroid15WizardPreference(context);
                     configureSystemAuditPreference(context);
                     configureIndustrialDiagnosticsPreference(context);
+                    configureVectraRuntimePreference(context);
                     configureTermuxAPIPreference(context);
                     configureTermuxFloatPreference(context);
                     configureTermuxTaskerPreference(context);
@@ -105,6 +106,17 @@ public class SettingsActivity extends AppCompatActivity {
                 diagnosticsPreference.setOnPreferenceClickListener(preference -> {
                     Intent intent = new Intent(context, SystemAuditActivity.class);
                     intent.putExtra(SystemAuditActivity.EXTRA_FOCUS_INDUSTRIAL_DIAGNOSTICS, true);
+                    startActivity(intent);
+                    return true;
+                });
+            }
+        }
+
+        private void configureVectraRuntimePreference(@NonNull Context context) {
+            Preference vectraRuntimePreference = findPreference("vectra_runtime");
+            if (vectraRuntimePreference != null) {
+                vectraRuntimePreference.setOnPreferenceClickListener(preference -> {
+                    Intent intent = new Intent(context, VectraRuntimeActivity.class);
                     startActivity(intent);
                     return true;
                 });
