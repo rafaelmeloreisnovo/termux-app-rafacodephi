@@ -61,5 +61,21 @@ def test_truth_table_keeps_real_pkg_unproved_until_device_smoke() -> None:
 
     assert "device pkg smoke" in text
     assert "DEVICE_REAL_PKG_VALIDATED" in text
-    for row in [line for line in text.splitlines() if any(key in line for key in ("`pkg update`", "`pkg install`", "`apt`", "`dpkg`"))]:
-        assert "TOKEN_VAZIO" in row or "FUTURO" in row
+
+    rows: dict[str, str] = {}
+    for line in text.splitlines():
+        if not line.startswith("|") or line.startswith("|---"):
+            continue
+        columns = [column.strip() for column in line.strip("|").split("|")]
+        if len(columns) < 2 or columns[0] == "Recurso":
+            continue
+        rows[columns[0]] = columns[1]
+
+    expected_states = {
+        "`pkg update`": "FUTURO",
+        "`pkg install`": "FUTURO",
+        "`apt`": "TOKEN_VAZIO",
+        "`dpkg`": "TOKEN_VAZIO",
+    }
+    for resource, expected_state in expected_states.items():
+        assert rows.get(resource) == expected_state
