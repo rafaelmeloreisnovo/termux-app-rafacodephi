@@ -37,10 +37,10 @@ def test_real_arm_core_builder_verifies_hashes_rewrites_prefix_and_fills_command
         assert token in text
 
 
-def test_main_bootstrap_build_uses_real_pkg_core_by_default_and_validates():
+def test_main_bootstrap_build_keeps_real_pkg_opt_in_and_validates_when_enabled():
     text = BOOTSTRAP_BUILD.read_text(encoding='utf-8')
     for token in [
-        'RAFCODEPHI_REAL_PKG_BOOTSTRAP:=true',
+        'RAFCODEPHI_REAL_PKG_BOOTSTRAP:=false',
         'RAFCODEPHI_REAL_PKG_ARCH:=all',
         'python3 scripts/build_real_arm_bootstrap_core.py',
         'python3 scripts/validate_real_arm_bootstrap_core.py',
