@@ -93,3 +93,27 @@ ifneq ($(RMR_NO_LIBM),1)
 LOCAL_LDLIBS += -lm
 endif
 include $(BUILD_SHARED_LIBRARY)
+
+# api_lowlevel — freestanding API bridge (termux-api → termux-app)
+# no-malloc · no-libc · CRC32C HW · NEON SIMD · branchless dispatch
+include $(CLEAR_VARS)
+LOCAL_MODULE := api_lowlevel
+LOCAL_SRC_FILES := \
+    lowlevel/api_lowlevel.c \
+    lowlevel/api_jni_bridge.c \
+    lowlevel/bench_vectras_port.c
+ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+    LOCAL_SRC_FILES += lowlevel/api_ll_asm.S
+    LOCAL_CFLAGS += -march=armv8-a+crc+simd -DHAS_CRC32C_HW=1 -DHAS_NEON=1
+endif
+ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
+    LOCAL_SRC_FILES += lowlevel/api_ll_asm.S
+    LOCAL_CFLAGS += -march=armv7-a -mfpu=neon -DHAS_NEON=1
+endif
+LOCAL_CFLAGS += -std=c11 -O3 -fno-stack-protector -fvisibility=hidden
+LOCAL_CFLAGS += -ffunction-sections -fdata-sections
+LOCAL_CFLAGS += -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-ident
+LOCAL_CFLAGS += -DAPI_LL_NOMALLOC=1
+LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
+LOCAL_LDLIBS := -llog
+include $(BUILD_SHARED_LIBRARY)
