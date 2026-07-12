@@ -136,5 +136,13 @@ def test_bridge_now_targets_arm_core_only_and_ca_certificates():
 
 def test_runbook_requires_pkg_install_promotion_sequence():
     text = RUNBOOK.read_text(encoding='utf-8')
-    for token in ['build_real_arm_bootstrap_core.py --arch all', 'validate_real_arm_bootstrap_core.py', 'DEVICE_SMOKE_REQUIRED=true', 'pkg update', 'pkg install nano', 'pkg install python', 'pkg install git']:
+    for token in [
+        'build_real_arm_bootstrap_core.py --arch all',
+        'validate_real_arm_bootstrap_core.py',
+        'DEVICE_SMOKE_REQUIRED=true',
+        'pkg update -y',
+        'pkg install -y nano',
+        'pkg install -y python',
+        'pkg install -y git',
+    ]:
         assert token in text
