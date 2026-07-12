@@ -250,4 +250,12 @@
     <string name="industrial_diagnostics_title">Industrial Diagnostics</string>
     <string name="industrial_diagnostics_summary">Open industrial diagnostics and runtime health checks.</string>
 
+    <string name="vectra_runtime_title">Vectra Sensor Runtime</string>
+    <string name="vectra_runtime_summary">Open the typed sensor runtime, hardware profile, and Vectra sampling presets.</string>
+    <string name="title_activity_vectra_runtime">Vectra Sensor Runtime</string>
+    <string name="permission_raf_sensor_access_label">RAFAELIA sensor access</string>
+    <string name="permission_raf_sensor_access_description">Allows an explicitly authorized app to request typed RAFAELIA sensor snapshots.</string>
+    <string name="raf_sensor_service_notification_title">RAFAELIA sensor runtime active</string>
+    <string name="raf_sensor_service_notification_text">Serving typed sensor snapshot requests.</string>
+
 </resources>
