@@ -13,11 +13,18 @@ def test_pkg_apt_bridge_does_not_recurse():
     assert "RAFCODEPHI bootstrap busybox stub" not in source
     assert "RAFCODEPHI bootstrap proot stub" not in source
 
-    # pkg must delegate to a real apt/apt-get backend, never exec itself.
-    pkg_start = source.index('cat > "${generated_root}/bin/pkg" <<')
-    pkg_end = source.index("\nEOS\n", pkg_start)
-    pkg_block = source[pkg_start:pkg_end]
+    # pkg is emitted from a grouped shell block redirected to bin/pkg. Extract
+    # that current structure instead of depending on the obsolete direct-cat form.
+    pkg_end_marker = '} > "${generated_root}/bin/pkg"'
+    pkg_end = source.index(pkg_end_marker)
+    pkg_start = source.rfind("\n{\n", 0, pkg_end)
+    assert pkg_start >= 0
+    pkg_block = source[pkg_start:pkg_end + len(pkg_end_marker)]
+
+    # pkg must delegate to distinct apt/apt-get backends and never exec itself.
     assert 'exec "${PREFIX}/bin/pkg"' not in pkg_block
+    assert 'exec "${PREFIX}/bin/apt" "$@"' in pkg_block
+    assert 'exec "${PREFIX}/bin/apt-get" "$@"' in pkg_block
 
     # apkmanager legitimately bridges to the distinct pkg binary; that is not
     # self-recursion and must keep working.
