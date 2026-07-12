@@ -9,6 +9,7 @@ Definir, de forma moderna e auditável, quais camadas sustentam a excelência op
 | Camada | Objetivo operacional | Prova mínima | Documento âncora |
 |---|---|---|---|
 | Estratégia | alinhamento entre visão, escopo e limites do fork | `README` e `STATUS` coerentes | [`../README.md`](../README.md) |
+| Coerência fonte-representação | manter o texto fiel ao código, ao runtime e ao estado real | `STATUS`, `RUNTIME_TRUTH_TABLE` e `RAFAELIA_CODE_DOC_SYNC*` sem contradição material | [`RAFAELIA_CODE_DOC_SYNC.md`](./RAFAELIA_CODE_DOC_SYNC.md) |
 | Build | gerar artefatos de forma reproduzível | APK gera sem desvio de trilha | [`ENGINEERING_SYSTEM_RUNBOOK.md`](./ENGINEERING_SYSTEM_RUNBOOK.md) |
 | Release | separar unsigned interno de signed oficial | assinatura só ocorre por contrato explícito | [`BUILD_APK_MATRIX.md`](./BUILD_APK_MATRIX.md) |
 | ABI | preservar matriz ARM oficial | `armeabi-v7a` e `arm64-v8a` presentes | [`STATUS.md`](./STATUS.md) |
@@ -44,6 +45,11 @@ Definir, de forma moderna e auditável, quais camadas sustentam a excelência op
 - inventário separado de canônicos;
 - layout textual que prioriza leitura, conforto e tomada de decisão.
 
+### 5. Coerência documental
+- o que é “verdade atual” deve estar em `STATUS` e `RUNTIME_TRUTH_TABLE`;
+- o que é divergência entre narrativa e implementação deve aparecer em `RAFAELIA_CODE_DOC_SYNC*`;
+- o que não está comprovado deve permanecer explicitamente marcado.
+
 ## Níveis de maturidade
 
 | Nível | Característica |
@@ -54,6 +60,15 @@ Definir, de forma moderna e auditável, quais camadas sustentam a excelência op
 | Auditável | evidência publicada e rastreável |
 | Referência | operação consistente, leitura simples e manutenção previsível |
 
+## Trilha até o platô de evolução estrutural
+
+| Etapa | Foco | Evidência de avanço |
+|---|---|---|
+| Organização canônica | hubs, índices e status convergem | entrada principal sem rotas ambíguas |
+| Sincronia código-documento | cada claim principal aponta para fonte executável | `RAFAELIA_CODE_DOC_SYNC*` e runbooks atualizados |
+| Convergência operacional | gap entre CI, runtime e device fica explícito e gerenciado | menos contradições materiais em `STATUS`/`RUNTIME_TRUTH_TABLE` |
+| Platô estrutural | documentação, código e evidência passam a evoluir no mesmo ritmo | governança previsível e leitura por perfil estável |
+
 ## Critérios para ser visto como referência operacional
 
 O repositório se aproxima de referência quando combina:
@@ -62,7 +77,8 @@ O repositório se aproxima de referência quando combina:
 2. **execução reproduzível**;
 3. **limites honestos de claim**;
 4. **evidência navegável**;
-5. **estrutura amigável para engenharia, auditoria e gestão**.
+5. **estrutura amigável para engenharia, auditoria e gestão**;
+6. **coerência constante entre código-fonte, documentação e representação operacional**.
 
 ## Leitura complementar
 
