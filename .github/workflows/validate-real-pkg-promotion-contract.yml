@@ -46,9 +46,11 @@ jobs:
       - name: Install test dependencies
         run: python3 -m pip install --disable-pip-version-check pytest
 
-      - name: Run real pkg promotion contract tests
-        run: |
-          python3 -m pytest -q \
-            tests/test_device_pkg_smoke_contract.py \
-            tests/test_real_pkg_promotion_contract.py \
-            tests/test_pkg_real_next_pr_marker.py
+      - name: Validate device pkg smoke contract
+        run: python3 -m pytest -q tests/test_device_pkg_smoke_contract.py
+
+      - name: Validate real pkg promotion contract
+        run: python3 -m pytest -q tests/test_real_pkg_promotion_contract.py
+
+      - name: Validate next-PR marker
+        run: python3 -m pytest -q tests/test_pkg_real_next_pr_marker.py
