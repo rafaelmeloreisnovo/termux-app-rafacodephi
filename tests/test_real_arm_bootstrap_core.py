@@ -32,7 +32,7 @@ def test_real_arm_core_builder_verifies_hashes_rewrites_prefix_and_fills_command
         'verify_sha256', 'hashlib.sha256', 'dependency_closure', 'parse_depends',
         'rewrite_text_file(path, "/data/data/com.termux/files/usr", current_prefix)',
         'SYMLINKS.txt', 'MINIMUM_COMMANDS', 'ensure_minimum_commands',
-        'write_command_wrapper', 'exec "$PREFIX/bin/busybox"', 'exec /system/bin/toybox',
+        'write_command_wrapper', '$PREFIX/bin/busybox', 'exec /system/bin/toybox',
     ]:
         assert token in text
 
