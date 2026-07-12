@@ -103,8 +103,8 @@ jobs:
       - name: Validate real ARM rewrite and fallback
         run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_real_arm_core_builder_verifies_hashes_rewrites_prefix_and_fills_commands
 
-      - name: Validate default real ARM build wiring
-        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_main_bootstrap_build_uses_real_pkg_core_by_default_and_validates
+      - name: Validate explicit real ARM build wiring
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_main_bootstrap_build_keeps_real_pkg_opt_in_and_validates_when_enabled
 
       - name: Validate real ARM required runtime contract
         run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_real_arm_core_validator_blocks_missing_runtime_contract
@@ -148,12 +148,12 @@ jobs:
       - name: Run README runtime claim boundary tests
         run: python3 -m pytest -q tests/test_readme_runtime_claim_boundary.py
 
-      - name: Generate bootstrap packages for native incbin
+      - name: Generate safe bootstrap packages for native incbin
         shell: bash
         run: |
           mkdir -p reports
           set -o pipefail
-          bash scripts/build_rafaelia_bootstraps.sh 2>&1 | tee reports/bootstrap_generation.log
+          RAFCODEPHI_REAL_PKG_BOOTSTRAP=false bash scripts/build_rafaelia_bootstraps.sh 2>&1 | tee reports/bootstrap_generation.log
 
       - name: Upload bootstrap generation log
         if: always()
