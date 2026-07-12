@@ -1,6 +1,6 @@
 # STATUS (Fonte de Verdade de Build/Release)
 
-> Última revisão: 2026-07-09 (UTC)
+> Última revisão: 2026-07-12 (UTC)
 
 Este documento consolida o estado **real e verificável** do pipeline Android (Gradle + NDK + CI) desta fork. A regra é separar promessa de prova: quando não houver backend ou teste real, o estado fica marcado como `TOKEN_VAZIO`, `PARCIAL`, `EXPERIMENTAL` ou `FUTURO`.
 
@@ -61,5 +61,18 @@ Nome técnico atual: **RAFAELIA deterministic VCPU state kernel** / **VCPU telem
 - Build e versões Android/NDK: `gradle.properties`.
 - Matriz signed/unsigned: `scripts/build_apk_matrix.sh`.
 - Contrato operacional: `docs/RUNTIME_TRUTH_TABLE.md`.
-- Runbook: `docs/ENGINEERING_RUNBOOK_RAFCODEPHI.md`.
+- Runbook operacional atual: `docs/ENGINEERING_SYSTEM_RUNBOOK.md`.
+- Runbook legado complementar: `docs/ENGINEERING_RUNBOOK_RAFCODEPHI.md`.
 - Visão macro do projeto: `README.md`.
+
+## Rota mínima para coerência operacional
+
+Para manter a representação documental fiel ao estado real do repositório, a leitura mínima deve seguir esta ordem:
+
+1. `README.md` — entrada institucional e contrato público do fork.
+2. `docs/README.md` — hub canônico de navegação e leitura por objetivo.
+3. `docs/ENGINEERING_SYSTEM_RUNBOOK.md` — execução real de build/release/CI.
+4. `docs/RUNTIME_TRUTH_TABLE.md` — verdade operacional detalhada e limites de runtime.
+5. `docs/RAFAELIA_CODE_DOC_SYNC.md` e `docs/RAFAELIA_CODE_DOC_SYNC_REPORT.md` — camada de coerência entre narrativa, código, teste e evidência.
+
+Se algum desses documentos divergir do código, do script ou do workflow correspondente, a documentação deve ser corrigida ou rebaixada para `PARCIAL`, `TOKEN_VAZIO` ou gap explícito.
