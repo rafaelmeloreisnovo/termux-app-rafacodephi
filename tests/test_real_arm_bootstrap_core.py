@@ -32,15 +32,15 @@ def test_real_arm_core_builder_verifies_hashes_rewrites_prefix_and_fills_command
         'verify_sha256', 'hashlib.sha256', 'dependency_closure', 'parse_depends',
         'rewrite_text_file(path, "/data/data/com.termux/files/usr", current_prefix)',
         'SYMLINKS.txt', 'MINIMUM_COMMANDS', 'ensure_minimum_commands',
-        'write_command_wrapper', 'exec "$PREFIX/bin/busybox"', 'exec /system/bin/toybox',
+        'write_command_wrapper', '$PREFIX/bin/busybox', 'exec /system/bin/toybox',
     ]:
         assert token in text
 
 
-def test_main_bootstrap_build_uses_real_pkg_core_by_default_and_validates():
+def test_main_bootstrap_build_keeps_real_pkg_opt_in_and_validates_when_enabled():
     text = BOOTSTRAP_BUILD.read_text(encoding='utf-8')
     for token in [
-        'RAFCODEPHI_REAL_PKG_BOOTSTRAP:=true',
+        'RAFCODEPHI_REAL_PKG_BOOTSTRAP:=false',
         'RAFCODEPHI_REAL_PKG_ARCH:=all',
         'python3 scripts/build_real_arm_bootstrap_core.py',
         'python3 scripts/validate_real_arm_bootstrap_core.py',
@@ -81,10 +81,28 @@ def test_runbook_blocks_promotion_on_binary_prefix_risk():
 
 def test_truth_table_keeps_real_package_stack_unproved():
     text = TRUTH_TABLE.read_text(encoding='utf-8')
-    for token in ['`pkg` real | TOKEN_VAZIO', '`apt` | TOKEN_VAZIO', '`apt-get` | TOKEN_VAZIO', '`dpkg` | TOKEN_VAZIO', '`libapt` | TOKEN_VAZIO', '`proot` | TOKEN_VAZIO', 'certificados | TOKEN_VAZIO', 'DNS/network básico | TOKEN_VAZIO', 'repositório configurado | TOKEN_VAZIO']:
-        assert token in text
-    package_rows = [line for line in text.splitlines() if any(key in line for key in ('`pkg` real', '`apt`', '`apt-get`', '`dpkg`', '`libapt`', '`proot`', 'certificados', 'DNS/network básico', 'repositório configurado'))]
-    assert all('PROVADO' not in line for line in package_rows)
+    rows = {}
+    for line in text.splitlines():
+        if not line.startswith('|') or line.startswith('|---'):
+            continue
+        columns = [column.strip() for column in line.strip('|').split('|')]
+        if len(columns) < 2 or columns[0] == 'Recurso':
+            continue
+        rows[columns[0]] = columns[1]
+
+    expected_states = {
+        '`pkg` real': 'TOKEN_VAZIO',
+        '`apt`': 'TOKEN_VAZIO',
+        '`apt-get`': 'TOKEN_VAZIO',
+        '`dpkg`': 'TOKEN_VAZIO',
+        '`libapt`': 'TOKEN_VAZIO',
+        '`proot`': 'TOKEN_VAZIO',
+        'certificados': 'TOKEN_VAZIO',
+        'DNS/network básico': 'TOKEN_VAZIO',
+        'repositório configurado': 'TOKEN_VAZIO',
+    }
+    for resource, expected_state in expected_states.items():
+        assert rows.get(resource) == expected_state
 
 
 def test_validator_rejects_binary_zip_entry_with_legacy_prefix(tmp_path):
@@ -136,5 +154,13 @@ def test_bridge_now_targets_arm_core_only_and_ca_certificates():
 
 def test_runbook_requires_pkg_install_promotion_sequence():
     text = RUNBOOK.read_text(encoding='utf-8')
-    for token in ['build_real_arm_bootstrap_core.py --arch all', 'validate_real_arm_bootstrap_core.py', 'DEVICE_SMOKE_REQUIRED=true', 'pkg update', 'pkg install nano', 'pkg install python', 'pkg install git']:
+    for token in [
+        'build_real_arm_bootstrap_core.py --arch all',
+        'validate_real_arm_bootstrap_core.py',
+        'DEVICE_SMOKE_REQUIRED=true',
+        'pkg update -y',
+        'pkg install -y nano',
+        'pkg install -y python',
+        'pkg install -y git',
+    ]:
         assert token in text

@@ -6,7 +6,7 @@ cd "$ROOT_DIR"
 
 : "${TERMUX_BOOTSTRAP_PACKAGE_NAME:=com.termux.rafacodephi}"
 : "${TERMUX_BOOTSTRAP_PAGE_SIZE:=16384}"
-: "${RAFCODEPHI_REAL_PKG_BOOTSTRAP:=true}"
+: "${RAFCODEPHI_REAL_PKG_BOOTSTRAP:=false}"
 : "${RAFCODEPHI_REAL_PKG_ARCH:=all}"
 : "${RAFCODEPHI_REAL_PKG_VALIDATE:=true}"
 : "${RAFCODEPHI_REAL_PKG_REPO:=https://packages.termux.dev/apt/termux-main}"

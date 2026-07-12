@@ -86,7 +86,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install test dependencies
-        run: pip install pytest
+        run: python3 -m pip install --disable-pip-version-check pytest
 
       - name: Validate static bootstrap install contract
         run: python3 tools/validate_bootstrap_package_install_contract.py
@@ -97,8 +97,35 @@ jobs:
       - name: Run busybox applet wrapper tests
         run: python3 -m pytest -q tests/test_bootstrap_busybox_applet_wrappers.py
 
-      - name: Run real ARM pkg core tests
-        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py
+      - name: Validate real ARM payload declaration
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_real_arm_core_builder_declares_required_payload_and_arches
+
+      - name: Validate real ARM rewrite and fallback
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_real_arm_core_builder_verifies_hashes_rewrites_prefix_and_fills_commands
+
+      - name: Validate explicit real ARM build wiring
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_main_bootstrap_build_keeps_real_pkg_opt_in_and_validates_when_enabled
+
+      - name: Validate real ARM required runtime contract
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_real_arm_core_validator_blocks_missing_runtime_contract
+
+      - name: Validate binary legacy-prefix audit
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_real_arm_core_validator_audits_binary_legacy_prefix_risk
+
+      - name: Validate runbook binary-risk gate
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_runbook_blocks_promotion_on_binary_prefix_risk
+
+      - name: Validate package truth table
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_truth_table_keeps_real_package_stack_unproved
+
+      - name: Validate binary-prefix rejection regression
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_validator_rejects_binary_zip_entry_with_legacy_prefix
+
+      - name: Validate package bridge scope
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_bridge_now_targets_arm_core_only_and_ca_certificates
+
+      - name: Validate pkg installation promotion sequence
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_runbook_requires_pkg_install_promotion_sequence
 
       - name: Run device pkg smoke contract tests
         run: python3 -m pytest -q tests/test_device_pkg_smoke_contract.py
@@ -121,8 +148,21 @@ jobs:
       - name: Run README runtime claim boundary tests
         run: python3 -m pytest -q tests/test_readme_runtime_claim_boundary.py
 
-      - name: Generate bootstrap packages for native incbin
-        run: bash scripts/build_rafaelia_bootstraps.sh
+      - name: Generate safe bootstrap packages for native incbin
+        shell: bash
+        run: |
+          mkdir -p reports
+          set -o pipefail
+          RAFCODEPHI_REAL_PKG_BOOTSTRAP=false bash scripts/build_rafaelia_bootstraps.sh 2>&1 | tee reports/bootstrap_generation.log
+
+      - name: Upload bootstrap generation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-generation-log
+          path: reports/bootstrap_generation.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Inspect generated installable bootstrap packages
         run: python3 tools/inspect_bootstrap_zips.py

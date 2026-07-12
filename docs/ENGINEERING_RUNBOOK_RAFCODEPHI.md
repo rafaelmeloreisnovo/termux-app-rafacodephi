@@ -65,41 +65,46 @@ Esse estado prova apenas que `pkg help` não quebra por ausência de comandos b�
 
 ## Payload core ARM real
 
-O build padrão agora tenta gerar payload core real para ARM:
+O build padrão é fail-closed e gera payload bridge:
+
+```bash
+RAFCODEPHI_REAL_PKG_BOOTSTRAP=false bash scripts/build_rafaelia_bootstraps.sh
+```
+
+A geração de candidato core ARM real é explícita:
 
 ```bash
 RAFCODEPHI_REAL_PKG_BOOTSTRAP=true bash scripts/build_rafaelia_bootstraps.sh
 ```
 
-Esse caminho sobrescreve:
+Ela tenta sobrescrever:
 
 ```text
 app/src/main/cpp/rewritten-bootstrap-aarch64.zip
 app/src/main/cpp/rewritten-bootstrap-arm.zip
 ```
 
-com payload real contendo `apt`, `apt-get`, `dpkg`, `pkg`, `bash`, `busybox`, `coreutils`, `ca-certificates`, `termux-tools`, DNS e `sources.list`. Os zips i686/x86_64 permanecem em modo bridge até haver payload real equivalente.
+com candidato contendo `apt`, `apt-get`, `dpkg`, `pkg`, `bash`, `busybox`, `coreutils`, `ca-certificates`, `termux-tools`, DNS e `sources.list`. Os pacotes oficiais Termux são compilados para `/data/data/com.termux/files/usr`; como o prefixo RAFCODEΦ é maior, o validador bloqueia qualquer ELF com `LEGACY_PREFIX_BINARY_RISK` em vez de fazer replace binário inseguro.
 
-Para rodar só o gerador real manualmente:
+Para auditar manualmente o candidato:
 
 ```bash
 ./scripts/build_real_arm_bootstrap_core.py --arch all
 python3 scripts/validate_real_arm_bootstrap_core.py \
   app/src/main/cpp/rewritten-bootstrap-aarch64.zip \
   app/src/main/cpp/rewritten-bootstrap-arm.zip
-DEVICE_SMOKE_REQUIRED=true ./scripts/device_runtime_smoke.sh path/to/app.apk
-./scripts/device_pkg_smoke.sh
 ```
 
-A validação do ZIP é obrigatória antes do device smoke. Falha `LEGACY_PREFIX_BINARY_RISK` bloqueia promoção: ela significa prefix legado dentro de arquivo binário/non-UTF-8, sem replace automático seguro; o pacote afetado deve ser reconstruído com prefix RAFCODEΦ ou coberto por estratégia de compatibilidade segura.
+Falha `LEGACY_PREFIX_BINARY_RISK` bloqueia promoção. A correção válida é recompilar o fechamento de dependências com o prefixo `/data/data/com.termux.rafacodephi/files/usr`, ou demonstrar estratégia compatível que não altere ELFs em-place.
 
-Promoção de `pkg` real permitida somente depois de passar, em dispositivo real:
+Depois de obter payload prefix-safe:
 
 ```bash
+DEVICE_SMOKE_REQUIRED=true ./scripts/device_runtime_smoke.sh path/to/app.apk
 REQUIRE_REAL_PKG=true ./scripts/device_pkg_smoke.sh
 ```
 
-Esse gate executa:
+O gate real executa:
 
 1. `pkg update -y`
 2. `pkg install -y nano`
@@ -109,7 +114,7 @@ Esse gate executa:
 6. `pkg install -y git`
 7. `git --version`
 
-O estado só pode mudar para `PROVADO` quando o relatório `reports/device_pkg_smoke.json` declarar:
+O estado só pode mudar para `PROVADO` quando `reports/device_pkg_smoke.json` declarar:
 
 ```text
 DEVICE_REAL_PKG_VALIDATED
