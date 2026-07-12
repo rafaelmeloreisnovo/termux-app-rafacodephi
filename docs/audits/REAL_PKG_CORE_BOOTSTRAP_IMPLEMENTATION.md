@@ -1,29 +1,53 @@
 # REAL_PKG_CORE_BOOTSTRAP_IMPLEMENTATION
 
-## Correção
+## Correção operacional
 
-O build do bootstrap não pode parar em `pkg help`. Para ARM, o fluxo agora tenta gerar payload real por padrão:
+O build padrão não pode fingir que pacotes upstream compilados para outro prefixo formam um `pkg` real utilizável. O caminho seguro permanece bridge-only:
+
+```bash
+RAFCODEPHI_REAL_PKG_BOOTSTRAP=false bash scripts/build_rafaelia_bootstraps.sh
+```
+
+A geração do candidato ARM real é opt-in:
 
 ```bash
 RAFCODEPHI_REAL_PKG_BOOTSTRAP=true bash scripts/build_rafaelia_bootstraps.sh
 ```
 
-Esse comando primeiro gera os zips bridge para todos os ABIs e depois sobrescreve:
+Esse comando primeiro gera os zips bridge para todos os ABIs e depois tenta sobrescrever:
 
 ```text
 app/src/main/cpp/rewritten-bootstrap-aarch64.zip
 app/src/main/cpp/rewritten-bootstrap-arm.zip
 ```
 
-com payload real gerado por:
+com candidato gerado por:
 
 ```bash
 python3 scripts/build_real_arm_bootstrap_core.py --arch all
 ```
 
-## Conteúdo mínimo do payload ARM real
+## Resultado observado no CI
 
-O gerador baixa pacotes `.deb` reais do Termux, verifica SHA-256, extrai o fechamento de dependências e monta prefixo RAFCODEPHI com:
+O gerador resolveu e montou 73 pacotes para cada ABI (`aarch64` e `arm`). A validação bloqueou a promoção porque dezenas de ELFs e bibliotecas ainda contêm:
+
+```text
+/data/data/com.termux/files/usr
+```
+
+Exemplos observados incluem `bin/bash`, `bin/apt-cache`, `bin/find`, `bin/gzip`, `lib/libgnutls.so` e outras dependências.
+
+O prefixo RAFCODEΦ é maior:
+
+```text
+/data/data/com.termux.rafacodephi/files/usr
+```
+
+Logo, replace binário em-place não é seguro: mudaria o tamanho das strings e poderia corromper offsets, seções ou dados internos do ELF.
+
+## Conteúdo pretendido do payload ARM real
+
+O candidato contém fechamento de dependências para:
 
 ```text
 apt
@@ -47,19 +71,9 @@ sources.list
 resolv.conf
 ```
 
-## Fallbacks
-
-Se algum comando mínimo não existir como binário real, o gerador cria wrapper executável que chama:
-
-```sh
-$PREFIX/bin/busybox <applet> "$@"
-```
-
-com fallback para Android toybox/toolbox.
-
 ## Gate
 
-O build agora valida os zips ARM reais com:
+A validação continua obrigatória:
 
 ```bash
 python3 scripts/validate_real_arm_bootstrap_core.py \
@@ -67,11 +81,16 @@ python3 scripts/validate_real_arm_bootstrap_core.py \
   app/src/main/cpp/rewritten-bootstrap-arm.zip
 ```
 
-Se a auditoria detectar `LEGACY_PREFIX_BINARY_RISK`, o build falha. Melhor falhar o beta do que entregar APK com `pkg` falso.
+Qualquer `LEGACY_PREFIX_BINARY_RISK` bloqueia promoção. O hotfix não ignora o erro e não faz replace automático.
 
-## Prova final
+## Caminho válido para promoção
 
-O estado `pkg real` só vira PROVADO quando passar no aparelho:
+1. recompilar os 73 pacotes e seu fechamento de dependências com o prefixo RAFCODEΦ;
+2. publicar repositório APT RAFCODEΦ com hashes e manifests fixados;
+3. gerar os zips ARM usando esse repositório;
+4. passar o validador sem risco binário;
+5. instalar APK em device real;
+6. executar:
 
 ```bash
 REQUIRE_REAL_PKG=true ./scripts/device_pkg_smoke.sh
@@ -79,8 +98,8 @@ REQUIRE_REAL_PKG=true ./scripts/device_pkg_smoke.sh
 
 ## Veredito
 
-F_ok: build ARM agora tenta payload real por padrão.
+F_ok: o gerador, a resolução de dependências, os hashes e o detector binário funcionaram e impediram uma promoção insegura.
 
-F_gap: device smoke ainda é necessário para declarar `pkg update/install` provado.
+F_gap: pacotes upstream não são relocáveis para o prefixo RAFCODEΦ por substituição textual.
 
-F_next: CI gerar os zips reais; se `LEGACY_PREFIX_BINARY_RISK` aparecer, rebuild de pacotes RAFCODEPHI ou estratégia compatível é obrigatório.
+F_next: rebuild prefix-aware do fechamento de 73 pacotes por ABI; até lá, build padrão bridge-only e `pkg real = TOKEN_VAZIO`.
