@@ -87,7 +87,7 @@ if [[ -n "${first_apk}" ]] && have unzip; then
     size="$(bytes_of "$so")"
     printf '%s\t%s\t%s\t%s\n' "$lib" "$abi" "$size" "$so" >> "${NATIVE_TSV}"
     if have readelf; then
-      aligns="$(readelf -l "$so" 2>/dev/null | awk '/LOAD/ {print $NF}' | paste -sd ',' -)"
+      aligns="$(readelf -l "$so" 2>/dev/null | awk '/LOAD/ {print $NF}' | paste -sd ',' - || true)"
       if echo "$aligns" | grep -qi '0x4000'; then
         printf '%s\t%s\tyes\t%s\tmeasured\t%s\n' "$lib" "$abi" "$aligns" "$so" >> "${ELF_TSV}"
       else
