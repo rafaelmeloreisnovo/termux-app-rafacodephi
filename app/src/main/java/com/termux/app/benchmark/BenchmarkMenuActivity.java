@@ -169,27 +169,30 @@ public final class BenchmarkMenuActivity extends Activity {
         new Thread(() -> {
             long[] scores = new long[CAT_COUNT];
             long total = 0L;
-            for (int cat = 0; cat < CAT_COUNT; cat++) {
-                final int c = cat;
-                long raw = nativeBenchRun(profile, cat);
-                /* hi32 = score, lo32 = cycles>>8 */
-                long score = (raw >>> 32) & 0xFFFFFFFFL;
-                scores[c] = score;
-                total += score;
-                final long fTotal = total;
-                final long fScore = score;
-                /* max score per category for progress scaling: 1M */
-                final int prog = (int) Math.min(1000L, (fScore * 1000L) / 1_000_000L);
+            try {
+                for (int cat = 0; cat < CAT_COUNT; cat++) {
+                    final int c = cat;
+                    long raw = nativeBenchRun(profile, cat);
+                    /* hi32 = score, lo32 = cycles>>8 */
+                    long score = (raw >>> 32) & 0xFFFFFFFFL;
+                    scores[c] = score;
+                    total += score;
+                    final long fTotal = total;
+                    final long fScore = score;
+                    /* max score per category for progress scaling: 1M */
+                    final int prog = (int) Math.min(1000L, (fScore * 1000L) / 1_000_000L);
+                    mUiHandler.post(() -> {
+                        mBars[c].setProgress(prog);
+                        mScores[c].setText(String.format(Locale.US, " %,d", fScore));
+                        mTotalScore.setText(String.format(Locale.US, "%,d", fTotal));
+                    });
+                }
+            } finally {
                 mUiHandler.post(() -> {
-                    mBars[c].setProgress(prog);
-                    mScores[c].setText(String.format(Locale.US, " %,d", fScore));
-                    mTotalScore.setText(String.format(Locale.US, "%,d", fTotal));
+                    mRunBtn.setEnabled(true);
+                    mRunning.set(false);
                 });
             }
-            mUiHandler.post(() -> {
-                mRunBtn.setEnabled(true);
-                mRunning.set(false);
-            });
         }, "bench-runner").start();
     }
 
