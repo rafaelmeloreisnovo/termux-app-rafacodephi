@@ -171,7 +171,8 @@ api_ll_neon_xor_fold:
     vmov    r2, s1
     eor     r4, r4, r2          @ r4 = 32-bit XOR from NEON lanes
     @ scalar tail: handle remaining 0-15 bytes
-    cbz     r1, .L_arm_xf_done
+    cmp     r1, #0
+    beq     .L_arm_xf_done
 .L_arm_xf_scalar:
     ldrb    r2, [r0], #1
     eor     r4, r4, r2
