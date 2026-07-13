@@ -58,9 +58,10 @@ scan_apk() {
 
   printf '%s\t%s\t%s\t%s\t%s\n' "$base" "$kind" "$abi" "$size" "$apk" >> "${SIZE_TSV}"
   apk_count=$((apk_count+1))
-  [[ "$abi" == "arm64-v8a" ]] && arm64_count=$((arm64_count+1))
+  [[ "$abi" == "arm64-v8a" ]]   && arm64_count=$((arm64_count+1))
   [[ "$abi" == "armeabi-v7a" ]] && arm32_count=$((arm32_count+1))
-  [[ "$abi" == "universal" ]] && universal_count=$((universal_count+1))
+  [[ "$abi" == "universal" ]]   && universal_count=$((universal_count+1))
+  return 0
 }
 
 while IFS= read -r -d '' apk; do
