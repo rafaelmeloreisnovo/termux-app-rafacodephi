@@ -58,9 +58,10 @@ scan_apk() {
 
   printf '%s\t%s\t%s\t%s\t%s\n' "$base" "$kind" "$abi" "$size" "$apk" >> "${SIZE_TSV}"
   apk_count=$((apk_count+1))
-  [[ "$abi" == "arm64-v8a" ]] && arm64_count=$((arm64_count+1))
+  [[ "$abi" == "arm64-v8a" ]]   && arm64_count=$((arm64_count+1))
   [[ "$abi" == "armeabi-v7a" ]] && arm32_count=$((arm32_count+1))
-  [[ "$abi" == "universal" ]] && universal_count=$((universal_count+1))
+  [[ "$abi" == "universal" ]]   && universal_count=$((universal_count+1))
+  return 0
 }
 
 while IFS= read -r -d '' apk; do
@@ -87,7 +88,7 @@ if [[ -n "${first_apk}" ]] && have unzip; then
     size="$(bytes_of "$so")"
     printf '%s\t%s\t%s\t%s\n' "$lib" "$abi" "$size" "$so" >> "${NATIVE_TSV}"
     if have readelf; then
-      aligns="$(readelf -l "$so" 2>/dev/null | awk '/LOAD/ {print $NF}' | paste -sd ',' -)"
+      aligns="$(readelf -l "$so" 2>/dev/null | awk '/LOAD/ {print $NF}' | paste -sd ',' - || true)"
       if echo "$aligns" | grep -qi '0x4000'; then
         printf '%s\t%s\tyes\t%s\tmeasured\t%s\n' "$lib" "$abi" "$aligns" "$so" >> "${ELF_TSV}"
       else

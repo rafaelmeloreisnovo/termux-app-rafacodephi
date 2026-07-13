@@ -575,7 +575,12 @@ jobs:
             fail_with_output_listing "No APKs were generated in '$APK_DIR_PATH'."
           fi
 
-          mapfile -t generated_abis < <(printf '%s\n' "${generated_apks[@]}" | sed -E "s/^${APK_BASENAME_PREFIX}_(.+)\.apk$/\1/" | sort -u)
+          mapfile -t generated_abis < <(
+            for _f in "${generated_apks[@]}"; do
+              _abi="${_f#${APK_BASENAME_PREFIX}_}"
+              echo "${_abi%.apk}"
+            done | sort -u
+          )
           echo "Generated ABIs: ${generated_abis[*]}"
 
           declare -A generated_abi_set=()

@@ -198,12 +198,20 @@ android {
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
+            def abi = output.getFilter(com.android.build.OutputFile.ABI)
+            def abiSuffix = abi ?: "universal"
             if (variant.buildType.name == "debug") {
-                def abi = output.getFilter(com.android.build.OutputFile.ABI)
-                outputFileName = new File("termux-rafcodephi-debug-" + (abi ? abi : "universal") + ".apk")
+                if (apkVersionTag) {
+                    outputFileName = new File("termux-app_${apkVersionTag}_${abiSuffix}.apk")
+                } else {
+                    outputFileName = new File("termux-rafcodephi-debug-${abiSuffix}.apk")
+                }
             } else if (variant.buildType.name == "release") {
-                def abi = output.getFilter(com.android.build.OutputFile.ABI)
-                outputFileName = new File("termux-rafcodephi-release-" + (abi ? abi : "universal") + ".apk")
+                if (apkVersionTag) {
+                    outputFileName = new File("termux-app_${apkVersionTag}_${abiSuffix}.apk")
+                } else {
+                    outputFileName = new File("termux-rafcodephi-release-${abiSuffix}.apk")
+                }
             }
         }
     }
@@ -362,6 +370,14 @@ tasks.register("validateRewrittenBootstraps") {
             }
         }
         logger.lifecycle("validateRewrittenBootstraps: all checks passed.")
+    }
+}
+
+tasks.register("printVersionName") {
+    group = "build info"
+    description = "Prints the app versionName to stdout (consumed by CI pipeline scripts via gradlew -q)."
+    doLast {
+        println android.defaultConfig.versionName
     }
 }
 
