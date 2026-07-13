@@ -18,9 +18,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Prepare Android toolchain
-        run: |
-          chmod +x ./scripts/ci_android_preflight.sh || true
-          ./scripts/ci_android_preflight.sh
+        shell: bash
+        run: bash ./scripts/ci_android_preflight.sh
       - name: Rewrite ARM bootstrap
         run: ./gradlew :app:rewriteBootstraps :app:validateRewrittenBootstraps
       - name: Collect reports
