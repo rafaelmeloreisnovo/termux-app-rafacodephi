@@ -202,13 +202,17 @@ android {
             def abiSuffix = abi ?: "universal"
             def apkVersionTag = System.getenv("TERMUX_APK_VERSION_TAG") ?: ""
             if (variant.buildType.name == "debug") {
-                outputFileName = apkVersionTag
-                    ? new File("termux-app_${apkVersionTag}_${abiSuffix}.apk")
-                    : new File("termux-rafcodephi-debug-${abiSuffix}.apk")
+                if (apkVersionTag) {
+                    outputFileName = new File("termux-app_${apkVersionTag}_${abiSuffix}.apk")
+                } else {
+                    outputFileName = new File("termux-rafcodephi-debug-${abiSuffix}.apk")
+                }
             } else if (variant.buildType.name == "release") {
-                outputFileName = apkVersionTag
-                    ? new File("termux-app_${apkVersionTag}_${abiSuffix}.apk")
-                    : new File("termux-rafcodephi-release-${abiSuffix}.apk")
+                if (apkVersionTag) {
+                    outputFileName = new File("termux-app_${apkVersionTag}_${abiSuffix}.apk")
+                } else {
+                    outputFileName = new File("termux-rafcodephi-release-${abiSuffix}.apk")
+                }
             }
         }
     }
