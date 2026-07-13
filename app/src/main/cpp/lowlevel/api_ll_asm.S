@@ -118,7 +118,7 @@ api_ll_state_update:
     orr     w5, w2, w1, lsl #16   /* w5 = C:H packed */
     eor     x6, x6, x5            /* fnv ^= C:H */
     movz    x5, #0x01B3
-    movk    x5, #0x0001, lsl #16  /* FNV prime low 32 */
+    movk    x5, #0x0001, lsl #32  /* FNV prime: 0x100000001B3 */
     mul     x6, x6, x5            /* fnv *= FNV_PRIME (low 64-bit) */
 
     /* Store back */
@@ -151,19 +151,34 @@ api_ll_neon_xor_fold:
     vmov.i8 q0, #0              @ acc = 0
 .L_arm_xf32:
     cmp     r1, #32
-    blt     .L_arm_xf_tail
-    vld1.8  {d2, d3, d4, d5}, [r0]!  @ load 32 bytes
+    blt     .L_arm_xf16
+    vld1.8  {d2, d3, d4, d5}, [r0]!  @ load 32 bytes into q1+q2
     veor    q0, q0, q1
     veor    q0, q0, q2
     sub     r1, r1, #32
     b       .L_arm_xf32
-.L_arm_xf_tail:
-    @ fold q0 (128-bit) → r0 (32-bit)
-    vdup.32 d2, d0[0]
-    veor    d0, d0, d1          @ d0 ^= d1
+.L_arm_xf16:
+    cmp     r1, #16
+    blt     .L_arm_xf_fold
+    vld1.8  {d2, d3}, [r0]!    @ load 16 bytes into q1
+    veor    q0, q0, q1
+    sub     r1, r1, #16
+    b       .L_arm_xf16
+.L_arm_xf_fold:
+    @ fold q0 (128-bit) → 32-bit into r4 (r0 still points to tail bytes)
+    veor    d0, d0, d1          @ d0 ^= d1 (fold hi64 into lo64)
     vmov    r4, s0
-    vmov    r0, s1
-    eor     r0, r0, r4
+    vmov    r2, s1
+    eor     r4, r4, r2          @ r4 = 32-bit XOR from NEON lanes
+    @ scalar tail: handle remaining 0-15 bytes
+    cbz     r1, .L_arm_xf_done
+.L_arm_xf_scalar:
+    ldrb    r2, [r0], #1
+    eor     r4, r4, r2
+    subs    r1, r1, #1
+    bne     .L_arm_xf_scalar
+.L_arm_xf_done:
+    mov     r0, r4
     pop     {r4, pc}
 .size api_ll_neon_xor_fold, . - api_ll_neon_xor_fold
 
