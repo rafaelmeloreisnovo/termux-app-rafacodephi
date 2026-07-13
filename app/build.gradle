@@ -261,6 +261,110 @@ tasks.register("generateRafcodephiBootstraps", Exec) {
     outputs.files(rafcodephiBootstrapZips)
 }
 
+def rafcodephiRewriteAbiMap = [
+    [arch: "aarch64", abi: "arm64-v8a"  ],
+    [arch: "arm",     abi: "armeabi-v7a"],
+    [arch: "i686",    abi: "x86"        ],
+    [arch: "x86_64",  abi: "x86_64"     ],
+]
+
+tasks.register("rewriteBootstraps") {
+    group = "build setup"
+    description = "Rewrite RAFCODEPHI bootstrap ZIPs via scripts/rewrite_bootstrap.py (4 ABIs)."
+    dependsOn("generateRafcodephiBootstraps")
+    outputs.files(rafcodephiBootstrapZips)
+    outputs.files(
+        file("${rootProject.projectDir}/build/reports/bootstrap-rewrite/bootstrap-elf-report.txt"),
+        file("${rootProject.projectDir}/build/reports/bootstrap-rewrite/bootstrap-text-rewrite-report.txt")
+    )
+    doLast {
+        def reportDir = file("${rootProject.projectDir}/build/reports/bootstrap-rewrite")
+        reportDir.mkdirs()
+        def workDir = file("${buildDir}/bootstrap-rewrite-work")
+        workDir.mkdirs()
+        rafcodephiRewriteAbiMap.each { e ->
+            project.exec {
+                workingDir rootProject.projectDir
+                commandLine "python3", "scripts/rewrite_bootstrap.py",
+                    "--input",        "app/src/main/cpp/bootstrap-${e.arch}.zip",
+                    "--output",       "app/src/main/cpp/rewritten-bootstrap-${e.arch}.zip",
+                    "--arch",         e.arch,
+                    "--abi",          e.abi,
+                    "--package-name", project.ext.bootstrapMetadataPackageName,
+                    "--prefix",       "/data/data/${project.ext.bootstrapMetadataPackageName}/files/usr",
+                    "--home",         "/data/data/${project.ext.bootstrapMetadataPackageName}/files/home",
+                    "--page-size",    project.ext.bootstrapRequiredPageSize,
+                    "--variant",      project.ext.packageVariant,
+                    "--workdir",      workDir.absolutePath,
+                    "--report-dir",   reportDir.absolutePath
+            }
+        }
+    }
+}
+
+tasks.register("validateRewrittenBootstraps") {
+    group = "verification"
+    description = "Validates BOOTSTRAP_INFO tokens and required entries in all four rewritten ZIPs."
+    dependsOn("rewriteBootstraps")
+    doLast {
+        def reportELF  = file("${rootProject.projectDir}/build/reports/bootstrap-rewrite/bootstrap-elf-report.txt")
+        def reportText = file("${rootProject.projectDir}/build/reports/bootstrap-rewrite/bootstrap-text-rewrite-report.txt")
+        if (!reportELF.exists() || reportELF.length() == 0L)
+            throw new GradleException("Missing or empty: ${reportELF}")
+        if (!reportText.exists() || reportText.length() == 0L)
+            throw new GradleException("Missing or empty: ${reportText}")
+
+        def legacyPrefix = "/data/data/com.termux/files/usr"
+        def requiredTokens = [
+            "BOOTSTRAP_KIND"            : "rewritten",
+            "BOOTSTRAP_RUNTIME_READY"   : "1",
+            "BOOTSTRAP_UTILS_READY"     : "1",
+            "BOOTSTRAP_APKMANAGER_READY": "1",
+            "BOOTSTRAP_SHELLBASH_READY" : "1",
+            "BOOTSTRAP_REWRITE_VERSION" : "2",
+            "TERMUX_PACKAGE_NAME"       : project.ext.bootstrapMetadataPackageName,
+        ]
+        def requiredEntries = ["bin/sh", "bin/pkg", "bin/apkmanager", "bin/shellbash", "BOOTSTRAP_INFO"]
+        def binaryExtensions = [".so", ".a", ".o", ".zip", ".deb", ".apk"] as Set
+
+        rafcodephiBootstrapZips.each { zipFile ->
+            if (!zipFile.exists())
+                throw new GradleException("Missing rewritten ZIP: ${zipFile}")
+            def zf = new java.util.zip.ZipFile(zipFile)
+            try {
+                def infoEntry = zf.getEntry("BOOTSTRAP_INFO")
+                if (!infoEntry) throw new GradleException("${zipFile.name}: missing BOOTSTRAP_INFO")
+                def tokens = [:]
+                zf.getInputStream(infoEntry).text.eachLine { line ->
+                    def idx = line.indexOf('=')
+                    if (idx > 0) tokens[line[0..<idx].trim()] = line[(idx + 1)..-1].trim()
+                }
+                requiredTokens.each { k, v ->
+                    if (tokens[k] != v)
+                        throw new GradleException("${zipFile.name}: expected ${k}=${v}, got '${tokens[k]}'")
+                }
+                requiredEntries.each { name ->
+                    if (!zf.getEntry(name))
+                        throw new GradleException("${zipFile.name}: missing required entry '${name}'")
+                }
+                def entries = zf.entries()
+                while (entries.hasMoreElements()) {
+                    def e = entries.nextElement()
+                    if (e.directory) continue
+                    if (binaryExtensions.any { ext -> e.name.endsWith(ext) }) continue
+                    def bytes = zf.getInputStream(e).bytes
+                    if (bytes.length >= 4 && bytes[0] == 0x7f && bytes[1] == 0x45 && bytes[2] == 0x4c && bytes[3] == 0x46) continue
+                    if (new String(bytes, "UTF-8").contains(legacyPrefix))
+                        throw new GradleException("${zipFile.name}!${e.name}: contains legacy prefix '${legacyPrefix}'")
+                }
+            } finally {
+                zf.close()
+            }
+        }
+        logger.lifecycle("validateRewrittenBootstraps: all checks passed.")
+    }
+}
+
 tasks.named("preBuild") {
     dependsOn(tasks.named("generateRafcodephiBootstraps"))
 }
