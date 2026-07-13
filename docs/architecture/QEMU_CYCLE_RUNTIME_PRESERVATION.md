@@ -1,5 +1,7 @@
 # QEMU Cycle Runtime Preservation Contract
 
+> Audited source: `rafaelmeloreisnovo/qemu_rafaelia` (`master`, QEMU version `10.2.50`).
+
 ## Purpose
 
 This contract prevents the freestanding extraction work from accidentally removing or replacing the cycle-based RAFAELIA runtime already integrated into `qemu_rafaelia`.
