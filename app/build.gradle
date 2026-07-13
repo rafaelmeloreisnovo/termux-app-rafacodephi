@@ -274,11 +274,11 @@ tasks.register("rewriteBootstraps") {
     dependsOn("generateRafcodephiBootstraps")
     outputs.files(rafcodephiBootstrapZips)
     outputs.files(
-        file("${buildDir}/reports/bootstrap-rewrite/bootstrap-elf-report.txt"),
-        file("${buildDir}/reports/bootstrap-rewrite/bootstrap-text-rewrite-report.txt")
+        file("${rootProject.projectDir}/build/reports/bootstrap-rewrite/bootstrap-elf-report.txt"),
+        file("${rootProject.projectDir}/build/reports/bootstrap-rewrite/bootstrap-text-rewrite-report.txt")
     )
     doLast {
-        def reportDir = file("${buildDir}/reports/bootstrap-rewrite")
+        def reportDir = file("${rootProject.projectDir}/build/reports/bootstrap-rewrite")
         reportDir.mkdirs()
         def workDir = file("${buildDir}/bootstrap-rewrite-work")
         workDir.mkdirs()
@@ -307,8 +307,8 @@ tasks.register("validateRewrittenBootstraps") {
     description = "Validates BOOTSTRAP_INFO tokens and required entries in all four rewritten ZIPs."
     dependsOn("rewriteBootstraps")
     doLast {
-        def reportELF  = file("${buildDir}/reports/bootstrap-rewrite/bootstrap-elf-report.txt")
-        def reportText = file("${buildDir}/reports/bootstrap-rewrite/bootstrap-text-rewrite-report.txt")
+        def reportELF  = file("${rootProject.projectDir}/build/reports/bootstrap-rewrite/bootstrap-elf-report.txt")
+        def reportText = file("${rootProject.projectDir}/build/reports/bootstrap-rewrite/bootstrap-text-rewrite-report.txt")
         if (!reportELF.exists() || reportELF.length() == 0L)
             throw new GradleException("Missing or empty: ${reportELF}")
         if (!reportText.exists() || reportText.length() == 0L)
