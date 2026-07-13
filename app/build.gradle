@@ -200,7 +200,6 @@ android {
         variant.outputs.all { output ->
             def abi = output.getFilter(com.android.build.OutputFile.ABI)
             def abiSuffix = abi ?: "universal"
-            def apkVersionTag = System.getenv("TERMUX_APK_VERSION_TAG") ?: ""
             if (variant.buildType.name == "debug") {
                 if (apkVersionTag) {
                     outputFileName = new File("termux-app_${apkVersionTag}_${abiSuffix}.apk")
