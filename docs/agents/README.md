@@ -7,6 +7,7 @@ Este diretório contém instruções específicas para Claude/Cloud, GitHub Copi
 Todos os agentes devem ler primeiro:
 
 - [`../architecture/GRADLE_ANDROIDX_QEMU_FREESTANDING_ARCHITECTURE.md`](../architecture/GRADLE_ANDROIDX_QEMU_FREESTANDING_ARCHITECTURE.md)
+- [`../architecture/QEMU_CYCLE_RUNTIME_PRESERVATION.md`](../architecture/QEMU_CYCLE_RUNTIME_PRESERVATION.md)
 - [`../audits/QEMU_ANDROIDX_RMR_CORRECTION_AUDIT.md`](../audits/QEMU_ANDROIDX_RMR_CORRECTION_AUDIT.md)
 - [`../../AGENTS.md`](../../AGENTS.md)
 - [`../STATUS.md`](../STATUS.md)
