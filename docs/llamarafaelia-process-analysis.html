@@ -1,4 +1,3 @@
-
 <title>llamaRafaelia — Análise de Processos</title>
 <style>
 /* ── tokens ── */
@@ -31,423 +30,1009 @@
   }
 }
 :root[data-theme="light"] {
-  --ink:      #0A0E17;
-  --paper:    #EEF1F6;
-  --signal:   #0FC7A0;
-  --pulse:    #8B7CF6;
-  --card:     #FFFFFF;
-  --border:   #C5CEDC;
-  --mid:      #D6DCEA;
-  --muted:    #68788E;
-  --signal-dim: rgba(15,199,160,.12);
-  --pulse-dim:  rgba(139,124,246,.12);
+  --ink:#0A0E17;--paper:#EEF1F6;--signal:#0FC7A0;--pulse:#8B7CF6;
+  --card:#FFFFFF;--border:#C5CEDC;--mid:#D6DCEA;--muted:#68788E;
+  --signal-dim:rgba(15,199,160,.12);--pulse-dim:rgba(139,124,246,.12);
 }
 :root[data-theme="dark"] {
-  --ink:      #DDE4F0;
-  --paper:    #080C14;
-  --signal:   #0EDBA8;
-  --pulse:    #A394FF;
-  --card:     #0F1826;
-  --border:   #1A2438;
-  --mid:      #141E30;
-  --muted:    #566070;
-  --signal-dim: rgba(14,219,168,.10);
-  --pulse-dim:  rgba(163,148,255,.10);
+  --ink:#DDE4F0;--paper:#080C14;--signal:#0EDBA8;--pulse:#A394FF;
+  --card:#0F1826;--border:#1A2438;--mid:#141E30;--muted:#566070;
+  --signal-dim:rgba(14,219,168,.10);--pulse-dim:rgba(163,148,255,.10);
 }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:1rem;line-height:1.65;padding:0 1.25rem 5rem}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+.page{max-width:860px;margin:0 auto}
+.site-header{border-bottom:1px solid var(--border);padding:3.5rem 0 2.5rem;margin-bottom:3rem}
+.header-eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--signal);margin-bottom:.6rem}
+.site-title{font-family:var(--mono);font-size:clamp(1.6rem,4vw,2.4rem);font-weight:700;line-height:1.15;letter-spacing:-.02em;color:var(--ink);text-wrap:balance;margin-bottom:.75rem}
+.site-tagline{font-family:var(--sans);font-size:1rem;color:var(--muted);max-width:560px;line-height:1.6}
+.theme-toggle{background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;padding:.3rem .7rem;cursor:pointer;margin-top:1.5rem;display:inline-block}
+.theme-toggle:hover{color:var(--signal);border-color:var(--signal)}
+.theme-toggle:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+.layers{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--border);margin-bottom:3.5rem}
+.layer{padding:1.1rem 1.25rem;border-right:1px solid var(--border)}
+.layer:last-child{border-right:none}
+.layer-num{font-family:var(--mono);font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem}
+.layer-name{font-family:var(--mono);font-size:.88rem;font-weight:700;color:var(--signal);margin-bottom:.25rem}
+.layer-desc{font-size:.8rem;color:var(--muted);line-height:1.5}
+@media(max-width:600px){.layers{grid-template-columns:1fr}.layer{border-right:none;border-bottom:1px solid var(--border)}.layer:last-child{border-bottom:none}}
+.proc-section{margin-bottom:3.5rem;padding-top:2.25rem;border-top:1px solid var(--border)}
+.section-tag{font-family:var(--mono);font-size:.67rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem}
+.section-title{font-family:var(--mono);font-size:1.18rem;font-weight:700;color:var(--ink);text-wrap:balance;margin-bottom:.5rem;letter-spacing:-.01em}
+.section-sub{font-size:.9rem;color:var(--muted);margin-bottom:1.4rem;max-width:620px}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem;margin:1rem 0 1.5rem;font-family:var(--mono);font-size:.78rem}
+.flow-node{background:var(--signal-dim);border:1px solid var(--signal);color:var(--ink);padding:.3rem .6rem;white-space:nowrap;letter-spacing:-.01em}
+.flow-node.omega{background:var(--pulse-dim);border-color:var(--pulse)}
+.flow-node.neutral{background:transparent;border-color:var(--border);color:var(--muted)}
+.flow-arrow{color:var(--muted);font-size:.85rem;user-select:none}
+.data-wrap{overflow-x:auto;margin:1rem 0 1.25rem}
+table{width:100%;border-collapse:collapse;font-size:.83rem;font-variant-numeric:tabular-nums}
+thead tr{border-bottom:2px solid var(--border)}
+thead th{font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:.5rem .75rem .5rem 0;font-weight:600}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+td{padding:.5rem .75rem .5rem 0;vertical-align:top;color:var(--ink);line-height:1.5}
+td code,th code{font-family:var(--mono);font-size:.8rem;background:var(--mid);padding:.1rem .3rem;letter-spacing:-.01em}
+.tag-signal{color:var(--signal);font-weight:600}
+.tag-pulse{color:var(--pulse);font-weight:600}
+code{font-family:var(--mono);font-size:.82em;background:var(--mid);padding:.08em .3em}
+.metric-row{display:flex;flex-wrap:wrap;gap:.6rem;margin:.75rem 0 1.25rem}
+.metric{border:1px solid var(--border);padding:.4rem .85rem;font-family:var(--mono);font-size:.78rem}
+.metric strong{display:block;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--signal);margin-bottom:.15rem}
+.cycle-wrap{display:flex;flex-direction:column;align-items:flex-start;gap:.75rem;margin:1.25rem 0}
+.cycle-svg-wrap{width:260px;height:260px;flex-shrink:0}
+.cycle-states{display:grid;grid-template-columns:1fr 1fr;gap:.4rem .75rem;font-size:.78rem;font-family:var(--mono);align-self:flex-start}
+.cycle-state{display:flex;align-items:baseline;gap:.4rem}
+.cs-sym{color:var(--signal);font-weight:700;font-size:.95rem;width:1.4rem;flex-shrink:0}
+.cs-name{color:var(--muted);font-size:.72rem;line-height:1.4}
+@media(min-width:540px){.cycle-wrap{flex-direction:row;align-items:center}}
+.zone-bar{display:flex;height:10px;border:1px solid var(--border);overflow:hidden;margin:.75rem 0 .5rem;max-width:640px}
+.zone-bar-seg{height:100%}
+.spec-list{list-style:none;margin:.75rem 0 1.25rem;display:grid;gap:.5rem}
+.spec-list li{display:grid;grid-template-columns:6rem 1fr;gap:.5rem 1rem;font-size:.85rem;border-top:1px solid var(--border);padding-top:.5rem}
+.spec-list li:first-child{border-top:none;padding-top:0}
+.spec-key{font-family:var(--mono);font-size:.72rem;color:var(--pulse);letter-spacing:.04em;padding-top:.1rem}
+.convergence{background:var(--card);border:1px solid var(--border);padding:1.5rem 1.5rem 1.75rem;margin:1rem 0 3rem}
+.convergence-title{font-family:var(--mono);font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--signal);margin-bottom:1rem}
+.conv-row{display:flex;align-items:center;flex-wrap:wrap;gap:.35rem;margin-bottom:.5rem;font-family:var(--mono);font-size:.75rem}
+.conv-row-label{font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:.75rem 0 .25rem}
+.conv-file{background:var(--mid);padding:.2rem .5rem;color:var(--ink);white-space:nowrap}
+.conv-tool{background:var(--signal-dim);border:1px solid var(--signal);padding:.2rem .5rem;color:var(--ink);white-space:nowrap}
+.conv-tool.omega{background:var(--pulse-dim);border-color:var(--pulse)}
+.conv-arr{color:var(--muted);font-size:.9rem}
+.conv-out{border:1px solid var(--border);padding:.2rem .5rem;color:var(--muted);white-space:nowrap}
+.conv-final{background:var(--signal);color:#000;font-weight:700;padding:.25rem .7rem;white-space:nowrap}
+footer{border-top:1px solid var(--border);padding-top:1.5rem;font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+@keyframes spin-dot{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.pulse-dot{animation:spin-dot 4s linear infinite;transform-origin:130px 130px}
 
-/* ── reset & base ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 16px; -webkit-font-smoothing: antialiased; }
-body {
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--sans);
-  font-size: 1rem;
-  line-height: 1.65;
-  padding: 0 1.25rem 5rem;
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
-}
-.page { max-width: 860px; margin: 0 auto; }
-.site-header { border-bottom: 1px solid var(--border); padding: 3.5rem 0 2.5rem; margin-bottom: 3rem; }
-.header-eyebrow { font-family: var(--mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--signal); margin-bottom: .6rem; }
-.site-title { font-family: var(--mono); font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 700; line-height: 1.15; letter-spacing: -.02em; color: var(--ink); text-wrap: balance; margin-bottom: .75rem; }
-.site-tagline { font-family: var(--sans); font-size: 1rem; color: var(--muted); max-width: 560px; line-height: 1.6; }
-.theme-toggle { background: none; border: 1px solid var(--border); color: var(--muted); font-family: var(--mono); font-size: .7rem; letter-spacing: .08em; padding: .3rem .7rem; cursor: pointer; margin-top: 1.5rem; display: inline-block; }
-.theme-toggle:hover { color: var(--signal); border-color: var(--signal); }
-.theme-toggle:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
-.layers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border: 1px solid var(--border); margin-bottom: 3.5rem; }
-.layer { padding: 1.1rem 1.25rem; border-right: 1px solid var(--border); }
-.layer:last-child { border-right: none; }
-.layer-num { font-family: var(--mono); font-size: .65rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: .35rem; }
-.layer-name { font-family: var(--mono); font-size: .88rem; font-weight: 700; color: var(--signal); margin-bottom: .25rem; }
-.layer-desc { font-size: .8rem; color: var(--muted); line-height: 1.5; }
-@media (max-width: 600px) { .layers { grid-template-columns: 1fr; } .layer { border-right: none; border-bottom: 1px solid var(--border); } .layer:last-child { border-bottom: none; } }
-.proc-section { margin-bottom: 3.5rem; padding-top: 2.25rem; border-top: 1px solid var(--border); }
-.section-tag { font-family: var(--mono); font-size: .67rem; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin-bottom: .35rem; }
-.section-title { font-family: var(--mono); font-size: 1.18rem; font-weight: 700; color: var(--ink); text-wrap: balance; margin-bottom: .5rem; letter-spacing: -.01em; }
-.section-sub { font-size: .9rem; color: var(--muted); margin-bottom: 1.4rem; max-width: 620px; }
-.flow { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin: 1rem 0 1.5rem; font-family: var(--mono); font-size: .78rem; }
-.flow-node { background: var(--signal-dim); border: 1px solid var(--signal); color: var(--ink); padding: .3rem .6rem; white-space: nowrap; letter-spacing: -.01em; }
-.flow-node.omega { background: var(--pulse-dim); border-color: var(--pulse); }
-.flow-node.neutral { background: transparent; border-color: var(--border); color: var(--muted); }
-.flow-arrow { color: var(--muted); font-size: .85rem; user-select: none; }
-.data-wrap { overflow-x: auto; margin: 1rem 0 1.25rem; }
-table { width: 100%; border-collapse: collapse; font-size: .83rem; font-variant-numeric: tabular-nums; }
-thead tr { border-bottom: 2px solid var(--border); }
-thead th { font-family: var(--mono); font-size: .65rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-align: left; padding: .5rem .75rem .5rem 0; font-weight: 600; }
-tbody tr { border-bottom: 1px solid var(--border); }
-tbody tr:last-child { border-bottom: none; }
-td { padding: .5rem .75rem .5rem 0; vertical-align: top; color: var(--ink); line-height: 1.5; }
-td code, th code { font-family: var(--mono); font-size: .8rem; background: var(--mid); padding: .1rem .3rem; letter-spacing: -.01em; }
-.tag-signal { color: var(--signal); font-weight: 600; }
-.tag-pulse  { color: var(--pulse);  font-weight: 600; }
-code { font-family: var(--mono); font-size: .82em; background: var(--mid); padding: .08em .3em; }
-.metric-row { display: flex; flex-wrap: wrap; gap: .6rem; margin: .75rem 0 1.25rem; }
-.metric { border: 1px solid var(--border); padding: .4rem .85rem; font-family: var(--mono); font-size: .78rem; }
-.metric strong { display: block; font-size: .65rem; letter-spacing: .1em; text-transform: uppercase; color: var(--signal); margin-bottom: .15rem; }
-.cycle-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: .75rem; margin: 1.25rem 0; }
-.cycle-svg-wrap { width: 260px; height: 260px; flex-shrink: 0; }
-.cycle-states { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem .75rem; font-size: .78rem; font-family: var(--mono); align-self: flex-start; }
-.cycle-state { display: flex; align-items: baseline; gap: .4rem; }
-.cs-sym { color: var(--signal); font-weight: 700; font-size: .95rem; width: 1.4rem; flex-shrink: 0; }
-.cs-name { color: var(--muted); font-size: .72rem; line-height: 1.4; }
-@media (min-width: 540px) { .cycle-wrap { flex-direction: row; align-items: center; } }
-.zone-bar { display: flex; height: 10px; border: 1px solid var(--border); overflow: hidden; margin: .75rem 0 .5rem; max-width: 640px; }
-.zone-bar-seg { height: 100%; }
-.spec-list { list-style: none; margin: .75rem 0 1.25rem; display: grid; gap: .5rem; }
-.spec-list li { display: grid; grid-template-columns: 6rem 1fr; gap: .5rem 1rem; font-size: .85rem; border-top: 1px solid var(--border); padding-top: .5rem; }
-.spec-list li:first-child { border-top: none; padding-top: 0; }
-.spec-key { font-family: var(--mono); font-size: .72rem; color: var(--pulse); letter-spacing: .04em; padding-top: .1rem; }
-.convergence { background: var(--card); border: 1px solid var(--border); padding: 1.5rem 1.5rem 1.75rem; margin: 1rem 0 3rem; }
-.convergence-title { font-family: var(--mono); font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: var(--signal); margin-bottom: 1rem; }
-.conv-row { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; margin-bottom: .5rem; font-family: var(--mono); font-size: .75rem; }
-.conv-file { background: var(--mid); padding: .2rem .5rem; color: var(--ink); white-space: nowrap; }
-.conv-tool { background: var(--signal-dim); border: 1px solid var(--signal); padding: .2rem .5rem; color: var(--ink); white-space: nowrap; }
-.conv-tool.omega { background: var(--pulse-dim); border-color: var(--pulse); }
-.conv-arr { color: var(--muted); font-size: .9rem; }
-.conv-final { background: var(--signal); color: #000; font-weight: 700; padding: .25rem .7rem; white-space: nowrap; }
-footer { border-top: 1px solid var(--border); padding-top: 1.5rem; font-family: var(--mono); font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
-.pulse-dot { animation: spin-dot 4s linear infinite; transform-origin: 130px 130px; }
-@keyframes spin-dot { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+/* ── pyramid ── */
+.pyramid-wrap{margin:1.25rem 0 1.75rem}
+.pyramid-level{display:grid;grid-template-columns:2.5rem 1fr auto;gap:0 1rem;align-items:start;border-left:3px solid var(--border);padding:.55rem .75rem .55rem 1rem;margin-bottom:.35rem;font-size:.82rem;position:relative}
+.pyramid-level.lv0{border-left-color:var(--muted)}
+.pyramid-level.lv1{border-left-color:#4BA8E8}
+.pyramid-level.lv2{border-left-color:#5CD8B8}
+.pyramid-level.lv3{border-left-color:var(--signal)}
+.pyramid-level.lv4{border-left-color:#B36CF6}
+.pyramid-level.lv5{border-left-color:var(--pulse);background:var(--pulse-dim)}
+.pyr-n{font-family:var(--mono);font-size:.7rem;color:var(--muted);padding-top:.1rem}
+.pyr-body strong{font-family:var(--mono);font-size:.85rem;display:block;margin-bottom:.1rem}
+.pyr-body span{color:var(--muted);font-size:.79rem}
+.pyr-delta{font-family:var(--mono);font-size:.7rem;color:var(--pulse);white-space:nowrap;padding-top:.15rem}
+
+/* ── code block ── */
+.code-block{font-family:var(--mono);font-size:.76rem;border:1px solid var(--border);background:var(--card);padding:.85rem 1rem;margin:.75rem 0 1rem;overflow-x:auto;line-height:1.7;white-space:pre}
+.code-block .cm{color:var(--muted)}
+.code-block .ck{color:var(--signal)}
+.code-block .cv{color:var(--pulse)}
+
+/* ── formula box ── */
+.formula{font-family:var(--mono);font-size:.82rem;background:var(--mid);border-left:3px solid var(--signal);padding:.5rem .85rem;margin:.75rem 0;display:inline-block}
+
+/* ── def list ── */
+.def-grid{display:grid;grid-template-columns:auto 1fr;gap:.3rem 1.25rem;font-size:.83rem;margin:.75rem 0 1.25rem}
+.def-grid dt{font-family:var(--mono);font-size:.78rem;color:var(--signal);white-space:nowrap;padding-top:.05rem}
+.def-grid dd{color:var(--ink);border-bottom:1px solid var(--border);padding-bottom:.3rem;margin-bottom:.05rem}
+
+/* ── note ── */
+.note{font-size:.82rem;color:var(--muted);margin-top:.5rem}
+.note code{font-size:.8rem}
+
+/* ── toc ── */
+.toc{border:1px solid var(--border);padding:1rem 1.25rem;margin-bottom:2.5rem;font-size:.82rem}
+.toc-title{font-family:var(--mono);font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem}
+.toc-list{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.25rem .75rem}
+.toc-list a{color:var(--muted);text-decoration:none;font-family:var(--mono);font-size:.75rem}
+.toc-list a:hover{color:var(--signal)}
+.toc-list .tl-tag{color:var(--signal);margin-right:.35rem}
 </style>
 
 <div class="page">
-  <header class="site-header">
-    <div class="header-eyebrow">LLM Inference · C/C++ · rmrCti · AArch64</div>
-    <h1 class="site-title">llamaRafaelia<br>Análise de Processos</h1>
-    <p class="site-tagline">Mapa técnico de todos os processos executáveis — da ingestão de conversas até a inferência com memória contextual, passando pelo núcleo bare-metal e o pipeline de curadoria Omega.</p>
-    <button class="theme-toggle" onclick="(function(){var r=document.documentElement,t=r.getAttribute('data-theme');r.setAttribute('data-theme',t==='dark'?'light':'dark')})()">toggle theme</button>
-  </header>
 
-  <div class="layers" role="region" aria-label="Arquitetura em três camadas">
-    <div class="layer"><div class="layer-num">Camada 1</div><div class="layer-name">llama.cpp</div><div class="layer-desc">Motor de inferência LLM em C/C++. Build via CMake. Backends: CPU, CUDA, ROCm, MUSA, CANN.</div></div>
-    <div class="layer"><div class="layer-num">Camada 2</div><div class="layer-name">CTI Memory</div><div class="layer-desc">Integração de memória contextual em <code>common/cti_memory.*</code>. Recupera conversas passadas durante inferência.</div></div>
-    <div class="layer"><div class="layer-num">Camada 3</div><div class="layer-name">rmrCti/</div><div class="layer-desc">Laboratório Rafael: scan, métricas, curadoria, navegação Omega, núcleo bare-metal AArch64.</div></div>
+<!-- HEADER -->
+<header class="site-header">
+  <div class="header-eyebrow">LLM Inference · C/C++ · rmrCti · AArch64 · v2 — expansão máxima</div>
+  <h1 class="site-title">llamaRafaelia<br>Análise de Processos</h1>
+  <p class="site-tagline">Mapa técnico completo de todos os processos executáveis — da ingestão de conversas até a inferência com memória contextual, passando pelo núcleo bare-metal, pipeline de curadoria Omega, TRIAD Engine e exportação Android.</p>
+  <button class="theme-toggle" onclick="(function(){var r=document.documentElement,t=r.getAttribute('data-theme');r.setAttribute('data-theme',t==='dark'?'light':'dark')})()">toggle theme</button>
+</header>
+
+<!-- TOC -->
+<nav class="toc" aria-label="Índice">
+  <div class="toc-title">Índice de seções</div>
+  <ul class="toc-list">
+    <li><a href="#sec-0"><span class="tl-tag">§0</span>Pirâmide</a></li>
+    <li><a href="#sec-a"><span class="tl-tag">A</span>CTI Scan</a></li>
+    <li><a href="#sec-b"><span class="tl-tag">B</span>NeuroMetrics (29 campos)</a></li>
+    <li><a href="#sec-c"><span class="tl-tag">C</span>Omega Forest (5 caminhos)</a></li>
+    <li><a href="#sec-d"><span class="tl-tag">D</span>Rankings e Navegação</a></li>
+    <li><a href="#sec-e"><span class="tl-tag">E</span>Export Android</a></li>
+    <li><a href="#sec-f"><span class="tl-tag">F</span>rf_core Bare-Metal</a></li>
+    <li><a href="#sec-g"><span class="tl-tag">G</span>BitStack World Model</a></li>
+    <li><a href="#sec-h"><span class="tl-tag">H</span>GBS Console</a></li>
+    <li><a href="#sec-i"><span class="tl-tag">I</span>Triad Engine</a></li>
+    <li><a href="#sec-j"><span class="tl-tag">J</span>Utilitários</a></li>
+    <li><a href="#sec-k"><span class="tl-tag">K</span>CTI Memory + LLM</a></li>
+    <li><a href="#sec-conv"><span class="tl-tag">∞</span>Pipeline Completo</a></li>
+  </ul>
+</nav>
+
+<!-- THREE LAYERS -->
+<div class="layers" role="region" aria-label="Arquitetura em três camadas">
+  <div class="layer">
+    <div class="layer-num">Camada 1</div>
+    <div class="layer-name">llama.cpp</div>
+    <div class="layer-desc">Motor de inferência LLM em C/C++. Build via CMake. Backends: CPU, CUDA, ROCm, MUSA, CANN.</div>
+  </div>
+  <div class="layer">
+    <div class="layer-num">Camada 2</div>
+    <div class="layer-name">CTI Memory</div>
+    <div class="layer-desc">Integração de memória contextual em <code>common/cti_memory.*</code>. Recupera conversas passadas durante inferência com <code>--cti-memory-*</code>.</div>
+  </div>
+  <div class="layer">
+    <div class="layer-num">Camada 3</div>
+    <div class="layer-name">rmrCti/</div>
+    <div class="layer-desc">Laboratório Rafael: scan, métricas, curadoria, navegação Omega, núcleo bare-metal AArch64, Triad Engine, GBS Console.</div>
+  </div>
+</div>
+
+
+<!-- §0: PIRÂMIDE -->
+<section class="proc-section" aria-labelledby="sec-0">
+  <div class="section-tag">§0 · Framework Conceitual</div>
+  <h2 class="section-title" id="sec-0">A Pirâmide — excelência × operacional × eficiência × eficácia</h2>
+  <p class="section-sub">Meta-estrutura do sistema: cada camada consome integralmente a anterior. A profundidade ∆ cresce como fatorial × potência de 2 — o limite é o silício.</p>
+
+  <div class="formula">
+    excelência × operacional × eficiência × eficácia<br>
+    → executivo × cognitivo × evolutivo<br>
+    ^ ∆ⁿ + (2ⁿ × ∆)&nbsp;&nbsp;&nbsp;onde ∆(N) = N! × 2ᴺ<br>
+    Restrição: N+F[N(1+Nᴺ)&gt;0] — cada nível existe somente se o anterior não for vazio
   </div>
 
-  <section class="proc-section" aria-labelledby="sec-a">
-    <div class="section-tag">A · Ingestão de Dados</div>
-    <h2 class="section-title" id="sec-a">CTI Scan — Pipeline de Entrada</h2>
-    <p class="section-sub">Converte exportações de conversas (ChatGPT/Claude) em artefatos JSONL estruturados para busca e análise.</p>
-    <div class="flow" role="img" aria-label="Fluxo de ingestão">
-      <span class="flow-node neutral">conversations.json</span><span class="flow-arrow">→</span>
-      <span class="flow-node">omega_json_reconstruct</span><span class="flow-arrow">→</span>
-      <span class="flow-node neutral">omega_objs.jsonl</span><span class="flow-arrow">→</span>
-      <span class="flow-node">omega_extract_msgs.py</span><span class="flow-arrow">→</span>
-      <span class="flow-node neutral">omega_msgs.jsonl</span>
+  <div class="pyramid-wrap" role="list" aria-label="Níveis da pirâmide">
+    <div class="pyramid-level lv0" role="listitem">
+      <div class="pyr-n">N=0</div>
+      <div class="pyr-body"><strong>Matéria — BitStack</strong><span>nibbles/bytes · <code>struct BitStack {u8 buf[CAP]; u32 w; u32 records}</code> · base imutável append-only</span></div>
+      <div class="pyr-delta">∆(0)=1</div>
     </div>
-    <div class="data-wrap"><table>
-      <thead><tr><th>Processo</th><th>Tipo</th><th>Entrada</th><th>Saída</th><th>Nota</th></tr></thead>
-      <tbody>
-        <tr><td><code>omega_json_reconstruct</code></td><td>C binário</td><td>export JSON (zip/raw)</td><td><code>omega_objs.jsonl</code></td><td>Streaming, com <code>--progress</code></td></tr>
-        <tr><td><code>omega_extract_msgs.py</code></td><td>Python</td><td><code>omega_objs.jsonl</code></td><td><code>omega_msgs.jsonl</code></td><td>Flag <code>--in_objs</code> / <code>--out</code></td></tr>
-        <tr><td><code>rafa_cti_scan.c</code></td><td>C streaming</td><td>arquivo grande / dump</td><td>JSONL append-only, CSV opcional</td><td>Sem descompressão</td></tr>
-      </tbody>
-    </table></div>
-    <p style="font-size:.82rem;color:var(--muted)"><code>omega_msgs.jsonl</code> é o índice central de busca — todos os processos posteriores dependem dele.</p>
-  </section>
+    <div class="pyramid-level lv1" role="listitem">
+      <div class="pyr-n">N=1</div>
+      <div class="pyr-body"><strong>CTI Scan — Ingestão</strong><span>streaming C · JSONL append-only · IC / PP / CV por chunk · out.bitstack.jsonl</span></div>
+      <div class="pyr-delta">∆(1)=2</div>
+    </div>
+    <div class="pyramid-level lv2" role="listitem">
+      <div class="pyr-n">N=2</div>
+      <div class="pyr-body"><strong>NeuroMetrics — 29 campos / NEON</strong><span>omega_neuro_full.c · 42 atratores via omega_point mod 42 · zone_stats · zones.index</span></div>
+      <div class="pyr-delta">∆(2)=8</div>
+    </div>
+    <div class="pyramid-level lv3" role="listitem">
+      <div class="pyr-n">N=3</div>
+      <div class="pyr-body"><strong>Omega Forest — 5 caminhos GF(2⁸)</strong><span>42-attractor topology · weight=IC_adj×PP_adj×(1−decay) · forest.jsonl</span></div>
+      <div class="pyr-delta">∆(3)=48</div>
+    </div>
+    <div class="pyramid-level lv4" role="listitem">
+      <div class="pyr-n">N=4</div>
+      <div class="pyr-body"><strong>Rankings + TRIAD + TEXTURE10</strong><span>rank multi-dimensional · ΔP=P(stable|peaks)−P(stable|¬peaks) · 10×10 bit grid · love_guard</span></div>
+      <div class="pyr-delta">∆(4)=384</div>
+    </div>
+    <div class="pyramid-level lv5" role="listitem">
+      <div class="pyr-n">N=5</div>
+      <div class="pyr-body"><strong>CTI Memory → llama-server (Ápice)</strong><span>score=base+forest_bonus+frames_bonus · injeção de contexto · namespace cti_memory::{config,hit,result}</span></div>
+      <div class="pyr-delta">∆(5)=3840</div>
+    </div>
+  </div>
 
-  <section class="proc-section" aria-labelledby="sec-b">
-    <div class="section-tag">B · Análise e Métricas por Zona</div>
-    <h2 class="section-title" id="sec-b">NeuroMetrics — Classificação por Blocos</h2>
-    <p class="section-sub">O corpus é dividido em zonas de 8 MB. Cada bloco recebe 29 campos de NeuroMetrics, calculados em C com NEON (ARM) e fallback escalar.</p>
-    <div class="metric-row">
-      <div class="metric"><strong>IC</strong>Index Complexity<br><span style="color:var(--muted);font-size:.7rem">densidade / complexidade do bloco</span></div>
-      <div class="metric"><strong>PP</strong>Pattern Probability<br><span style="color:var(--muted);font-size:.7rem">probabilidade de padrão recorrente</span></div>
-      <div class="metric"><strong>CV</strong>Coefficient of Variation<br><span style="color:var(--muted);font-size:.7rem">variância relativa entre blocos</span></div>
-    </div>
-    <div style="font-family:var(--mono);font-size:.68rem;color:var(--muted);margin-bottom:.3rem">Distribuição de zonas (323.509 referências totais)</div>
-    <div class="zone-bar" role="img" aria-label="Zona 0 representa 98,81% de todas as referências">
-      <div class="zone-bar-seg" style="width:98.81%;background:var(--signal);opacity:.7"></div>
-      <div class="zone-bar-seg" style="width:1.19%;background:var(--pulse);opacity:.7"></div>
-    </div>
-    <div style="font-size:.72rem;color:var(--muted);font-family:var(--mono);margin-bottom:1.25rem">
-      <span style="color:var(--signal)">■</span> zona 0 — 323.493 refs (MIXED/TEXT_HUMAN) &nbsp;
-      <span style="color:var(--pulse)">■</span> zonas 1–88 — 1.016 refs (clusters especializados)
-    </div>
-    <div class="data-wrap"><table>
+  <p class="note">Analogia executiva: excelência=cobertura total dos 29 campos; operacional=cada processo executa (freestanding, sem libc); eficiência=NEON+scalar fallback, 4096-bit branchless; eficácia=contexto rico no LLM. ∆ total: 3840 + 2⁵×384 = 16128 unidades de profundidade.</p>
+</section>
+
+
+<!-- A: INGESTÃO -->
+<section class="proc-section" aria-labelledby="sec-a">
+  <div class="section-tag">A · Ingestão de Dados</div>
+  <h2 class="section-title" id="sec-a">CTI Scan — Pipeline de Entrada</h2>
+  <p class="section-sub">Converte exportações de conversas (ChatGPT/Claude) em artefatos JSONL estruturados para busca e análise. Entrada: ZIP ou JSON raw de exportação. Saída: <code>omega_msgs.jsonl</code> — índice central de busca para todos os processos posteriores.</p>
+
+  <div class="flow" role="img" aria-label="Fluxo de ingestão">
+    <span class="flow-node neutral">conversations.json</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node">omega_json_reconstruct</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node neutral">omega_objs.jsonl</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node">omega_extract_msgs.py</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node neutral">omega_msgs.jsonl</span>
+    <span class="flow-arrow">+</span>
+    <span class="flow-node">rafa_cti_scan.c</span>
+  </div>
+
+  <div class="data-wrap">
+    <table>
+      <thead><tr><th>Processo</th><th>Tipo</th><th>Entrada</th><th>Saída</th><th>Flags / Notas</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>omega_json_reconstruct</code></td>
+          <td>C binário</td>
+          <td>export JSON (ZIP ou raw)</td>
+          <td><code>omega_objs.jsonl</code></td>
+          <td><code>--progress</code> — streaming, sem carregar todo o JSON em memória</td>
+        </tr>
+        <tr>
+          <td><code>omega_extract_msgs.py</code></td>
+          <td>Python</td>
+          <td><code>omega_objs.jsonl</code></td>
+          <td><code>omega_msgs.jsonl</code></td>
+          <td><code>--in_objs &lt;path&gt;</code> <code>--out &lt;path&gt;</code> — extrai mensagens individuais por conversa</td>
+        </tr>
+        <tr>
+          <td><code>rafa_cti_scan.c</code></td>
+          <td>C streaming</td>
+          <td>arquivo grande / dump binário</td>
+          <td>JSONL append-only + CSV opcional (<code>--csv</code>)</td>
+          <td>Sem descompressão — lê bytes diretamente; campos IC/PP/CV por bloco</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p style="font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-bottom:.4rem">Esquema omega_msgs.jsonl — um objeto JSON por linha:</p>
+  <div class="code-block"><span class="cm">// Cada linha é uma mensagem individual de uma conversa</span>
+<span class="ck">{</span>
+  <span class="cv">"conv_i"</span>:   42,          <span class="cm">// índice da conversa (chave primária de busca)</span>
+  <span class="cv">"msg_i"</span>:    7,           <span class="cm">// índice da mensagem dentro da conversa</span>
+  <span class="cv">"role"</span>:     "assistant", <span class="cm">// "user" | "assistant" | "tool"</span>
+  <span class="cv">"model"</span>:    "gpt-4o",    <span class="cm">// modelo que gerou a resposta</span>
+  <span class="cv">"content"</span>:  "...",       <span class="cm">// texto completo da mensagem (campo buscado por omega_search_fast)</span>
+  <span class="cv">"ts"</span>:       1769000000  <span class="cm">// timestamp Unix</span>
+<span class="ck">}</span></div>
+
+  <p class="note"><code>omega_msgs.jsonl</code> é o índice central — omega_search_fast faz busca substring case-insensitive neste campo <code>content</code>. Sem este arquivo, CTI Memory entra em modo <code>"unavailable"</code>.</p>
+</section>
+
+
+<!-- B: MÉTRICAS -->
+<section class="proc-section" aria-labelledby="sec-b">
+  <div class="section-tag">B · Análise e Métricas por Zona</div>
+  <h2 class="section-title" id="sec-b">NeuroMetrics — 29 Campos por Chunk (NEON + Scalar)</h2>
+  <p class="section-sub">O corpus é dividido em zonas de 8 MB (<code>RAF_CHUNK = 65536</code> bytes por bloco de análise). Cada bloco recebe 29 campos calculados em C com NEON (ARM) e fallback escalar. Constante toroidal: <code>RAF_ATTRACTORS = 42</code>. Entropia esperada: <code>RAF_ENT_EXPECTED = 4500</code> (milli-bits). Dimensão fractal: <code>RAF_FRACTAL_DIM = 1347</code> (D_KY × 1000).</p>
+
+  <div class="metric-row">
+    <div class="metric"><strong>IC</strong>Index Complexity<br><span style="color:var(--muted);font-size:.7rem">densidade e complexidade estrutural do bloco</span></div>
+    <div class="metric"><strong>PP</strong>Pattern Probability<br><span style="color:var(--muted);font-size:.7rem">probabilidade de padrão recorrente</span></div>
+    <div class="metric"><strong>CV</strong>Coefficient of Variation<br><span style="color:var(--muted);font-size:.7rem">variância relativa entre blocos da mesma zona</span></div>
+    <div class="metric"><strong>PP_adj</strong>PP × (1 − DF)<br><span style="color:var(--muted);font-size:.7rem">PP ajustado por decay factor de antiguidade</span></div>
+    <div class="metric"><strong>IC_adj</strong>IC / √msgs<br><span style="color:var(--muted);font-size:.7rem">IC normalizado por volume de mensagens</span></div>
+  </div>
+
+  <!-- zone bar -->
+  <div style="font-family:var(--mono);font-size:.68rem;color:var(--muted);margin-bottom:.3rem">Distribuição de zonas (323.509 referências totais)</div>
+  <div class="zone-bar" role="img" aria-label="Zona 0 representa 98,81% de todas as referências">
+    <div class="zone-bar-seg" style="width:98.81%;background:var(--signal);opacity:.7"></div>
+    <div class="zone-bar-seg" style="width:1.19%;background:var(--pulse);opacity:.7"></div>
+  </div>
+  <div style="font-size:.72rem;color:var(--muted);font-family:var(--mono);margin-bottom:1.25rem">
+    <span style="color:var(--signal)">■</span> zona 0 — 323.493 refs (classe MIXED/TEXT_HUMAN — texto misto humano+assistente, padrão dominante) &nbsp;
+    <span style="color:var(--pulse)">■</span> zonas 1–88 — 1.016 refs (clusters especializados: código, JSON puro, binário)
+  </div>
+
+  <p style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem">Classes de zona: <strong>TEXT_HUMAN</strong> = texto de linguagem natural dominante; <strong>MIXED</strong> = alternância código/texto; <strong>CODE</strong> = maior densidade de <code>{}:,</code>; <strong>BINARY</strong> = hibit &gt; 40%. <code>ones_ratio</code> = fração de bits 1 no bloco (0–1.0). <code>entropia</code> = Shannon entropy em bits (0–8).</p>
+
+  <p style="font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-bottom:.4rem">Todos os 29 campos de <code>typedef struct NeuroMetrics</code> (omega_neuro_full.c):</p>
+  <div class="data-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Campo</th><th>Fórmula / Fonte</th><th>Analogia / Semântica</th></tr></thead>
+      <tbody>
+        <tr><td><code>01</code></td><td><code>s_syn</code></td><td>count(bytes ≥ 128)</td><td>Massa simbólica / Unicode — volume de caracteres não-ASCII</td></tr>
+        <tr><td><code>02</code></td><td><code>s_emerg</code></td><td>bytes totais do chunk</td><td>Volume emergente — tamanho bruto do bloco</td></tr>
+        <tr><td><code>03</code></td><td><code>s_latent</code></td><td>tokens únicos FNV1a-64 com ≥ 4 chars (via HashSet)</td><td>Tokens latentes — diversidade vocabular do bloco</td></tr>
+        <tr><td><code>04</code></td><td><code>entropy_raw</code></td><td>Shannon entropy × 1000 (0–8000)</td><td>Entropia em milli-bits — complexidade informacional</td></tr>
+        <tr><td><code>05</code></td><td><code>burst_factor</code></td><td>count(espaços acumulados)</td><td>Densidade de burst — espaços como proxy de separadores léxicos</td></tr>
+        <tr><td><code>06</code></td><td><code>iso_ratio</code></td><td>bytes_únicos / 256 × 1000</td><td>Isolamento — quão distribuídos estão os byte-types (0–1000)</td></tr>
+        <tr><td><code>07</code></td><td><code>technical_d</code></td><td>count(<code>"</code>) + count(<code>:</code>) + count(<code>,</code>)</td><td>Densidade JSON/técnica — proxy de estrutura de dados no texto</td></tr>
+        <tr><td><code>08</code></td><td><code>noise_floor</code></td><td>hibit × 1000 / bytes</td><td>Ruído simbólico ‰ — proporção de bytes high-bit (≥128)</td></tr>
+        <tr><td><code>09</code></td><td><code>alpha_wave</code></td><td>count(<code>\n</code>) newlines</td><td>Onda estrutural de linhas — granularidade de parágrafo</td></tr>
+        <tr><td><code>10</code></td><td><code>beta_wave</code></td><td>count(<code>{</code>) + count(<code>}</code>) braces</td><td>Onda estrutural JSON — profundidade de aninhamento</td></tr>
+        <tr><td><code>11</code></td><td><code>phi_integral</code></td><td>(1 − H/8) × (s_latent/bytes) Q16</td><td>Integral ética φ — equilíbrio entre clareza e diversidade vocabular</td></tr>
+        <tr><td><code>12</code></td><td><code>k_constant</code></td><td>literal <strong>42</strong> (invariante)</td><td>Constante toroidal RAFAELIA — nunca varia; marca de identidade do sistema</td></tr>
+        <tr><td><code>13</code></td><td><code>sync_clock</code></td><td>ticks desde _start</td><td>Relógio de sincronização — posição temporal do chunk no stream</td></tr>
+        <tr><td><code>14</code></td><td><code>semantic_gap</code></td><td>|H_cur − H_prev| (delta de entropia)</td><td>Salto semântico entre chunks consecutivos — transição de tópico</td></tr>
+        <tr><td><code>15</code></td><td><code>logic_depth</code></td><td>transition_energy (energia de transição local)</td><td>Profundidade lógica — mudanças abruptas de byte-class dentro do chunk</td></tr>
+        <tr><td><code>16</code></td><td><code>token_ratio</code></td><td>count(<code>"</code>) × 1000 / bytes</td><td>Razão de tokenização — densidade de delimitadores de string</td></tr>
+        <tr><td><code>17</code></td><td><code>bit_depth_10</code></td><td>ones × 1000 / (bytes × 8)</td><td>Profundidade de bits — fração de bits 1 (= ones_ratio × 1000)</td></tr>
+        <tr><td><code>18</code></td><td><code>context_span</code></td><td>nl × 1000 / bytes</td><td>Amplitude de contexto — linhas por byte; chunks densos têm context_span baixo</td></tr>
+        <tr><td><code>19</code></td><td><code>feedback_loop</code></td><td>hibit × 1000 / bytes (snapshot)</td><td>Loop de feedback — mesmo numerador que noise_floor mas como snapshot (≠ acumulado)</td></tr>
+        <tr><td><code>20</code></td><td><code>neural_res</code></td><td>√(nl × brace) × 1000 / bytes</td><td>Ressonância neural — produto geométrico de onda-α × onda-β normalizado</td></tr>
+        <tr><td><code>21</code></td><td><code>cross_entropy</code></td><td>|H_cur − 4500| (desvio de RAF_ENT_EXPECTED)</td><td>Entropia cruzada — distância do ponto esperado de texto misto (4500 milli-bits)</td></tr>
+        <tr><td><code>22</code></td><td><code>weight_bias</code></td><td>hibit × 1000 / max(1, s_latent)</td><td>Peso por token — sinal non-ASCII por token único; alto em texto multilíngue</td></tr>
+        <tr><td><code>23</code></td><td><code>fractal_dim</code></td><td>literal <strong>1347</strong> (constante verificada)</td><td>Dimensão fractal D_KY × 1000 — constante topológica RAFAELIA</td></tr>
+        <tr><td><code>24</code></td><td><code>hamming_dist</code></td><td>XOR popcount(prev_chunk ↔ cur_chunk)</td><td>Distância de Hamming — bits que mudaram entre chunks consecutivos</td></tr>
+        <tr><td><code>25</code></td><td><code>kurtosis_val</code></td><td>(space_pm²) / max(1, nl_pm)</td><td>Curtose normalizada — concentração de espaços vs. quebras de linha</td></tr>
+        <tr><td><code>26</code></td><td><code>skewness_val</code></td><td>|count(<code>:</code>) − count(<code>,</code>)| × 1000 / bytes</td><td>Assimetria — desequilíbrio entre chaves e vírgulas (JSON vs. CSV)</td></tr>
+        <tr><td><code>27</code></td><td><code>chi_square</code></td><td>|H − 4500|² / 1000</td><td>χ² vs. entropia esperada — teste de aderência ao modelo de texto misto</td></tr>
+        <tr><td><code>28</code></td><td><code>p_value_est</code></td><td>1000 − clamp(χ²/100, 0, 1000)</td><td>p-valor estimado (‰) — 1000=perfeito ajuste, 0=total desvio</td></tr>
+        <tr><td><code>29</code></td><td><code>omega_point</code></td><td>(hibit + entropy_milli) <strong>mod 42</strong></td><td>Atrator toroidal — mapeamento de cada chunk a um dos 42 pontos fixos</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="data-wrap" style="margin-top:1.5rem">
+    <table>
       <thead><tr><th>Artefato</th><th>Conteúdo</th><th>Gerado por</th></tr></thead>
       <tbody>
         <tr><td><code>zones.index.txt</code></td><td>offset / bytes / ones_ratio / entropia / classe por zona</td><td><code>omega_neuro_full.c</code></td></tr>
         <tr><td><code>zone_stats.txt</code></td><td>IC_mean / PP_mean / CV_mean por zona</td><td><code>omega_neuro_full.c</code></td></tr>
-        <tr><td><code>zone_markov_edges.txt</code></td><td>transições entre zonas (cadeia de Markov)</td><td>pós-scan</td></tr>
-        <tr><td><code>zone_conv_streaks.txt</code></td><td>sequências contínuas por zona</td><td>pós-scan</td></tr>
-        <tr><td><code>omega_conv_stats.jsonl</code></td><td>IC / PP / CV por conversa</td><td><code>omega_neuro_full.c</code></td></tr>
-        <tr><td><code>omega_metrics_v3.jsonl</code></td><td>métricas completas v3 por chunk</td><td><code>omega_neuro_full.c</code></td></tr>
+        <tr><td><code>zone_markov_edges.txt</code></td><td>transições entre zonas — P(zona_j | zona_i) para todos os pares observados</td><td><code>omega_zone_metrics.c</code></td></tr>
+        <tr><td><code>zone_conv_streaks.txt</code></td><td>sequências contínuas por zona (streaks de conversas dentro da mesma zona)</td><td><code>omega_zone_metrics.c</code></td></tr>
+        <tr><td><code>omega_conv_stats.jsonl</code></td><td>IC / PP / CV por conversa (agregado)</td><td><code>omega_neuro_full.c</code></td></tr>
+        <tr><td><code>omega_metrics_v3.jsonl</code></td><td>todos os 29 campos NeuroMetrics por chunk (formato JSONL)</td><td><code>omega_neuro_full.c</code></td></tr>
       </tbody>
-    </table></div>
-  </section>
+    </table>
+  </div>
 
-  <section class="proc-section" aria-labelledby="sec-c">
-    <div class="section-tag">C · Curadoria e Classificação</div>
-    <h2 class="section-title" id="sec-c">Omega Forest — Floresta de 42 Atratores</h2>
-    <p class="section-sub">Classifica cada conversa num de 5 caminhos de valor usando o vetor [IC, PP, CV] + path de ausência. Gera <code>forest.jsonl</code> — base para navegação e ranking.</p>
-    <div class="flow">
-      <span class="flow-node neutral">omega_metrics_v3.jsonl</span><span class="flow-arrow">+</span>
-      <span class="flow-node neutral">omega_conv_stats.jsonl</span><span class="flow-arrow">→</span>
-      <span class="flow-node omega">omega_forest.c</span><span class="flow-arrow">→</span>
-      <span class="flow-node neutral">forest.jsonl</span>
-    </div>
-    <div class="data-wrap"><table>
-      <thead><tr><th>Caminho</th><th>Critério principal</th><th>Uso no ranking</th></tr></thead>
+  <p class="note">Invocação: <code>./omega_neuro_full omega_msgs.jsonl</code> — processa todos os chunks e emite os 6 artefatos acima. NEON path ativo em AArch64 (Termux/Android); fallback escalar ativo em x86.</p>
+</section>
+
+
+<!-- C: OMEGA FOREST -->
+<section class="proc-section" aria-labelledby="sec-c">
+  <div class="section-tag">C · Curadoria e Classificação</div>
+  <h2 class="section-title" id="sec-c">Omega Forest — 42 Atratores, 5 Caminhos</h2>
+  <p class="section-sub">Classifica cada conversa num dos 5 caminhos de valor usando o vetor [IC_adj, PP_adj, CV] projetado sobre a topologia toroidal de 42 atratores (GF(2⁸), polinômio redutor 0x1D). Gera <code>forest.jsonl</code> — base para navegação e ranking.</p>
+
+  <div class="flow">
+    <span class="flow-node neutral">omega_metrics_v3.jsonl</span>
+    <span class="flow-arrow">+</span>
+    <span class="flow-node neutral">omega_conv_stats.jsonl</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node omega">omega_forest.c</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node neutral">forest.jsonl</span>
+  </div>
+
+  <p style="font-size:.82rem;color:var(--muted);margin-bottom:.85rem"><strong>42 Atratores:</strong> <code>LB_ATTRACTORS = RAF_ATTRACTORS = 42</code> — conjunto |𝒜| de pontos fixos toroidais. Mapeamento por chunk: <code>omega_point = (hibit + entropy_milli) mod 42</code>. Campo invariante: <code>k_constant = 42</code> (nunca muda entre chunks). Topologia GF(2⁸) com polinômio redutor 0x1D (0x11D → 1D). Constantes espiral: <code>RAF_SPIRAL_Q16 = 56756</code>, <code>RAF_PHI_Q16 = 105965</code>.</p>
+
+  <div class="data-wrap">
+    <table>
+      <thead><tr><th>Valor</th><th>Caminho (enum)</th><th>Critério de classificação</th><th>Uso no ranking CTI</th></tr></thead>
       <tbody>
-        <tr><td><span class="tag-signal">URGENT</span></td><td>PP_adj alto — padrão com alta probabilidade e relevância imediata</td><td>bônus +1 no ranking CTI Memory</td></tr>
-        <tr><td><span class="tag-pulse">MENOSPREZADO</span></td><td>IC alto — bloco complexo com baixa atenção histórica</td><td>bônus de recuperação no ranking</td></tr>
-        <tr><td colspan="3" style="color:var(--muted);font-size:.78rem">+ 3 caminhos adicionais classificados internamente pelo <code>omega_forest</code></td></tr>
+        <tr>
+          <td><code>0</code></td>
+          <td><span class="tag-muted" style="color:var(--muted)">PROCESSUAL</span></td>
+          <td>Em processamento — IC e PP dentro da faixa média; valor potencial ainda latente</td>
+          <td>Sem bônus</td>
+        </tr>
+        <tr>
+          <td><code>1</code></td>
+          <td><span style="color:var(--muted)">VOID</span></td>
+          <td>Sem sinal de valor detectável — IC e PP abaixo do limiar mínimo</td>
+          <td>Sem bônus</td>
+        </tr>
+        <tr>
+          <td><code>2</code></td>
+          <td><span style="color:var(--muted)">FORGOTTEN</span></td>
+          <td>Valor ignorado/enterrado — IC presente mas acesso histórico muito baixo; não urgente</td>
+          <td>Sem bônus</td>
+        </tr>
+        <tr>
+          <td><code>3</code></td>
+          <td><span class="tag-pulse">MENOSPREZADO</span></td>
+          <td>IC alto, PP_adj abaixo de 0.8 — "ouro enterrado"; alta complexidade ainda não explorada</td>
+          <td>Bônus de recuperação: +0.5 no score (recupera conversas de alto IC)</td>
+        </tr>
+        <tr>
+          <td><code>4</code></td>
+          <td><span class="tag-signal">URGENT</span></td>
+          <td>PP_adj &gt; 0.8 — "produto maduro"; padrão de alto retorno imediato pronto para ação</td>
+          <td>Bônus de prioridade: <strong>+1</strong> no ranking CTI Memory</td>
+        </tr>
       </tbody>
-    </table></div>
-    <p style="font-size:.82rem;color:var(--muted)">Comando: <code>./omega_forest omega_metrics_v3.jsonl omega_conv_stats.jsonl &gt; forest.jsonl</code></p>
-  </section>
+    </table>
+  </div>
 
-  <section class="proc-section" aria-labelledby="sec-d">
-    <div class="section-tag">D · Navegação e Rankings</div>
-    <h2 class="section-title" id="sec-d">Omega — Sistema de Ranking e Browsing</h2>
-    <p class="section-sub">Camada de navegação sobre todos os artefatos de análise. CLI bash + TUI ncurses para exploração interativa.</p>
-    <div class="data-wrap"><table>
-      <thead><tr><th>Artefato</th><th>Dimensão de rank</th><th>Top entrada (exemplo)</th></tr></thead>
+  <p style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem"><strong>Fórmulas de ajuste:</strong></p>
+  <div class="formula">PP_adj = PP × (1.0 − DF) &nbsp;&nbsp;[DF = decay factor, antiguidade normalizada]<br>IC_adj = IC / √msgs &nbsp;&nbsp;[normalizado por volume de mensagens]<br>node.weight = IC_adj × PP_adj × (1 − decay)</div>
+
+  <p style="font-size:.82rem;color:var(--muted);margin-top:.75rem"><strong>path de ausência:</strong> conversas onde nenhuma métrica principal atinge o limiar mínimo — classificadas como VOID (path 1) e preservadas no forest.jsonl com <code>cluster = omega_point mod 42</code>.</p>
+
+  <p class="note">Execução: <code>./omega_forest omega_metrics_v3.jsonl omega_conv_stats.jsonl &gt; forest.jsonl</code></p>
+</section>
+
+
+<!-- D: NAVEGAÇÃO -->
+<section class="proc-section" aria-labelledby="sec-d">
+  <div class="section-tag">D · Navegação e Rankings</div>
+  <h2 class="section-title" id="sec-d">Omega — Sistema Multi-Dimensional de Ranking</h2>
+  <p class="section-sub">Cinco superfícies de rank cobrindo dimensões diferentes. CLI bash para acesso rápido e TUI ncurses para navegação interativa.</p>
+
+  <div class="data-wrap">
+    <table>
+      <thead><tr><th>Artefato</th><th>Fórmula / Dimensão</th><th>Exemplo de topo</th></tr></thead>
       <tbody>
-        <tr><td><code>omega_hot_rank.txt</code></td><td>densidade × bytes × msgs</td><td>density=914 — "Erro de Sintaxe Bash" (42.985 bytes)</td></tr>
-        <tr><td><code>omega_threads_rank.txt</code></td><td>profundidade de thread × msgs</td><td>threads com maior profundidade de ramificação</td></tr>
-        <tr><td><code>omega_cross_hot_rank.txt</code></td><td>msgs × tool_pct × modelo</td><td>2.896 msgs — modelo unknown; 2.181 — gpt-4o</td></tr>
-        <tr><td><code>omega_zone_rank.txt</code></td><td>AS × ZV × H por zona + evento</td><td>zona 53, off=452.984.832 — regime AS=1.668</td></tr>
-        <tr><td><code>omega_zone_conv_rank.txt</code></td><td>refs por zona</td><td>zona 0 → 323.493 refs (98,81%)</td></tr>
-        <tr><td><code>omega_metrics_abc.txt</code></td><td>ABC por massa de bytes de título</td><td>A: "Analisar pasta Google" — 26,3 MB</td></tr>
+        <tr>
+          <td><code>omega_hot_rank.txt</code></td>
+          <td>densidade × bytes × msgs (hotspot absoluto)</td>
+          <td>density=914 — "Erro de Sintaxe Bash" (42.985 bytes)</td>
+        </tr>
+        <tr>
+          <td><code>omega_threads_rank.txt</code></td>
+          <td>profundidade de ramificação × total de msgs por thread</td>
+          <td>threads com maior profundidade de branching (conversas longas e iterativas)</td>
+        </tr>
+        <tr>
+          <td><code>omega_cross_hot_rank.txt</code></td>
+          <td>msgs × tool_pct × modelo</td>
+          <td>2.896 msgs — modelo unknown; 2.181 — gpt-4o</td>
+        </tr>
+        <tr>
+          <td><code>omega_zone_rank.txt</code></td>
+          <td>ZV × H por zona + evento/regime</td>
+          <td>zona 53, off=452.984.832 — regime ZV=1.668</td>
+        </tr>
+        <tr>
+          <td><code>omega_zone_conv_rank.txt</code></td>
+          <td>refs por zona (distribuição)</td>
+          <td>zona 0 → 323.493 refs (98,81%)</td>
+        </tr>
+        <tr>
+          <td><code>omega_metrics_abc.txt</code></td>
+          <td>ABC por massa de bytes de título (A=top 20%, B=médio, C=cauda)</td>
+          <td>A: "Analisar pasta Google" — 26,3 MB</td>
+        </tr>
       </tbody>
-    </table></div>
-    <div class="flow" style="margin-top:1rem">
-      <span class="flow-node omega">omega (bash CLI)</span><span class="flow-arrow">→</span>
-      <span class="flow-node neutral">hot / threads / cross / zone</span><span class="flow-arrow">·</span>
-      <span class="flow-node omega">omega_nav.c (TUI)</span><span class="flow-arrow">→</span>
-      <span class="flow-node neutral">busca + navegação ncurses</span>
-    </div>
-  </section>
+    </table>
+  </div>
 
-  <section class="proc-section" aria-labelledby="sec-e">
-    <div class="section-tag">E · Export Android</div>
-    <h2 class="section-title" id="sec-e">Frames Export — Da Curadoria ao APK</h2>
-    <p class="section-sub">Fecha o elo entre a classificação Omega Forest e o consumo no app Android (<code>RafaeliaEngine.kt</code>). Seleciona os melhores URGENT (por PP_adj) e MENOSPREZADO (por IC).</p>
-    <div class="flow">
-      <span class="flow-node neutral">forest.jsonl</span><span class="flow-arrow">→</span>
-      <span class="flow-node omega">omega_frames_export.c</span><span class="flow-arrow">→</span>
-      <span class="flow-node neutral">frames_seed.json</span><span class="flow-arrow">→</span>
-      <span class="flow-node">update_frames.sh</span><span class="flow-arrow">→</span>
-      <span class="flow-node neutral">RafaeliaMiddleware/…/assets/</span><span class="flow-arrow">→</span>
-      <span class="flow-node omega">RafaeliaEngine.kt</span>
-    </div>
-  </section>
+  <p style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem"><strong>Definições das métricas de zona (omega_zone_metrics.c):</strong></p>
+  <dl class="def-grid">
+    <dt>ZV</dt><dd><strong>Zone Volatility</strong> = |dppm| / 1e5 + hibit_penalty — volatilidade da zona: desvio em partes por milhão + penalidade por alta densidade de bytes high-bit</dd>
+    <dt>H</dt><dd><strong>Entropy proxy</strong> = Shannon entropy sobre 7 classes de byte: space / quote / brace / colon / comma / hibit / other</dd>
+    <dt>tool_pct</dt><dd>Percentual de mensagens com role="tool" na conversa — proxy de uso de ferramentas (function calling) no modelo</dd>
+    <dt>ABC</dt><dd>Classificação por tercis de massa de bytes: A (top 20% por bytes de título), B (próximos 30%), C (cauda 50%) — heurística de curadoria rápida</dd>
+  </dl>
 
-  <section class="proc-section" aria-labelledby="sec-f">
-    <div class="section-tag">F · Núcleo Bare-Metal</div>
-    <h2 class="section-title" id="sec-f">rf_core — Ciclo ψ→χ→ρ→Δ→Σ→Ω→ψ</h2>
-    <p class="section-sub">Núcleo freestanding para AArch64 — sem libc, sem includes. Implementa um ciclo de estados com BitStack append-only e CRC32 bitwise. Roda em QEMU virt ou bare-metal.</p>
-    <div class="cycle-wrap">
-      <div class="cycle-svg-wrap" aria-label="Ciclo de estados ψ→χ→ρ→Δ→Σ→Ω">
-        <svg viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
-          <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
-          <circle cx="130" cy="130" r="90" fill="none" stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4"/>
-          <path d="M 152,56 A 90,90 0 0,1 207,97" fill="none" stroke="var(--muted)" stroke-width="1" marker-end="url(#arr)"/>
-          <path d="M 213,120 A 90,90 0 0,1 207,163" fill="none" stroke="var(--muted)" stroke-width="1" marker-end="url(#arr)"/>
-          <path d="M 188,184 A 90,90 0 0,1 152,204" fill="none" stroke="var(--muted)" stroke-width="1" marker-end="url(#arr)"/>
-          <path d="M 108,204 A 90,90 0 0,1 53,163" fill="none" stroke="var(--muted)" stroke-width="1" marker-end="url(#arr)"/>
-          <path d="M 47,140 A 90,90 0 0,1 53,97" fill="none" stroke="var(--muted)" stroke-width="1" marker-end="url(#arr)"/>
-          <path d="M 72,76 A 90,90 0 0,1 108,56" fill="none" stroke="var(--muted)" stroke-width="1" marker-end="url(#arr)"/>
-          <circle cx="130" cy="40" r="18" fill="var(--card)" stroke="var(--signal)" stroke-width="1.5"/>
-          <circle cx="210" cy="90" r="18" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-          <circle cx="210" cy="170" r="18" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-          <circle cx="130" cy="220" r="18" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-          <circle cx="50" cy="170" r="18" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-          <circle cx="50" cy="90" r="18" fill="var(--card)" stroke="var(--pulse)" stroke-width="1.5"/>
-          <text x="130" y="45" text-anchor="middle" dominant-baseline="middle" font-family="'Courier New',monospace" font-size="14" fill="var(--signal)" font-weight="700">ψ</text>
-          <text x="210" y="95" text-anchor="middle" dominant-baseline="middle" font-family="'Courier New',monospace" font-size="14" fill="var(--ink)">χ</text>
-          <text x="210" y="175" text-anchor="middle" dominant-baseline="middle" font-family="'Courier New',monospace" font-size="14" fill="var(--ink)">ρ</text>
-          <text x="130" y="225" text-anchor="middle" dominant-baseline="middle" font-family="'Courier New',monospace" font-size="14" fill="var(--ink)">Δ</text>
-          <text x="50" y="175" text-anchor="middle" dominant-baseline="middle" font-family="'Courier New',monospace" font-size="14" fill="var(--ink)">Σ</text>
-          <text x="50" y="95" text-anchor="middle" dominant-baseline="middle" font-family="'Courier New',monospace" font-size="14" fill="var(--pulse)" font-weight="700">Ω</text>
-          <g class="pulse-dot"><circle cx="130" cy="40" r="4" fill="var(--signal)" opacity=".9"/></g>
-        </svg>
-      </div>
-      <div class="cycle-states">
-        <div class="cycle-state"><span class="cs-sym">ψ</span><span class="cs-name">ST_PSI = 0<br>init / reset</span></div>
-        <div class="cycle-state"><span class="cs-sym">χ</span><span class="cs-name">ST_CHI = 1<br>leitura / input</span></div>
-        <div class="cycle-state"><span class="cs-sym">ρ</span><span class="cs-name">ST_RHO = 2<br>transformação</span></div>
-        <div class="cycle-state"><span class="cs-sym">Δ</span><span class="cs-name">ST_DELTA = 3<br>delta / diff</span></div>
-        <div class="cycle-state"><span class="cs-sym">Σ</span><span class="cs-name">ST_SIGMA = 4<br>acumulação</span></div>
-        <div class="cycle-state"><span class="cs-sym">Ω</span><span class="cs-name">ST_OMEGA = 5<br>saída / finalização</span></div>
-      </div>
+  <div class="flow" style="margin-top:1rem">
+    <span class="flow-node omega">omega (bash CLI)</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node neutral">hot</span>
+    <span class="flow-arrow">|</span>
+    <span class="flow-node neutral">threads</span>
+    <span class="flow-arrow">|</span>
+    <span class="flow-node neutral">cross</span>
+    <span class="flow-arrow">|</span>
+    <span class="flow-node neutral">zone</span>
+    <span class="flow-arrow">|</span>
+    <span class="flow-node neutral">abc</span>
+  </div>
+
+  <p class="note"><code>omega_nav.c</code> (TUI ncurses): busca por substring, navega com ↑/↓, seleciona conversa com Enter para ver detalhes, <code>q</code> para sair. Precisa de: <code>-lncurses</code> no build.</p>
+</section>
+
+
+<!-- E: ANDROID APK -->
+<section class="proc-section" aria-labelledby="sec-e">
+  <div class="section-tag">E · Export Android</div>
+  <h2 class="section-title" id="sec-e">Frames Export — Da Curadoria ao APK</h2>
+  <p class="section-sub">Seleciona os top-N URGENT (ordenados por PP_adj) e top-N MENOSPREZADO (ordenados por IC) de <code>forest.jsonl</code>, extrai tags e gera <code>frames_seed.json</code> para consumo no app Android.</p>
+
+  <div class="flow">
+    <span class="flow-node neutral">forest.jsonl</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node omega">omega_frames_export.c</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node neutral">frames_seed.json</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node">update_frames.sh</span>
+    <span class="flow-arrow">+</span>
+    <span class="flow-node neutral">omega_msgs.jsonl</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node neutral">RafaeliaMiddleware/app/…/assets/</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node omega">RafaeliaEngine.kt</span>
+  </div>
+
+  <dl class="def-grid">
+    <dt>PP_adj</dt><dd><code>PP × (1.0 − DF)</code> — PP decay-ajustado pela antiguidade da conversa. URGENT frames são ordenados por PP_adj decrescente. IC bruto é usado para MENOSPREZADO.</dd>
+    <dt>top-N</dt><dd>N configurável no build de <code>omega_frames_export.c</code>; default inclui os melhores de cada caminho prioritário</dd>
+    <dt>update_frames.sh</dt><dd>Chama <code>omega_frames_export</code>, depois preenche o campo <code>content</code> de cada frame lendo <code>omega_msgs.jsonl</code> pelo <code>conv_i</code>. Sem <code>omega_msgs.jsonl</code>: emite <code>"[PLACEHOLDER — conteudo real nao extraido]"</code> (comportamento honesto — nunca fabrica texto)</dd>
+    <dt>RafaeliaEngine.kt</dt><dd>Consome <code>frames_seed.json</code> em <code>RafaeliaMiddleware/app/src/main/assets/</code>: carrega os frames como memória contextual da sessão Android, exibindo as conversas curadas como "frames" de contexto ao usuário</dd>
+  </dl>
+
+  <p style="font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-bottom:.4rem">Esquema frames_seed.json:</p>
+  <div class="code-block"><span class="ck">{</span>
+  <span class="cv">"generated_at"</span>: 1769000000,
+  <span class="cv">"frames"</span>: [
+    <span class="ck">{</span>
+      <span class="cv">"conv_i"</span>:   42,
+      <span class="cv">"path"</span>:    "URGENT",       <span class="cm">// "URGENT" | "MENOSPREZADO"</span>
+      <span class="cv">"PP_adj"</span>:  0.923,          <span class="cm">// score de seleção para URGENT</span>
+      <span class="cv">"IC"</span>:      1.055,          <span class="cm">// score de seleção para MENOSPREZADO</span>
+      <span class="cv">"title"</span>:   "Sistema guardião FCEA",
+      <span class="cv">"tags"</span>:    ["guardião","FCEA","produto_maduro"],
+      <span class="cv">"content"</span>: "..."           <span class="cm">// texto real ou [PLACEHOLDER] se omega_msgs.jsonl ausente</span>
+    <span class="ck">}</span>
+  ]
+<span class="ck">}</span></div>
+</section>
+
+
+<!-- F: RF_CORE -->
+<section class="proc-section" aria-labelledby="sec-f">
+  <div class="section-tag">F · Núcleo Bare-Metal</div>
+  <h2 class="section-title" id="sec-f">rf_core — Ciclo ψ→χ→ρ→Δ→Σ→Ω→ψ</h2>
+  <p class="section-sub">Núcleo freestanding para AArch64 — zero libc, zero includes. Implementa um ciclo de estados com BitStack append-only e CRC32 bitwise. Emite <code>out.bitstack.jsonl</code> como feed do Triad Engine. Roda em QEMU virt @ 0x40000000.</p>
+
+  <div class="cycle-wrap">
+    <div class="cycle-svg-wrap" aria-label="Ciclo de estados ψ→χ→ρ→Δ→Σ→Ω">
+      <svg viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+        <defs>
+          <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/>
+          </marker>
+        </defs>
+        <circle cx="130" cy="130" r="90" fill="none" stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4"/>
+        <path d="M 152,56 A 90,90 0 0,1 207,97" fill="none" stroke="var(--muted)" stroke-width="1" marker-end="url(#arr)"/>
+        <path d="M 213,120 A 90,90 0 0,1 207,163" fill="none" stroke="var(--muted)" stroke-width="1" marker-end="url(#arr)"/>
+        <path d="M 188,184 A 90,90 0 0,1 152,204" fill="none" stroke="var(--muted)" stroke-width="1" marker-end="url(#arr)"/>
+        <path d="M 108,204 A 90,90 0 0,1 53,163" fill="none" stroke="var(--muted)" stroke-width="1" marker-end="url(#arr)"/>
+        <path d="M 47,140 A 90,90 0 0,1 53,97" fill="none" stroke="var(--muted)" stroke-width="1" marker-end="url(#arr)"/>
+        <path d="M 72,76 A 90,90 0 0,1 108,56" fill="none" stroke="var(--muted)" stroke-width="1" marker-end="url(#arr)"/>
+        <circle cx="130" cy="40"  r="18" fill="var(--card)" stroke="var(--signal)" stroke-width="1.5"/>
+        <circle cx="210" cy="90"  r="18" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
+        <circle cx="210" cy="170" r="18" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
+        <circle cx="130" cy="220" r="18" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
+        <circle cx="50"  cy="170" r="18" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
+        <circle cx="50"  cy="90"  r="18" fill="var(--card)" stroke="var(--pulse)" stroke-width="1.5"/>
+        <text x="130" y="45"  text-anchor="middle" dominant-baseline="middle" font-family="'Courier New',monospace" font-size="14" fill="var(--signal)" font-weight="700">ψ</text>
+        <text x="210" y="95"  text-anchor="middle" dominant-baseline="middle" font-family="'Courier New',monospace" font-size="14" fill="var(--ink)">χ</text>
+        <text x="210" y="175" text-anchor="middle" dominant-baseline="middle" font-family="'Courier New',monospace" font-size="14" fill="var(--ink)">ρ</text>
+        <text x="130" y="225" text-anchor="middle" dominant-baseline="middle" font-family="'Courier New',monospace" font-size="14" fill="var(--ink)">Δ</text>
+        <text x="50"  y="175" text-anchor="middle" dominant-baseline="middle" font-family="'Courier New',monospace" font-size="14" fill="var(--ink)">Σ</text>
+        <text x="50"  y="95"  text-anchor="middle" dominant-baseline="middle" font-family="'Courier New',monospace" font-size="14" fill="var(--pulse)" font-weight="700">Ω</text>
+        <g class="pulse-dot">
+          <circle cx="130" cy="40" r="4" fill="var(--signal)" opacity=".9"/>
+        </g>
+      </svg>
     </div>
-    <div class="data-wrap"><table>
-      <thead><tr><th>Arquivo</th><th>Papel</th></tr></thead>
+
+    <div class="cycle-states">
+      <div class="cycle-state"><span class="cs-sym">ψ</span><span class="cs-name">ST_PSI = 0<br>init / reset<br><em style="font-size:.68rem;color:var(--muted)">BitStack limpo, CRC32=0</em></span></div>
+      <div class="cycle-state"><span class="cs-sym">χ</span><span class="cs-name">ST_CHI = 1<br>leitura / input<br><em style="font-size:.68rem;color:var(--muted)">buf append, w++</em></span></div>
+      <div class="cycle-state"><span class="cs-sym">ρ</span><span class="cs-name">ST_RHO = 2<br>transformação<br><em style="font-size:.68rem;color:var(--muted)">XOR + rotate</em></span></div>
+      <div class="cycle-state"><span class="cs-sym">Δ</span><span class="cs-name">ST_DELTA = 3<br>delta / diff<br><em style="font-size:.68rem;color:var(--muted)">hamming(prev,cur)</em></span></div>
+      <div class="cycle-state"><span class="cs-sym">Σ</span><span class="cs-name">ST_SIGMA = 4<br>acumulação<br><em style="font-size:.68rem;color:var(--muted)">CRC32 bitwise update</em></span></div>
+      <div class="cycle-state"><span class="cs-sym">Ω</span><span class="cs-name">ST_OMEGA = 5<br>saída / finalização<br><em style="font-size:.68rem;color:var(--muted)">ABI u64 → RAM buffer</em></span></div>
+    </div>
+  </div>
+
+  <div class="data-wrap">
+    <table>
+      <thead><tr><th>Arquivo</th><th>Papel</th><th>Detalhe</th></tr></thead>
       <tbody>
-        <tr><td><code>start.S</code></td><td>entry AArch64: seta stack, zera .bss, chama <code>rf_main</code></td></tr>
-        <tr><td><code>rf_core.c</code></td><td>ciclo ψ→Ω, BitStack append-only, CRC32 bitwise — zero libc</td></tr>
-        <tr><td><code>rf_core.h</code></td><td>tipos (u8/u16/u32/u64) e declaração <code>rafa_boot()</code></td></tr>
-        <tr><td><code>rf_entry.c</code></td><td>glue freestanding — saída em RAM buffer, ABI u64</td></tr>
-        <tr><td><code>rmr_compat.h/c</code></td><td>backend plugável (write/panic injetáveis, sem stdlib no core)</td></tr>
-        <tr><td><code>link.ld</code></td><td>layout AArch64: ENTRY(_start), load @ 0x40000000 (QEMU virt)</td></tr>
-        <tr><td><code>hosted_demo.c</code></td><td>wrapper com libc para testar rf_core no ambiente hosted</td></tr>
-        <tr><td><code>build.sh</code></td><td>compila com clang + ld.lld + llvm-objcopy (Termux)</td></tr>
-        <tr><td><code>build_all.sh</code></td><td>executa build baremetal + hosted demo em sequência</td></tr>
+        <tr><td><code>start.S</code></td><td>entry AArch64</td><td>seta stack pointer, zera .bss, chama <code>rf_main</code> — nenhuma instrução de sistema operacional</td></tr>
+        <tr><td><code>rf_core.c</code></td><td>ciclo ψ→Ω</td><td><code>struct BitStack { u8 buf[BITSTACK_CAP]; u32 w; u32 records; }</code> — append-only, sem free; CRC32 bitwise (bit a bit, sem tabela lookup)</td></tr>
+        <tr><td><code>rf_core.h</code></td><td>tipos primitivos</td><td><code>typedef uint8_t u8; uint16_t u16; uint32_t u32; uint64_t u64;</code> e declaração <code>rafa_boot()</code></td></tr>
+        <tr><td><code>rf_entry.c</code></td><td>glue freestanding</td><td>saída em RAM buffer — ABI u64: <code>rafa_boot(u64 *out_buf, u32 buf_len)</code> retorna count de registros escritos</td></tr>
+        <tr><td><code>rmr_compat.h/c</code></td><td>backend plugável</td><td>injeta <code>write_fn</code> e <code>panic_fn</code> via ponteiros de função; o core nunca chama syscalls diretamente</td></tr>
+        <tr><td><code>link.ld</code></td><td>layout AArch64</td><td><code>ENTRY(_start)</code>, load @ <code>0x40000000</code> — endereço DRAM da máquina virtual QEMU <code>virt</code> (base mapeada em RAM)</td></tr>
+        <tr><td><code>hosted_demo.c</code></td><td>wrapper hosted</td><td>fornece <code>write_fn</code> = <code>write(2,...)</code> e <code>panic_fn</code> = <code>abort()</code> para teste em Linux; imprime registros BitStack no stderr</td></tr>
+        <tr><td><code>build.sh</code></td><td>baremetal</td><td><code>clang --target=aarch64-elf -ffreestanding -nostdlib -T link.ld</code> + <code>ld.lld</code> + <code>llvm-objcopy -O binary</code></td></tr>
+        <tr><td><code>build_all.sh</code></td><td>tudo</td><td>executa <code>build.sh</code> (baremetal) + <code>hosted_demo</code> em sequência</td></tr>
       </tbody>
-    </table></div>
-  </section>
+    </table>
+  </div>
 
-  <section class="proc-section" aria-labelledby="sec-g">
-    <div class="section-tag">G · Modelo Conceitual</div>
-    <h2 class="section-title" id="sec-g">BitStack World Model — SPEC.md</h2>
-    <p class="section-sub">Ontologia formal que define como matéria, leis e memória se comportam no sistema. Base conceitual do rf_core e da validação por blocos.</p>
-    <ul class="spec-list">
-      <li><span class="spec-key">Matéria</span><span>Nibbles e bytes como substrato físico-lógico. Quando organizados formam blocos; blocos formam mundos. A matéria é o único substrato real — tudo o mais é organização sobre ela.</span></li>
-      <li><span class="spec-key">Leis (Witness)</span><span>Regras de validação por bloco. Um bloco só é utilizável quando sua verificação retorna <code>Witness=true</code>. Blocos inválidos são preservados mas não consumidos.</span></li>
-      <li><span class="spec-key">Memória</span><span>Base imutável + overlays/layers equivalentes. Todos os layers seguem o mesmo esquema de blocos. A base nunca é sobrescrita — apenas lida.</span></li>
-      <li><span class="spec-key">Testemunha</span><span>Processo explícito que percorre cada bloco e estampa <code>Witness=true</code> ou <code>false</code>. Análogo a um commit: só o que foi testemunhado entra no fluxo canônico.</span></li>
-    </ul>
-    <p style="font-size:.82rem;color:var(--muted)">Analogia operacional: o ciclo ψ→Ω do rf_core implementa este modelo — ψ é o reset ao estado "matéria limpa", Ω é a saída testemunhada.</p>
-  </section>
+  <p style="font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-bottom:.3rem">Rodar em QEMU (após build.sh):</p>
+  <div class="code-block">qemu-system-aarch64 -M virt -cpu cortex-a53 -nographic \
+  -kernel rf_core.bin -serial stdio</div>
 
-  <section class="proc-section" aria-labelledby="sec-h">
-    <div class="section-tag">H · Console de Análise</div>
-    <h2 class="section-title" id="sec-h">GBS Console — Terminal BBS de Análise Estatística</h2>
-    <p class="section-sub">Série de ferramentas de terminal ASCII (estilo BBS) para inspecionar os resultados do Triad Engine. Quatro versões com funcionalidades incrementais.</p>
-    <div class="data-wrap"><table>
+  <p class="note"><code>0x40000000</code> = base de RAM da máquina QEMU <code>virt</code> (1 GiB offset). CRC32 bitwise: atualiza bit a bit sem tabela — adequado para freestanding sem memória de lookup. Saída: <code>out.bitstack.jsonl</code> (via <code>rmr_compat</code> write_fn) — consumido por <code>triad_cti_couple.py</code>.</p>
+</section>
+
+
+<!-- G: BITSTACK WORLD MODEL -->
+<section class="proc-section" aria-labelledby="sec-g">
+  <div class="section-tag">G · Modelo Conceitual</div>
+  <h2 class="section-title" id="sec-g">BitStack World Model — rmrCti/SPEC.md</h2>
+  <p class="section-sub">Ontologia formal que define como matéria, leis e memória se comportam no sistema. Base conceitual do rf_core e da validação por blocos. Arquivo: <code>rmrCti/SPEC.md</code>.</p>
+
+  <ul class="spec-list">
+    <li>
+      <span class="spec-key">Matéria</span>
+      <span>Nibbles e bytes como substrato físico-lógico. Quando organizados formam blocos; blocos formam mundos. A matéria é o único substrato real — tudo o mais é organização sobre ela. Mapeamento ao rf_core: <strong>ψ</strong> = reset ao estado "matéria limpa" — BitStack com <code>w=0, records=0</code>.</span>
+    </li>
+    <li>
+      <span class="spec-key">Leis (Witness)</span>
+      <span>Regras de validação por bloco. Um bloco só é utilizável quando sua verificação retorna <code>Witness=true</code>. Blocos inválidos são preservados mas não consumidos — análogo ao <code>love_guard=1</code> do Triad Engine: marcar, não deletar. Mapeamento: <strong>χ</strong> (leitura) + <strong>ρ</strong> (transformação) = as leis em ação.</span>
+    </li>
+    <li>
+      <span class="spec-key">Memória</span>
+      <span>Base imutável + overlays/layers equivalentes. Todos os layers seguem o mesmo esquema de blocos. A base nunca é sobrescrita — apenas lida. Implementação: <code>raf_bitstack_state { uint64_t *layers; uint32_t num_layers; size_t bits_per_layer; uint32_t flip_count; uint64_t state_hash; }</code>. Flip = XOR determinístico sobre uma camada; state_hash rastreia a evolução. Mapeamento: <strong>Δ</strong> (diff) + <strong>Σ</strong> (acumulação) = a memória crescendo.</span>
+    </li>
+    <li>
+      <span class="spec-key">Testemunha</span>
+      <span>Processo explícito que percorre cada bloco e estampa <code>Witness=true</code> ou <code>false</code>. Análogo a um commit: só o que foi testemunhado entra no fluxo canônico. Mapeamento: <strong>Ω</strong> = saída testemunhada — o bloco foi validado e seu conteúdo é confiável. Os 42 atratores (<code>omega_point mod 42</code>) identificam a qual "vizinhança toroidal" o bloco pertence após testemunho.</span>
+    </li>
+  </ul>
+
+  <p class="note">Overlays: camadas adicionais sobre a base imutável. Não resolvem conflitos por merge — cada layer é uma visão independente. A combinação de layers equivale a um diff acumulado, não a uma sobrescrita. Cross-ref com §C: os 42 atratores do BitStack World Model são os mesmos 42 clusters do Omega Forest.</p>
+</section>
+
+
+<!-- H: GBS -->
+<section class="proc-section" aria-labelledby="sec-h">
+  <div class="section-tag">H · Console de Análise</div>
+  <h2 class="section-title" id="sec-h">GBS Console — Terminal BBS de Análise Estatística</h2>
+  <p class="section-sub">Série de ferramentas de terminal ASCII (estilo BBS) para inspecionar os resultados do Triad Engine. Quatro versões com funcionalidades incrementais. Consome <code>out/triad_trace.csv</code> e <code>out_sweep/results.csv</code>.</p>
+
+  <div class="data-wrap">
+    <table>
       <thead><tr><th>Binário</th><th>Fonte</th><th>Diferencial</th><th>Build</th></tr></thead>
       <tbody>
-        <tr><td><code>gbs</code></td><td><code>gbs_bbs.c</code></td><td>menu BBS base, J-histogram, ΔP, escape rate</td><td><code>gbs.sh</code></td></tr>
-        <tr><td><code>gbs2</code></td><td><code>gbs2.c</code></td><td>revisão do parser e saídas</td><td><code>gbs2.sh</code></td></tr>
-        <tr><td><code>gbs3</code></td><td><code>gbs3.c</code></td><td>adiciona <code>time.h</code>, timestamps</td><td><code>gbs3.sh</code></td></tr>
-        <tr><td><code>gbs3_color</code></td><td><code>gbs3_color.c</code></td><td>saída ANSI colorida</td><td><code>gbs3_color.sh</code></td></tr>
+        <tr><td><code>gbs</code></td><td><code>gbs_bbs.c</code></td><td>menu BBS base, J-histogram, ΔP, escape rate, stable count</td><td><code>cc -O2 -std=c11 -Wall gbs_bbs.c -lm -o gbs</code></td></tr>
+        <tr><td><code>gbs2</code></td><td><code>gbs2.c</code></td><td>parser revisado, tabela de gate distribution adicionada</td><td><code>gbs2.sh</code></td></tr>
+        <tr><td><code>gbs3</code></td><td><code>gbs3.c</code></td><td>adiciona <code>time.h</code>, timestamps de análise</td><td><code>gbs3.sh</code></td></tr>
+        <tr><td><code>gbs3_color</code></td><td><code>gbs3_color.c</code></td><td>saída ANSI colorida: J histogram em verde, ΔP em azul, anomalias (X_bad) em vermelho</td><td><code>gbs3_color.sh</code></td></tr>
       </tbody>
-    </table></div>
-    <div style="font-family:var(--mono);font-size:.78rem;border:1px solid var(--border);padding:.85rem 1rem;background:var(--card);margin-top:.25rem">
-      <div style="color:var(--muted);margin-bottom:.4rem"># Leituras do GBS</div>
-      <div>out/triad_trace.csv &nbsp;&nbsp;&nbsp; <span style="color:var(--muted)">← traço passo-a-passo do Triad Engine</span></div>
-      <div>out_sweep/results.csv &nbsp; <span style="color:var(--muted)">← varredura de parâmetros</span></div>
-      <div style="margin-top:.6rem;color:var(--muted)"># Saídas impressas</div>
-      <div>J histogram · escape rate · stable count · peaks vs non-peaks · ΔP · top sweep by delta</div>
-    </div>
-  </section>
+    </table>
+  </div>
 
-  <section class="proc-section" aria-labelledby="sec-i">
-    <div class="section-tag">I · Motor de Simulação</div>
-    <h2 class="section-title" id="sec-i">Triad Engine — TRIAD / TEXTURE10 / toro</h2>
-    <p class="section-sub">Simulação de dinâmica de campo sobre estrutura toroidal. Produz os traços CSV consumidos pelo GBS Console. Acoplado ao corpus CTI via <code>triad_cti_couple.py</code>.</p>
-    <div class="flow">
-      <span class="flow-node">run.sh</span><span class="flow-arrow">→</span>
-      <span class="flow-node neutral">src/triad_engine.py</span>
-      <span class="flow-arrow" style="font-size:.7rem">--steps 300 --seed 42</span>
-      <span class="flow-arrow">→</span><span class="flow-node neutral">out/triad_trace.csv</span>
-    </div>
-    <div class="flow" style="margin-top:.35rem">
-      <span class="flow-node">triad_cti_couple.py</span><span class="flow-arrow">→</span>
-      <span class="flow-node neutral">acopla CTI a toro / TRIAD / TEXTURE10 / love_guard</span>
-    </div>
-    <p style="font-size:.82rem;color:var(--muted);margin-top:.75rem">O parâmetro <code>--seed</code> garante determinismo total — a mesma semente com os mesmos dados produz o mesmo traço, permitindo reprodutibilidade.</p>
-  </section>
+  <p style="font-size:.82rem;color:var(--muted);margin-bottom:.6rem"><strong>Definições das métricas do GBS (colunas de triad_trace.csv):</strong></p>
+  <dl class="def-grid">
+    <dt>J / J_n</dt><dd><strong>Score local combinado</strong> — saída numérica de <code>triad_cti_couple.py</code> por chunk. O GBS exibe histograma da distribuição de J_n sobre todos os chunks do trace</dd>
+    <dt>escaped</dt><dd><strong>gate_in_peaks == 1</strong> — chunk caiu dentro de uma janela de pico da sequência de gates. <em>escaped rate</em> = count(gate_in_peaks==1) / total</dd>
+    <dt>stable</dt><dd><strong>stable_any == 1</strong> — chunk atingiu ponto fixo (fixed-point stability). <em>stable count</em> = count(stable_any==1)</dd>
+    <dt>ΔP</dt><dd><strong>P(stable|peaks) − P(stable|¬peaks)</strong> — associação entre picos de gate e estabilidade. Identidade integral: I_N = ΔP (via <code>rmrcti_delta_p_integral.py</code>). Valor atrator observado: ≈ <strong>0.18</strong></dd>
+    <dt>X_bad</dt><dd><strong>Anomalia detectada</strong> (X_bad == 1) no scan CTI. Propaga <code>love_guard=1</code> nas saídas acopladas — ver §I</dd>
+    <dt>out_sweep/results.csv</dt><dd>Gerado por varredura de parâmetros: sweep de <em>gate × seed × steps</em> sobre o Triad Engine. Cada linha = uma combinação de parâmetros com métricas agregadas. "Top sweep by delta" = configuração com maior ΔP</dd>
+  </dl>
 
-  <section class="proc-section" aria-labelledby="sec-j">
-    <div class="section-tag">J · Ferramentas Auxiliares</div>
-    <h2 class="section-title" id="sec-j">Utilitários Especializados</h2>
-    <p class="section-sub">Ferramentas de suporte e experimentação — geometria, agentes autônomos, operações bare-metal e inspeção de artefatos.</p>
-    <div class="data-wrap"><table>
-      <thead><tr><th>Arquivo</th><th>Função</th><th>Saída</th></tr></thead>
+  <div style="font-family:var(--mono);font-size:.78rem;border:1px solid var(--border);padding:.85rem 1rem;background:var(--card);margin-top:.25rem">
+    <div style="color:var(--muted);margin-bottom:.4rem"># Entradas do GBS</div>
+    <div>out/triad_trace.csv &nbsp;&nbsp;&nbsp;<span style="color:var(--muted)">← colunas: idx,off,size,ts,H,X_bad,u,v,D_re,D_im,gate_9to1,stable_any,J_n,love_guard,grid10x10_hex,...</span></div>
+    <div>out_sweep/results.csv <span style="color:var(--muted)">← sweep gate×seed×steps (varredura de parâmetros)</span></div>
+    <div style="margin-top:.6rem;color:var(--muted)"># Saídas impressas</div>
+    <div>J histogram · escape rate · stable count</div>
+    <div>peaks vs non-peaks · ΔP ≈ 0.18 · top sweep by delta</div>
+  </div>
+</section>
+
+
+<!-- I: TRIAD ENGINE -->
+<section class="proc-section" aria-labelledby="sec-i">
+  <div class="section-tag">I · Motor de Simulação</div>
+  <h2 class="section-title" id="sec-i">Triad Engine — TRIAD / TEXTURE10 / love_guard</h2>
+  <p class="section-sub">Simulação determinística de dinâmica de campo sobre estrutura toroidal (<em>toro</em>). Produz traços CSV consumidos pelo GBS Console. Acoplado ao corpus CTI via <code>triad_cti_couple.py</code>.</p>
+
+  <div class="flow">
+    <span class="flow-node">run.sh</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node neutral">src/triad_engine.py</span>
+    <span class="flow-arrow" style="font-size:.7rem">--steps 300 --seed 42</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node neutral">out/triad_trace.csv</span>
+  </div>
+
+  <div class="flow" style="margin-top:.35rem">
+    <span class="flow-node neutral">out.bitstack.jsonl</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node">triad_cti_couple.py</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-node neutral">out.coupled.jsonl</span>
+    <span class="flow-arrow">+</span>
+    <span class="flow-node neutral">out/triad_trace.csv</span>
+  </div>
+
+  <p style="font-size:.82rem;color:var(--muted);margin:.85rem 0 .6rem"><strong>Definições:</strong></p>
+  <dl class="def-grid">
+    <dt>toro</dt><dd>Topologia toroidal — o campo de simulação envolve nas bordas (wrap-around). Cada "step" atualiza todos os pontos do grid com as regras locais de campo</dd>
+    <dt>um step</dt><dd>Uma iteração do loop em <code>triad_engine.py</code>: leitura do estado atual, aplicação das regras de campo, atualização de todos os pontos, emissão de uma linha no trace CSV. Com <code>--steps 300</code>: 300 linhas no trace</dd>
+    <dt>TRIAD</dt><dd>Algoritmo de acoplamento em <code>triad_cti_couple.py</code>. Para cada registro CTI (campo <code>H</code> / <code>entropy</code>), computa:
+      <br>· <code>D = D_re + i·D_im</code> — discriminante complexo do estado do campo
+      <br>· <code>gate_9to1</code> ∈ {1..9} — gate determinístico (função de H, seed)
+      <br>· <code>stable_any</code> ∈ {0,1} — flag de ponto fixo
+      <br>· <code>fr_matches_gate</code> — Fibonacci-Rafael / gate match
+      <br>· <code>J_n</code> — score local combinado
+    </dd>
+    <dt>TEXTURE10</dt><dd>Grid 10×10 bits = 100 bits → packed em <strong>13 bytes</strong> (104 bits, 4 bits de padding). Saída: <code>grid10x10_hex</code> (hex string de 26 chars) + paridades: <code>par_row8</code> (parity por linha), <code>par_col8</code> (parity por coluna), <code>par_global</code> (global). Serve como "textura de estado" compacta e verificável</dd>
+    <dt>love_guard</dt><dd><strong>Flag ética / safety</strong>: <code>love_guard = 1</code> quando <code>X_bad != 0</code> (anomalia detectada na varredura CTI). Semântica: <em>"preservar, marcar, não forçar colapso"</em>. Propagação obrigatória: stage 1 (scan) → stage 2 (TRIAD) → stage 3 (rank / relatório). Invariante verificado em build: <code>assert X_bad != 0 → love_guard == 1</code></dd>
+    <dt>--seed 42</dt><dd>Garante determinismo total — mesma semente + mesmos dados = mesmo trace CSV. 42 = <code>k_constant</code> do sistema (constante toroidal RAFAELIA)</dd>
+  </dl>
+
+  <p class="note">Dialetos CTI aceitos por <code>triad_cti_couple.py</code>: campo <code>"H"</code> ou <code>"entropy"</code> (ambos mapeiam para a mesma entrada do TRIAD). Saída: <code>out.coupled.jsonl</code> + trace para GBS.</p>
+</section>
+
+
+<!-- J: AUXILIARES -->
+<section class="proc-section" aria-labelledby="sec-j">
+  <div class="section-tag">J · Ferramentas Auxiliares</div>
+  <h2 class="section-title" id="sec-j">Utilitários Especializados</h2>
+  <p class="section-sub">Ferramentas de suporte e experimentação — geometria cognitiva, agentes autônomos, operações bare-metal, motor 4096-bit e inspeção de artefatos.</p>
+
+  <div class="data-wrap">
+    <table>
+      <thead><tr><th>Arquivo</th><th>Função</th><th>Parâmetros chave</th><th>Pipeline</th></tr></thead>
       <tbody>
-        <tr><td><code>cognitio_min.c</code></td><td>N pontos no círculo + ruído + simetria X/Y</td><td>medidas de simetria impressas</td></tr>
-        <tr><td><code>RafaFibo.c</code> (rafa_autonomos.c)</td><td>agentes 2D determinísticos: FSM IDLE/SEEK/FLEE, boids light</td><td>simulação impressa por passo</td></tr>
-        <tr><td><code>omega_slice.c</code></td><td>slice via syscalls ARM64 (SYS_OPENAT=56, SYS_READ=63, SYS_WRITE=64) — sem libc</td><td>fatia de bytes do arquivo</td></tr>
-        <tr><td><code>omega_layersbit.c</code> + <code>lb_tables.h</code></td><td>motor 4096-bit freestanding branchless: assinatura omega/phi/entropy por fluxo</td><td>hash determinístico por fluxo</td></tr>
-        <tr><td><code>omega_search_fast.c</code></td><td>busca rápida substring (case-insensitive) sobre <code>omega_msgs.jsonl</code></td><td>linhas correspondentes, stdin/stdout</td></tr>
-        <tr><td><code>z_islands.sh</code></td><td>análise de ilhas e transições por zona</td><td>transições impressas no terminal</td></tr>
-        <tr><td><code>z_zip_peek.sh</code></td><td>inspeção de ZIPs sem descompressão total</td><td>listagem estruturada do ZIP</td></tr>
+        <tr>
+          <td><code>cognitio_min.c</code></td>
+          <td>N pontos no círculo + ruído gaussiano + teste de simetria X/Y</td>
+          <td>N configurável (linha de comando ou <code>#define N_POINTS</code>); seed fixo para reprodutibilidade</td>
+          <td>Standalone — saída: métricas de simetria no terminal</td>
+        </tr>
+        <tr>
+          <td><code>RafaFibo.c</code> = <code>rafa_autonomos.c</code></td>
+          <td>Agentes 2D determinísticos com FSM: IDLE / SEEK / FLEE + comportamentos boids: seek, avoid, separate, cohere, align</td>
+          <td>Seed 42 por padrão; número de agentes configurável. Fibonacci-Rafael guia a sequência de estados da FSM</td>
+          <td>Standalone — imprime estado de cada agente por step; cross-ref §I (fr_matches_gate usa a mesma lógica Fibonacci-Rafael)</td>
+        </tr>
+        <tr>
+          <td><code>omega_slice.c</code></td>
+          <td>Slice de arquivo via syscalls ARM64 diretas sem libc (<code>SYS_OPENAT=56</code>, <code>SYS_READ=63</code>, <code>SYS_WRITE=64</code>)</td>
+          <td><code>offset</code> + <code>length</code> como argumentos</td>
+          <td>Complementa §F — demonstra acesso a artefatos (omega_msgs.jsonl) sem depender do sistema de arquivos do OS</td>
+        </tr>
+        <tr>
+          <td><code>omega_layersbit.c</code> + <code>lb_tables.h</code></td>
+          <td>Motor 4096-bit freestanding branchless: estado de 16 layers × 256 bits. Emite assinatura omega (omega_point mod 42), phi (phi_integral Q16) e entropy por fluxo</td>
+          <td>Sem parâmetros — processa stdin em blocos de 512 bytes</td>
+          <td>Extensão de §F para fluxos arbitrários — cross-ref §B: mesmas constantes (LB_ATTRACTORS=42, LB_GF_POLY=0x1D)</td>
+        </tr>
+        <tr>
+          <td><code>omega_search_fast.c</code></td>
+          <td>Busca rápida substring case-insensitive sobre <code>omega_msgs.jsonl</code> — stdin/stdout pipeline-friendly</td>
+          <td>Query como argumento; opcional: <code>--conv_i</code> para filtrar por conversa</td>
+          <td>Usada por §K (CTI Memory) como <code>--cti-memory-search-bin</code></td>
+        </tr>
+        <tr>
+          <td><code>z_islands.sh</code></td>
+          <td>Análise de <em>ilhas</em> (sequências contínuas de chunks da mesma zona sem interrupção) e suas transições — "ilha" = streak ininterrupta de ≥ 3 chunks na mesma zona</td>
+          <td><code>LIMIT</code> configurável (default 1000 linhas); consome <code>zones.index.txt</code></td>
+          <td>Complementa §B — cross-ref com <code>zone_conv_streaks.txt</code></td>
+        </tr>
+        <tr>
+          <td><code>z_zip_peek.sh</code></td>
+          <td>Inspeção de conteúdo de ZIPs de exportação sem descompressão total</td>
+          <td>Caminho do ZIP como argumento; usa <code>unzip -l</code> + filtros</td>
+          <td>Pré-processamento para §A — verifica formato antes de passar para <code>omega_json_reconstruct</code></td>
+        </tr>
       </tbody>
-    </table></div>
-  </section>
+    </table>
+  </div>
 
-  <section class="proc-section" aria-labelledby="sec-k">
-    <div class="section-tag">K · Integração com llama.cpp</div>
-    <h2 class="section-title" id="sec-k">CTI Memory — Recuperação Contextual Durante Inferência</h2>
-    <p class="section-sub">Ponto de convergência de todas as camadas: a CTI Memory conecta os artefatos Omega ao motor de inferência LLM, injetando contexto de conversas passadas antes da geração de tokens.</p>
-    <div class="data-wrap"><table>
+  <p class="note">omega / phi signature: <code>omega_point = (hibit + entropy_milli) mod 42</code> (campo [29] dos NeuroMetrics); <code>phi_integral</code> = campo [11] Q16 — ambos são assinaturas determinísticas do conteúdo do bloco, usadas por <code>omega_layersbit.c</code> como hash de fluxo.</p>
+</section>
+
+
+<!-- K: CTI MEMORY -->
+<section class="proc-section" aria-labelledby="sec-k">
+  <div class="section-tag">K · Integração com llama.cpp</div>
+  <h2 class="section-title" id="sec-k">CTI Memory — Recuperação Contextual Durante Inferência</h2>
+  <p class="section-sub">Ponto de convergência de todas as camadas: conecta os artefatos Omega ao motor de inferência LLM, injetando contexto de conversas passadas antes da geração de tokens.</p>
+
+  <div class="data-wrap">
+    <table>
       <thead><tr><th>Flag CLI</th><th>Padrão</th><th>Função</th></tr></thead>
       <tbody>
-        <tr><td><code>--cti-memory-search-bin</code></td><td><code>&lt;dir&gt;/omega_search_fast</code></td><td>binário de busca rápida; sem ele, usa fallback interno (scan em processo)</td></tr>
-        <tr><td><code>--cti-memory-forest-path</code></td><td><code>&lt;dir&gt;/forest.jsonl</code></td><td>curadoria omega_forest — bônus URGENT/MENOSPREZADO no ranking</td></tr>
-        <tr><td><code>--cti-memory-frames-path</code></td><td><code>&lt;dir&gt;/frames_seed.json</code></td><td>top curado omega_frames_export — bônus curated-top (+1) e tags</td></tr>
+        <tr><td><code>--cti-memory-dir</code></td><td><code>rmrCti</code></td><td>diretório raiz com todos os artefatos omega (omega_msgs.jsonl, forest.jsonl, frames_seed.json)</td></tr>
+        <tr><td><code>--cti-memory-search-bin</code></td><td><code>&lt;dir&gt;/omega_search_fast</code></td><td>binário de busca; sem este flag usa fallback interno (scan em processo — mais lento, sem ranking omega)</td></tr>
+        <tr><td><code>--cti-memory-forest-path</code></td><td><code>&lt;dir&gt;/forest.jsonl</code></td><td>curadoria omega_forest — carrega mapa conv_i → bônus (URGENT=+1, MENOSPREZADO=+0.5)</td></tr>
+        <tr><td><code>--cti-memory-frames-path</code></td><td><code>&lt;dir&gt;/frames_seed.json</code></td><td>top curado omega_frames_export — bônus curated-top (+1) e tags para cada conv_i presente</td></tr>
+        <tr><td><code>--cti-memory-top-k</code></td><td><code>5</code></td><td>número de hits a recuperar por query (top-K por score combinado)</td></tr>
+        <tr><td><code>--bitstack-log</code></td><td>(vazio)</td><td>path opcional para log de auditoria em formato bitstack JSON (<code>render_event_json</code>)</td></tr>
       </tbody>
-    </table></div>
-    <div style="font-family:var(--mono);font-size:.78rem;border:1px solid var(--border);padding:.85rem 1rem;background:var(--card);margin:.5rem 0 1rem">
-      <div style="color:var(--muted);margin-bottom:.35rem"># Status de resposta CTI</div>
-      <div><span style="color:var(--signal)">"ok"</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;busca retornou hits</div>
-      <div><span style="color:var(--muted)">"no_hits"</span> &nbsp;&nbsp;&nbsp;nenhuma correspondência</div>
-      <div><span style="color:var(--muted)">"unavailable"</span>&nbsp;arquivo ausente</div>
-      <div><span style="color:var(--muted)">"error"</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ex: missing_file:rmrCti/omega_msgs.jsonl</div>
-      <div style="margin-top:.5rem;color:var(--muted)"># Source field</div>
-      <div>"omega_search_fast" | "scan_fallback" | "none"</div>
-    </div>
-    <p style="font-size:.82rem;color:var(--muted)">Testes em <code>tests/test-cti-memory.cpp</code> cobrem: busca com ranking, bônus omega_forest, fallback interno e ausência de arquivos.</p>
-  </section>
+    </table>
+  </div>
 
-  <section class="proc-section" aria-labelledby="sec-conv">
-    <div class="section-tag">Fluxo Completo</div>
-    <h2 class="section-title" id="sec-conv">Ponta a Ponta — conversations.json → llama-server</h2>
-    <div class="convergence">
-      <div class="convergence-title">Pipeline end-to-end</div>
-      <div class="conv-row">
-        <span class="conv-file">conversations.json</span><span class="conv-arr">→</span>
-        <span class="conv-tool">omega_json_reconstruct</span><span class="conv-arr">→</span>
-        <span class="conv-file">omega_objs.jsonl</span><span class="conv-arr">→</span>
-        <span class="conv-tool">omega_extract_msgs.py</span><span class="conv-arr">→</span>
-        <span class="conv-file">omega_msgs.jsonl</span>
-      </div>
-      <div class="conv-row">
-        <span class="conv-file">omega_msgs.jsonl</span><span class="conv-arr">→</span>
-        <span class="conv-tool">omega_neuro_full.c</span><span class="conv-arr">→</span>
-        <span class="conv-file">omega_metrics_v3.jsonl</span><span class="conv-arr">+</span>
-        <span class="conv-file">omega_conv_stats.jsonl</span><span class="conv-arr">+</span>
-        <span class="conv-file">zones.index.txt</span>
-      </div>
-      <div class="conv-row">
-        <span class="conv-file">omega_metrics_v3.jsonl</span><span class="conv-arr">→</span>
-        <span class="conv-tool omega">omega_forest.c</span><span class="conv-arr">→</span>
-        <span class="conv-file">forest.jsonl</span><span class="conv-arr">→</span>
-        <span class="conv-tool omega">omega_frames_export.c</span><span class="conv-arr">→</span>
-        <span class="conv-file">frames_seed.json</span>
-      </div>
-      <div class="conv-row">
-        <span class="conv-file">omega_msgs.jsonl</span><span class="conv-arr">+</span>
-        <span class="conv-file">forest.jsonl</span><span class="conv-arr">+</span>
-        <span class="conv-file">frames_seed.json</span><span class="conv-arr">→</span>
-        <span class="conv-final">llama-server --cti-memory-*</span>
-      </div>
-    </div>
-  </section>
+  <p style="font-size:.82rem;color:var(--muted);margin:.85rem 0 .4rem"><strong>API interna — namespace <code>cti_memory</code> (common/cti_memory.h):</strong></p>
+  <div class="code-block"><span class="cm">// common/cti_memory.h</span>
+namespace cti_memory <span class="ck">{</span>
 
-  <footer>
-    <span>llamaRafaelia · rmrCti · análise de processos</span>
-    <span>C/C++ · Python · AArch64 · Termux</span>
-  </footer>
+  struct config <span class="ck">{</span>
+    bool        enabled       = false;      <span class="cm">// opt-in; default off</span>
+    std::string dir           = "rmrCti";
+    std::string search_bin    = "";         <span class="cm">// empty → &lt;dir&gt;/omega_search_fast</span>
+    std::string forest_path   = "";         <span class="cm">// empty → &lt;dir&gt;/forest.jsonl</span>
+    std::string frames_path   = "";         <span class="cm">// empty → &lt;dir&gt;/frames_seed.json</span>
+    int         top_k         = 5;
+  <span class="ck">}</span>;
+
+  struct hit <span class="ck">{</span>
+    int         conv_i    = -1;
+    std::string conv_title;
+    int         sig_phi   = 0;  <span class="cm">// phi_integral Q16 do snippet (campo [11] NeuroMetrics)</span>
+    int         score     = 0;  <span class="cm">// score combinado final</span>
+  <span class="ck">}</span>;
+
+  struct result <span class="ck">{</span>
+    bool        ok     = false;
+    std::string status;   <span class="cm">// "ok" | "no_hits" | "unavailable" | "error"</span>
+    std::string reason;   <span class="cm">// ex: "missing_file:rmrCti/omega_msgs.jsonl"</span>
+  <span class="ck">}</span>;
+
+<span class="ck">}</span></div>
+
+  <p style="font-size:.82rem;color:var(--muted);margin:.85rem 0 .4rem"><strong>Fórmula de score combinado (ranking interno):</strong></p>
+  <div class="formula">score = base_relevance(query, conv_i)<br>      + forest_bonus  <span style="color:var(--muted)">// URGENT=+1, MENOSPREZADO=+0.5, outros=0</span><br>      + frames_bonus  <span style="color:var(--muted)">// +1 se conv_i presente em frames_seed.json</span><br>      + phi_weight    <span style="color:var(--muted)">// sig_phi Q16 normalizado (ética / qualidade do snippet)</span></div>
+
+  <p style="font-size:.82rem;color:var(--muted);margin:.85rem 0 .4rem"><strong>Injeção no contexto LLM:</strong> os top-K hits são formatados como bloco de contexto inserido no prompt antes da query do usuário — similar a RAG mas com ranking próprio baseado nos artefatos Omega. Fallback interno: quando <code>omega_search_fast</code> está ausente, executa scan linha-a-linha do <code>omega_msgs.jsonl</code> em processo (sem ranking de zona — apenas relevância textual).</p>
+
+  <div style="font-family:var(--mono);font-size:.78rem;border:1px solid var(--border);padding:.85rem 1rem;background:var(--card);margin:.5rem 0 1rem">
+    <div style="color:var(--muted);margin-bottom:.35rem"># Status de resposta CTI (result.status)</div>
+    <div><span style="color:var(--signal)">"ok"</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;busca retornou hits — contexto injetado</div>
+    <div><span style="color:var(--muted)">"no_hits"</span> &nbsp;&nbsp;&nbsp;nenhuma correspondência — inferência sem contexto CTI</div>
+    <div><span style="color:var(--muted)">"unavailable"</span>&nbsp;arquivo ausente — modo degradado silencioso</div>
+    <div><span style="color:var(--muted)">"error"</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ex: <code>missing_file:rmrCti/omega_msgs.jsonl</code></div>
+    <div style="margin-top:.5rem;color:var(--muted)"># result.reason source field</div>
+    <div>"omega_search_fast" | "scan_fallback" | "none"</div>
+  </div>
+
+  <p class="note">Testes em <code>tests/test-cti-memory.cpp</code>: busca com ranking, bônus omega_forest, fallback interno e ausência de arquivos. Comando de ativação: <code>./llama-server -m model.gguf --cti-memory-dir rmrCti --cti-memory-top-k 5</code></p>
+</section>
+
+
+<!-- CONVERGÊNCIA -->
+<section class="proc-section" aria-labelledby="sec-conv">
+  <div class="section-tag">Fluxo Completo</div>
+  <h2 class="section-title" id="sec-conv">Ponta a Ponta — conversations.json → llama-server</h2>
+  <p class="section-sub">Todos os 11 grupos de processos convergindo. rf_core e Triad Engine correm em paralelo ao pipeline principal de curadoria.</p>
+
+  <div class="convergence">
+    <div class="convergence-title">Pipeline end-to-end completo (A → K)</div>
+
+    <div class="conv-row-label">A · Ingestão</div>
+    <div class="conv-row">
+      <span class="conv-file">conversations.json</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-tool">omega_json_reconstruct</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-file">omega_objs.jsonl</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-tool">omega_extract_msgs.py</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-file">omega_msgs.jsonl</span>
+    </div>
+
+    <div class="conv-row-label">B · NeuroMetrics</div>
+    <div class="conv-row">
+      <span class="conv-file">omega_msgs.jsonl</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-tool">omega_neuro_full.c</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-file">omega_metrics_v3.jsonl</span>
+      <span class="conv-arr">+</span>
+      <span class="conv-file">omega_conv_stats.jsonl</span>
+      <span class="conv-arr">+</span>
+      <span class="conv-file">zones.index.txt</span>
+      <span class="conv-arr">+</span>
+      <span class="conv-file">zone_markov_edges.txt</span>
+    </div>
+
+    <div class="conv-row-label">C · Omega Forest</div>
+    <div class="conv-row">
+      <span class="conv-file">omega_metrics_v3.jsonl</span>
+      <span class="conv-arr">+</span>
+      <span class="conv-file">omega_conv_stats.jsonl</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-tool omega">omega_forest.c</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-file">forest.jsonl</span>
+      <span class="conv-arr">[5 paths · 42 atratores]</span>
+    </div>
+
+    <div class="conv-row-label">D · Rankings</div>
+    <div class="conv-row">
+      <span class="conv-file">forest.jsonl</span>
+      <span class="conv-arr">+</span>
+      <span class="conv-file">omega_metrics_v3.jsonl</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-tool omega">omega_zone_metrics.c</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-file">omega_hot_rank.txt</span>
+      <span class="conv-arr">+</span>
+      <span class="conv-file">omega_zone_rank.txt</span>
+      <span class="conv-arr">+</span>
+      <span class="conv-file">omega_threads_rank.txt</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-tool omega">omega CLI / omega_nav TUI</span>
+    </div>
+
+    <div class="conv-row-label">E · Export Android</div>
+    <div class="conv-row">
+      <span class="conv-file">forest.jsonl</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-tool omega">omega_frames_export.c</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-file">frames_seed.json</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-tool">update_frames.sh</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-file">RafaeliaMiddleware/assets/</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-tool omega">RafaeliaEngine.kt</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-out">APK</span>
+    </div>
+
+    <div class="conv-row-label">F + I · rf_core → Triad Engine</div>
+    <div class="conv-row">
+      <span class="conv-file">omega_msgs.jsonl</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-tool">rf_core.c (ψ→Ω)</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-file">out.bitstack.jsonl</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-tool">triad_cti_couple.py</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-file">out.coupled.jsonl</span>
+      <span class="conv-arr">+</span>
+      <span class="conv-file">out/triad_trace.csv</span>
+    </div>
+
+    <div class="conv-row-label">H · GBS Console</div>
+    <div class="conv-row">
+      <span class="conv-file">out/triad_trace.csv</span>
+      <span class="conv-arr">+</span>
+      <span class="conv-file">out_sweep/results.csv</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-tool">gbs / gbs3_color</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-out">J histogram · ΔP ≈ 0.18 · escape rate · love_guard</span>
+    </div>
+
+    <div class="conv-row-label">K · CTI Memory → llama-server (Ápice)</div>
+    <div class="conv-row">
+      <span class="conv-file">omega_msgs.jsonl</span>
+      <span class="conv-arr">+</span>
+      <span class="conv-file">forest.jsonl</span>
+      <span class="conv-arr">+</span>
+      <span class="conv-file">frames_seed.json</span>
+      <span class="conv-arr">→</span>
+      <span class="conv-final">llama-server --cti-memory-dir rmrCti</span>
+    </div>
+  </div>
+</section>
+
+
+<footer>
+  <span>llamaRafaelia · rmrCti · análise de processos · v2</span>
+  <span>C/C++ · Python · AArch64 · Termux · 2026-07-14</span>
+</footer>
+
 </div>
 
 <script>
-(function(){var mq=window.matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;if(!r.getAttribute('data-theme'))r.setAttribute('data-theme',mq.matches?'dark':'light');mq.addEventListener('change',function(e){r.setAttribute('data-theme',e.matches?'dark':'light');});})();
+  (function() {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var r = document.documentElement;
+    if (!r.getAttribute('data-theme')) {
+      r.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
+    }
+    mq.addEventListener('change', function(e) {
+      if (!r.hasAttribute('data-theme')) {
+        r.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      }
+    });
+  })();
 </script>
