@@ -54,6 +54,10 @@ public final class ApiLowLevelBridge {
     public static final int FL_LOCK    = 1;
     public static final int FL_FLOW    = 1 << 1;
     public static final int FL_VOID    = 1 << 2;
+    public static final int FL_TRICKST = 1 << 3;
+    public static final int FL_VISCNEG = 1 << 4;
+    public static final int FL_ATTJUMP = 1 << 5;
+    public static final int FL_MERKLE  = 1 << 6;
     public static final int FL_GEOFAIL = 1 << 7;
 
     /* result packed format: hi32=crc32c lo32=event_count */

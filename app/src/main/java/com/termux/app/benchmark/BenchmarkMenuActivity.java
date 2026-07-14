@@ -64,7 +64,9 @@ public final class BenchmarkMenuActivity extends Activity {
         super.onCreate(saved);
         setTitle("RafCodePhi Benchmark");
         setContentView(buildLayout());
-        mHwCaps.setText(formatHwCaps(nativeHwCaps()));
+        long baselineCycles = nativeCycleRead();
+        mHwCaps.setText(formatHwCaps(nativeHwCaps())
+            + "  cycle=0x" + Long.toHexString(baselineCycles));
     }
 
     /* ── Layout built programmatically (no XML dependency) ──────────────── */

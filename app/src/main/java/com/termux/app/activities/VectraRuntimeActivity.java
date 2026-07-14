@@ -24,6 +24,10 @@ import java.util.Map;
 
 public class VectraRuntimeActivity extends AppCompatActivity {
 
+    static {
+        System.loadLibrary("api_lowlevel");
+    }
+
     private LinearLayout contentLayout;
 
     @Override
@@ -163,43 +167,20 @@ public class VectraRuntimeActivity extends AppCompatActivity {
     }
 
     private String buildBenchmarkSummary() {
-        final int q16Steps = 200_000;
-        int state = 65_536;
-        long q16Start = System.nanoTime();
-        for (int i = 0; i < q16Steps; i++) {
-            state = (int) ((((long) state * 56_756L) >> 16) + 203_280L);
-            state ^= (i & 0x3f);
-        }
-        long q16Elapsed = System.nanoTime() - q16Start;
-
-        byte[] src = new byte[4_096];
-        byte[] dst = new byte[4_096];
-        for (int i = 0; i < src.length; i++) {
-            src[i] = (byte) ((i * 31) ^ (i >>> 3));
-        }
-
-        long checksum = 0xcbf29ce484222325L;
-        final int rounds = 256;
-        long bufferStart = System.nanoTime();
-        for (int round = 0; round < rounds; round++) {
-            System.arraycopy(src, 0, dst, 0, src.length);
-            for (byte value : dst) {
-                checksum ^= (value & 0xffL);
-                checksum *= 0x100000001b3L;
-            }
-        }
-        long bufferElapsed = System.nanoTime() - bufferStart;
-        double seconds = bufferElapsed / 1_000_000_000.0d;
-        double mib = (src.length * rounds) / (1024.0d * 1024.0d);
-
+        final String[] catNames = {
+            "CPU Single", "CPU Multi", "Memory", "Storage", "Integrity", "Emulation"
+        };
         StringBuilder sb = new StringBuilder();
-        sb.append("• Q16 recurrence final state: ").append(state).append("\n");
-        sb.append("• Q16 elapsed: ").append(String.format(Locale.US, "%.3f", q16Elapsed / 1_000_000.0d)).append(" ms\n");
-        sb.append("• Buffer bytes: ").append(src.length * rounds).append("\n");
-        sb.append("• Buffer elapsed: ").append(String.format(Locale.US, "%.3f", bufferElapsed / 1_000_000.0d)).append(" ms\n");
-        sb.append("• FNV checksum: 0x").append(Long.toHexString(checksum)).append("\n");
-        sb.append("• Throughput: ").append(seconds > 0 ? String.format(Locale.US, "%.2f", mib / seconds) : "unknown").append(" MiB/s\n");
-        sb.append("• Sensor runtime policy: typed requests only, no generic command channel");
+        long total = 0L;
+        for (int i = 0; i < catNames.length; i++) {
+            long raw = com.termux.app.benchmark.BenchmarkMenuActivity.nativeBenchRun(0, i);
+            long score = (raw >>> 32) & 0xFFFFFFFFL;
+            total += score;
+            sb.append(String.format(Locale.US, "• %-14s %,d\n", catNames[i] + ":", score));
+        }
+        sb.append(String.format(Locale.US, "• Total:         %,d\n", total));
+        long cycles = com.termux.app.benchmark.BenchmarkMenuActivity.nativeCycleRead();
+        sb.append("• Cycle counter: 0x").append(Long.toHexString(cycles));
         return sb.toString();
     }
 }
