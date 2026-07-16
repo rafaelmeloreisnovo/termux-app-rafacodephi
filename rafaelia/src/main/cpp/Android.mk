@@ -5,6 +5,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := termux-rafaelia
 LOCAL_SRC_FILES := rafaelia.c \
   rafaelia_bitraf_core.c \
+  raf_numbase.c \
   raf_termux_emul.c \
   raf_termux_registry.c \
   raf_termux_catalog.c \
