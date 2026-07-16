@@ -194,7 +194,58 @@ unsigned int crc32(const unsigned char *data, size_t len) {
 }
 
 // ============================================================================
-// 5. FUNÇÃO PRINCIPAL (BLOCO ÚNICO)
+// 5. ZERO CURVE DUAL: Z/base_a Z e Z/base_b Z coexistindo
+// Mostra como 0 "curva" em cada anel modular e onde coincidem (LCM).
+// Para base_a=7, base_b=10: ambos curvam ao zero em 70.
+// Pisano period mostra quantos passos Fibonacci leva para retornar ao (0,1).
+// ============================================================================
+
+static int raf_gcd(int a, int b) { while (b) { int t = b; b = a % b; a = t; } return a; }
+
+static int raf_pisano_42(int m) {
+    if (m <= 1) return 1;
+    long long a = 0, b = 1;
+    for (int i = 0; i < 6 * m; i++) {
+        long long c = (a + b) % m;
+        a = b; b = c;
+        if (a == 0 && b == 1) return i + 1;
+    }
+    return 0;
+}
+
+void zero_curve_dual(int base_a, int base_b) {
+    if (base_a < 2 || base_b < 2) return;
+    int g   = raf_gcd(base_a, base_b);
+    int lcm = (base_a / g) * base_b;
+
+    printf("\n=== ZERO CURVE DUAL: Z/%dZ e Z/%dZ ===\n", base_a, base_b);
+    printf("Anel A (Z/%dZ): [", base_a);
+    for (int i = 0; i < base_a; i++) printf(i ? " %d" : "%d", i);
+    printf("] — 0 curva ao voltar após %d passos\n", base_a);
+
+    printf("Anel B (Z/%dZ): [", base_b);
+    for (int i = 0; i < base_b; i++) printf(i ? " %d" : "%d", i);
+    printf("] — 0 curva ao voltar após %d passos\n", base_b);
+
+    printf("LCM(%d,%d) = %d — ambos coincidem em 0 aqui\n", base_a, base_b, lcm);
+
+    printf("Coincidências (0 em ambos): ");
+    for (int i = 0; i <= lcm; i++) {
+        if (i % base_a == 0 && i % base_b == 0) printf("%d ", i);
+    }
+    printf("\n");
+
+    int pa = raf_pisano_42(base_a);
+    int pb = raf_pisano_42(base_b);
+    printf("Pisano(%d) = %d  |  Pisano(%d) = %d\n", base_a, pa, base_b, pb);
+    printf("(Fibonacci mod %d retorna a (0,1) em %d passos — Recorrência de Poincaré)\n",
+           base_a, pa);
+    printf("(Fibonacci mod %d retorna a (0,1) em %d passos — Poincaré)\n\n",
+           base_b, pb);
+}
+
+// ============================================================================
+// 6. FUNÇÃO PRINCIPAL (BLOCO ÚNICO)
 // ============================================================================
 int main() {
     printf("RAFAELIA_CORE_ARM32_NEON\n");
@@ -278,7 +329,13 @@ int main() {
         }
     }
     printf("Ciclo de retroalimentação concluído.\n");
-    
+
+    // --- 8. Zero Curve Dual: base 7 e base 10 coexistindo ---
+    // 42 = 6×7: o círculo de 42 pontos é o anel Z/42Z — LCM(6,7)
+    // Base 7 e base 10 coexistem em LCM(7,10)=70; ambas curvam ao zero em 70
+    zero_curve_dual(7, 10);
+    zero_curve_dual(7, 14);   /* 14 = 2×7; LCM=14, coexistem a cada 14 */
+
     free(image);
     return 0;
 }
