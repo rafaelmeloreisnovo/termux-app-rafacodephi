@@ -64,6 +64,13 @@ public class TermuxApplication extends Application {
             Logger.logError(LOG_TAG, "ApiLowLevelBridge nativeInit failed: " + e.getMessage());
         }
 
+        try {
+            BootstrapBaremetalGuard.selftest();
+            Logger.logDebug(LOG_TAG, "BootstrapBaremetalGuard.selftest() ok");
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "BootstrapBaremetalGuard selftest failed: " + e.getMessage());
+        }
+
         Logger.logDebug("Starting Application");
 
         // Set TermuxBootstrap.TERMUX_APP_PACKAGE_MANAGER and TermuxBootstrap.TERMUX_APP_PACKAGE_VARIANT
