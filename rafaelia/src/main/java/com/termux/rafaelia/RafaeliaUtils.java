@@ -304,4 +304,45 @@ public final class RafaeliaUtils {
      * @return Array [SS_T, SS_M, SS_E], or null on error
      */
     public static native float[] computeSSDecomposition(float[] y, float[] yPred);
+
+    // ==================== Numeric Base Operations (raf_numbase) ====================
+
+    /** Convert {@code n} to its string representation in {@code base} (2–36). */
+    public static native String toBase(long n, int base);
+
+    /** Parse a base-{@code base} string back to a {@code long}. */
+    public static native long fromBase(String s, int base);
+
+    /** F(0)=0, F(1)=1, F(2)=1, F(3)=2 … */
+    public static native long fibonacci(int n);
+
+    /** T(0)=0, T(1)=0, T(2)=1; T(n)=T(n-1)+T(n-2)+T(n-3) → 0,0,1,1,2,4,7,13 … */
+    public static native long tribonacci(int n);
+
+    /** P(0)=2, P(1)=3; P(n)=next prime ≥ P(n-2)+P(n-1) → 2,3,5,11,17,29 … */
+    public static native long primonacci(int n);
+
+    /**
+     * Any sequence value mod m.
+     * @param type 0=fibonacci 1=tribonacci 2=primonacci
+     */
+    public static native long seqMod(int type, int n, int mod);
+
+    /**
+     * Pisano period π(m): Fibonacci mod m returns to state (0,1) after π(m) steps.
+     * π(10)=60, π(7)=16, π(14)=24, π(70)=120.
+     */
+    public static native int pisanoPeriod(int m);
+
+    /**
+     * Radix economy for {@code base} over integers up to {@code nMax}.
+     * Lower value = more efficient representation.
+     */
+    public static native double baseEfficiency(int base, long nMax);
+
+    /**
+     * JSON describing how Z/baseAZ and Z/baseBZ coexist:
+     * rings, Pisano periods, and coincidences at multiples of LCM(baseA, baseB).
+     */
+    public static native String zeroCurveDual(int baseA, int baseB);
 }

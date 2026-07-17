@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include "raf_numbase.h"
 
 #define RAFAELIA_VA_MAGIC 0x52464156u
 #define RAFAELIA_VA_MAX_DIM 1048576
@@ -325,4 +326,67 @@ Java_com_termux_rafaelia_RafaeliaUtils_computeSSDecomposition(JNIEnv *env, jclas
     (*env)->SetFloatArrayRegion(env, result, 0, 3, ss_arr);
 
     return result;
+}
+
+/* ==========================================================================
+ * JNI bridge: raf_numbase — numeric bases, sequences, Pisano, zero-curve
+ * Exposed as static natives on com.termux.rafaelia.RafaeliaUtils.
+ * ========================================================================== */
+
+#define RAF_JNI(ret, name) \
+    JNIEXPORT ret JNICALL Java_com_termux_rafaelia_RafaeliaUtils_##name
+
+RAF_JNI(jstring, toBase)(JNIEnv *env, jclass clazz, jlong n, jint base) {
+    (void)clazz;
+    char buf[68];
+    if (!raf_to_base((long long)n, (int)base, buf, sizeof(buf))) return NULL;
+    return (*env)->NewStringUTF(env, buf);
+}
+
+RAF_JNI(jlong, fromBase)(JNIEnv *env, jclass clazz, jstring s, jint base) {
+    (void)clazz;
+    if (!s) return 0;
+    const char *cs = (*env)->GetStringUTFChars(env, s, NULL);
+    if (!cs) return 0;
+    jlong r = (jlong)raf_from_base(cs, (int)base);
+    (*env)->ReleaseStringUTFChars(env, s, cs);
+    return r;
+}
+
+RAF_JNI(jlong, fibonacci)(JNIEnv *env, jclass clazz, jint n) {
+    (void)env; (void)clazz;
+    return (jlong)raf_fibonacci((int)n);
+}
+
+RAF_JNI(jlong, tribonacci)(JNIEnv *env, jclass clazz, jint n) {
+    (void)env; (void)clazz;
+    return (jlong)raf_tribonacci((int)n);
+}
+
+RAF_JNI(jlong, primonacci)(JNIEnv *env, jclass clazz, jint n) {
+    (void)env; (void)clazz;
+    return (jlong)raf_primonacci((int)n);
+}
+
+RAF_JNI(jlong, seqMod)(JNIEnv *env, jclass clazz, jint type, jint n, jint mod) {
+    (void)env; (void)clazz;
+    return (jlong)raf_seq_mod((int)type, (int)n, (int)mod);
+}
+
+RAF_JNI(jint, pisanoPeriod)(JNIEnv *env, jclass clazz, jint m) {
+    (void)env; (void)clazz;
+    return (jint)raf_pisano_period((int)m);
+}
+
+RAF_JNI(jdouble, baseEfficiency)(JNIEnv *env, jclass clazz, jint base, jlong nMax) {
+    (void)env; (void)clazz;
+    return (jdouble)raf_base_efficiency((int)base, (long long)nMax);
+}
+
+RAF_JNI(jstring, zeroCurveDual)(JNIEnv *env, jclass clazz, jint baseA, jint baseB) {
+    (void)clazz;
+    char buf[4096];
+    int r = raf_zero_curve_dual((int)baseA, (int)baseB, buf, sizeof(buf));
+    if (r < 0) return NULL;
+    return (*env)->NewStringUTF(env, buf);
 }
