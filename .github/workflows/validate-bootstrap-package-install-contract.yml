@@ -157,7 +157,7 @@ jobs:
 
       - name: Upload bootstrap generation log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bootstrap-generation-log
           path: reports/bootstrap_generation.log

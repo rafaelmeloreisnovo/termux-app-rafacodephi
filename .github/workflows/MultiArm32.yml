@@ -195,7 +195,7 @@ jobs:
           fi
       
       - name: 📤 Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: apk-${{ matrix.arch }}-pagesize-${{ matrix.page_size }}
@@ -260,7 +260,7 @@ jobs:
           echo "**✅ Build validado com sucesso**" >> $GITHUB_STEP_SUMMARY
       
       - name: 📤 Upload Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: consolidated-reports

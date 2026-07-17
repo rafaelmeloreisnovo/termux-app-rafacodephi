@@ -45,7 +45,7 @@ jobs:
         run: ./gradlew app:assembleRelease
 
       - name: Upload signed APK (artifact)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: termux-rafacodephi-signed-${{ github.ref_name }}
           path: app/build/outputs/apk/release/*.apk
