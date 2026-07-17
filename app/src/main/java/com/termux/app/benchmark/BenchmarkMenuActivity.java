@@ -14,6 +14,9 @@ import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.termux.app.api.ApiLowLevelBridge;
+
+import java.nio.ByteBuffer;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -36,6 +39,9 @@ public final class BenchmarkMenuActivity extends Activity {
     public static native long nativeCycleRead();
     /** Hardware capability bitmask: bit0=CNTVCT bit1=CRC32C bit2=NEON */
     public static native int  nativeHwCaps();
+
+    /* 1-byte direct buffer — ticks the native state machine per bench event */
+    private static final ByteBuffer BENCH_PAYLOAD = ByteBuffer.allocateDirect(1);
 
     /* ── Execution profiles ───────────────────────────────────────────────── */
     private static final int PROF_AUTO        = 0;
@@ -174,6 +180,8 @@ public final class BenchmarkMenuActivity extends Activity {
             try {
                 for (int cat = 0; cat < CAT_COUNT; cat++) {
                     final int c = cat;
+                    /* tick native dispatch state machine: API_SENSOR=0x01 + cat offset */
+                    ApiLowLevelBridge.nativeDispatch(BENCH_PAYLOAD, 0x01 + cat);
                     long raw = nativeBenchRun(profile, cat);
                     /* hi32 = score, lo32 = cycles>>8 */
                     long score = (raw >>> 32) & 0xFFFFFFFFL;
