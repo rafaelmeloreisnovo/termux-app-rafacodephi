@@ -18,3 +18,24 @@ jobs:
       - name: Validate CI workflow metadata contract
         run: ./scripts/validate_ci_workflow_metadata.sh
 
+      - name: Validate non-destructive runtime evidence collector
+        run: |
+          sh -n scripts/federation/collect_runtime_evidence.sh
+          mkdir -p artifacts
+          sh scripts/federation/collect_runtime_evidence.sh artifacts/termux-runtime-evidence.json
+          python3 tools/validate_runtime_evidence.py artifacts/termux-runtime-evidence.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('artifacts/termux-runtime-evidence.json').read_text())
+          assert report['claim_allowed'] is False
+          assert report['install_or_mutation_performed'] is False
+          assert {item['name'] for item in report['commands']} == {'sh', 'ls', 'pkg', 'apt', 'dpkg', 'proot'}
+          PY
+
+      - name: Upload runtime evidence contract artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: termux-runtime-evidence-contract-${{ github.run_id }}
+          path: artifacts/termux-runtime-evidence.json
+          retention-days: 30
