@@ -57,6 +57,13 @@ public class TermuxApplication extends Application {
             Logger.logError(LOG_TAG, "Failed to set log config: " + e.getMessage());
         }
 
+        try {
+            com.termux.app.api.ApiLowLevelBridge.nativeInit();
+            Logger.logDebug(LOG_TAG, "ApiLowLevelBridge.nativeInit() ok");
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "ApiLowLevelBridge nativeInit failed: " + e.getMessage());
+        }
+
         Logger.logDebug("Starting Application");
 
         // Set TermuxBootstrap.TERMUX_APP_PACKAGE_MANAGER and TermuxBootstrap.TERMUX_APP_PACKAGE_VARIANT
