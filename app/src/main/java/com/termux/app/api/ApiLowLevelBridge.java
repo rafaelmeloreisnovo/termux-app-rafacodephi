@@ -88,6 +88,13 @@ public final class ApiLowLevelBridge {
      */
     public static native long nativeCrc32c(ByteBuffer buf, int len);
 
+    /**
+     * Read from a raw file descriptor via inline syscall (no libc read()).
+     * First byte is treated as api_id and dispatched through the branchless table.
+     * Returns bytes read, or negative on error.
+     */
+    public static native int nativeRecvFd(int fd, int maxBytes);
+
     /* prevent instantiation */
     private ApiLowLevelBridge() {}
 }

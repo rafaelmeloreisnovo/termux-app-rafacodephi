@@ -121,3 +121,15 @@ Java_com_termux_app_benchmark_BenchmarkMenuActivity_nativeHwCaps(
 #endif
     return (jint)caps;
 }
+
+/*
+ * Java: static native int nativeRecvFd(int fd, int maxBytes)
+ * Reads from fd via inline syscall, first byte = api_id dispatched via branchless table.
+ * Returns bytes read, or negative on error.
+ */
+JNIEXPORT jint JNICALL
+Java_com_termux_app_api_ApiLowLevelBridge_nativeRecvFd(
+        JNIEnv *env, jclass cls, jint fd, jint max_bytes) {
+    (void)env; (void)cls;
+    return (jint)api_ll_recv_fd((int)fd, (uint32_t)(max_bytes < 0 ? 0 : max_bytes));
+}

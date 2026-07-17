@@ -181,6 +181,16 @@ public class VectraRuntimeActivity extends AppCompatActivity {
         sb.append(String.format(Locale.US, "• Total:         %,d\n", total));
         long cycles = com.termux.app.benchmark.BenchmarkMenuActivity.nativeCycleRead();
         sb.append("• Cycle counter: 0x").append(Long.toHexString(cycles));
+        long state = com.termux.app.api.ApiLowLevelBridge.nativeStateQuery();
+        int hiWord       = (int)(state >>> 32);
+        int statePhase   = (hiWord >>> 24) & 0xFF;
+        int stateAtt     = (hiWord >>> 16) & 0xFF;
+        int stateFlags   = (hiWord >>> 8) & 0xFF;
+        int stateEntropy = hiWord & 0xFF;
+        int stateEvents  = (int)(state & 0xFFFFFFFFL);
+        sb.append(String.format(Locale.US,
+            "\n• State: phase=%d att=%d flags=0x%02x entropy=0x%02x events=%d",
+            statePhase, stateAtt, stateFlags, stateEntropy, stateEvents));
         return sb.toString();
     }
 }
