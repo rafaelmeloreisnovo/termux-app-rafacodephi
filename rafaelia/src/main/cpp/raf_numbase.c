@@ -122,7 +122,7 @@ long long raf_seq_mod(int type, int n, int m) {
 
 /* =========================================================================
  * Pisano Period
- * Fibonacci mod m is periodic; P(10)=60, P(7)=16, P(14)=24, P(70)=120
+ * Fibonacci mod m is periodic; P(10)=60, P(7)=16, P(14)=48, P(70)=240.
  * ========================================================================= */
 
 int raf_pisano_period(int m) {
@@ -138,8 +138,7 @@ int raf_pisano_period(int m) {
 
 /* =========================================================================
  * Base Efficiency
- * Radix economy = ceil(log_base(n_max)) * base — lower is better.
- * We return the reciprocal scaled so higher = more efficient.
+ * Radix economy = ceil(log_base(n_max)) * base; lower is more economical.
  * ========================================================================= */
 
 double raf_base_efficiency(int base, long long n_max) {
