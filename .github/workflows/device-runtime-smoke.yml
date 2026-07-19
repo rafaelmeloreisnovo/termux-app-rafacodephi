@@ -12,7 +12,7 @@ jobs:
   device-runtime:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - name: Device smoke (report mode)
         if: ${{ vars.DEVICE_SMOKE_REQUIRED != 'true' }}
         run: ./scripts/device_runtime_smoke.sh "${{ inputs.apk_path }}" || true
