@@ -47,24 +47,39 @@ jobs:
           echo "arm64=$ARM64_APK" >> "$GITHUB_OUTPUT"
           echo "universal=$UNIVERSAL_APK" >> "$GITHUB_OUTPUT"
 
-      - name: Generate ARM32 compatibility report
-        shell: bash
+      - name: Resolve apksigner path
         run: |
-          bash scripts/generate_arm32_compatibility_report.sh \
-            "${{ steps.apks.outputs.arm32 }}" \
-            "${{ steps.apks.outputs.universal }}" \
-            dist/arm32-compatibility-ndk29
+          APKSIGNER=$(find "${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}/build-tools" \
+            -name 'apksigner' -type f 2>/dev/null | sort -rV | head -1)
+          if [ -z "$APKSIGNER" ]; then
+            sdkmanager --install "build-tools;35.0.1" >/dev/null 2>&1 || true
+            APKSIGNER=$(find "${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}/build-tools" \
+              -name 'apksigner' -type f 2>/dev/null | sort -rV | head -1)
+          fi
+          test -n "$APKSIGNER" || { echo "apksigner not found after install attempt" >&2; exit 1; }
+          echo "APKSIGNER=$APKSIGNER" >> "$GITHUB_ENV"
+
+      - name: Generate ARM32 compatibility report
+        run: |
+          mkdir -p dist/arm32-compatibility-ndk29
+          aapt dump badging "${{ steps.apks.outputs.arm32 }}" | tee dist/arm32-compatibility-ndk29/apk-badging.txt
+          unzip -l "${{ steps.apks.outputs.arm32 }}" | tee dist/arm32-compatibility-ndk29/native-libs.txt
+          unzip -l "${{ steps.apks.outputs.universal }}" > dist/arm32-compatibility-ndk29/universal-libs.txt
+          lib_path=$(unzip -Z1 "${{ steps.apks.outputs.arm32 }}" | grep '^lib/armeabi-v7a/.*\.so$' | head -n1)
+          test -n "$lib_path"
+          unzip -p "${{ steps.apks.outputs.arm32 }}" "$lib_path" > /tmp/arm32-lib.so
+          readelf -h /tmp/arm32-lib.so > dist/arm32-compatibility-ndk29/readelf-arm32.txt
+          readelf -A /tmp/arm32-lib.so >> dist/arm32-compatibility-ndk29/readelf-arm32.txt
+          "$APKSIGNER" verify --verbose "${{ steps.apks.outputs.arm32 }}" | tee dist/arm32-compatibility-ndk29/apk-signature.txt
 
       - name: Enforce compatibility gates
-        run: bash scripts/enforce_arm32_compatibility_gates.sh dist/arm32-compatibility-ndk29
-
-      - name: Upload ARM32 gate diagnostics
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: termux-rafcodephi-arm32-gate-diagnostics-ndk29-${{ github.sha }}
-          path: dist/arm32-compatibility-ndk29/
-          if-no-files-found: warn
+        run: |
+          grep -q "package: name='com.termux.rafacodephi'" dist/arm32-compatibility-ndk29/apk-badging.txt
+          grep -q "sdkVersion:'21'" dist/arm32-compatibility-ndk29/apk-badging.txt
+          grep -q "targetSdkVersion:'28'" dist/arm32-compatibility-ndk29/apk-badging.txt
+          grep -q 'native-code:.*armeabi-v7a' dist/arm32-compatibility-ndk29/apk-badging.txt
+          grep -q 'lib/armeabi-v7a/' dist/arm32-compatibility-ndk29/native-libs.txt
+          grep -q 'lib/armeabi-v7a/' dist/arm32-compatibility-ndk29/universal-libs.txt
 
       - name: Validate bootstrap ARM32 presence
         run: |
@@ -97,13 +112,8 @@ jobs:
           name: termux-rafcodephi-arm32-compat-report-ndk29-${{ github.sha }}
           path: |
             dist/arm32-compatibility-ndk29/apk-badging.txt
-            dist/arm32-compatibility-ndk29/apk-metadata-source.txt
-            dist/arm32-compatibility-ndk29/apk-metadata-errors.txt
-            dist/arm32-compatibility-ndk29/android-sdk-tools.txt
             dist/arm32-compatibility-ndk29/native-libs.txt
-            dist/arm32-compatibility-ndk29/universal-libs.txt
             dist/arm32-compatibility-ndk29/readelf-arm32.txt
             dist/arm32-compatibility-ndk29/apk-signature.txt
-            dist/arm32-compatibility-ndk29/gate-results.txt
             dist/arm32-compatibility-ndk29/install-notes-moto-e7-power.md
             dist/arm32-compatibility-ndk29/bootstrap-arm.txt
