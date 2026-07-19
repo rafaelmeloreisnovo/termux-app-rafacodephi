@@ -4,6 +4,8 @@
    - Append-only: não reescreve payload, só adiciona "pontos"
 */
 
+#include "raf_ecc32_masked.h"
+
 typedef unsigned char      u8;
 typedef unsigned short     u16;
 typedef unsigned int       u32;
@@ -234,20 +236,9 @@ static u8 raf_base20(u32 v){ return (u8)(v % 20u); }
 /* ==== slot10: normaliza 0..9 ==== */
 static u8 raf_slot10(u32 v){ return (u8)(v % 10u); }
 
-/* ==== ECC simples (paridades por posição) ==== */
+/* ==== ECC simples (paridades por posição, sem loops aninhados) ==== */
 static u8 raf_ecc32(u32 v){
-  u8 ecc = 0u;
-  for(u8 bit=0u; bit<6u; bit++){
-    u32 p = 0u;
-    for(u8 i=0u; i<32u; i++){
-      u32 pos = (u32)i + 1u;
-      if(pos & (1u << bit)){
-        p ^= (v >> i) & 1u;
-      }
-    }
-    ecc |= (u8)((p & 1u) << bit);
-  }
-  return ecc;
+  return (u8)raf_ecc32_masked((unsigned int)v);
 }
 
 static void raf_ecc64(u64 v, u8 *ecc0, u8 *ecc1){
