@@ -1,137 +1,144 @@
 # BOOTSTRAP_SOURCE_CONTRACT.md
-<!-- Criado: 2026-07-19 | Complementar a RAFCODEPHI_BOOTSTRAP_CONTRACT.md -->
+<!-- Atualizado: 2026-07-19 | Complementar a RAFCODEPHI_BOOTSTRAP_CONTRACT.md -->
 
-Este documento especifica a **fonte canônica** dos ZIPs de bootstrap e os procedimentos
-de verificação de integridade. Complementa `RAFCODEPHI_BOOTSTRAP_CONTRACT.md`, que
-descreve o *conteúdo esperado* do bootstrap.
+Este documento define a fonte canônica dos ZIPs de bootstrap, separando três estados que não podem ser confundidos:
 
----
+1. payload local de ponte;
+2. payload real derivado de pacotes Termux;
+3. artefato de release comprovado por hash.
 
-## O Problema
+## Correção canônica da auditoria
 
-`./gradlew :app:downloadBootstraps` baixa ZIPs de bootstrap de um servidor remoto,
-mas a **URL de origem e os hashes esperados** não estavam documentados explicitamente,
-criando o estado `BOOTSTRAP_UNVERIFIABLE` — ninguém pode confirmar de onde vieram os ZIPs
-sem inspecionar o código Gradle.
+No grafo Gradle atual **não existe** a task `:app:downloadBootstraps`.
+A task efetivamente ligada a `preBuild` é:
 
-Este documento resolve isso.
+```bash
+./gradlew :app:generateRafcodephiBootstraps --no-daemon
+```
 
----
+Ela executa:
 
-## Arquivos Bootstrap Esperados
+```bash
+bash scripts/build_rafaelia_bootstraps.sh
+```
+
+Portanto, referências anteriores a download remoto automático eram drift documental e não descreviam o código corrente.
+
+## Arquivos produzidos
 
 ```text
 app/src/main/cpp/bootstrap-aarch64.zip
 app/src/main/cpp/bootstrap-arm.zip
 app/src/main/cpp/bootstrap-i686.zip
 app/src/main/cpp/bootstrap-x86_64.zip
+app/src/main/cpp/rewritten-bootstrap-aarch64.zip
+app/src/main/cpp/rewritten-bootstrap-arm.zip
+app/src/main/cpp/rewritten-bootstrap-i686.zip
+app/src/main/cpp/rewritten-bootstrap-x86_64.zip
 ```
 
-Esses arquivos **não são versionados no Git** por design (binários grandes + rebuild frequente).
-São gerados ou baixados durante o build.
+Esses ZIPs são artefatos de build e não devem ser tratados como fontes versionadas.
 
----
+## Fonte 1 — gerador local de ponte
 
-## Fontes Canônicas e Prioridade
-
-### Fonte 1 — Variáveis de ambiente com BLAKE3 (fonte primária, release-grade)
-
-Configure as variáveis antes de executar o build:
+Estado padrão:
 
 ```bash
-export TERMUX_BOOTSTRAP_BLAKE3_AARCH64="<blake3-hash-do-zip-aarch64>"
-export TERMUX_BOOTSTRAP_BLAKE3_ARM="<blake3-hash-do-zip-arm>"
-export TERMUX_BOOTSTRAP_BLAKE3_I686="<blake3-hash-do-zip-i686>"
-export TERMUX_BOOTSTRAP_BLAKE3_X86_64="<blake3-hash-do-zip-x86_64>"
+RAFCODEPHI_REAL_PKG_BOOTSTRAP=false \
+./gradlew :app:generateRafcodephiBootstraps --no-daemon
 ```
 
-O build verifica que os ZIPs baixados coincidem com os hashes declarados via
-`BootstrapBaremetalGuard`. Release builds **falham** se essas variáveis estiverem vazias.
+O script compila `scripts/bootstrap_zip_builder.c` e gera um payload mínimo com wrappers para `sh`, `pkg`, `apt`, `apt-get`, `busybox`, `proot`, `apkmanager` e `shellbash`.
 
-### Fonte 2 — Download via Gradle task (desenvolvimento)
+Classificação obrigatória:
+
+```text
+BOOTSTRAP_BRIDGE_ONLY
+NOT_RELEASE_RUNTIME_PROOF
+```
+
+Esse modo prova estrutura e empacotamento, mas não prova backend real de `apt`, `busybox`, `proot` ou shell completo.
+
+## Fonte 2 — pacotes Termux reais
+
+Ativação explícita:
 
 ```bash
-./gradlew :app:downloadBootstraps --no-daemon
+RAFCODEPHI_REAL_PKG_BOOTSTRAP=true \
+RAFCODEPHI_REAL_PKG_ARCH=all \
+RAFCODEPHI_REAL_PKG_REPO=https://packages.termux.dev/apt/termux-main \
+./gradlew :app:generateRafcodephiBootstraps --no-daemon
 ```
 
-A URL de download é definida na task `downloadBootstraps` em `app/build.gradle.kts`.
-**Ação necessária:** Documentar a URL explícita aqui após confirmação de qual
-servidor é usado (Termux packages server, GitHub Releases, ou build próprio).
+Variáveis do contrato:
 
-### Fonte 3 — Bootstrap local de desenvolvimento (sem download remoto)
+| variável | padrão | função |
+|---|---|---|
+| `RAFCODEPHI_REAL_PKG_BOOTSTRAP` | `false` | habilita payload real |
+| `RAFCODEPHI_REAL_PKG_ARCH` | `all` | `all`, `aarch64` ou `arm` |
+| `RAFCODEPHI_REAL_PKG_VALIDATE` | `true` | valida os ZIPs reais gerados |
+| `RAFCODEPHI_REAL_PKG_REPO` | `https://packages.termux.dev/apt/termux-main` | repositório APT de origem |
+| `TERMUX_BOOTSTRAP_PACKAGE_NAME` | `com.termux.rafacodephi` | package/prefix canônico |
+| `TERMUX_BOOTSTRAP_PAGE_SIZE` | `16384` | contrato de page size |
 
-```bash
-bash scripts/verify_bootstrap_contract.sh --prepare-dev
-```
+A URL acima é fonte de pacotes, não um endpoint de ZIP pronto. A geração continua sendo local e deve registrar versões e hashes dos pacotes consumidos.
 
-Gera `bootstrap-*.zip` mínimos localmente via `bootstrap_zip_builder.c` com marcador
-`BUILD_ONLY` — não apto para release ou teste de runtime.
+## Fonte 3 — artefato de release
 
----
+Um ZIP só pode receber classificação `RELEASE_BOOTSTRAP_VERIFIED` quando houver:
 
-## Verificação de Integridade
+- commit do gerador;
+- URL/revisão do repositório de pacotes;
+- lista pinada de pacotes e versões;
+- ABI;
+- SHA-256;
+- BLAKE3, quando exigido pelo runtime;
+- relatório de validação;
+- workflow/run que materializou o artefato.
 
-### SHA-256 (mínimo obrigatório)
+Sem esse conjunto, use `BLOCKED_BY[CANONICAL_BUILD_EVIDENCE_REQUIRED]`.
+
+## Verificação
 
 ```bash
 sha256sum app/src/main/cpp/bootstrap-*.zip
-```
-
-Os valores SHA-256 devem ser registrados após cada build canônico que produza
-ZIPs verificados. Estado atual: `NOASSERTION` — preencher após primeira execução
-de CI bem-sucedida com fonte 1 ou 2.
-
-| ABI       | SHA-256                 | Status       |
-|-----------|-------------------------|--------------|
-| aarch64   | NOASSERTION             | PENDING      |
-| arm       | NOASSERTION             | PENDING      |
-| i686      | NOASSERTION             | PENDING      |
-| x86_64    | NOASSERTION             | PENDING      |
-
-### BLAKE3 (obrigatório para release)
-
-BLAKE3 é o mecanismo de verificação usado pela `BootstrapBaremetalGuard` em
-runtime. Requer `b3sum` no ambiente de build:
-
-```bash
 b3sum app/src/main/cpp/bootstrap-*.zip
+python3 scripts/validate_real_arm_bootstrap_core.py \
+  app/src/main/cpp/rewritten-bootstrap-aarch64.zip \
+  app/src/main/cpp/rewritten-bootstrap-arm.zip
 ```
 
----
+## Registro de hashes
 
-## Registro de Dependências do Bootstrap
+| ABI | SHA-256 | BLAKE3 | origem | estado |
+|---|---|---|---|---|
+| aarch64 | `NOASSERTION` | `NOASSERTION` | aguardando build canônico | `BLOCKED_BY[CI_ARTIFACT]` |
+| arm | `NOASSERTION` | `NOASSERTION` | aguardando build canônico | `BLOCKED_BY[CI_ARTIFACT]` |
+| i686 | `NOASSERTION` | `NOASSERTION` | gerador de ponte somente | `DEV_ONLY` |
+| x86_64 | `NOASSERTION` | `NOASSERTION` | gerador de ponte somente | `DEV_ONLY` |
 
-Os ZIPs devem conter, no mínimo:
+`NOASSERTION` aqui significa ausência declarada de artefato canônico; não é um hash substituto.
 
-| Arquivo              | Propósito                    | Verificado por              |
-|----------------------|------------------------------|-----------------------------|
-| `SYMLINKS.txt`       | Links simbólicos do bootstrap| `BootstrapBaremetalGuard`   |
-| `bin/sh`             | Shell mínimo                 | runtime contract check      |
-| `bin/pkg`            | Gerenciador de pacotes       | runtime contract check      |
-| `bin/busybox`        | Utilitários Unix             | runtime contract check      |
-| `bin/proot`          | Emulação de chroot           | runtime contract check      |
-| `BOOTSTRAP_INFO`     | Metadados de build           | contract validator          |
+## Build reproduzível
 
----
+A promoção exige:
 
-## Build Reproduzível
+1. pin do commit deste repositório;
+2. pin do snapshot/revisão de `termux-packages`;
+3. lista ordenada de pacotes e versões;
+4. ambiente/toolchain registrado;
+5. geração dos quatro ZIPs;
+6. validação do conteúdo e prefixos;
+7. SHA-256/BLAKE3 materializados;
+8. upload imutável ou release asset;
+9. ledger relacionando artefato, commit e workflow.
 
-Para garantir reprodutibilidade:
+## Estado atual
 
-1. Fixar a versão do toolchain termux-packages usado para compilar os ZIPs
-2. Usar commits pinados de `termux-packages`
-3. Registrar o SHA-256 + BLAKE3 de cada ZIP como artefato de CI
-4. Armazenar os ZIPs como GitHub Release assets ou em armazenamento de artefatos
-   com retenção de no mínimo 90 dias
-
----
-
-## Gaps Pendentes (BLOCKED_BY_AUDIT)
-
-- [ ] Documentar URL exata usada por `downloadBootstraps` em `app/build.gradle.kts`
-- [ ] Preencher SHA-256 e BLAKE3 da tabela após primeiro CI build bem-sucedido
-- [ ] Confirmar versão do termux-packages usada para gerar os ZIPs
-- [ ] Decidir entre: servidor próprio, GitHub Releases ou artefato de CI como fonte primária
-
-Até esses itens serem preenchidos, o estado do bootstrap é:
-`BOOTSTRAP_DEV_LOCAL_ONLY` (conforme `docs/BETA_BOOTSTRAP_STATUS.md`)
+```text
+source_contract_documented = true
+legacy_download_task_claim = removed
+default_payload = BOOTSTRAP_BRIDGE_ONLY
+real_arm_payload_path = implemented_but_unproven_on_current_head
+release_hashes = BLOCKED_BY[CANONICAL_BUILD_EVIDENCE_REQUIRED]
+```
