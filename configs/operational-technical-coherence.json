@@ -62,11 +62,24 @@
       "limitations": ["DNS, HTTP parsing and device execution require dedicated reproducible tests"]
     },
     {
+      "id": "browser.https.failclosed.materializer",
+      "path": "scripts/materialize_browser_fail_closed.py",
+      "state": "VERIFIED_HOST",
+      "scope": "canonical materialization removes the known HTTPS-to-HTTP downgrade and terminates with an explicit TLS error",
+      "evidence": ["scripts/validate_browser_fail_closed.py", "Rafaelia Native Safety"],
+      "claim_allowed": true,
+      "limitations": [
+        "does not implement TLS 1.2 or TLS 1.3",
+        "does not validate certificates",
+        "raw Browser.sh remains a historical prototype generator and is not the canonical build entrypoint"
+      ]
+    },
+    {
       "id": "browser.tls13",
       "path": "Browser.sh",
       "state": "PROTOTYPE_FAIL_CLOSED_REQUIRED",
       "scope": "ClientHello construction and record-header parsing only",
-      "evidence": ["Browser.sh:br_tls.h", "Browser.sh:DO_FETCH"],
+      "evidence": ["Browser.sh:br_tls.h", "Browser.sh:DO_FETCH", "scripts/materialize_browser_fail_closed.py"],
       "claim_allowed": false,
       "limitations": [
         "no cryptographically secure client random",
@@ -76,7 +89,7 @@
         "no AEAD record protection",
         "no certificate-chain validation",
         "no Finished verification",
-        "current source contains plaintext fallback behavior"
+        "canonical materialization fails closed; TLS functionality remains absent"
       ]
     },
     {
