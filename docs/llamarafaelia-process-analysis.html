@@ -147,13 +147,60 @@ footer{border-top:1px solid var(--border);padding-top:1.5rem;font-family:var(--m
 .toc-list a{color:var(--muted);text-decoration:none;font-family:var(--mono);font-size:.75rem}
 .toc-list a:hover{color:var(--signal)}
 .toc-list .tl-tag{color:var(--signal);margin-right:.35rem}
+
+/* ── v3 interactive ── */
+/* §V3 donut */
+.donut-wrap{display:flex;flex-wrap:wrap;align-items:center;gap:1.25rem;margin:.75rem 0 .5rem}
+.donut-svg{width:110px;height:110px;flex-shrink:0}
+.donut-seg{transition:stroke-dashoffset 1.4s cubic-bezier(.4,0,.2,1)}
+.donut-legend{font-size:.75rem;font-family:var(--mono);display:flex;flex-direction:column;gap:.4rem}
+.donut-legend-row{display:flex;align-items:center;gap:.45rem}
+.donut-pct{font-size:1.1rem;font-weight:700;font-family:var(--mono)}
+
+/* §V2 sparkbars */
+.spark-cell{width:90px;vertical-align:middle!important}
+.spark-bar-wrap{display:flex;align-items:center;gap:.35rem}
+.spark-bar-inner{height:7px;border-radius:1px;min-width:2px;width:0;transition:width .8s ease}
+.spark-bar-inner.const-field{background:var(--pulse)!important;opacity:1!important}
+.spark-val-lbl{font-family:var(--mono);font-size:.63rem;color:var(--muted);white-space:nowrap}
+
+/* §V4 pyramid bars */
+.pyr-bar-track{background:var(--mid);height:5px;margin-top:.35rem;border-radius:2px;overflow:hidden;max-width:100%}
+.pyr-bar-fill{height:100%;width:0;border-radius:2px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+
+/* §V1 attractor wheel */
+.attractor-wrap{margin:1rem 0 1.25rem;position:relative;display:inline-block}
+.attractor-svg{display:block}
+.attr-tooltip{position:absolute;background:var(--card);border:1px solid var(--signal);padding:.35rem .65rem;font-family:var(--mono);font-size:.7rem;pointer-events:none;display:none;z-index:10;line-height:1.6;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+
+/* §V5 score simulator */
+.score-sim{border:1px solid var(--border);padding:1rem 1.25rem;background:var(--card);margin:1rem 0;max-width:540px}
+.score-sim-title{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--signal);margin-bottom:.85rem}
+.sim-row{display:grid;grid-template-columns:70px 1fr 52px;align-items:center;gap:.4rem .65rem;margin-bottom:.45rem}
+.sim-label{font-family:var(--mono);font-size:.7rem;color:var(--muted)}
+.sim-slider{width:100%;accent-color:var(--signal);cursor:pointer}
+.sim-val{font-family:var(--mono);font-size:.7rem;color:var(--ink);text-align:right}
+.sim-output{border-top:1px solid var(--border);margin-top:.7rem;padding-top:.7rem;display:grid;grid-template-columns:1fr 1fr;gap:.35rem .65rem;font-family:var(--mono);font-size:.7rem}
+.sim-out-label{color:var(--muted)}
+.sim-out-val{color:var(--signal);font-weight:700}
+.sim-path{grid-column:1/-1;margin-top:.35rem;padding:.35rem .6rem;font-size:.73rem;font-family:var(--mono);text-align:center;font-weight:700}
+
+/* §V6 pipeline flow animation */
+.flow-run-btn{background:var(--signal);color:#000;border:none;font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;padding:.4rem 1rem;cursor:pointer;font-weight:700;margin-bottom:.85rem;display:inline-block}
+.flow-run-btn:hover{opacity:.82}
+@keyframes flow-pulse{0%{background:var(--signal-dim)}45%{background:var(--signal);color:#000}100%{background:var(--signal-dim)}}
+.conv-row.flowing{animation:flow-pulse .9s ease forwards;border-radius:1px}
+
+/* §V7 cycle tooltips */
+.cycle-svg-wrap{position:relative}
+.cycle-tooltip{position:absolute;background:var(--card);border:1px solid var(--signal);padding:.4rem .75rem;font-family:var(--mono);font-size:.68rem;pointer-events:none;display:none;z-index:10;max-width:230px;line-height:1.55;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 </style>
 
 <div class="page">
 
 <!-- HEADER -->
 <header class="site-header">
-  <div class="header-eyebrow">LLM Inference · C/C++ · rmrCti · AArch64 · v2 — expansão máxima</div>
+  <div class="header-eyebrow">LLM Inference · C/C++ · rmrCti · AArch64 · v3 — interactive</div>
   <h1 class="site-title">llamaRafaelia<br>Análise de Processos</h1>
   <p class="site-tagline">Mapa técnico completo de todos os processos executáveis — da ingestão de conversas até a inferência com memória contextual, passando pelo núcleo bare-metal, pipeline de curadoria Omega, TRIAD Engine e exportação Android.</p>
   <button class="theme-toggle" onclick="(function(){var r=document.documentElement,t=r.getAttribute('data-theme');r.setAttribute('data-theme',t==='dark'?'light':'dark')})()">toggle theme</button>
@@ -212,35 +259,60 @@ footer{border-top:1px solid var(--border);padding-top:1.5rem;font-family:var(--m
     Restrição: N+F[N(1+Nᴺ)&gt;0] — cada nível existe somente se o anterior não for vazio
   </div>
 
-  <div class="pyramid-wrap" role="list" aria-label="Níveis da pirâmide">
-    <div class="pyramid-level lv0" role="listitem">
+  <!-- §V4: Animated pyramid bars (JS fills .pyr-bar-fill widths) -->
+  <div class="pyramid-wrap" role="list" aria-label="Níveis da pirâmide" id="pyramid-wrap">
+    <div class="pyramid-level lv0" role="listitem" data-delta="1">
       <div class="pyr-n">N=0</div>
-      <div class="pyr-body"><strong>Matéria — BitStack</strong><span>nibbles/bytes · <code>struct BitStack {u8 buf[CAP]; u32 w; u32 records}</code> · base imutável append-only</span></div>
+      <div class="pyr-body">
+        <strong>Matéria — BitStack</strong>
+        <span>nibbles/bytes · <code>struct BitStack {u8 buf[CAP]; u32 w; u32 records}</code> · base imutável append-only</span>
+        <div class="pyr-bar-track"><div class="pyr-bar-fill"></div></div>
+      </div>
       <div class="pyr-delta">∆(0)=1</div>
     </div>
-    <div class="pyramid-level lv1" role="listitem">
+    <div class="pyramid-level lv1" role="listitem" data-delta="2">
       <div class="pyr-n">N=1</div>
-      <div class="pyr-body"><strong>CTI Scan — Ingestão</strong><span>streaming C · JSONL append-only · IC / PP / CV por chunk · out.bitstack.jsonl</span></div>
+      <div class="pyr-body">
+        <strong>CTI Scan — Ingestão</strong>
+        <span>streaming C · JSONL append-only · IC / PP / CV por chunk · out.bitstack.jsonl</span>
+        <div class="pyr-bar-track"><div class="pyr-bar-fill"></div></div>
+      </div>
       <div class="pyr-delta">∆(1)=2</div>
     </div>
-    <div class="pyramid-level lv2" role="listitem">
+    <div class="pyramid-level lv2" role="listitem" data-delta="8">
       <div class="pyr-n">N=2</div>
-      <div class="pyr-body"><strong>NeuroMetrics — 29 campos / NEON</strong><span>omega_neuro_full.c · 42 atratores via omega_point mod 42 · zone_stats · zones.index</span></div>
+      <div class="pyr-body">
+        <strong>NeuroMetrics — 29 campos / NEON</strong>
+        <span>omega_neuro_full.c · 42 atratores via omega_point mod 42 · zone_stats · zones.index</span>
+        <div class="pyr-bar-track"><div class="pyr-bar-fill"></div></div>
+      </div>
       <div class="pyr-delta">∆(2)=8</div>
     </div>
-    <div class="pyramid-level lv3" role="listitem">
+    <div class="pyramid-level lv3" role="listitem" data-delta="48">
       <div class="pyr-n">N=3</div>
-      <div class="pyr-body"><strong>Omega Forest — 5 caminhos GF(2⁸)</strong><span>42-attractor topology · weight=IC_adj×PP_adj×(1−decay) · forest.jsonl</span></div>
+      <div class="pyr-body">
+        <strong>Omega Forest — 5 caminhos GF(2⁸)</strong>
+        <span>42-attractor topology · weight=IC_adj×PP_adj×(1−decay) · forest.jsonl</span>
+        <div class="pyr-bar-track"><div class="pyr-bar-fill"></div></div>
+      </div>
       <div class="pyr-delta">∆(3)=48</div>
     </div>
-    <div class="pyramid-level lv4" role="listitem">
+    <div class="pyramid-level lv4" role="listitem" data-delta="384">
       <div class="pyr-n">N=4</div>
-      <div class="pyr-body"><strong>Rankings + TRIAD + TEXTURE10</strong><span>rank multi-dimensional · ΔP=P(stable|peaks)−P(stable|¬peaks) · 10×10 bit grid · love_guard</span></div>
+      <div class="pyr-body">
+        <strong>Rankings + TRIAD + TEXTURE10</strong>
+        <span>rank multi-dimensional · ΔP=P(stable|peaks)−P(stable|¬peaks) · 10×10 bit grid · love_guard</span>
+        <div class="pyr-bar-track"><div class="pyr-bar-fill"></div></div>
+      </div>
       <div class="pyr-delta">∆(4)=384</div>
     </div>
-    <div class="pyramid-level lv5" role="listitem">
+    <div class="pyramid-level lv5" role="listitem" data-delta="3840">
       <div class="pyr-n">N=5</div>
-      <div class="pyr-body"><strong>CTI Memory → llama-server (Ápice)</strong><span>score=base+forest_bonus+frames_bonus · injeção de contexto · namespace cti_memory::{config,hit,result}</span></div>
+      <div class="pyr-body">
+        <strong>CTI Memory → llama-server (Ápice)</strong>
+        <span>score=base+forest_bonus+frames_bonus · injeção de contexto · namespace cti_memory::{config,hit,result}</span>
+        <div class="pyr-bar-track"><div class="pyr-bar-fill"></div></div>
+      </div>
       <div class="pyr-delta">∆(5)=3840</div>
     </div>
   </div>
@@ -327,53 +399,86 @@ footer{border-top:1px solid var(--border);padding-top:1.5rem;font-family:var(--m
     <div class="metric"><strong>IC_adj</strong>IC / √msgs<br><span style="color:var(--muted);font-size:.7rem">IC normalizado por volume de mensagens</span></div>
   </div>
 
-  <!-- zone bar -->
-  <div style="font-family:var(--mono);font-size:.68rem;color:var(--muted);margin-bottom:.3rem">Distribuição de zonas (323.509 referências totais)</div>
-  <div class="zone-bar" role="img" aria-label="Zona 0 representa 98,81% de todas as referências">
-    <div class="zone-bar-seg" style="width:98.81%;background:var(--signal);opacity:.7"></div>
-    <div class="zone-bar-seg" style="width:1.19%;background:var(--pulse);opacity:.7"></div>
-  </div>
-  <div style="font-size:.72rem;color:var(--muted);font-family:var(--mono);margin-bottom:1.25rem">
-    <span style="color:var(--signal)">■</span> zona 0 — 323.493 refs (classe MIXED/TEXT_HUMAN — texto misto humano+assistente, padrão dominante) &nbsp;
-    <span style="color:var(--pulse)">■</span> zonas 1–88 — 1.016 refs (clusters especializados: código, JSON puro, binário)
+  <!-- §V3: Animated donut -->
+  <div class="donut-wrap" aria-label="Distribuição de zonas — 323.509 referências totais">
+    <div class="attractor-wrap" style="margin:0">
+      <svg class="donut-svg" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="55" cy="55" r="38" fill="none" stroke="var(--mid)" stroke-width="13"/>
+        <!-- zona 0: 98.81% → circumference=238.76, visible=235.92, offset animates 238.76→2.84 -->
+        <circle class="donut-seg" id="donut-z0" cx="55" cy="55" r="38" fill="none"
+          stroke="var(--signal)" stroke-width="13" stroke-opacity=".85"
+          stroke-dasharray="238.76 238.76"
+          stroke-dashoffset="238.76"
+          data-target="2.84"
+          transform="rotate(-90 55 55)"/>
+        <!-- zonas 1-88: 1.19% → visible=2.84, positioned at end of zona 0 (start at 354.7°) -->
+        <circle class="donut-seg" id="donut-z1" cx="55" cy="55" r="38" fill="none"
+          stroke="var(--pulse)" stroke-width="13" stroke-opacity=".85"
+          stroke-dasharray="2.84 238.76"
+          stroke-dashoffset="0"
+          transform="rotate(264.7 55 55)"/>
+        <text x="55" y="51" text-anchor="middle" dominant-baseline="middle"
+          font-family="'Courier New',monospace" font-size="10" fill="var(--signal)" font-weight="700">98.81%</text>
+        <text x="55" y="62" text-anchor="middle" dominant-baseline="middle"
+          font-family="'Courier New',monospace" font-size="7" fill="var(--muted)">zona 0</text>
+      </svg>
+      <div class="attr-tooltip" id="donut-tip"></div>
+    </div>
+    <div class="donut-legend">
+      <div class="donut-legend-row">
+        <span style="color:var(--signal);font-size:1.1rem">■</span>
+        <span style="font-family:var(--mono);font-size:.75rem">
+          <strong style="color:var(--signal)">zona 0</strong> — 323.493 refs<br>
+          <span style="color:var(--muted);font-size:.7rem">MIXED / TEXT_HUMAN · padrão dominante</span>
+        </span>
+      </div>
+      <div class="donut-legend-row">
+        <span style="color:var(--pulse);font-size:1.1rem">■</span>
+        <span style="font-family:var(--mono);font-size:.75rem">
+          <strong style="color:var(--pulse)">zonas 1–88</strong> — 1.016 refs<br>
+          <span style="color:var(--muted);font-size:.7rem">CODE / BINARY / JSON puro · clusters especializados</span>
+        </span>
+      </div>
+      <div style="font-family:var(--mono);font-size:.67rem;color:var(--muted);margin-top:.2rem">323.509 refs totais · 89 zonas detectadas</div>
+    </div>
   </div>
 
   <p style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem">Classes de zona: <strong>TEXT_HUMAN</strong> = texto de linguagem natural dominante; <strong>MIXED</strong> = alternância código/texto; <strong>CODE</strong> = maior densidade de <code>{}:,</code>; <strong>BINARY</strong> = hibit &gt; 40%. <code>ones_ratio</code> = fração de bits 1 no bloco (0–1.0). <code>entropia</code> = Shannon entropy em bits (0–8).</p>
 
-  <p style="font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-bottom:.4rem">Todos os 29 campos de <code>typedef struct NeuroMetrics</code> (omega_neuro_full.c):</p>
+  <p style="font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-bottom:.4rem">Todos os 29 campos de <code>typedef struct NeuroMetrics</code> (omega_neuro_full.c) — barra = valor típico relativo; <span style="color:var(--pulse)">■</span> = constante invariante:</p>
   <div class="data-wrap">
     <table>
-      <thead><tr><th>#</th><th>Campo</th><th>Fórmula / Fonte</th><th>Analogia / Semântica</th></tr></thead>
+      <thead><tr><th>#</th><th>Campo</th><th>Fórmula / Fonte</th><th>Analogia / Semântica</th><th style="min-width:90px">Típico</th></tr></thead>
       <tbody>
-        <tr><td><code>01</code></td><td><code>s_syn</code></td><td>count(bytes ≥ 128)</td><td>Massa simbólica / Unicode — volume de caracteres não-ASCII</td></tr>
-        <tr><td><code>02</code></td><td><code>s_emerg</code></td><td>bytes totais do chunk</td><td>Volume emergente — tamanho bruto do bloco</td></tr>
-        <tr><td><code>03</code></td><td><code>s_latent</code></td><td>tokens únicos FNV1a-64 com ≥ 4 chars (via HashSet)</td><td>Tokens latentes — diversidade vocabular do bloco</td></tr>
-        <tr><td><code>04</code></td><td><code>entropy_raw</code></td><td>Shannon entropy × 1000 (0–8000)</td><td>Entropia em milli-bits — complexidade informacional</td></tr>
-        <tr><td><code>05</code></td><td><code>burst_factor</code></td><td>count(espaços acumulados)</td><td>Densidade de burst — espaços como proxy de separadores léxicos</td></tr>
-        <tr><td><code>06</code></td><td><code>iso_ratio</code></td><td>bytes_únicos / 256 × 1000</td><td>Isolamento — quão distribuídos estão os byte-types (0–1000)</td></tr>
-        <tr><td><code>07</code></td><td><code>technical_d</code></td><td>count(<code>"</code>) + count(<code>:</code>) + count(<code>,</code>)</td><td>Densidade JSON/técnica — proxy de estrutura de dados no texto</td></tr>
-        <tr><td><code>08</code></td><td><code>noise_floor</code></td><td>hibit × 1000 / bytes</td><td>Ruído simbólico ‰ — proporção de bytes high-bit (≥128)</td></tr>
-        <tr><td><code>09</code></td><td><code>alpha_wave</code></td><td>count(<code>\n</code>) newlines</td><td>Onda estrutural de linhas — granularidade de parágrafo</td></tr>
-        <tr><td><code>10</code></td><td><code>beta_wave</code></td><td>count(<code>{</code>) + count(<code>}</code>) braces</td><td>Onda estrutural JSON — profundidade de aninhamento</td></tr>
-        <tr><td><code>11</code></td><td><code>phi_integral</code></td><td>(1 − H/8) × (s_latent/bytes) Q16</td><td>Integral ética φ — equilíbrio entre clareza e diversidade vocabular</td></tr>
-        <tr><td><code>12</code></td><td><code>k_constant</code></td><td>literal <strong>42</strong> (invariante)</td><td>Constante toroidal RAFAELIA — nunca varia; marca de identidade do sistema</td></tr>
-        <tr><td><code>13</code></td><td><code>sync_clock</code></td><td>ticks desde _start</td><td>Relógio de sincronização — posição temporal do chunk no stream</td></tr>
-        <tr><td><code>14</code></td><td><code>semantic_gap</code></td><td>|H_cur − H_prev| (delta de entropia)</td><td>Salto semântico entre chunks consecutivos — transição de tópico</td></tr>
-        <tr><td><code>15</code></td><td><code>logic_depth</code></td><td>transition_energy (energia de transição local)</td><td>Profundidade lógica — mudanças abruptas de byte-class dentro do chunk</td></tr>
-        <tr><td><code>16</code></td><td><code>token_ratio</code></td><td>count(<code>"</code>) × 1000 / bytes</td><td>Razão de tokenização — densidade de delimitadores de string</td></tr>
-        <tr><td><code>17</code></td><td><code>bit_depth_10</code></td><td>ones × 1000 / (bytes × 8)</td><td>Profundidade de bits — fração de bits 1 (= ones_ratio × 1000)</td></tr>
-        <tr><td><code>18</code></td><td><code>context_span</code></td><td>nl × 1000 / bytes</td><td>Amplitude de contexto — linhas por byte; chunks densos têm context_span baixo</td></tr>
-        <tr><td><code>19</code></td><td><code>feedback_loop</code></td><td>hibit × 1000 / bytes (snapshot)</td><td>Loop de feedback — mesmo numerador que noise_floor mas como snapshot (≠ acumulado)</td></tr>
-        <tr><td><code>20</code></td><td><code>neural_res</code></td><td>√(nl × brace) × 1000 / bytes</td><td>Ressonância neural — produto geométrico de onda-α × onda-β normalizado</td></tr>
-        <tr><td><code>21</code></td><td><code>cross_entropy</code></td><td>|H_cur − 4500| (desvio de RAF_ENT_EXPECTED)</td><td>Entropia cruzada — distância do ponto esperado de texto misto (4500 milli-bits)</td></tr>
-        <tr><td><code>22</code></td><td><code>weight_bias</code></td><td>hibit × 1000 / max(1, s_latent)</td><td>Peso por token — sinal non-ASCII por token único; alto em texto multilíngue</td></tr>
-        <tr><td><code>23</code></td><td><code>fractal_dim</code></td><td>literal <strong>1347</strong> (constante verificada)</td><td>Dimensão fractal D_KY × 1000 — constante topológica RAFAELIA</td></tr>
-        <tr><td><code>24</code></td><td><code>hamming_dist</code></td><td>XOR popcount(prev_chunk ↔ cur_chunk)</td><td>Distância de Hamming — bits que mudaram entre chunks consecutivos</td></tr>
-        <tr><td><code>25</code></td><td><code>kurtosis_val</code></td><td>(space_pm²) / max(1, nl_pm)</td><td>Curtose normalizada — concentração de espaços vs. quebras de linha</td></tr>
-        <tr><td><code>26</code></td><td><code>skewness_val</code></td><td>|count(<code>:</code>) − count(<code>,</code>)| × 1000 / bytes</td><td>Assimetria — desequilíbrio entre chaves e vírgulas (JSON vs. CSV)</td></tr>
-        <tr><td><code>27</code></td><td><code>chi_square</code></td><td>|H − 4500|² / 1000</td><td>χ² vs. entropia esperada — teste de aderência ao modelo de texto misto</td></tr>
-        <tr><td><code>28</code></td><td><code>p_value_est</code></td><td>1000 − clamp(χ²/100, 0, 1000)</td><td>p-valor estimado (‰) — 1000=perfeito ajuste, 0=total desvio</td></tr>
-        <tr><td><code>29</code></td><td><code>omega_point</code></td><td>(hibit + entropy_milli) <strong>mod 42</strong></td><td>Atrator toroidal — mapeamento de cada chunk a um dos 42 pontos fixos</td></tr>
+        <tr><td><code>01</code></td><td><code>s_syn</code></td><td>count(bytes ≥ 128)</td><td>Massa simbólica / Unicode — volume de caracteres não-ASCII</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="500" data-max="2000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~500</span></div></td></tr>
+        <tr><td><code>02</code></td><td><code>s_emerg</code></td><td>bytes totais do chunk</td><td>Volume emergente — tamanho bruto do bloco</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="65536" data-max="65536"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">65536</span></div></td></tr>
+        <tr><td><code>03</code></td><td><code>s_latent</code></td><td>tokens únicos FNV1a-64 com ≥ 4 chars (via HashSet)</td><td>Tokens latentes — diversidade vocabular do bloco</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="800" data-max="3000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~800</span></div></td></tr>
+        <tr><td><code>04</code></td><td><code>entropy_raw</code></td><td>Shannon entropy × 1000 (0–8000)</td><td>Entropia em milli-bits — complexidade informacional</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="4500" data-max="8000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~4500</span></div></td></tr>
+        <tr><td><code>05</code></td><td><code>burst_factor</code></td><td>count(espaços acumulados)</td><td>Densidade de burst — espaços como proxy de separadores léxicos</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="8000" data-max="20000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~8k</span></div></td></tr>
+        <tr><td><code>06</code></td><td><code>iso_ratio</code></td><td>bytes_únicos / 256 × 1000</td><td>Isolamento — quão distribuídos estão os byte-types (0–1000)</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="800" data-max="1000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~800</span></div></td></tr>
+        <tr><td><code>07</code></td><td><code>technical_d</code></td><td>count(<code>"</code>) + count(<code>:</code>) + count(<code>,</code>)</td><td>Densidade JSON/técnica — proxy de estrutura de dados no texto</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="2000" data-max="8000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~2k</span></div></td></tr>
+        <tr><td><code>08</code></td><td><code>noise_floor</code></td><td>hibit × 1000 / bytes</td><td>Ruído simbólico ‰ — proporção de bytes high-bit (≥128)</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="8" data-max="100"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~8</span></div></td></tr>
+        <tr><td><code>09</code></td><td><code>alpha_wave</code></td><td>count(<code>\n</code>) newlines</td><td>Onda estrutural de linhas — granularidade de parágrafo</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="600" data-max="3000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~600</span></div></td></tr>
+        <tr><td><code>10</code></td><td><code>beta_wave</code></td><td>count(<code>{</code>) + count(<code>}</code>) braces</td><td>Onda estrutural JSON — profundidade de aninhamento</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="400" data-max="2000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~400</span></div></td></tr>
+        <tr><td><code>11</code></td><td><code>phi_integral</code></td><td>(1 − H/8) × (s_latent/bytes) Q16</td><td>Integral ética φ — equilíbrio entre clareza e diversidade vocabular</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="500" data-max="2000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~500</span></div></td></tr>
+        <tr><td><code>12</code></td><td><code>k_constant</code></td><td>literal <strong>42</strong> (invariante)</td><td>Constante toroidal RAFAELIA — nunca varia; marca de identidade do sistema</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="42" data-max="42" data-const="1"><div class="spark-bar-inner const-field"></div><span class="spark-val-lbl" style="color:var(--pulse)">42 ●</span></div></td></tr>
+        <tr><td><code>13</code></td><td><code>sync_clock</code></td><td>ticks desde _start</td><td>Relógio de sincronização — posição temporal do chunk no stream</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="50" data-max="200"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">var</span></div></td></tr>
+        <tr><td><code>14</code></td><td><code>semantic_gap</code></td><td>|H_cur − H_prev| (delta de entropia)</td><td>Salto semântico entre chunks consecutivos — transição de tópico</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="200" data-max="4000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~200</span></div></td></tr>
+        <tr><td><code>15</code></td><td><code>logic_depth</code></td><td>transition_energy (energia de transição local)</td><td>Profundidade lógica — mudanças abruptas de byte-class dentro do chunk</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="150" data-max="1000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~150</span></div></td></tr>
+        <tr><td><code>16</code></td><td><code>token_ratio</code></td><td>count(<code>"</code>) × 1000 / bytes</td><td>Razão de tokenização — densidade de delimitadores de string</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="80" data-max="500"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~80</span></div></td></tr>
+        <tr><td><code>17</code></td><td><code>bit_depth_10</code></td><td>ones × 1000 / (bytes × 8)</td><td>Profundidade de bits — fração de bits 1 (= ones_ratio × 1000)</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="500" data-max="1000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~500</span></div></td></tr>
+        <tr><td><code>18</code></td><td><code>context_span</code></td><td>nl × 1000 / bytes</td><td>Amplitude de contexto — linhas por byte; chunks densos têm context_span baixo</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="10" data-max="100"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~10</span></div></td></tr>
+        <tr><td><code>19</code></td><td><code>feedback_loop</code></td><td>hibit × 1000 / bytes (snapshot)</td><td>Loop de feedback — mesmo numerador que noise_floor mas como snapshot (≠ acumulado)</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="8" data-max="100"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~8</span></div></td></tr>
+        <tr><td><code>20</code></td><td><code>neural_res</code></td><td>√(nl × brace) × 1000 / bytes</td><td>Ressonância neural — produto geométrico de onda-α × onda-β normalizado</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="5" data-max="50"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~5</span></div></td></tr>
+        <tr><td><code>21</code></td><td><code>cross_entropy</code></td><td>|H_cur − 4500| (desvio de RAF_ENT_EXPECTED)</td><td>Entropia cruzada — distância do ponto esperado de texto misto (4500 milli-bits)</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="500" data-max="4000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~500</span></div></td></tr>
+        <tr><td><code>22</code></td><td><code>weight_bias</code></td><td>hibit × 1000 / max(1, s_latent)</td><td>Peso por token — sinal non-ASCII por token único; alto em texto multilíngue</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="15" data-max="100"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~15</span></div></td></tr>
+        <tr><td><code>23</code></td><td><code>fractal_dim</code></td><td>literal <strong>1347</strong> (constante verificada)</td><td>Dimensão fractal D_KY × 1000 — constante topológica RAFAELIA</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="1347" data-max="1347" data-const="1"><div class="spark-bar-inner const-field"></div><span class="spark-val-lbl" style="color:var(--pulse)">1347 ●</span></div></td></tr>
+        <tr><td><code>24</code></td><td><code>hamming_dist</code></td><td>XOR popcount(prev_chunk ↔ cur_chunk)</td><td>Distância de Hamming — bits que mudaram entre chunks consecutivos</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="3000" data-max="8000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~3k</span></div></td></tr>
+        <tr><td><code>25</code></td><td><code>kurtosis_val</code></td><td>(space_pm²) / max(1, nl_pm)</td><td>Curtose normalizada — concentração de espaços vs. quebras de linha</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="50" data-max="500"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~50</span></div></td></tr>
+        <tr><td><code>26</code></td><td><code>skewness_val</code></td><td>|count(<code>:</code>) − count(<code>,</code>)| × 1000 / bytes</td><td>Assimetria — desequilíbrio entre chaves e vírgulas (JSON vs. CSV)</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="5" data-max="100"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~5</span></div></td></tr>
+        <tr><td><code>27</code></td><td><code>chi_square</code></td><td>|H − 4500|² / 1000</td><td>χ² vs. entropia esperada — teste de aderência ao modelo de texto misto</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="250" data-max="16000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~250</span></div></td></tr>
+        <tr><td><code>28</code></td><td><code>p_value_est</code></td><td>1000 − clamp(χ²/100, 0, 1000)</td><td>p-valor estimado (‰) — 1000=perfeito ajuste, 0=total desvio</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="750" data-max="1000"><div class="spark-bar-inner" style="background:var(--signal);opacity:.7"></div><span class="spark-val-lbl">~750</span></div></td></tr>
+        <tr><td><code>29</code></td><td><code>omega_point</code></td><td>(hibit + entropy_milli) <strong>mod 42</strong></td><td>Atrator toroidal — mapeamento de cada chunk a um dos 42 pontos fixos</td><td class="spark-cell"><div class="spark-bar-wrap" data-spark data-val="21" data-max="41"><div class="spark-bar-inner" style="background:var(--pulse);opacity:.7"></div><span class="spark-val-lbl">0–41</span></div></td></tr>
       </tbody>
     </table>
   </div>
@@ -413,6 +518,18 @@ footer{border-top:1px solid var(--border);padding-top:1.5rem;font-family:var(--m
   </div>
 
   <p style="font-size:.82rem;color:var(--muted);margin-bottom:.85rem"><strong>42 Atratores:</strong> <code>LB_ATTRACTORS = RAF_ATTRACTORS = 42</code> — conjunto |𝒜| de pontos fixos toroidais. Mapeamento por chunk: <code>omega_point = (hibit + entropy_milli) mod 42</code>. Campo invariante: <code>k_constant = 42</code> (nunca muda entre chunks). Topologia GF(2⁸) com polinômio redutor 0x1D (0x11D → 1D). Constantes espiral: <code>RAF_SPIRAL_Q16 = 56756</code>, <code>RAF_PHI_Q16 = 105965</code>.</p>
+
+  <!-- §V1: 42-Attractor Wheel -->
+  <div class="attractor-wrap" id="attractor-wrap" aria-label="Roda dos 42 atratores toroidais — passe o mouse sobre cada ponto">
+    <svg class="attractor-svg" id="attractor-svg" viewBox="0 0 300 300" width="300" height="300" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="150" cy="150" r="120" fill="none" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 3"/>
+      <circle cx="150" cy="150" r="120" fill="none" stroke="var(--signal)" stroke-width="0.5" stroke-opacity="0.2"/>
+      <text x="150" y="143" text-anchor="middle" dominant-baseline="middle" font-family="'Courier New',monospace" font-size="11" fill="var(--signal)" font-weight="700">|𝒜| = 42</text>
+      <text x="150" y="157" text-anchor="middle" dominant-baseline="middle" font-family="'Courier New',monospace" font-size="8" fill="var(--muted)">GF(2⁸) · 0x1D</text>
+      <g id="attr-pts"></g>
+    </svg>
+    <div class="attr-tooltip" id="attr-tooltip"></div>
+  </div>
 
   <div class="data-wrap">
     <table>
@@ -454,6 +571,38 @@ footer{border-top:1px solid var(--border);padding-top:1.5rem;font-family:var(--m
 
   <p style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem"><strong>Fórmulas de ajuste:</strong></p>
   <div class="formula">PP_adj = PP × (1.0 − DF) &nbsp;&nbsp;[DF = decay factor, antiguidade normalizada]<br>IC_adj = IC / √msgs &nbsp;&nbsp;[normalizado por volume de mensagens]<br>node.weight = IC_adj × PP_adj × (1 − decay)</div>
+
+  <!-- §V5: CTI Memory Score Simulator -->
+  <div class="score-sim" id="score-sim">
+    <div class="score-sim-title">Simulador de Score — Omega Forest</div>
+    <div class="sim-row">
+      <label class="sim-label" for="sim-ic">IC</label>
+      <input class="sim-slider" id="sim-ic" type="range" min="0" max="2" step="0.01" value="1.0">
+      <span class="sim-val" id="sim-ic-val">1.00</span>
+    </div>
+    <div class="sim-row">
+      <label class="sim-label" for="sim-pp">PP</label>
+      <input class="sim-slider" id="sim-pp" type="range" min="0" max="1" step="0.01" value="0.75">
+      <span class="sim-val" id="sim-pp-val">0.75</span>
+    </div>
+    <div class="sim-row">
+      <label class="sim-label" for="sim-decay">decay</label>
+      <input class="sim-slider" id="sim-decay" type="range" min="0" max="1" step="0.01" value="0.20">
+      <span class="sim-val" id="sim-decay-val">0.20</span>
+    </div>
+    <div class="sim-row">
+      <label class="sim-label" for="sim-msgs">msgs</label>
+      <input class="sim-slider" id="sim-msgs" type="range" min="1" max="500" step="1" value="50">
+      <span class="sim-val" id="sim-msgs-val">50</span>
+    </div>
+    <div class="sim-output">
+      <span class="sim-out-label">PP_adj</span><span class="sim-out-val" id="sim-ppadj">—</span>
+      <span class="sim-out-label">IC_adj</span><span class="sim-out-val" id="sim-icadj">—</span>
+      <span class="sim-out-label">node.weight</span><span class="sim-out-val" id="sim-weight">—</span>
+      <span class="sim-out-label">score+bonus</span><span class="sim-out-val" id="sim-score">—</span>
+      <div class="sim-path" id="sim-path">—</div>
+    </div>
+  </div>
 
   <p style="font-size:.82rem;color:var(--muted);margin-top:.75rem"><strong>path de ausência:</strong> conversas onde nenhuma métrica principal atinge o limiar mínimo — classificadas como VOID (path 1) e preservadas no forest.jsonl com <code>cluster = omega_point mod 42</code>.</p>
 
@@ -516,8 +665,6 @@ footer{border-top:1px solid var(--border);padding-top:1.5rem;font-family:var(--m
   <div class="flow" style="margin-top:1rem">
     <span class="flow-node omega">omega (bash CLI)</span>
     <span class="flow-arrow">→</span>
-    <span class="flow-node neutral">hot</span>
-    <span class="flow-arrow">|</span>
     <span class="flow-node neutral">hot</span>
     <span class="flow-arrow">|</span>
     <span class="flow-node neutral">threads</span>
@@ -900,6 +1047,8 @@ namespace cti_memory <span class="ck">{</span>
   <h2 class="section-title" id="sec-conv">Ponta a Ponta — conversations.json → llama-server</h2>
   <p class="section-sub">Todos os 11 grupos de processos convergindo. rf_core e Triad Engine correm em paralelo ao pipeline principal de curadoria.</p>
 
+  <button class="flow-run-btn" id="flow-run-btn" aria-label="Animar fluxo do pipeline">▶ executar pipeline</button>
+
   <div class="convergence">
     <div class="convergence-title">Pipeline end-to-end completo (A → K)</div>
 
@@ -1018,23 +1167,250 @@ namespace cti_memory <span class="ck">{</span>
 
 
 <footer>
-  <span>llamaRafaelia · rmrCti · análise de processos · v2</span>
-  <span>C/C++ · Python · AArch64 · Termux · 2026-07-14</span>
+  <span>llamaRafaelia · rmrCti · análise de processos · v3 interactive</span>
+  <span>C/C++ · Python · AArch64 · Termux · 2026-07-17</span>
 </footer>
 
 </div>
 
 <script>
-  (function() {
-    var mq = window.matchMedia('(prefers-color-scheme: dark)');
-    var r = document.documentElement;
-    if (!r.getAttribute('data-theme')) {
-      r.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
+(function() {
+  /* ── Theme ── */
+  var mq = window.matchMedia('(prefers-color-scheme: dark)');
+  var r = document.documentElement;
+  if (!r.getAttribute('data-theme')) {
+    r.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
+  }
+  mq.addEventListener('change', function(e) {
+    if (!r.hasAttribute('data-theme')) {
+      r.setAttribute('data-theme', e.matches ? 'dark' : 'light');
     }
-    mq.addEventListener('change', function(e) {
-      if (!r.hasAttribute('data-theme')) {
-        r.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+  });
+
+  /* ── §V3: Animated donut ── */
+  function initDonut() {
+    var seg = document.getElementById('donut-z0');
+    if (!seg) return;
+    var wrap = seg.closest('svg');
+    if (!wrap) return;
+    var fired = false;
+    var obs = new IntersectionObserver(function(entries) {
+      if (!fired && entries[0].isIntersecting) {
+        fired = true;
+        seg.style.strokeDashoffset = seg.dataset.target;
+        obs.disconnect();
       }
+    }, { threshold: 0.4 });
+    obs.observe(wrap);
+  }
+
+  /* ── §V2: Sparkbars ── */
+  function initSparkbars() {
+    document.querySelectorAll('[data-spark]').forEach(function(el) {
+      var val = parseFloat(el.dataset.val || 0);
+      var max = parseFloat(el.dataset.max || 100);
+      var isConst = el.dataset.const === '1';
+      var pct = Math.max(2, Math.round(val / max * 100));
+      var fill = el.querySelector('.spark-bar-inner');
+      if (!fill) return;
+      if (isConst) { fill.classList.add('const-field'); }
+      setTimeout(function() { fill.style.width = pct + '%'; }, 200);
     });
-  })();
+  }
+
+  /* ── §V4: Pyramid animated bars ── */
+  function initPyramid() {
+    var max = 3840;
+    var colors = ['var(--muted)', '#4BA8E8', '#5CD8B8', 'var(--signal)', '#B36CF6', 'var(--pulse)'];
+    document.querySelectorAll('.pyramid-level[data-delta]').forEach(function(lv) {
+      var delta = parseFloat(lv.dataset.delta || 1);
+      var pct = Math.max(0.3, delta / max * 100);
+      var fill = lv.querySelector('.pyr-bar-fill');
+      if (!fill) return;
+      var m = lv.className.match(/lv(\d)/);
+      var idx = m ? parseInt(m[1]) : 0;
+      fill.style.background = colors[idx] || 'var(--signal)';
+      var delay = idx * 160;
+      setTimeout(function() { fill.style.width = pct + '%'; }, 400 + delay);
+    });
+  }
+
+  /* ── §V1: 42-Attractor Wheel ── */
+  function initAttractors() {
+    var g = document.getElementById('attr-pts');
+    var tip = document.getElementById('attr-tooltip');
+    var wrap = document.getElementById('attractor-wrap');
+    if (!g || !tip || !wrap) return;
+    var svgNS = 'http://www.w3.org/2000/svg';
+    var cx = 150, cy = 150, r = 120, n = 42;
+    var pts = [];
+    for (var i = 0; i < n; i++) {
+      var angle = (-90 + i * 360 / n) * Math.PI / 180;
+      var x = cx + r * Math.cos(angle);
+      var y = cy + r * Math.sin(angle);
+      var c = document.createElementNS(svgNS, 'circle');
+      c.setAttribute('cx', x.toFixed(1));
+      c.setAttribute('cy', y.toFixed(1));
+      c.setAttribute('r', '7');
+      c.setAttribute('data-idx', i);
+      c.style.fill = 'var(--card)';
+      c.style.stroke = (i === 0) ? 'var(--pulse)' : 'var(--signal)';
+      c.style.strokeWidth = (i === 0) ? '2' : '1.5';
+      c.style.cursor = 'pointer';
+      c.style.transition = 'fill .15s,r .15s';
+      g.appendChild(c);
+      pts.push(c);
+    }
+    /* label key indices */
+    [0, 10, 21, 31].forEach(function(idx) {
+      var angle = (-90 + idx * 360 / n) * Math.PI / 180;
+      var lx = cx + (r + 20) * Math.cos(angle);
+      var ly = cy + (r + 20) * Math.sin(angle);
+      var t = document.createElementNS(svgNS, 'text');
+      t.setAttribute('x', lx.toFixed(1));
+      t.setAttribute('y', ly.toFixed(1));
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('dominant-baseline', 'middle');
+      t.setAttribute('font-size', '8');
+      t.setAttribute('font-family', "'Courier New',monospace");
+      t.style.fill = 'var(--muted)';
+      t.textContent = '#' + idx;
+      g.appendChild(t);
+    });
+    /* hover interaction */
+    pts.forEach(function(pt) {
+      pt.addEventListener('mouseenter', function() {
+        pt.style.fill = 'var(--signal)';
+        var idx = pt.getAttribute('data-idx');
+        tip.innerHTML = '<span style="color:var(--signal)">atrator #' + idx + '</span><br>'
+          + 'omega_point = (hibit + entropy_milli) mod 42<br>'
+          + '= <strong>' + idx + '</strong> (cluster toroidal GF(2⁸))';
+        tip.style.display = 'block';
+      });
+      pt.addEventListener('mousemove', function(e) {
+        var rect = wrap.getBoundingClientRect();
+        tip.style.left = (e.clientX - rect.left + 14) + 'px';
+        tip.style.top  = (e.clientY - rect.top  - 10) + 'px';
+      });
+      pt.addEventListener('mouseleave', function() {
+        pt.style.fill = 'var(--card)';
+        tip.style.display = 'none';
+      });
+    });
+  }
+
+  /* ── §V5: Score Simulator ── */
+  function initScoreSim() {
+    var sim = document.getElementById('score-sim');
+    if (!sim) return;
+    function recalc() {
+      var IC    = parseFloat(sim.querySelector('#sim-ic').value);
+      var PP    = parseFloat(sim.querySelector('#sim-pp').value);
+      var decay = parseFloat(sim.querySelector('#sim-decay').value);
+      var msgs  = parseFloat(sim.querySelector('#sim-msgs').value);
+      sim.querySelector('#sim-ic-val').textContent    = IC.toFixed(2);
+      sim.querySelector('#sim-pp-val').textContent    = PP.toFixed(2);
+      sim.querySelector('#sim-decay-val').textContent = decay.toFixed(2);
+      sim.querySelector('#sim-msgs-val').textContent  = Math.round(msgs);
+      var PP_adj  = PP * (1 - decay);
+      var IC_adj  = IC / Math.sqrt(msgs);
+      var weight  = IC_adj * PP_adj * (1 - decay);
+      var path, fb, bg;
+      if (PP_adj > 0.8) {
+        path = 'URGENT (4)'; fb = 1;
+        bg = 'var(--signal-dim)';
+      } else if (IC > 1.2) {
+        path = 'MENOSPREZADO (3)'; fb = 0.5;
+        bg = 'var(--pulse-dim)';
+      } else if (IC < 0.3 && PP < 0.2) {
+        path = 'VOID (1)'; fb = 0; bg = 'var(--mid)';
+      } else if (PP < 0.15) {
+        path = 'FORGOTTEN (2)'; fb = 0; bg = 'var(--mid)';
+      } else {
+        path = 'PROCESSUAL (0)'; fb = 0; bg = 'var(--mid)';
+      }
+      var baseScore = (PP_adj * IC_adj).toFixed(3);
+      sim.querySelector('#sim-ppadj').textContent  = PP_adj.toFixed(4);
+      sim.querySelector('#sim-icadj').textContent  = IC_adj.toFixed(4);
+      sim.querySelector('#sim-weight').textContent = weight.toFixed(5);
+      sim.querySelector('#sim-score').textContent  = parseFloat(baseScore) + ' +' + fb;
+      var pathEl = sim.querySelector('#sim-path');
+      pathEl.textContent = '→ ' + path;
+      pathEl.style.background = bg;
+      pathEl.style.color = fb === 1 ? '#000' : 'var(--ink)';
+    }
+    sim.querySelectorAll('input[type=range]').forEach(function(s) {
+      s.addEventListener('input', recalc);
+    });
+    recalc();
+  }
+
+  /* ── §V6: Pipeline Flow Animation ── */
+  function initFlowAnimation() {
+    var btn = document.getElementById('flow-run-btn');
+    if (!btn) return;
+    btn.addEventListener('click', function() {
+      var rows = document.querySelectorAll('.conv-row');
+      rows.forEach(function(r) { r.classList.remove('flowing'); });
+      rows.forEach(function(row, i) {
+        setTimeout(function() { row.classList.add('flowing'); }, i * 380);
+        setTimeout(function() { row.classList.remove('flowing'); }, i * 380 + 900);
+      });
+    });
+  }
+
+  /* ── §V7: ψ→Ω Cycle Tooltips ── */
+  function initCycleTooltips() {
+    var wrap = document.querySelector('.cycle-svg-wrap');
+    if (!wrap) return;
+    var tip = document.createElement('div');
+    tip.className = 'cycle-tooltip';
+    wrap.appendChild(tip);
+    var data = {
+      'ψ': { name:'ST_PSI = 0 · init / reset', detail:'BitStack.w = 0, records = 0\nCRC32 reiniciado para 0x00000000', code:'bs->w = 0; bs->records = 0;' },
+      'χ': { name:'ST_CHI = 1 · leitura / input', detail:'Lê byte do buffer de entrada\nAppend ao BitStack: buf[w++]', code:'bs->buf[bs->w++] = in_byte;' },
+      'ρ': { name:'ST_RHO = 2 · transformação', detail:'XOR + rotate sobre bloco acumulado\nTransfere entropia do input → estado', code:'state ^= rotl32(crc, 3);' },
+      'Δ': { name:'ST_DELTA = 3 · delta / diff', detail:'Hamming distance prev↔cur chunk\nDetecta transições de conteúdo', code:'dist = __builtin_popcount(prev^cur);' },
+      'Σ': { name:'ST_SIGMA = 4 · acumulação', detail:'Atualiza CRC32 bitwise (sem tabela)\nAcumula estado ao longo do stream', code:'crc = crc32_bit(crc, byte);' },
+      'Ω': { name:'ST_OMEGA = 5 · saída / finalização', detail:'Escreve registro no RAM buffer\nABI: rafa_boot(u64 *out, u32 len)', code:'out_buf[records++] = pack_u64(state);' }
+    };
+    wrap.querySelectorAll('text').forEach(function(txt) {
+      var sym = txt.textContent.trim();
+      if (!data[sym]) return;
+      txt.style.cursor = 'pointer';
+      txt.addEventListener('mouseenter', function(e) {
+        var d = data[sym];
+        tip.innerHTML = '<strong>' + d.name + '</strong><br>'
+          + d.detail.replace(/\n/g, '<br>') + '<br>'
+          + '<code style="font-size:.66rem;color:var(--signal)">' + d.code + '</code>';
+        tip.style.display = 'block';
+      });
+      txt.addEventListener('mousemove', function(e) {
+        var rect = wrap.getBoundingClientRect();
+        var left = e.clientX - rect.left + 14;
+        var top  = e.clientY - rect.top  - 10;
+        if (left + 240 > rect.width) left = e.clientX - rect.left - 250;
+        tip.style.left = left + 'px';
+        tip.style.top  = top  + 'px';
+      });
+      txt.addEventListener('mouseleave', function() { tip.style.display = 'none'; });
+    });
+  }
+
+  /* ── Init all ── */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', run);
+  } else {
+    run();
+  }
+  function run() {
+    initDonut();
+    initSparkbars();
+    initPyramid();
+    initAttractors();
+    initScoreSim();
+    initFlowAnimation();
+    initCycleTooltips();
+  }
+})();
 </script>
