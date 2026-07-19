@@ -69,7 +69,7 @@ else
     printf "sdkVersion:'%s'\n" "${min_sdk}"
     printf "targetSdkVersion:'%s'\n" "${target_sdk}"
     if [[ -n "${native_abis}" ]]; then
-      printf "native-code: '%s'\n" "${native_abis// /' ' '}'"
+      printf "native-code: '%s'\n" "${native_abis}"
     fi
   } > "${BADGING}"
   printf 'source=apkanalyzer+zip-inventory\n' > "${SOURCE}"
