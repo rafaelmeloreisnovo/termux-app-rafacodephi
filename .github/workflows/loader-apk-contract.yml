@@ -41,15 +41,19 @@ jobs:
             dist/loader/loader-contract.txt
 
       - name: Upload loader APK
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: termux-rafcodephi-loader-stub-${{ github.sha }}
           path: app/loader/build/dist/loader.apk
-          if-no-files-found: error
+          if-no-files-found: warn
 
-      - name: Upload loader contract report
+      - name: Upload loader contract diagnostics
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: termux-rafcodephi-loader-contract-${{ github.sha }}
-          path: dist/loader/loader-contract.txt
-          if-no-files-found: error
+          path: |
+            dist/loader/loader-contract.txt
+            dist/loader/loader-badging.txt
+          if-no-files-found: warn
