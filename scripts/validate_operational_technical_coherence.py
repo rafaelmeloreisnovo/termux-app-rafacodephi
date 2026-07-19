@@ -49,13 +49,32 @@ def main() -> int:
     tls13 = by_id.get("browser.tls13", {})
     tls12 = by_id.get("browser.tls12", {})
     tls_cert = by_id.get("browser.tls.certification", {})
+    failclosed = by_id.get("browser.https.failclosed.materializer", {})
 
-    incomplete_tls_markers = (
+    legacy_tls_markers = (
         "crypto não implementado" in browser
         and "X25519 + AES-GCM + HKDF" in browser
         and "[FALLBACK] Usando HTTP para demo" in browser
     )
-    check("browser_incomplete_tls_detected", incomplete_tls_markers, "ClientHello-only source with plaintext fallback")
+    check(
+        "browser_legacy_tls_downgrade_identified",
+        legacy_tls_markers,
+        "raw Browser.sh remains a historical prototype and must not be the canonical build entrypoint",
+    )
+    check(
+        "browser_failclosed_materializer_registered",
+        failclosed.get("state") == "VERIFIED_HOST"
+        and failclosed.get("claim_allowed") is True
+        and failclosed.get("path") == "scripts/materialize_browser_fail_closed.py"
+        and bool(failclosed.get("evidence")),
+        failclosed,
+    )
+    check(
+        "browser_failclosed_tools_present",
+        (ROOT / "scripts/materialize_browser_fail_closed.py").is_file()
+        and (ROOT / "scripts/validate_browser_fail_closed.py").is_file(),
+        ["scripts/materialize_browser_fail_closed.py", "scripts/validate_browser_fail_closed.py"],
+    )
     check(
         "browser_tls13_not_promoted",
         tls13.get("state") == "PROTOTYPE_FAIL_CLOSED_REQUIRED" and tls13.get("claim_allowed") is False,
