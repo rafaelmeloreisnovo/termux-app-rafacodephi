@@ -45,21 +45,30 @@ record "aapt=${AAPT:-NOT_FOUND}"
 package_name=""
 min_sdk=""
 target_sdk=""
+manifest_print=""
 if [[ -n "${APKANALYZER}" ]]; then
   package_name="$(${APKANALYZER} manifest application-id "${APK}" 2>>"${REPORT}" || true)"
   min_sdk="$(${APKANALYZER} manifest min-sdk "${APK}" 2>>"${REPORT}" || true)"
   target_sdk="$(${APKANALYZER} manifest target-sdk "${APK}" 2>>"${REPORT}" || true)"
+  manifest_print="$(${APKANALYZER} manifest print "${APK}" 2>>"${REPORT}" || true)"
   package_name="$(tr -d '\r\n' <<<"${package_name}")"
   min_sdk="$(tr -d '\r\n' <<<"${min_sdk}")"
   target_sdk="$(tr -d '\r\n' <<<"${target_sdk}")"
 fi
 
-if [[ -z "${package_name}" && -n "${AAPT}" ]]; then
+badging=""
+manifest_tree=""
+if [[ -n "${AAPT}" ]]; then
   badging="$(${AAPT} dump badging "${APK}" 2>>"${REPORT}" || true)"
+  manifest_tree="$(${AAPT} dump xmltree "${APK}" AndroidManifest.xml 2>>"${REPORT}" || true)"
+  printf '%s\n' "${badging}" > "$(dirname "${REPORT}")/loader-badging.txt"
+  printf '%s\n' "${manifest_tree}" > "$(dirname "${REPORT}")/loader-manifest-tree.txt"
+fi
+
+if [[ -z "${package_name}" ]]; then
   package_name="$(sed -n "s/^package: name='\([^']*\)'.*/\1/p" <<<"${badging}" | head -n1)"
   min_sdk="$(sed -n "s/^sdkVersion:'\([^']*\)'.*/\1/p" <<<"${badging}" | head -n1)"
   target_sdk="$(sed -n "s/^targetSdkVersion:'\([^']*\)'.*/\1/p" <<<"${badging}" | head -n1)"
-  printf '%s\n' "${badging}" > "$(dirname "${REPORT}")/loader-badging.txt"
 fi
 
 record "package=${package_name:-UNRESOLVED}"
@@ -84,12 +93,43 @@ else
   fail "target_sdk expected=28 actual=${target_sdk:-UNRESOLVED}"
 fi
 
-if unzip -Z1 "${APK}" | grep -Eq '^classes([0-9]*)?\.dex$'; then
-  record "has_dex=true"
-  fail "loader stub must not contain executable DEX code"
+if grep -Eq 'android:hasCode="false"' <<<"${manifest_print}" \
+    || grep -Eq 'android:hasCode.*\(type 0x12\)0x0' <<<"${manifest_tree}"; then
+  record "manifest_has_code=false"
+  pass "manifest_has_code_false"
 else
-  record "has_dex=false"
-  pass "no_dex"
+  record "manifest_has_code=UNRESOLVED_OR_TRUE"
+  fail "manifest must declare android:hasCode=false"
+fi
+
+dex_files="$(unzip -Z1 "${APK}" | grep -E '^classes([0-9]*)?\.dex$' || true)"
+dex_count="$(grep -c . <<<"${dex_files}" || true)"
+record "dex_count=${dex_count}"
+
+if [[ "${dex_count}" -eq 0 ]]; then
+  record "dex_policy=no_dex"
+  pass "dex_policy"
+elif [[ "${dex_count}" -eq 1 ]]; then
+  dex_file="$(head -n1 <<<"${dex_files}")"
+  descriptors="$(unzip -p "${APK}" "${dex_file}" \
+    | strings -a \
+    | grep -oE 'L[A-Za-z0-9_/$.-]+;' \
+    | sort -u || true)"
+  unexpected="$(grep -Ev '^Ljava/lang/Object;$|^Lcom/termux/rafacodephi/loader/R(\$[^;]+)?;$' \
+    <<<"${descriptors}" || true)"
+  {
+    printf '\n[dex_class_descriptors]\n%s\n' "${descriptors}"
+  } | tee -a "${REPORT}"
+  if [[ -z "${unexpected}" ]]; then
+    record "dex_policy=generated_resources_only"
+    pass "dex_policy"
+  else
+    record "dex_policy=unexpected_classes"
+    fail "unexpected DEX classes: ${unexpected//$'\n'/,}"
+  fi
+else
+  record "dex_policy=multiple_dex"
+  fail "loader stub must not contain multiple DEX files"
 fi
 
 if [[ -z "${APKSIGNER}" ]]; then
