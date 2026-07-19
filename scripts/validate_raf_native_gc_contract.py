@@ -44,6 +44,9 @@ CHECKS = {
     ),
     "rafaelia/src/main/cpp/raf_ecc32_masked.h": (
         "_Static_assert(sizeof(unsigned int) == 4u",
+        "RAF_ECC32_FORCE_COMPACT",
+        "RAF_ECC32_FORCE_UNROLL",
+        "__OPTIMIZE_SIZE__",
         "RAF_ECC32_MASK_0 0x55555555u",
         "RAF_ECC32_MASK_1 0x66666666u",
         "RAF_ECC32_MASK_2 0x78787878u",
@@ -63,6 +66,12 @@ CHECKS = {
         "1000000u",
         "raf_ecc32_reference",
         "raf_ecc32_masked",
+    ),
+    "scripts/test_raf_native_compile_contract.sh": (
+        "-DRAF_ECC32_FORCE_COMPACT=1",
+        "-DRAF_ECC32_FORCE_UNROLL=1",
+        "test_raf_ecc32_compact",
+        "test_raf_ecc32_unrolled",
     ),
 }
 
@@ -103,13 +112,13 @@ def main() -> int:
         )
 
     report = {
-        "schema": "raf.native-gc-contract.v2",
+        "schema": "raf.native-gc-contract.v3",
         "status": "PASS" if passed else "FAIL",
         "checks": results,
         "invariant": (
             "warnings remain visible; intentional exceptions are explicit; "
             "dead symbols are removed only by section-level reachability; "
-            "ECC32 runtime uses the basis-proven masked transform"
+            "ECC32 runtime uses a basis-proven compile-time policy"
         ),
     }
     print(json.dumps(report, ensure_ascii=False, indent=2))
