@@ -34,7 +34,7 @@ OLD_BLOCK = """            PS(\"  [TLS] NOTA: crypto não implementado — usand
         if(CONNECT(ctx->fd,&sa)!=0){FF_SET(ctx->flags,FL_ERROR);CLOSE(ctx->fd);GRS();return-1;}
         FF_CLR(ctx->flags,FL_TLS_HS);
         PS(\"  [FALLBACK] Usando HTTP para demo\\n\");
-"""
+""".rstrip("\n")
 
 NEW_BLOCK = """            PS(\"  [TLS] NOTA: crypto incompleto — HTTPS será recusado\\n\");
         } else {
@@ -48,7 +48,7 @@ NEW_BLOCK = """            PS(\"  [TLS] NOTA: crypto incompleto — HTTPS será 
         CLOSE(ctx->fd);
         GRS();
         return-2;
-"""
+""".rstrip("\n")
 
 FORBIDDEN = (
     "ctx->port=80u;ctx->use_tls=0;",
