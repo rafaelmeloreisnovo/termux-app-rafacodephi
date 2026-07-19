@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Validar manifesto Arme
         run: |
@@ -164,19 +164,19 @@ jobs:
               writer.writerow(payload)
 
           report_md.write_text(
-              "# ARM Benchmark\\n\\n"
-              f"- ABI: `{abi}`\\n"
-              f"- Módulos compilados: `{len(compiled)}`\\n"
-              f"- C/ASM: `{c_count}` / `{asm_count}`\\n"
-              f"- Equivalência C/ASM: `{equivalence}`\\n"
-              f"- SHA256: `{digest}`\\n",
+              "# ARM Benchmark\n\n"
+              f"- ABI: `{abi}`\n"
+              f"- Módulos compilados: `{len(compiled)}`\n"
+              f"- C/ASM: `{c_count}` / `{asm_count}`\n"
+              f"- Equivalência C/ASM: `{equivalence}`\n"
+              f"- SHA256: `{digest}`\n",
               encoding="utf-8",
           )
 
           build_info.write_text(
-              f"abi={abi}\\n"
-              f"python={platform.python_version()}\\n"
-              f"timestamp_utc={datetime.now(timezone.utc).isoformat()}\\n",
+              f"abi={abi}\n"
+              f"python={platform.python_version()}\n"
+              f"timestamp_utc={datetime.now(timezone.utc).isoformat()}\n",
               encoding="utf-8",
           )
 
@@ -188,10 +188,10 @@ jobs:
 
           summary = Path(os.environ["GITHUB_STEP_SUMMARY"])
           summary.write_text(
-              f"## Arme benchmark ({abi})\\n"
-              f"- Hash: `{digest}`\\n"
-              f"- ABI avaliada: `{abi}`\\n"
-              f"- Status equivalência C/ASM: `{equivalence}`\\n",
+              f"## Arme benchmark ({abi})\n"
+              f"- Hash: `{digest}`\n"
+              f"- ABI avaliada: `{abi}`\n"
+              f"- Status equivalência C/ASM: `{equivalence}`\n",
               encoding="utf-8",
           )
           PY
