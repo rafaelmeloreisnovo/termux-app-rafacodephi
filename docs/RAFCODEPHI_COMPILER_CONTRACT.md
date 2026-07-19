@@ -3,10 +3,11 @@
 ## Estado
 
 ```text
-contract_version = 1
+contract_version = 2
 source_changes    = IMPLEMENTED
-host_gate         = PROVIDED
-android_ndk_build = TOKEN_VAZIO
+host_gate         = PASS
+native_safety     = PASS
+android_ndk_build = RUNNING
 apk_runtime       = TOKEN_VAZIO
 claim_allowed     = false
 ```
@@ -184,7 +185,9 @@ O campo abaixo é invariável:
 "automatic_source_deletion": false
 ```
 
-## 7. Otimização numérica já aplicada
+## 7. Otimizações já aplicadas
+
+### 7.1 Núcleo numérico
 
 Em `raf_numbase.c`:
 
@@ -195,11 +198,54 @@ Em `raf_numbase.c`:
 5. a economia de base para `n_max = 1` passou a representar ao menos um dígito;
 6. ponteiro de bases é validado quando `n_bases > 0`.
 
-A mudança principal é:
-
 ```text
 antes: Σ(k=0..86) O(k)  → O(n²)
 agora: uma passagem     → O(n)
+```
+
+### 7.2 ECC32 mascarado
+
+A implementação antiga em `rafaelia_bitraf_core.c` realizava:
+
+```text
+6 × 32 = 192 iterações posicionais
+```
+
+A relação foi convertida em seis máscaras constantes:
+
+```text
+55555555
+66666666
+78787878
+7F807F80
+7FFF8000
+80000000
+```
+
+O runtime chama:
+
+```c
+raf_ecc32_masked(v)
+```
+
+O precompilador escolhe a política:
+
+```text
+RAF_ECC32_PROFILE=compact  → seis passos mascarados; padrão do módulo -Os
+RAF_ECC32_PROFILE=speed    → seis paridades totalmente desenroladas
+```
+
+Os dois caminhos foram verificados contra a referência por:
+
+- todos os 32 vetores da base canônica de `GF(2)^32`;
+- 1.000.000 de estados determinísticos por política;
+- compilação com `-Werror`;
+- verificador estático que proíbe o retorno do loop antigo `6 × 32`.
+
+A prova detalhada está em:
+
+```text
+docs/RAFCODEPHI_ECC32_MASKED_PROOF.md
 ```
 
 ## 8. Gate local
@@ -215,46 +261,52 @@ O gate:
 1. compila o núcleo numérico com warnings estritos;
 2. ativa seções individuais e GC do linker;
 3. executa invariantes nativas;
-4. valida as flags nos módulos Android;
-5. testa o classificador de warnings.
+4. compila e executa ECC32 em política compacta;
+5. compila e executa ECC32 em política desenrolada;
+6. valida as flags e perfis nos módulos Android;
+7. testa o classificador de warnings.
+
+O comando é chamado pelo workflow canônico `Rafaelia Native Safety`, sem novo YAML.
 
 ## 9. Limites de prova
 
-O contrato e os testes de host não equivalem a:
+Os testes de host e a prova algébrica não equivalem a:
 
-- build completo do NDK;
-- APK assinado;
-- teste ARM32;
-- teste ARM64;
-- execução em Android 10/14/15;
-- medição real de tamanho antes/depois;
+- APK assinado para distribuição;
+- medição de ciclos no Moto E7 Power;
+- medição de ciclos em ARM64 físico;
+- comportamento térmico prolongado;
+- medição final de bytes no `.so` após todas as decisões de inline;
 - prova de que todo warning histórico foi resolvido.
 
 Portanto:
 
 ```text
 source_contract = IMPLEMENTED
-host_logic      = TESTABLE
-android_build   = TOKEN_VAZIO
+host_logic      = PASS
+native_safety   = PASS
+android_build   = RUNNING
 runtime_device  = TOKEN_VAZIO
 ```
 
 ## 10. Próxima redução segura
 
-O próximo candidato de alto valor é `raf_ecc32` em `rafaelia_bitraf_core.c`.
+O próximo candidato de alto valor é `raf_crc16` em `rafaelia_bitraf_core.c`.
 
-A implementação atual percorre seis bits de paridade × 32 posições. Ela pode ser substituída por máscaras constantes e paridade por palavra, desde que:
+A implementação atual percorre cada byte e executa oito passos de polinômio. Antes de qualquer substituição, devem existir:
 
-1. os vetores old/new sejam equivalentes;
-2. ARM32 e ARM64 sejam testados;
-3. o compilador não introduza dependência de runtime indesejada;
-4. o resultado seja medido no binário final.
+1. equivalência old/new para vetores conhecidos e corpus determinístico;
+2. separação explícita entre perfil compacto e perfil de velocidade;
+3. medição de bytes no objeto e no `.so` ARM32/ARM64;
+4. garantia de ausência de tabela grande indesejada no perfil `-Os`;
+5. manutenção do polinômio e do valor inicial como contrato versionado.
 
-Até essa prova, o loop permanece válido e não deve ser apagado apenas por parecer repetitivo.
+Até essa prova, o loop CRC permanece produtivo e não pode ser apagado apenas por aparecer como repetição.
 
 ---
 
-
+```text
 authorial_scope: RAFCODE-Φ / Rafael Melo Reis
 upstream_scope: preserved per repository license map
 release_decision: HUMAN_REVIEW_REQUIRED
+```
