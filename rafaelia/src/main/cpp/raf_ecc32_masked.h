@@ -9,6 +9,8 @@
  * Each output is therefore a linear GF(2) parity over one fixed mask.
  */
 
+_Static_assert(sizeof(unsigned int) == 4u, "RAFCODE-Phi ECC32 requires 32-bit unsigned int");
+
 #define RAF_ECC32_MASK_0 0x55555555u
 #define RAF_ECC32_MASK_1 0x66666666u
 #define RAF_ECC32_MASK_2 0x78787878u
