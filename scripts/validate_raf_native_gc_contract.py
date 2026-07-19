@@ -42,11 +42,37 @@ CHECKS = {
         "i <= n / i",
         "0ULL - (unsigned long long)n",
     ),
+    "rafaelia/src/main/cpp/raf_ecc32_masked.h": (
+        "_Static_assert(sizeof(unsigned int) == 4u",
+        "RAF_ECC32_MASK_0 0x55555555u",
+        "RAF_ECC32_MASK_1 0x66666666u",
+        "RAF_ECC32_MASK_2 0x78787878u",
+        "RAF_ECC32_MASK_3 0x7F807F80u",
+        "RAF_ECC32_MASK_4 0x7FFF8000u",
+        "RAF_ECC32_MASK_5 0x80000000u",
+        "raf_parity32_fold",
+        "raf_ecc32_masked",
+    ),
+    "rafaelia/src/main/cpp/rafaelia_bitraf_core.c": (
+        '#include "raf_ecc32_masked.h"',
+        "return (u8)raf_ecc32_masked((unsigned int)v);",
+        "sem loops aninhados",
+    ),
+    "tests/native/test_raf_ecc32_masked.c": (
+        "complete\n     * 32-element standard basis",
+        "1000000u",
+        "raf_ecc32_reference",
+        "raf_ecc32_masked",
+    ),
 }
 
 FORBIDDEN = {
     "rafaelia/src/main/cpp/Android.mk": (
         "-Wno-unused-function",
+    ),
+    "rafaelia/src/main/cpp/rafaelia_bitraf_core.c": (
+        "for(u8 bit=0u; bit<6u; bit++)",
+        "for(u8 i=0u; i<32u; i++)",
     ),
 }
 
@@ -77,12 +103,13 @@ def main() -> int:
         )
 
     report = {
-        "schema": "raf.native-gc-contract.v1",
+        "schema": "raf.native-gc-contract.v2",
         "status": "PASS" if passed else "FAIL",
         "checks": results,
         "invariant": (
             "warnings remain visible; intentional exceptions are explicit; "
-            "dead symbols are removed only by section-level reachability"
+            "dead symbols are removed only by section-level reachability; "
+            "ECC32 runtime uses the basis-proven masked transform"
         ),
     }
     print(json.dumps(report, ensure_ascii=False, indent=2))
