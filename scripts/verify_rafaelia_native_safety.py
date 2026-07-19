@@ -8,15 +8,14 @@ before shipping incomplete JNI code.
 from __future__ import annotations
 
 import subprocess
-import sys
 from pathlib import Path
+from typing import Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
 RAFAELIA_C = ROOT / "rafaelia" / "src" / "main" / "cpp" / "rafaelia.c"
 INDEX = ROOT / "rafaelia" / "termux-packages-manifests" / "INDEX.rafidx"
 CORE_PKG = ROOT / "rafaelia" / "termux-packages-manifests" / "rafacodephi-core.rafpkg"
-GC_CONTRACT = ROOT / "scripts" / "validate_raf_native_gc_contract.py"
-WARNING_TESTS = ROOT / "tests" / "test_raf_compile_warning_contract.py"
+NATIVE_COMPILE_GATE = ROOT / "scripts" / "test_raf_native_compile_contract.sh"
 
 FAILURES: list[str] = []
 
@@ -26,13 +25,9 @@ def require(condition: bool, message: str) -> None:
         FAILURES.append(message)
 
 
-def run_python_gate(path: Path, label: str) -> None:
-    require(path.exists(), f"missing {label}: {path}")
-    if not path.exists():
-        return
-
+def run_gate(command: Sequence[str], label: str) -> None:
     completed = subprocess.run(
-        [sys.executable, str(path)],
+        list(command),
         cwd=ROOT,
         text=True,
         stdout=subprocess.PIPE,
@@ -73,10 +68,13 @@ def main() -> int:
         require("seal=RAFPKG" in pkg, "rafacodephi-core manifest missing RAFPkg seal")
         require("name=rafacodephi-core" in pkg, "rafacodephi-core manifest missing canonical name")
 
-    # Compose the new compiler-intent contract into the already-canonical
-    # native-safety gate without adding another workflow definition.
-    run_python_gate(GC_CONTRACT, "native-gc-contract")
-    run_python_gate(WARNING_TESTS, "compile-warning-contract-tests")
+    # Reuse the already-canonical native-safety workflow without creating or
+    # modifying another YAML workflow. This gate compiles the changed C source
+    # with -Werror, executes host invariants, validates section GC and runs the
+    # compiler-warning classifier tests.
+    require(NATIVE_COMPILE_GATE.exists(), f"missing native compile gate: {NATIVE_COMPILE_GATE}")
+    if NATIVE_COMPILE_GATE.exists():
+        run_gate(["bash", str(NATIVE_COMPILE_GATE)], "native-compile-contract")
 
     if FAILURES:
         print("RAFAELIA_NATIVE_SAFETY=fail")
