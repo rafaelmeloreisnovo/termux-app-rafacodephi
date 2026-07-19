@@ -4,8 +4,9 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libtermux-bootstrap
 LOCAL_SRC_FILES := termux-bootstrap-zip.S termux-bootstrap.c
+LOCAL_CFLAGS += -fno-common -ffunction-sections -fdata-sections
 # Critical: 16KB page alignment for Android 15/16 compatibility
-LOCAL_LDFLAGS := -Wl,-z,max-page-size=16384
+LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384
 include $(BUILD_SHARED_LIBRARY)
 
 # Bare-metal low-level library
@@ -44,7 +45,7 @@ ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
     LOCAL_SRC_FILES += lowlevel/baremetal_asm.S
     LOCAL_CFLAGS += -DHAS_BM_NEON_ASM=1
 endif
-LOCAL_CFLAGS += -std=c11 -Wall -Wextra -Werror -Os -fno-stack-protector
+LOCAL_CFLAGS += -std=c11 -Wall -Wextra -Werror -Os -fno-stack-protector -fno-common
 LOCAL_CFLAGS += -ffast-math
 LOCAL_CFLAGS += -ffunction-sections -fdata-sections
 # Critical: 16KB page alignment for Android 15/16 compatibility
@@ -86,8 +87,9 @@ endif
 ifeq ($(RMR_PURE_CORE),1)
 LOCAL_CFLAGS += -DRMR_NO_DEBUG_STRING=1
 endif
-LOCAL_CFLAGS += -std=c11 -Wall -Wextra -Os -fno-stack-protector
-LOCAL_LDFLAGS := -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
+LOCAL_CFLAGS += -std=c11 -Wall -Wextra -Os -fno-stack-protector -fno-common
+LOCAL_CFLAGS += -ffunction-sections -fdata-sections
+LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
 LOCAL_LDLIBS := -llog
 ifneq ($(RMR_NO_LIBM),1)
 LOCAL_LDLIBS += -lm
@@ -110,7 +112,7 @@ ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
     LOCAL_SRC_FILES += lowlevel/api_ll_asm.S
     LOCAL_CFLAGS += -march=armv7-a -mfpu=neon -DHAS_NEON=1
 endif
-LOCAL_CFLAGS += -std=c11 -O3 -fno-stack-protector -fvisibility=hidden
+LOCAL_CFLAGS += -std=c11 -O3 -fno-stack-protector -fvisibility=hidden -fno-common
 LOCAL_CFLAGS += -ffunction-sections -fdata-sections
 LOCAL_CFLAGS += -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-ident
 LOCAL_CFLAGS += -DAPI_LL_NOMALLOC=1
