@@ -47,9 +47,13 @@ jobs:
           echo "universal=$UNIVERSAL_APK" >> "$GITHUB_OUTPUT"
 
       - name: Generate ARM32 compatibility report
+        shell: bash
         run: |
+          set -o pipefail
           mkdir -p dist/arm32-compatibility
-          aapt dump badging "${{ steps.apks.outputs.arm32 }}" | tee dist/arm32-compatibility/apk-badging.txt
+          bash scripts/collect_apk_badging.sh \
+            "${{ steps.apks.outputs.arm32 }}" \
+            dist/arm32-compatibility
           unzip -l "${{ steps.apks.outputs.arm32 }}" | tee dist/arm32-compatibility/native-libs.txt
           unzip -l "${{ steps.apks.outputs.universal }}" > dist/arm32-compatibility/universal-libs.txt
           lib_path=$(unzip -Z1 "${{ steps.apks.outputs.arm32 }}" | grep '^lib/armeabi-v7a/.*\.so$' | head -n1)
@@ -101,6 +105,8 @@ jobs:
           name: termux-rafcodephi-arm32-compat-report-${{ github.sha }}
           path: |
             dist/arm32-compatibility/apk-badging.txt
+            dist/arm32-compatibility/apk-metadata-source.txt
+            dist/arm32-compatibility/apk-metadata-errors.txt
             dist/arm32-compatibility/native-libs.txt
             dist/arm32-compatibility/readelf-arm32.txt
             dist/arm32-compatibility/apk-signature.txt
