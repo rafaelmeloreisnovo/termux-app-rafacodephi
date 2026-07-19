@@ -17,6 +17,6 @@ trap 'rm -rf "$TMP"' EXIT
 
 "$TMP/test_raf_numbase"
 python3 "$ROOT/scripts/validate_raf_native_gc_contract.py"
-python3 -m unittest "$ROOT/tests/test_raf_compile_warning_contract.py"
+python3 "$ROOT/tests/test_raf_compile_warning_contract.py"
 
 echo "RAFCODE-Phi native compile contract: PASS"
