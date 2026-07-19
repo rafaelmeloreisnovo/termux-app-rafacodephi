@@ -49,19 +49,10 @@ jobs:
       - name: Generate ARM32 compatibility report
         shell: bash
         run: |
-          set -o pipefail
-          mkdir -p dist/arm32-compatibility
-          bash scripts/collect_apk_badging.sh \
+          bash scripts/generate_arm32_compatibility_report.sh \
             "${{ steps.apks.outputs.arm32 }}" \
+            "${{ steps.apks.outputs.universal }}" \
             dist/arm32-compatibility
-          unzip -l "${{ steps.apks.outputs.arm32 }}" | tee dist/arm32-compatibility/native-libs.txt
-          unzip -l "${{ steps.apks.outputs.universal }}" > dist/arm32-compatibility/universal-libs.txt
-          lib_path=$(unzip -Z1 "${{ steps.apks.outputs.arm32 }}" | grep '^lib/armeabi-v7a/.*\.so$' | head -n1)
-          test -n "$lib_path"
-          unzip -p "${{ steps.apks.outputs.arm32 }}" "$lib_path" > /tmp/arm32-lib.so
-          readelf -h /tmp/arm32-lib.so > dist/arm32-compatibility/readelf-arm32.txt
-          readelf -A /tmp/arm32-lib.so >> dist/arm32-compatibility/readelf-arm32.txt
-          apksigner verify --verbose "${{ steps.apks.outputs.arm32 }}" | tee dist/arm32-compatibility/apk-signature.txt
 
       - name: Enforce compatibility gates
         run: bash scripts/enforce_arm32_compatibility_gates.sh dist/arm32-compatibility
@@ -107,8 +98,11 @@ jobs:
             dist/arm32-compatibility/apk-badging.txt
             dist/arm32-compatibility/apk-metadata-source.txt
             dist/arm32-compatibility/apk-metadata-errors.txt
+            dist/arm32-compatibility/android-sdk-tools.txt
             dist/arm32-compatibility/native-libs.txt
+            dist/arm32-compatibility/universal-libs.txt
             dist/arm32-compatibility/readelf-arm32.txt
             dist/arm32-compatibility/apk-signature.txt
+            dist/arm32-compatibility/gate-results.txt
             dist/arm32-compatibility/install-notes-moto-e7-power.md
             dist/arm32-compatibility/bootstrap-arm.txt
