@@ -51,6 +51,7 @@ trap 'rm -rf "$TMP"' EXIT
 
 python3 "$ROOT/scripts/validate_apkc_dex_contract.py" "$TMP/classes.dex" --pretty
 python3 "$ROOT/scripts/validate_operational_technical_coherence.py"
+python3 "$ROOT/scripts/index_loose_operational_artifacts.py" --validate --summary
 python3 "$ROOT/scripts/validate_raf_native_gc_contract.py"
 python3 "$ROOT/tests/test_raf_compile_warning_contract.py"
 
