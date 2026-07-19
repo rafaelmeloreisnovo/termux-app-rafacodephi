@@ -1,4 +1,5 @@
 #include "raf_numbase.h"
+#include "raf_compile_contract.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -15,10 +16,22 @@ char *raf_to_base(long long n, int base, char *buf, int buf_len) {
     static const char digits[] = "0123456789abcdefghijklmnopqrstuvwxyz";
     char tmp[68];
     int pos = 0, neg = 0;
+    unsigned long long magnitude;
 
     if (n == 0) { buf[0] = '0'; buf[1] = '\0'; return buf; }
-    if (n < 0) { neg = 1; n = -n; }
-    while (n > 0 && pos < 67) { tmp[pos++] = digits[(int)(n % base)]; n /= base; }
+
+    /* Avoid signed overflow for LLONG_MIN. */
+    if (n < 0) {
+        neg = 1;
+        magnitude = 0ULL - (unsigned long long)n;
+    } else {
+        magnitude = (unsigned long long)n;
+    }
+
+    while (magnitude > 0ULL && pos < 67) {
+        tmp[pos++] = digits[(int)(magnitude % (unsigned int)base)];
+        magnitude /= (unsigned int)base;
+    }
 
     int out = 0;
     if (neg && out < buf_len - 1) buf[out++] = '-';
@@ -66,15 +79,16 @@ long long raf_tribonacci(int n) {
     return c;
 }
 
-static int raf_is_prime(long long n) {
+static RAF_PURE int raf_is_prime(long long n) {
     if (n < 2) return 0;
     if (n == 2) return 1;
     if (n % 2 == 0) return 0;
-    for (long long i = 3; i * i <= n; i += 2) if (n % i == 0) return 0;
+    /* i <= n / i avoids overflow from i*i near LLONG_MAX. */
+    for (long long i = 3; i <= n / i; i += 2) if (n % i == 0) return 0;
     return 1;
 }
 
-static long long raf_next_prime(long long n) {
+static RAF_PURE long long raf_next_prime(long long n) {
     if (n < 2) return 2;
     long long p = (n % 2 == 0) ? n + 1 : n + 2;
     while (!raf_is_prime(p)) p += 2;
@@ -131,6 +145,7 @@ int raf_pisano_period(int m) {
 double raf_base_efficiency(int base, long long n_max) {
     if (base < 2 || n_max <= 0) return 0.0;
     double digits = ceil(log((double)n_max) / log((double)base));
+    if (digits < 1.0) digits = 1.0;
     return digits * base; /* radix economy — caller compares across bases */
 }
 
@@ -190,9 +205,10 @@ int raf_prime_fluid_graph(const int *primes, int n_primes, int mod,
  * ========================================================================= */
 
 int raf_analyze_special(const long long *nums, int n_nums,
-                        const int *bases, int n_bases,
-                        char *buf, int buf_len) {
+                         const int *bases, int n_bases,
+                         char *buf, int buf_len) {
     if (!nums || n_nums <= 0 || !buf || buf_len < 64) return -1;
+    if (n_bases > 0 && !bases) return -1;
     static const int MODS[] = {7, 10, 14, 70};
     char tmp[68];
     int pos = 0;
@@ -203,7 +219,10 @@ int raf_analyze_special(const long long *nums, int n_nums,
         jprintf(buf, &pos, buf_len, "{\"n\":%lld,\"bases\":{", n);
         for (int b = 0; b < n_bases; b++) {
             if (b > 0) jappend(buf, &pos, buf_len, ",");
-            raf_to_base(n, bases[b], tmp, sizeof(tmp));
+            if (!raf_to_base(n, bases[b], tmp, (int)sizeof(tmp))) {
+                tmp[0] = '?';
+                tmp[1] = '\0';
+            }
             jprintf(buf, &pos, buf_len, "\"%d\":\"%s\"", bases[b], tmp);
         }
         jappend(buf, &pos, buf_len, "},\"mod\":{");
@@ -212,12 +231,18 @@ int raf_analyze_special(const long long *nums, int n_nums,
             long long r = ((n % MODS[m]) + MODS[m]) % MODS[m];
             jprintf(buf, &pos, buf_len, "\"%d\":%lld", MODS[m], r);
         }
-        /* Fibonacci index if applicable */
+
+        /* Single linear pass instead of recalculating Fibonacci from zero. */
         int fib_idx = -1;
+        long long fib_a = 0;
+        long long fib_b = 1;
         for (int k = 0; k <= 86; k++) {
-            long long f = raf_fibonacci(k);
+            long long f = fib_a;
             if (f == n) { fib_idx = k; break; }
             if (f > n) break;
+            long long next = fib_a + fib_b;
+            fib_a = fib_b;
+            fib_b = next;
         }
         jprintf(buf, &pos, buf_len, "},\"fib_index\":%d}", fib_idx);
     }
