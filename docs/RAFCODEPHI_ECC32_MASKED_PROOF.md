@@ -6,7 +6,8 @@
 source_integration = IMPLEMENTED
 gf2_basis_proof    = PASS
 million_state_test = PASS
-host_compile       = PASS
+compact_policy     = PASS
+unrolled_policy    = PASS
 native_safety      = PASS
 android_arm32      = RUNNING
 android_ndk29      = RUNNING
@@ -32,7 +33,7 @@ Estrutura máxima por palavra:
 6 × 32 = 192 testes de posição
 ```
 
-O loop era determinístico e correto, mas repetia em runtime uma relação de posições que é constante em compile-time.
+O algoritmo era determinístico e correto, mas repetia em runtime uma relação de posições constante em compile-time.
 
 ## 2. Forma algébrica
 
@@ -114,7 +115,7 @@ O teste `tests/native/test_raf_ecc32_masked.c` verifica os 32 vetores-base. Essa
 
 ## 4. Guarda de implementação
 
-Além da base canônica, o gate executa:
+Além da base canônica, cada política executa:
 
 ```text
 1.000.000 estados determinísticos
@@ -132,11 +133,59 @@ Para cada estado:
 reference(state) == masked(state)
 ```
 
-Esse milhão de estados não é necessário para completar a prova algébrica, mas protege contra erros de codificação, constantes digitadas incorretamente e regressões no folding de paridade.
+O milhão de estados não é necessário para completar a prova algébrica, mas protege contra constantes incorretas, regressões no folding e divergências entre os caminhos de compilação.
 
-## 5. Runtime integrado
+## 5. Política dirigida pelo precompilador
 
-Arquivo canônico da transformação:
+O primeiro corte totalmente desenrolado removeu todos os loops, mas a inspeção estrutural mostrou que isso pode aumentar bytes quando o compilador opera com `-Os`.
+
+O contrato final possui dois caminhos semanticamente idênticos.
+
+### 5.1 Compacto
+
+Ativado por:
+
+```text
+-Os
+-Oz
+RAF_ECC32_FORCE_COMPACT=1
+```
+
+Executa seis máscaras fixas:
+
+```text
+for b = 0..5
+    ecc[b] = parity(v & M_b)
+```
+
+Assim, o loop interno de 32 posições desaparece:
+
+```text
+antes = 6 × 32 iterações
+agora = 6 iterações
+```
+
+### 5.2 Desenrolado
+
+Ativado por:
+
+```text
+RAF_ECC32_FORCE_UNROLL=1
+```
+
+Expande as seis paridades diretamente, favorecendo o perfil de velocidade e permitindo agendamento independente pelo compilador.
+
+### 5.3 Invariante
+
+```text
+compact(v) = unrolled(v) = reference(v)
+```
+
+Definir simultaneamente `RAF_ECC32_FORCE_COMPACT` e `RAF_ECC32_FORCE_UNROLL` produz erro de compilação.
+
+## 6. Runtime integrado
+
+Arquivo canônico:
 
 ```text
 rafaelia/src/main/cpp/raf_ecc32_masked.h
@@ -152,9 +201,9 @@ static u8 raf_ecc32(u32 v) {
 
 A implementação de referência não permanece no runtime. Ela existe somente no teste como oráculo independente.
 
-## 6. Paridade sem loop
+## 7. Folding de paridade
 
-A paridade de cada máscara é reduzida por folding:
+A paridade de cada máscara é reduzida sem loop:
 
 ```text
 v ^= v >> 16
@@ -163,17 +212,17 @@ v ^= v >> 4
 parity = (0x6996 >> (v & 0xF)) & 1
 ```
 
-Não há dependência de libc, heap, `libm` ou builtin específico de uma arquitetura.
+Não há dependência de libc, heap, `libm` ou builtin específico de arquitetura.
 
-O header também fixa o contrato:
+O header fixa o contrato de palavra:
 
 ```c
 _Static_assert(sizeof(unsigned int) == 4u, ...);
 ```
 
-Isso impede compilar silenciosamente o transformador em uma plataforma onde `unsigned int` não possua 32 bits.
+Isso impede compilar silenciosamente o transformador onde `unsigned int` não possua 32 bits.
 
-## 7. Gate
+## 8. Gate
 
 Comando canônico:
 
@@ -183,28 +232,29 @@ bash scripts/test_raf_native_compile_contract.sh
 
 O gate:
 
-1. compila a transformação com `-Wall -Wextra -Werror`;
-2. executa a prova de base e o milhão de estados;
-3. confirma que `rafaelia_bitraf_core.c` usa o novo header;
-4. proíbe o retorno dos dois loops antigos;
-5. permanece integrado ao workflow `Rafaelia Native Safety`.
+1. compila a política compacta com `-Os` e `RAF_ECC32_FORCE_COMPACT=1`;
+2. compila a política desenrolada com `-O2` e `RAF_ECC32_FORCE_UNROLL=1`;
+3. executa a prova de base e um milhão de estados em cada binário;
+4. confirma que `rafaelia_bitraf_core.c` usa o novo header;
+5. proíbe o retorno do antigo loop `6 × 32`;
+6. permanece integrado ao workflow `Rafaelia Native Safety`.
 
-## 8. Limites
+## 9. Medição e limites
 
-A equivalência funcional de `raf_ecc32` está fechada no domínio de 32 bits. Ainda não estão demonstrados neste documento:
+A equivalência funcional de `raf_ecc32` está fechada no domínio de 32 bits. Ainda exigem medição no artefato Android:
 
-- ganho exato de ciclos em ARMv7;
-- ganho exato de ciclos em ARM64;
-- redução final de bytes no `.so` após todas as decisões de inline;
-- comportamento térmico em execução prolongada;
+- ciclos exatos em ARMv7;
+- ciclos exatos em ARM64;
+- bytes finais no `.so` após inlining e linker GC;
+- comportamento térmico prolongado;
 - execução em dispositivo físico.
 
-Esses valores dependem do compilador, ABI, inlining e microarquitetura. Devem ser medidos, não inferidos.
+Medições exploratórias de objeto cruzado indicaram que a política compacta é mais adequada ao `-Os`, enquanto o desenrolamento é mais apropriado a perfis de velocidade. Esses números não substituem o `.so` real produzido pelo NDK.
 
 ---
 
 ```text
 authorial_scope = RAFCODE-Φ / Rafael Melo Reis
-proof_scope      = ECC32 functional equivalence
+proof_scope      = ECC32 functional equivalence + compile policy
 release_decision = HUMAN_REVIEW_REQUIRED
 ```
