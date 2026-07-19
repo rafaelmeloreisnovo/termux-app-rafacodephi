@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -u
 
 APK="${1:-}"
 REPORT="${2:-}"
@@ -8,53 +8,109 @@ if [[ -z "${APK}" || -z "${REPORT}" ]]; then
   echo "usage: $0 <loader.apk> <report-file>" >&2
   exit 64
 fi
-if [[ ! -f "${APK}" ]]; then
-  echo "ERROR: loader APK not found: ${APK}" >&2
-  exit 1
-fi
 
 mkdir -p "$(dirname "${REPORT}")"
 : > "${REPORT}"
 
-APKANALYZER="$(bash scripts/find_android_sdk_tool.sh apkanalyzer)"
-APKSIGNER="$(bash scripts/find_android_sdk_tool.sh apksigner)"
+failures=0
+record() {
+  printf '%s\n' "$1" | tee -a "${REPORT}"
+}
+fail() {
+  record "FAIL $1"
+  failures=$((failures + 1))
+}
+pass() {
+  record "PASS $1"
+}
 
-package_name="$(${APKANALYZER} manifest application-id "${APK}" | tr -d '\r\n')"
-min_sdk="$(${APKANALYZER} manifest min-sdk "${APK}" | tr -d '\r\n')"
-target_sdk="$(${APKANALYZER} manifest target-sdk "${APK}" | tr -d '\r\n')"
-
-if [[ "${package_name}" != "com.termux.rafacodephi.loader" ]]; then
-  echo "ERROR: unexpected loader package: ${package_name}" >&2
+if [[ ! -f "${APK}" ]]; then
+  fail "loader APK not found: ${APK}"
+  record "SUMMARY FAIL failures=${failures}"
   exit 1
 fi
-if [[ "${min_sdk}" != "21" ]]; then
-  echo "ERROR: unexpected loader minSdk: ${min_sdk}" >&2
-  exit 1
+
+APKANALYZER="$(bash scripts/find_android_sdk_tool.sh apkanalyzer 2>>"${REPORT}" || true)"
+APKSIGNER="$(bash scripts/find_android_sdk_tool.sh apksigner 2>>"${REPORT}" || true)"
+AAPT="$(bash scripts/find_android_sdk_tool.sh aapt 2>>"${REPORT}" || true)"
+
+record "state=STUB_NO_BOOTSTRAP_PAYLOAD"
+record "apk=${APK}"
+record "size_bytes=$(stat -c '%s' "${APK}")"
+record "sha256=$(sha256sum "${APK}" | awk '{print $1}')"
+record "apkanalyzer=${APKANALYZER:-NOT_FOUND}"
+record "apksigner=${APKSIGNER:-NOT_FOUND}"
+record "aapt=${AAPT:-NOT_FOUND}"
+
+package_name=""
+min_sdk=""
+target_sdk=""
+if [[ -n "${APKANALYZER}" ]]; then
+  package_name="$(${APKANALYZER} manifest application-id "${APK}" 2>>"${REPORT}" || true)"
+  min_sdk="$(${APKANALYZER} manifest min-sdk "${APK}" 2>>"${REPORT}" || true)"
+  target_sdk="$(${APKANALYZER} manifest target-sdk "${APK}" 2>>"${REPORT}" || true)"
+  package_name="$(tr -d '\r\n' <<<"${package_name}")"
+  min_sdk="$(tr -d '\r\n' <<<"${min_sdk}")"
+  target_sdk="$(tr -d '\r\n' <<<"${target_sdk}")"
 fi
-if [[ "${target_sdk}" != "28" ]]; then
-  echo "ERROR: unexpected loader targetSdk: ${target_sdk}" >&2
-  exit 1
+
+if [[ -z "${package_name}" && -n "${AAPT}" ]]; then
+  badging="$(${AAPT} dump badging "${APK}" 2>>"${REPORT}" || true)"
+  package_name="$(sed -n "s/^package: name='\([^']*\)'.*/\1/p" <<<"${badging}" | head -n1)"
+  min_sdk="$(sed -n "s/^sdkVersion:'\([^']*\)'.*/\1/p" <<<"${badging}" | head -n1)"
+  target_sdk="$(sed -n "s/^targetSdkVersion:'\([^']*\)'.*/\1/p" <<<"${badging}" | head -n1)"
+  printf '%s\n' "${badging}" > "$(dirname "${REPORT}")/loader-badging.txt"
+fi
+
+record "package=${package_name:-UNRESOLVED}"
+record "min_sdk=${min_sdk:-UNRESOLVED}"
+record "target_sdk=${target_sdk:-UNRESOLVED}"
+
+if [[ "${package_name}" == "com.termux.rafacodephi.loader" ]]; then
+  pass "package"
+else
+  fail "package expected=com.termux.rafacodephi.loader actual=${package_name:-UNRESOLVED}"
+fi
+
+if [[ "${min_sdk}" == "21" ]]; then
+  pass "min_sdk"
+else
+  fail "min_sdk expected=21 actual=${min_sdk:-UNRESOLVED}"
+fi
+
+if [[ "${target_sdk}" == "28" ]]; then
+  pass "target_sdk"
+else
+  fail "target_sdk expected=28 actual=${target_sdk:-UNRESOLVED}"
 fi
 
 if unzip -Z1 "${APK}" | grep -Eq '^classes([0-9]*)?\.dex$'; then
-  echo "ERROR: loader stub must not contain executable DEX code" >&2
+  record "has_dex=true"
+  fail "loader stub must not contain executable DEX code"
+else
+  record "has_dex=false"
+  pass "no_dex"
+fi
+
+if [[ -z "${APKSIGNER}" ]]; then
+  record "signed=UNRESOLVED"
+  fail "apksigner unavailable"
+else
+  signature_output="$(${APKSIGNER} verify --verbose "${APK}" 2>&1)"
+  signature_status=$?
+  printf '\n[apksigner]\n%s\n' "${signature_output}" | tee -a "${REPORT}"
+  if [[ ${signature_status} -eq 0 ]]; then
+    record "signed=true"
+    pass "signature"
+  else
+    record "signed=false"
+    fail "apksigner exit=${signature_status}"
+  fi
+fi
+
+if (( failures > 0 )); then
+  record "SUMMARY FAIL failures=${failures}"
   exit 1
 fi
 
-"${APKSIGNER}" verify --verbose "${APK}" > /tmp/loader-apksigner.txt 2>&1
-sha256="$(sha256sum "${APK}" | awk '{print $1}')"
-
-{
-  printf 'state=STUB_NO_BOOTSTRAP_PAYLOAD\n'
-  printf 'package=%s\n' "${package_name}"
-  printf 'min_sdk=%s\n' "${min_sdk}"
-  printf 'target_sdk=%s\n' "${target_sdk}"
-  printf 'has_dex=false\n'
-  printf 'signed=true\n'
-  printf 'sha256=%s\n' "${sha256}"
-  printf 'size_bytes=%s\n' "$(stat -c '%s' "${APK}")"
-  printf 'apkanalyzer=%s\n' "${APKANALYZER}"
-  printf 'apksigner=%s\n' "${APKSIGNER}"
-  printf '\n[apksigner]\n'
-  cat /tmp/loader-apksigner.txt
-} | tee "${REPORT}"
+record "SUMMARY PASS failures=0"
