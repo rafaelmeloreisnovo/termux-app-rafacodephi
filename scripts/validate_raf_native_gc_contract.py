@@ -15,6 +15,10 @@ CHECKS = {
         "-fno-common",
         "-Wno-error=unused-function",
         "-Wl,--gc-sections",
+        "RAF_ECC32_PROFILE ?= compact",
+        "-DRAF_ECC32_FORCE_COMPACT=1",
+        "-DRAF_ECC32_FORCE_UNROLL=1",
+        "Unsupported RAF_ECC32_PROFILE",
     ),
     "rmr/src/main/cpp/Android.mk": (
         "-ffunction-sections",
