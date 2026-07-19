@@ -19,10 +19,10 @@ long long raf_primonacci(int n);
 long long raf_seq_mod(int type, int n, int m);
 
 /* Pisano period: Fibonacci mod m is periodic with period P(m).
- * P(7)=16, P(10)=60, P(14)=24, P(70)=120 */
+ * P(7)=16, P(10)=60, P(14)=48, P(70)=240. */
 int raf_pisano_period(int m);
 
-/* Radix economy: log_b(n_max) / ln(base). Higher = more efficient representation. */
+/* Radix economy = ceil(log_base(n_max)) * base. Lower is more economical. */
 double raf_base_efficiency(int base, long long n_max);
 
 /* Prime fluid graph. Nodes=primes; edges where (p2-p1) % mod == 0.
@@ -32,8 +32,8 @@ int raf_prime_fluid_graph(const int *primes, int n_primes, int mod,
 
 /* Analyze nums in multiple bases and mod {7,10,14,70}. Writes JSON array. */
 int raf_analyze_special(const long long *nums, int n_nums,
-                        const int *bases, int n_bases,
-                        char *buf, int buf_len);
+                         const int *bases, int n_bases,
+                         char *buf, int buf_len);
 
 /* Show how Z/base_a Z and Z/base_b Z coexist (coincide at multiples of LCM).
  * Writes JSON describing both rings, coincidence points, Pisano periods. */
