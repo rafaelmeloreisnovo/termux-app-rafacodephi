@@ -59,7 +59,7 @@ CHECKS = {
         "sem loops aninhados",
     ),
     "tests/native/test_raf_ecc32_masked.c": (
-        "complete\n     * 32-element standard basis",
+        "32-element standard basis",
         "1000000u",
         "raf_ecc32_reference",
         "raf_ecc32_masked",
