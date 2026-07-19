@@ -25,6 +25,11 @@ jobs:
       - name: Setup Android SDK/NDK
         run: ./scripts/setup_android_toolchain.sh
 
+      - name: Add Android build-tools to PATH (apksigner)
+        run: |
+          BUILD_TOOLS=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n1)
+          echo "$ANDROID_HOME/build-tools/$BUILD_TOOLS" >> "$GITHUB_PATH"
+
       - name: Build debug APKs
         run: ./gradlew clean :app:assembleDebug
 
