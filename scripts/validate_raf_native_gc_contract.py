@@ -34,7 +34,7 @@ CHECKS = {
         "RAF_NORETURN",
         "RAF_DISCARD",
         "RAF_SPIN_FOREVER",
-        "automatic",
+        "--gc-sections",
     ),
     "rafaelia/src/main/cpp/raf_numbase.c": (
         '#include "raf_compile_contract.h"',
