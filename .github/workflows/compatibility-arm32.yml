@@ -60,13 +60,15 @@ jobs:
           apksigner verify --verbose "${{ steps.apks.outputs.arm32 }}" | tee dist/arm32-compatibility/apk-signature.txt
 
       - name: Enforce compatibility gates
-        run: |
-          grep -q "package: name='com.termux.rafacodephi'" dist/arm32-compatibility/apk-badging.txt
-          grep -q "sdkVersion:'21'" dist/arm32-compatibility/apk-badging.txt
-          grep -q "targetSdkVersion:'28'" dist/arm32-compatibility/apk-badging.txt
-          grep -q 'native-code:.*armeabi-v7a' dist/arm32-compatibility/apk-badging.txt
-          grep -q 'lib/armeabi-v7a/' dist/arm32-compatibility/native-libs.txt
-          grep -q 'lib/armeabi-v7a/' dist/arm32-compatibility/universal-libs.txt
+        run: bash scripts/enforce_arm32_compatibility_gates.sh dist/arm32-compatibility
+
+      - name: Upload ARM32 gate diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: termux-rafcodephi-arm32-gate-diagnostics-${{ github.sha }}
+          path: dist/arm32-compatibility/
+          if-no-files-found: warn
 
       - name: Validate bootstrap ARM32 presence
         run: |
