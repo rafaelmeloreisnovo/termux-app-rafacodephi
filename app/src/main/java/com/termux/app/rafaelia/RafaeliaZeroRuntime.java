@@ -56,7 +56,8 @@ public final class RafaeliaZeroRuntime {
         if (!AVAILABLE) return E_STATE;
         if (payload == null || !payload.isDirect()) return E_NULL;
         int offset = payload.position();
-        if (bytes < 0 || bytes > MAX_PAYLOAD || offset < 0 || offset + bytes > payload.capacity()) return E_RANGE;
+        long end = (long) offset + (long) bytes;
+        if (bytes < 0 || bytes > MAX_PAYLOAD || offset < 0 || end > payload.capacity()) return E_RANGE;
         synchronized (LOCK) {
             return nativeEncodeIngestDirect(payload, offset, bytes, flags, source, sequence);
         }
