@@ -166,41 +166,13 @@ manifest = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 print(manifest["role"])
 PY
 )
-case "$ROLE" in
-    arm32-legacy|arm64-modern|x86|x86_64) ;;
-    *) fail "unsupported evidence role: $ROLE" ;;
-esac
+python3 scripts/rebuild_rafaelia_zero_device_matrix.py \
+    --evidence-root "$EVIDENCE_ROOT" \
+    --select-role "$ROLE" \
+    --select-bundle "$BUNDLE_DIR"
+
 SELECTION_FILE="${EVIDENCE_ROOT}/selected-${ROLE}.txt"
-python3 - "$SELECTION_FILE" "$BUNDLE_DIR" <<'PY'
-import os
-import pathlib
-import sys
-path = pathlib.Path(sys.argv[1])
-temporary = path.with_name(path.name + ".tmp")
-with temporary.open("w", encoding="utf-8", newline="\n") as stream:
-    stream.write(sys.argv[2] + "\n")
-    stream.flush()
-    os.fsync(stream.fileno())
-os.replace(temporary, path)
-descriptor = os.open(path.parent, os.O_RDONLY)
-try:
-    os.fsync(descriptor)
-finally:
-    os.close(descriptor)
-PY
-
 MATRIX_OUTPUT="${EVIDENCE_ROOT}/matrix.json"
-set --
-for selected_role in arm32-legacy arm64-modern x86 x86_64; do
-    pointer="${EVIDENCE_ROOT}/selected-${selected_role}.txt"
-    [ -f "$pointer" ] || continue
-    selected_bundle=$(sed -n '1p' "$pointer")
-    [ -n "$selected_bundle" ] || fail "empty selection pointer: $pointer"
-    [ -d "$selected_bundle" ] || fail "selected bundle is missing: $selected_bundle"
-    set -- "$@" "$selected_bundle"
-done
-python3 scripts/validate_rafaelia_zero_device_matrix.py "$@" --output "$MATRIX_OUTPUT"
-
 MANIFEST_SHA256=$(hash_file "$BUNDLE_DIR/manifest.json")
 MATRIX_SHA256=$(hash_file "$MATRIX_OUTPUT")
 printf '%s\n' \
