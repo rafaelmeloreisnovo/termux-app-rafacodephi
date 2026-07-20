@@ -5,8 +5,8 @@
 | Campo | Valor |
 |-------|-------|
 | **Título** | Índice Centralizado de Documentação |
-| **Versão** | 1.0 |
-| **Data** | Janeiro 2026 |
+| **Versão** | 1.1 |
+| **Data** | Julho 2026 |
 | **Autor** | instituto-Rafael |
 | **Licença** | GPLv3 |
 | **Propósito** | Navegação e descoberta de toda documentação do projeto |
@@ -57,14 +57,16 @@ Este documento serve como índice mestre de toda a documentação do projeto Ter
 | [ANDROID15_RELATORIO_COMPATIBILIDADE.md](ANDROID15_RELATORIO_COMPATIBILIDADE.md) | Relatório em português | Desenvolvedores | ⭐ Referência |
 | [ANDROID16_PAGE_SIZE_FIX.md](ANDROID16_PAGE_SIZE_FIX.md) | Correção 16KB page size | Desenvolvedores | ⭐⭐⭐ Crítico |
 
-### Documentação de Suporte
+### Documentação de Suporte e Operacional
 
 | Documento | Descrição | Público-Alvo | Prioridade |
 |-----------|-----------|--------------|------------|
+| [docs/CANONICAL_INDEX.html](docs/CANONICAL_INDEX.html) | **Índice canônico interativo**: mapa de 37 workflows, 8 bugs, 12 gaps, mapa econômico e pirâmide RAFAELIA | Desenvolvedores, Engenharia | ⭐⭐⭐ Crítico |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Solução de problemas comuns | Usuários | ⭐⭐ Importante |
 | [VALIDATION_COMMANDS.md](VALIDATION_COMMANDS.md) | Comandos de validação | Desenvolvedores | ⭐ Referência |
 | [ARQUIVOS_SOLTOS_INVENTARIO.md](ARQUIVOS_SOLTOS_INVENTARIO.md) | Inventário de `.md` e arquivos soltos | Desenvolvedores | ⭐ Referência |
 | [docs/STATUS.md](docs/STATUS.md) | Status oficial e consolidado | Desenvolvedores | ⭐⭐ Importante |
+| [AUDITORIA_TAREFAS.md](AUDITORIA_TAREFAS.md) | Auditoria de tarefas: bugs, gaps e resoluções | Desenvolvedores | ⭐⭐ Importante |
 | [SUMMARY.md](SUMMARY.md) | Resumo final de implementação (legado) | Todos | ⭐ Referência |
 | [RESUMO_FINAL.md](RESUMO_FINAL.md) | Resumo das mudanças (Target SDK 28) (legado) | Desenvolvedores | ⭐ Referência |
 | [IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md) | Status de implementação (legado) | Desenvolvedores | ⭐ Referência |
@@ -92,7 +94,8 @@ Este documento serve como índice mestre de toda a documentação do projeto Ter
 ### Subdiretório Principal
 
 | Documento | Descrição | Público-Alvo |
-|-----------|-----------|--------------|
+|-----------|-----------|-------------- |
+| [docs/CANONICAL_INDEX.html](docs/CANONICAL_INDEX.html) | **Índice canônico interativo** (37 workflows, 8 bugs, 12 gaps, mapa econômico) | Desenvolvedores |
 | [docs/RAFCODEPHI_ANDROID15_COMPATIBILITY.md](docs/RAFCODEPHI_ANDROID15_COMPATIBILITY.md) | Guia técnico Android 15 | Desenvolvedores |
 | [docs/MUDANCAS_ANDROID15.md](docs/MUDANCAS_ANDROID15.md) | Changelog Android 15 | Desenvolvedores |
 | [docs/LOWLEVEL_SUMMARY.md](docs/LOWLEVEL_SUMMARY.md) | Resumo low-level | Desenvolvedores |
@@ -114,7 +117,7 @@ Este documento serve como índice mestre de toda a documentação do projeto Ter
 ### Subdiretório `/docs/rafaelia/`
 
 | Documento | Descrição | Público-Alvo |
-|-----------|-----------|--------------|
+|-----------|-----------|-------------- |
 | [docs/rafaelia/README.md](docs/rafaelia/README.md) | Introdução ao RAFAELIA | Todos |
 | [docs/rafaelia/DOCUMENTACAO_COMPLETA_RAFAELIA.md](docs/rafaelia/DOCUMENTACAO_COMPLETA_RAFAELIA.md) | Documentação completa | Acadêmicos |
 | [docs/rafaelia/FORMULAS_RAFAELIA_INDEX.md](docs/rafaelia/FORMULAS_RAFAELIA_INDEX.md) | Índice de fórmulas | Acadêmicos |
@@ -122,7 +125,7 @@ Este documento serve como índice mestre de toda a documentação do projeto Ter
 ### Subdiretório `/docs/en/`
 
 | Documento | Descrição | Público-Alvo |
-|-----------|-----------|--------------|
+|-----------|-----------|-------------- |
 | [docs/en/index.md](docs/en/index.md) | Índice em inglês | Internacional |
 
 ---
@@ -130,7 +133,7 @@ Este documento serve como índice mestre de toda a documentação do projeto Ter
 ## 📁 Documentação em `/scripts/`
 
 | Documento | Descrição | Público-Alvo |
-|-----------|-----------|--------------|
+|-----------|-----------|-------------- |
 | [scripts/README_RAFAELIA_PROTOCOL.md](scripts/README_RAFAELIA_PROTOCOL.md) | Protocolo RAFAELIA para scripts | Desenvolvedores |
 
 ---
@@ -138,7 +141,7 @@ Este documento serve como índice mestre de toda a documentação do projeto Ter
 ## 📁 Documentação em `/app/`
 
 | Documento | Descrição | Público-Alvo |
-|-----------|-----------|--------------|
+|-----------|-----------|-------------- |
 | [app/src/main/cpp/lowlevel/README.md](app/src/main/cpp/lowlevel/README.md) | README técnico bare-metal | Desenvolvedores C/ASM |
 
 ---
@@ -146,7 +149,7 @@ Este documento serve como índice mestre de toda a documentação do projeto Ter
 ## 📁 Documentação em `/rafaelia/`
 
 | Documento | Descrição | Público-Alvo |
-|-----------|-----------|--------------|
+|-----------|-----------|-------------- |
 | [rafaelia/old/README.md](rafaelia/old/README.md) | README arquivos antigos | Desenvolvedores |
 
 ---
@@ -154,7 +157,7 @@ Este documento serve como índice mestre de toda a documentação do projeto Ter
 ## 📁 Documentação em `/termux-shared/`
 
 | Documento | Descrição | Público-Alvo |
-|-----------|-----------|--------------|
+|-----------|-----------|-------------- |
 | [termux-shared/LICENSE.md](termux-shared/LICENSE.md) | Licença da biblioteca shared | Legal |
 
 ---
@@ -180,6 +183,13 @@ README.md (Entrada Principal)
 │   └── docs/RAFCODEPHI_ANDROID15_COMPATIBILITY.md
 └── DIFERENCAS_FORK.md (Comparação)
 
+docs/CANONICAL_INDEX.html (Índice Canônico - NOVO)
+├── 37 workflows mapeados
+├── 8 bugs rastreados
+├── 12 gaps documentados
+├── Mapa econômico
+└── Pirâmide RAFAELIA (6 níveis)
+
 LICENSE.md (Legal)
 ├── CONTRIBUTORS.md (Atribuição)
 ├── SECURITY.md (Segurança)
@@ -198,17 +208,17 @@ LICENSE.md (Legal)
 | Acadêmica | 4 | ~2500 | ~70KB |
 | Técnica | 6 | ~4000 | ~100KB |
 | Android | 5 | ~1500 | ~40KB |
-| Suporte | 5 | ~1000 | ~30KB |
+| Suporte/Operacional | 7 | ~1500 | ~80KB |
 | Legal/Segurança | 4 | ~800 | ~20KB |
 | Subdiretórios | 10 | ~2000 | ~50KB |
-| **TOTAL** | **~40** | **~15000** | **~390KB** |
+| **TOTAL** | **~41** | **~15300** | **~440KB** |
 
 ### Por Idioma
 
 | Idioma | Documentos | Percentual |
 |--------|------------|------------|
-| Português | 35 | 87% |
-| Inglês | 5 | 13% |
+| Português | 36 | 88% |
+| Inglês | 5 | 12% |
 
 ---
 
@@ -240,6 +250,12 @@ LICENSE.md (Legal)
 2. [README.md](README.md) - 5 min
 3. [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - conforme necessário
 
+### 🔧 Engenheiro de Build/CI
+1. [docs/STATUS.md](docs/STATUS.md) - 10 min
+2. [docs/ENGINEERING_SYSTEM_RUNBOOK.md](docs/ENGINEERING_SYSTEM_RUNBOOK.md) - 20 min
+3. [docs/CANONICAL_INDEX.html](docs/CANONICAL_INDEX.html) - 15 min (visão interativa)
+4. [AUDITORIA_TAREFAS.md](AUDITORIA_TAREFAS.md) - 10 min
+
 ---
 
 ## 🔍 Busca Rápida por Tópico
@@ -258,6 +274,9 @@ LICENSE.md (Legal)
 | Segurança | [SECURITY.md](SECURITY.md) |
 | Mercado | [ANALISE_MERCADO.md](ANALISE_MERCADO.md) |
 | Fórmulas | [docs/rafaelia/FORMULAS_RAFAELIA_INDEX.md](docs/rafaelia/FORMULAS_RAFAELIA_INDEX.md) |
+| CI/Workflows | [docs/CANONICAL_INDEX.html](docs/CANONICAL_INDEX.html) |
+| Bugs/Gaps | [AUDITORIA_TAREFAS.md](AUDITORIA_TAREFAS.md) |
+| Estado do sistema | [docs/STATUS.md](docs/STATUS.md) |
 
 ---
 
@@ -286,6 +305,7 @@ LICENSE.md (Legal)
 
 | Data | Versão | Mudanças |
 |------|--------|----------|
+| 2026-07-20 | 1.1 | Adicionado `docs/CANONICAL_INDEX.html`; entrada de Engenheiro de Build/CI; busca rápida expandida; atualização de estatísticas; AUDITORIA_TAREFAS.md adicionada ao índice |
 | 2026-01-11 | 1.0 | Criação inicial do índice |
 
 ---
