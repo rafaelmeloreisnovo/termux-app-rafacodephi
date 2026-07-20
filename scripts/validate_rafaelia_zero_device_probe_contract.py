@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract gate for the RAFAELIA ZERO debug device probe."""
+"""Static contract gate for the RAFAELIA ZERO operational device proof path."""
 
 from __future__ import annotations
 
@@ -15,7 +15,11 @@ RELEASE_MANIFEST = ROOT / "app/src/release/AndroidManifest.xml"
 ACTIVITY = ROOT / "app/src/debug/java/com/termux/app/rafaelia/RafaeliaZeroProbeActivity.java"
 RUNNER = ROOT / "scripts/run_rafaelia_zero_device_probe.sh"
 RECEIPT_VALIDATOR = ROOT / "scripts/validate_rafaelia_zero_device_receipt.py"
-CONTRACT = ROOT / "configs/rafaelia-zero-device-probe-contract.json"
+BUNDLE_BUILDER = ROOT / "scripts/create_rafaelia_zero_device_bundle.py"
+BUNDLE_VALIDATOR = ROOT / "scripts/validate_rafaelia_zero_device_bundle.py"
+MATRIX_VALIDATOR = ROOT / "scripts/validate_rafaelia_zero_device_matrix.py"
+PROBE_CONTRACT = ROOT / "configs/rafaelia-zero-device-probe-contract.json"
+EVIDENCE_CONTRACT = ROOT / "configs/rafaelia-zero-operational-evidence-contract.json"
 
 
 def require(condition: bool, message: str) -> None:
@@ -23,24 +27,29 @@ def require(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
-def load_receipt_validator():
-    spec = importlib.util.spec_from_file_location("rafz_receipt", RECEIPT_VALIDATOR)
-    require(spec is not None and spec.loader is not None, "cannot load receipt validator")
+def load_module(path: pathlib.Path, name: str):
+    spec = importlib.util.spec_from_file_location(name, path)
+    require(spec is not None and spec.loader is not None, f"cannot load {path.name}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
 def main() -> int:
-    for path in (
+    required_paths = (
         DEBUG_MANIFEST,
         MAIN_MANIFEST,
         RELEASE_MANIFEST,
         ACTIVITY,
         RUNNER,
         RECEIPT_VALIDATOR,
-        CONTRACT,
-    ):
+        BUNDLE_BUILDER,
+        BUNDLE_VALIDATOR,
+        MATRIX_VALIDATOR,
+        PROBE_CONTRACT,
+        EVIDENCE_CONTRACT,
+    )
+    for path in required_paths:
         require(path.is_file(), f"missing required file: {path.relative_to(ROOT)}")
 
     debug_manifest = DEBUG_MANIFEST.read_text(encoding="utf-8")
@@ -48,7 +57,8 @@ def main() -> int:
     release_manifest = RELEASE_MANIFEST.read_text(encoding="utf-8")
     activity = ACTIVITY.read_text(encoding="utf-8")
     runner = RUNNER.read_text(encoding="utf-8")
-    contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    probe_contract = json.loads(PROBE_CONTRACT.read_text(encoding="utf-8"))
+    evidence_contract = json.loads(EVIDENCE_CONTRACT.read_text(encoding="utf-8"))
 
     component = "com.termux.app.rafaelia.RafaeliaZeroProbeActivity"
     require(component in debug_manifest, "probe activity missing from debug manifest")
@@ -64,22 +74,34 @@ def main() -> int:
     require("latest.json.tmp" in activity and "renameTo(target)" in activity,
             "receipt must be written atomically")
     require("claim_allowed_device" in activity, "device claim gate missing")
-    require("run-as" in runner, "runner must capture from app-private storage with run-as")
-    require("validate_rafaelia_zero_device_receipt.py" in runner,
-            "runner must invoke receipt validator")
-    require("sha256" in runner.lower(), "runner must hash the captured receipt")
 
-    require(contract.get("schema") == "rafaelia.zero.device-probe-contract.v1",
-            "unexpected machine-readable contract schema")
-    component_policy = contract.get("component", {})
-    promotion = contract.get("promotion", {})
-    states = contract.get("states", {})
-    require(component_policy.get("source_set") == "debug", "contract must pin debug source set")
-    require(component_policy.get("activity") == component, "contract activity mismatch")
+    runner_requirements = (
+        "run-as",
+        "validate_rafaelia_zero_device_receipt.py",
+        "create_rafaelia_zero_device_bundle.py",
+        "validate_rafaelia_zero_device_bundle.py",
+        "validate_rafaelia_zero_device_matrix.py",
+        "capture.json",
+        "transcript.txt",
+        "apk.bin",
+        "receipt_sha256=",
+        "apk_sha256=",
+        "RAFAELIA_ZERO_OPERATIONAL_EVIDENCE=PASS",
+    )
+    for token in runner_requirements:
+        require(token in runner, f"runner contract token missing: {token}")
+
+    require(probe_contract.get("schema") == "rafaelia.zero.device-probe-contract.v1",
+            "unexpected probe contract schema")
+    component_policy = probe_contract.get("component", {})
+    promotion = probe_contract.get("promotion", {})
+    states = probe_contract.get("states", {})
+    require(component_policy.get("source_set") == "debug", "probe contract must pin debug source set")
+    require(component_policy.get("activity") == component, "probe contract activity mismatch")
     require(component_policy.get("required_permission") == "android.permission.DUMP",
-            "contract permission mismatch")
+            "probe contract permission mismatch")
     require(component_policy.get("release_present") is False,
-            "contract must prohibit release component")
+            "probe contract must prohibit release component")
     require(promotion.get("static_contract_pass_promotes_device_claim") is False,
             "static PASS must not promote device claim")
     require(promotion.get("valid_device_receipt_required") is True,
@@ -89,20 +111,63 @@ def main() -> int:
     require(states.get("physical_device_receipt") == "TOKEN_VAZIO",
             "physical receipt must remain TOKEN_VAZIO in source contract")
 
-    module = load_receipt_validator()
-    module.self_test()
+    require(evidence_contract.get("schema") == "rafaelia.zero.operational-evidence-contract.v1",
+            "unexpected operational evidence contract schema")
+    bundle = evidence_contract.get("bundle", {})
+    capture = evidence_contract.get("capture", {})
+    targets = evidence_contract.get("required_targets", {})
+    matrix_promotion = evidence_contract.get("promotion", {})
+    current_state = evidence_contract.get("current_state", {})
+    require(bundle.get("schema") == "rafaelia.zero.device.evidence-bundle.v1",
+            "evidence bundle schema mismatch")
+    require(bundle.get("digest") == "sha256", "bundle digest must be sha256")
+    require(bundle.get("symlink_policy") == "forbidden", "bundle symlinks must be forbidden")
+    require(capture.get("schema") == "rafaelia.zero.device.capture.v1",
+            "capture schema mismatch")
+    require(set(targets) == {"arm32-legacy", "arm64-modern"},
+            "required device targets must be ARM32 and ARM64")
+    require(targets["arm32-legacy"].get("architecture_id") == 1,
+            "ARM32 target architecture id mismatch")
+    require(targets["arm64-modern"].get("architecture_id") == 2,
+            "ARM64 target architecture id mismatch")
+    require(matrix_promotion.get("static_contract_can_promote") is False,
+            "static contract must not promote matrix")
+    require(matrix_promotion.get("single_bundle_can_promote_matrix") is False,
+            "single bundle must not promote matrix")
+    require(matrix_promotion.get("release_claim_from_debug_evidence") is False,
+            "debug evidence must not promote release")
+    require(current_state.get("arm32-legacy") == "TOKEN_VAZIO",
+            "ARM32 source state must remain TOKEN_VAZIO")
+    require(current_state.get("arm64-modern") == "TOKEN_VAZIO",
+            "ARM64 source state must remain TOKEN_VAZIO")
+    require(current_state.get("claim_allowed_device_matrix") is False,
+            "source contract must not pre-authorize device matrix")
+
+    receipt_module = load_module(RECEIPT_VALIDATOR, "rafz_receipt_contract")
+    builder_module = load_module(BUNDLE_BUILDER, "rafz_builder_contract")
+    bundle_module = load_module(BUNDLE_VALIDATOR, "rafz_bundle_contract")
+    matrix_module = load_module(MATRIX_VALIDATOR, "rafz_matrix_contract")
+    receipt_module.self_test()
+    builder_module.self_test()
+    bundle_module.self_test()
+    matrix_module.self_test()
 
     print("RAFAELIA_ZERO_DEVICE_PROBE_CONTRACT=PASS")
     print("release_component_present=false")
     print("debug_permission=android.permission.DUMP")
     print("receipt_validator_self_test=PASS")
-    print("physical_device_receipt=TOKEN_VAZIO")
+    print("bundle_builder_self_test=PASS")
+    print("bundle_validator_self_test=PASS")
+    print("matrix_validator_self_test=PASS")
+    print("arm32_device_receipt=TOKEN_VAZIO")
+    print("arm64_device_receipt=TOKEN_VAZIO")
+    print("claim_allowed_device_matrix=false")
     return 0
 
 
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except (AssertionError, json.JSONDecodeError) as exc:
+    except (AssertionError, json.JSONDecodeError, OSError, ValueError) as exc:
         print(f"RAFAELIA_ZERO_DEVICE_PROBE_CONTRACT=FAIL: {exc}", file=sys.stderr)
         raise SystemExit(1)
