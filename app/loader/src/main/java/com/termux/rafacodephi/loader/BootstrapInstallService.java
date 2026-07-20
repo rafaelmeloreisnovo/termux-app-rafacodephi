@@ -39,12 +39,13 @@ public final class BootstrapInstallService extends IntentService {
     protected void onHandleIntent(Intent intent) {
         if (intent == null) return;
         String abi = intent.getStringExtra(BootstrapInstallContract.EXTRA_ABI);
+        String expectedSha256 = null;
         try {
             if (!BootstrapInstallContract.ACTION_INSTALL_BOOTSTRAP.equals(intent.getAction())) {
                 throw new IllegalArgumentException("INVALID_ACTION");
             }
             abi = BootstrapSourcePolicy.requireAbi(abi);
-            String expectedSha256 = BootstrapSourcePolicy.requireSha256(
+            expectedSha256 = BootstrapSourcePolicy.requireSha256(
                     intent.getStringExtra(BootstrapInstallContract.EXTRA_SHA256));
             URL initialUrl = BootstrapSourcePolicy.requireInitialUrl(
                     intent.getStringExtra(BootstrapInstallContract.EXTRA_SOURCE_URL));
@@ -75,15 +76,16 @@ public final class BootstrapInstallService extends IntentService {
                     part.delete();
                     throw t;
                 }
-                publishSuccess(this, abi, target, bytes);
+                publishSuccess(this, abi, expectedSha256, target, bytes);
             } else {
-                publishSuccess(this, abi, target, target.length());
+                publishSuccess(this, abi, expectedSha256, target, target.length());
             }
         } catch (Throwable t) {
             Log.e(TAG, "Bootstrap acquisition failed", t);
             publishFailure(
                     this,
                     abi,
+                    expectedSha256,
                     t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage());
         }
     }
@@ -114,7 +116,7 @@ public final class BootstrapInstallService extends IntentService {
                 if (code < 200 || code >= 300) {
                     throw new IOException("HTTP_" + code);
                 }
-                long contentLength = connection.getContentLengthLong();
+                long contentLength = connection.getContentLength();
                 if (contentLength > BootstrapSourcePolicy.MAX_DOWNLOAD_BYTES) {
                     throw new IOException("DOWNLOAD_TOO_LARGE");
                 }
@@ -166,7 +168,12 @@ public final class BootstrapInstallService extends IntentService {
         return result.toString();
     }
 
-    private static void publishSuccess(Context context, String abi, File file, long bytes) {
+    private static void publishSuccess(
+            Context context,
+            String abi,
+            String expectedSha256,
+            File file,
+            long bytes) {
         Uri uri = new Uri.Builder()
                 .scheme("content")
                 .authority(BootstrapInstallContract.PROVIDER_AUTHORITY)
@@ -176,7 +183,7 @@ public final class BootstrapInstallService extends IntentService {
                 BootstrapInstallContract.HOST_PACKAGE,
                 uri,
                 Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        Intent result = baseResult(true, "", abi);
+        Intent result = baseResult(true, "", abi, expectedSha256);
         result.setData(uri);
         result.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         result.putExtra(BootstrapInstallContract.EXTRA_VERIFIED_BYTES, bytes);
@@ -185,12 +192,28 @@ public final class BootstrapInstallService extends IntentService {
     }
 
     static void publishFailure(Context context, String abi, String reason) {
+        publishFailure(context, abi, null, reason);
+    }
+
+    private static void publishFailure(
+            Context context,
+            String abi,
+            String expectedSha256,
+            String reason) {
         context.sendBroadcast(
-                baseResult(false, reason == null ? "UNKNOWN_FAILURE" : reason, abi),
+                baseResult(
+                        false,
+                        reason == null ? "UNKNOWN_FAILURE" : reason,
+                        abi,
+                        expectedSha256),
                 BootstrapInstallContract.HANDOFF_PERMISSION);
     }
 
-    private static Intent baseResult(boolean success, String reason, String abi) {
+    private static Intent baseResult(
+            boolean success,
+            String reason,
+            String abi,
+            String expectedSha256) {
         Intent result = new Intent(BootstrapInstallContract.ACTION_BOOTSTRAP_VERIFIED);
         result.setPackage(BootstrapInstallContract.HOST_PACKAGE);
         result.putExtra(BootstrapInstallContract.EXTRA_SUCCESS, success);
@@ -198,6 +221,9 @@ public final class BootstrapInstallService extends IntentService {
         result.putExtra(
                 BootstrapInstallContract.EXTRA_VERIFIED_ABI,
                 abi == null ? "" : abi);
+        if (expectedSha256 != null) {
+            result.putExtra(BootstrapInstallContract.EXTRA_SHA256, expectedSha256);
+        }
         return result;
     }
 }
