@@ -46,19 +46,23 @@
     {
       "id": "apkc.elf.structural",
       "criteria": [
-        {"id": "elf32_arm_header", "state": "PROVEN", "evidence": ["apkc/fmt_elf.h"]},
-        {"id": "elf64_aarch64_header", "state": "PROVEN", "evidence": ["apkc/fmt_elf.h"]},
-        {"id": "bounded_writer", "state": "PROVEN", "evidence": ["tests/native/apkc_emit_minimal_elf.c"]},
-        {"id": "independent_validator", "state": "PROVEN", "evidence": ["scripts/validate_apkc_elf_contract.py"]},
+        {"id": "elf32_arm_rel_header", "state": "PROVEN", "evidence": ["apkc/fmt_elf.h"]},
+        {"id": "elf64_aarch64_rel_header", "state": "PROVEN", "evidence": ["apkc/fmt_elf.h"]},
+        {"id": "bounded_rel_writer", "state": "PROVEN", "evidence": ["tests/native/apkc_emit_minimal_elf.c"]},
+        {"id": "rel_independent_validator", "state": "PROVEN", "evidence": ["scripts/validate_apkc_elf_contract.py"]},
+        {"id": "elf32_arm_exec_header", "state": "PROVEN", "evidence": ["apkc/fmt_elf.h", "tests/native/apkc_emit_exec_elf.c"]},
+        {"id": "elf64_aarch64_exec_header", "state": "PROVEN", "evidence": ["apkc/fmt_elf.h", "tests/native/apkc_emit_exec_elf.c"]},
+        {"id": "rx_pt_load_segment", "state": "PROVEN", "evidence": ["scripts/validate_apkc_elf_contract.py"]},
+        {"id": "fixed_exit_stub", "state": "PROVEN", "evidence": ["scripts/validate_apkc_elf_contract.py"]},
         {"id": "named_sections", "state": "TOKEN_VAZIO", "evidence": []},
         {"id": "symbols", "state": "TOKEN_VAZIO", "evidence": []},
         {"id": "relocations", "state": "TOKEN_VAZIO", "evidence": []},
-        {"id": "load_segments", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "general_linker", "state": "TOKEN_VAZIO", "evidence": []},
         {"id": "dynamic_linking", "state": "TOKEN_VAZIO", "evidence": []},
-        {"id": "runtime_execution", "state": "TOKEN_VAZIO", "evidence": []}
+        {"id": "physical_runtime_execution", "state": "TOKEN_VAZIO", "evidence": []}
       ],
       "claim_allowed": true,
-      "claim_scope": "minimal ET_REL containers with null section only"
+      "claim_scope": "ET_REL containers plus fixed ET_EXEC exit(0) stubs; no general linker or device proof"
     },
     {
       "id": "browser.http.textmode",
