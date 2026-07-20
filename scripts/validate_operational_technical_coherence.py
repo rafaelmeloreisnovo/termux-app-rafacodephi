@@ -36,13 +36,15 @@ def main() -> int:
 
     ids = [component.get("id") for component in components]
     check("unique_component_ids", len(ids) == len(set(ids)) and all(isinstance(item, str) for item in ids), ids)
-    check("known_states", all(component.get("state") in states for component in components), [component.get("state") for component in components])
+    check("known_states", all(component.get("state") in states for component in components),
+          [component.get("state") for component in components])
     check(
         "claims_require_evidence",
         all(not component.get("claim_allowed") or bool(component.get("evidence")) for component in components),
         [component.get("id") for component in components if component.get("claim_allowed") and not component.get("evidence")],
     )
-    check("no_automatic_claim_promotion", matrix.get("automatic_claim_promotion") is False, matrix.get("automatic_claim_promotion"))
+    check("no_automatic_claim_promotion", matrix.get("automatic_claim_promotion") is False,
+          matrix.get("automatic_claim_promotion"))
 
     browser_path = ROOT / "Browser.sh"
     browser = browser_path.read_text(encoding="utf-8") if browser_path.is_file() else ""
@@ -98,13 +100,21 @@ def main() -> int:
         "w32(out + 104, DEX_DATA_SZ);",
         "w32(out + 108, DEX_MAP_OFF);",
         "dex_build_checked",
-        "STRUCTURAL" if False else "no class definitions",
+        "no class definitions",
     )
     check("dex_contract_source_markers", all(token in dex for token in dex_tokens), dex_tokens)
     check(
         "dex_scope_is_structural",
         by_id.get("apkc.dex.minimal", {}).get("scope", "").startswith("DEX 035 structural"),
         by_id.get("apkc.dex.minimal"),
+    )
+    dex_exec = by_id.get("apkc.dex.executable-content", {})
+    check(
+        "dex_executable_content_not_inferred",
+        dex_exec.get("state") == "TOKEN_VAZIO"
+        and dex_exec.get("claim_allowed") is False
+        and not dex_exec.get("evidence"),
+        dex_exec,
     )
 
     sys_path = ROOT / "apkc/sys.h"
@@ -115,11 +125,66 @@ def main() -> int:
         "host adapter and unsupported-architecture fail-fast",
     )
 
-    custom_elf = by_id.get("apkc.elf.custom-emitter", {})
+    elf_text = (ROOT / "apkc/fmt_elf.h").read_text(encoding="utf-8") \
+        if (ROOT / "apkc/fmt_elf.h").is_file() else ""
+    elf_structural = by_id.get("apkc.elf.custom-emitter", {})
+    elf_executable = by_id.get("apkc.elf.executable-writer", {})
+    elf_tokens = (
+        "apkc_elf32_arm_build_checked",
+        "apkc_elf64_aarch64_build_checked",
+        "APKC_ET_REL",
+        "null section only",
+    )
+    check("elf_structural_source_markers", all(token in elf_text for token in elf_tokens), elf_tokens)
     check(
-        "custom_elf_not_inferred_from_ndk",
-        custom_elf.get("state") == "TOKEN_VAZIO" and custom_elf.get("claim_allowed") is False,
-        custom_elf,
+        "elf_structural_emitter_bounded_claim",
+        elf_structural.get("state") == "VERIFIED_HOST"
+        and elf_structural.get("claim_allowed") is True
+        and bool(elf_structural.get("evidence")),
+        elf_structural,
+    )
+    check(
+        "elf_structural_tools_present",
+        (ROOT / "tests/native/apkc_emit_minimal_elf.c").is_file()
+        and (ROOT / "scripts/validate_apkc_elf_contract.py").is_file(),
+        ["tests/native/apkc_emit_minimal_elf.c", "scripts/validate_apkc_elf_contract.py"],
+    )
+    check(
+        "elf_executable_not_inferred",
+        elf_executable.get("state") == "TOKEN_VAZIO"
+        and elf_executable.get("claim_allowed") is False
+        and not elf_executable.get("evidence"),
+        elf_executable,
+    )
+
+    compiler_matrix = by_id.get("apkc.compiler.capability-matrix", {})
+    check(
+        "compiler_matrix_is_governance_only",
+        compiler_matrix.get("state") == "VERIFIED_HOST"
+        and compiler_matrix.get("claim_allowed") is True
+        and "governance" in " ".join(compiler_matrix.get("limitations", [])).lower(),
+        compiler_matrix,
+    )
+    check(
+        "compiler_matrix_tools_present",
+        (ROOT / "configs/compiler-capability-matrix.json").is_file()
+        and (ROOT / "scripts/validate_compiler_capability_matrix.py").is_file(),
+        ["configs/compiler-capability-matrix.json", "scripts/validate_compiler_capability_matrix.py"],
+    )
+
+    gap_map = by_id.get("governance.first-part-gap-map", {})
+    check(
+        "first_part_gap_map_registered",
+        gap_map.get("state") == "VERIFIED_HOST"
+        and gap_map.get("claim_allowed") is True
+        and bool(gap_map.get("evidence")),
+        gap_map,
+    )
+    check(
+        "first_part_gap_map_tools_present",
+        (ROOT / "configs/first-part-gap-map.json").is_file()
+        and (ROOT / "scripts/validate_first_part_gap_map.py").is_file(),
+        ["configs/first-part-gap-map.json", "scripts/validate_first_part_gap_map.py"],
     )
 
     loose = by_id.get("documents.loose.corpus", {})

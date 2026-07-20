@@ -1,0 +1,154 @@
+{
+  "schema": "raf.first-part-gap-map.v1",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "measurement": "evidence_coverage_percent",
+  "warning": "percentage measures registered evidence criteria, not market readiness, certification or physical runtime",
+  "automatic_claim_promotion": false,
+  "criterion_states": {
+    "PROVEN": 1.0,
+    "PARTIAL": 0.5,
+    "TOKEN_VAZIO": 0.0,
+    "BLOCKED": 0.0
+  },
+  "domains": [
+    {
+      "id": "android.apk.pipeline",
+      "criteria": [
+        {"id": "arm32_build", "state": "PROVEN", "evidence": ["PR-282"]},
+        {"id": "arm64_build", "state": "PROVEN", "evidence": ["PR-282"]},
+        {"id": "universal_build", "state": "PROVEN", "evidence": ["PR-282"]},
+        {"id": "dex_packaged", "state": "PROVEN", "evidence": ["Android build pipeline"]},
+        {"id": "ndk_elf_packaged", "state": "PROVEN", "evidence": ["PR-282"]},
+        {"id": "development_signature", "state": "PROVEN", "evidence": ["PR-282"]},
+        {"id": "physical_device_smoke", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "production_release_signing", "state": "TOKEN_VAZIO", "evidence": []}
+      ],
+      "claim_allowed": true,
+      "claim_scope": "CI build and packaging only"
+    },
+    {
+      "id": "apkc.dex.structural",
+      "criteria": [
+        {"id": "header", "state": "PROVEN", "evidence": ["apkc/fmt_dex.h"]},
+        {"id": "map_list", "state": "PROVEN", "evidence": ["apkc/fmt_dex.h"]},
+        {"id": "sha1_signature", "state": "PROVEN", "evidence": ["scripts/validate_apkc_dex_contract.py"]},
+        {"id": "adler32_checksum", "state": "PROVEN", "evidence": ["scripts/validate_apkc_dex_contract.py"]},
+        {"id": "strings_types_protos", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "fields_methods_classes", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "code_items", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "debug_info_annotations", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "multidex_merge", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "art_dalvik_runtime", "state": "TOKEN_VAZIO", "evidence": []}
+      ],
+      "claim_allowed": true,
+      "claim_scope": "empty structural DEX 035 container only"
+    },
+    {
+      "id": "apkc.elf.structural",
+      "criteria": [
+        {"id": "elf32_arm_header", "state": "PROVEN", "evidence": ["apkc/fmt_elf.h"]},
+        {"id": "elf64_aarch64_header", "state": "PROVEN", "evidence": ["apkc/fmt_elf.h"]},
+        {"id": "bounded_writer", "state": "PROVEN", "evidence": ["tests/native/apkc_emit_minimal_elf.c"]},
+        {"id": "independent_validator", "state": "PROVEN", "evidence": ["scripts/validate_apkc_elf_contract.py"]},
+        {"id": "named_sections", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "symbols", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "relocations", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "load_segments", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "dynamic_linking", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "runtime_execution", "state": "TOKEN_VAZIO", "evidence": []}
+      ],
+      "claim_allowed": true,
+      "claim_scope": "minimal ET_REL containers with null section only"
+    },
+    {
+      "id": "browser.http.textmode",
+      "criteria": [
+        {"id": "syscall_layer", "state": "PARTIAL", "evidence": ["Browser.sh"]},
+        {"id": "dns", "state": "PARTIAL", "evidence": ["Browser.sh"]},
+        {"id": "tcp", "state": "PARTIAL", "evidence": ["Browser.sh"]},
+        {"id": "http_request", "state": "PARTIAL", "evidence": ["Browser.sh"]},
+        {"id": "http_response_parser", "state": "PARTIAL", "evidence": ["Browser.sh"]},
+        {"id": "html_text_renderer", "state": "PARTIAL", "evidence": ["Browser.sh"]},
+        {"id": "reproducible_host_tests", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "physical_device_runtime", "state": "TOKEN_VAZIO", "evidence": []}
+      ],
+      "claim_allowed": false,
+      "claim_scope": "source prototype only"
+    },
+    {
+      "id": "browser.tls12",
+      "criteria": [
+        {"id": "record_layer", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "handshake", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "key_exchange", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "prf_key_schedule", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "aead_or_cbc", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "x509_chain", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "hostname_verification", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "finished_verification", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "interoperability", "state": "TOKEN_VAZIO", "evidence": []}
+      ],
+      "claim_allowed": false,
+      "claim_scope": "not implemented"
+    },
+    {
+      "id": "browser.tls13",
+      "criteria": [
+        {"id": "client_hello", "state": "PARTIAL", "evidence": ["Browser.sh"]},
+        {"id": "record_header_parser", "state": "PARTIAL", "evidence": ["Browser.sh"]},
+        {"id": "secure_entropy", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "x25519_key_share", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "transcript_hash", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "hkdf_schedule", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "aead_records", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "x509_chain", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "finished_verification", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "interoperability", "state": "TOKEN_VAZIO", "evidence": []}
+      ],
+      "claim_allowed": false,
+      "claim_scope": "ClientHello and record-header prototype only"
+    },
+    {
+      "id": "browser.tls.certification",
+      "criteria": [
+        {"id": "external_test_lab", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "protocol_conformance_report", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "certificate_validation_suite", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "published_certificate", "state": "TOKEN_VAZIO", "evidence": []}
+      ],
+      "claim_allowed": false,
+      "claim_scope": "not certified"
+    },
+    {
+      "id": "apkc.compilers",
+      "criteria": [
+        {"id": "per_language_matrix", "state": "PROVEN", "evidence": ["configs/compiler-capability-matrix.json"]},
+        {"id": "claim_validator", "state": "PROVEN", "evidence": ["scripts/validate_compiler_capability_matrix.py"]},
+        {"id": "complete_owned_compiler", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "cross_language_ir", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "dex_backend", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "elf_backend", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "apk_packager_end_to_end", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "runtime_test_matrix", "state": "TOKEN_VAZIO", "evidence": []}
+      ],
+      "claim_allowed": true,
+      "claim_scope": "governance and gap mapping only; zero complete APKC-owned compilers"
+    },
+    {
+      "id": "documents.loose.corpus",
+      "criteria": [
+        {"id": "deterministic_inventory", "state": "PROVEN", "evidence": ["scripts/index_loose_operational_artifacts.py"]},
+        {"id": "content_hashes", "state": "PROVEN", "evidence": ["scripts/index_loose_operational_artifacts.py"]},
+        {"id": "duplicate_detection", "state": "PROVEN", "evidence": ["scripts/index_loose_operational_artifacts.py"]},
+        {"id": "non_promotion_invariant", "state": "PROVEN", "evidence": ["configs/loose-artifact-policy.json"]},
+        {"id": "origin_author", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "license_review", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "reference_graph", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "approved_canonical_destination", "state": "TOKEN_VAZIO", "evidence": []}
+      ],
+      "claim_allowed": true,
+      "claim_scope": "inventory and triage only; no automatic migration"
+    }
+  ],
+  "release_allowed": false
+}

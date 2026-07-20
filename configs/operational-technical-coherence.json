@@ -35,6 +35,15 @@
       "limitations": ["not a Java compiler", "not a Kotlin compiler", "not a functional Android application"]
     },
     {
+      "id": "apkc.dex.executable-content",
+      "path": "TOKEN_VAZIO",
+      "state": "TOKEN_VAZIO",
+      "scope": "strings, types, prototypes, methods, classes and executable code_items",
+      "evidence": [],
+      "claim_allowed": false,
+      "limitations": ["structural empty DEX does not prove executable Dalvik bytecode"]
+    },
+    {
       "id": "apkc.language.routing",
       "path": "apkc/",
       "state": "STRUCTURAL_PRIMITIVE",
@@ -44,13 +53,39 @@
       "limitations": ["language profile is not equivalent to a complete compiler frontend/backend"]
     },
     {
+      "id": "apkc.compiler.capability-matrix",
+      "path": "configs/compiler-capability-matrix.json",
+      "state": "VERIFIED_HOST",
+      "scope": "fail-closed per-language phase accounting and claim validation",
+      "evidence": ["configs/compiler-capability-matrix.json", "scripts/validate_compiler_capability_matrix.py"],
+      "claim_allowed": true,
+      "limitations": ["the matrix proves governance, not a compiler", "complete APKC-owned compilers remain zero"]
+    },
+    {
       "id": "apkc.elf.custom-emitter",
-      "path": "apkc/",
+      "path": "apkc/fmt_elf.h",
+      "state": "VERIFIED_HOST",
+      "scope": "bounded structural ELF32 EM_ARM EABI5 and ELF64 EM_AARCH64 ET_REL containers with a null section only",
+      "evidence": ["apkc/fmt_elf.h", "tests/native/apkc_emit_minimal_elf.c", "scripts/validate_apkc_elf_contract.py"],
+      "claim_allowed": true,
+      "limitations": [
+        "no named sections",
+        "no symbols",
+        "no relocations",
+        "no PT_LOAD segments",
+        "not executable",
+        "not a linker",
+        "not runtime-proven"
+      ]
+    },
+    {
+      "id": "apkc.elf.executable-writer",
+      "path": "TOKEN_VAZIO",
       "state": "TOKEN_VAZIO",
-      "scope": "custom ELF writer independent of the Android NDK linker",
+      "scope": "loadable ELF executable or shared-object writer with symbols, relocations and segments",
       "evidence": [],
       "claim_allowed": false,
-      "limitations": ["NDK-produced ELF libraries do not prove a custom ELF emitter"]
+      "limitations": ["structural ET_REL headers do not prove executable ELF generation"]
     },
     {
       "id": "browser.http.textmode",
@@ -124,9 +159,18 @@
       "path": "Arme/, BugOrAdd/, rafaelia/old/, root-level *.txt/*.md",
       "state": "HISTORICAL_OR_LOOSE",
       "scope": "documents and source fragments outside canonical build paths",
-      "evidence": ["repository-tree"],
+      "evidence": ["scripts/index_loose_operational_artifacts.py", "configs/loose-artifact-policy.json"],
       "claim_allowed": false,
-      "limitations": ["presence does not establish integration", "must be indexed with origin, status and target"]
+      "limitations": ["presence does not establish integration", "provenance, license, references and destination still require review"]
+    },
+    {
+      "id": "governance.first-part-gap-map",
+      "path": "configs/first-part-gap-map.json",
+      "state": "VERIFIED_HOST",
+      "scope": "evidence-weighted coverage calculation for APK, DEX, ELF, browser, TLS, compilers and loose documents",
+      "evidence": ["configs/first-part-gap-map.json", "scripts/validate_first_part_gap_map.py"],
+      "claim_allowed": true,
+      "limitations": ["coverage percentage is not certification, release readiness or device-runtime proof"]
     }
   ],
   "release_invariant": {

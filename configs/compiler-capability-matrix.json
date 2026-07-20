@@ -1,0 +1,62 @@
+{
+  "schema": "raf.apkc-compiler-capability-matrix.v1",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "owner_scope": "APKC-owned compiler implementation only",
+  "principle": "LANGUAGE_NAME_OR_ROUTE != COMPLETE_COMPILER",
+  "automatic_claim_promotion": false,
+  "accepted_proof_states": ["VERIFIED_HOST", "PROVEN_CI", "PROVEN_DEVICE"],
+  "phase_order": [
+    "source_reader",
+    "lexer",
+    "parser",
+    "ast",
+    "semantic_analysis",
+    "ir",
+    "optimizer",
+    "backend",
+    "link_or_package",
+    "runtime_tests"
+  ],
+  "external_toolchains": [
+    {
+      "id": "android.java-kotlin.gradle-d8-r8",
+      "scope": "Java/Kotlin Android build through Gradle and Android toolchain",
+      "state": "PROVEN_CI",
+      "apkc_owned_compiler": false,
+      "limitations": ["does not prove a Java or Kotlin compiler implemented inside apkc/"]
+    },
+    {
+      "id": "android.c-asm.ndk-clang-linker",
+      "scope": "C/ASM native build through Android NDK clang, assembler and linker",
+      "state": "PROVEN_CI",
+      "apkc_owned_compiler": false,
+      "limitations": ["does not prove an APKC-owned C compiler, assembler or linker"]
+    }
+  ],
+  "languages": [
+    {"id": "c", "display_name": "C", "candidate_extensions": [".c", ".h"], "phases": {}, "complete_compiler": false, "claim_allowed": false},
+    {"id": "cpp", "display_name": "C++", "candidate_extensions": [".cc", ".cpp", ".cxx", ".hpp"], "phases": {}, "complete_compiler": false, "claim_allowed": false},
+    {"id": "asm", "display_name": "Assembly", "candidate_extensions": [".s", ".S", ".asm"], "phases": {}, "complete_compiler": false, "claim_allowed": false},
+    {"id": "java", "display_name": "Java", "candidate_extensions": [".java"], "phases": {}, "complete_compiler": false, "claim_allowed": false},
+    {"id": "kotlin", "display_name": "Kotlin", "candidate_extensions": [".kt", ".kts"], "phases": {}, "complete_compiler": false, "claim_allowed": false},
+    {"id": "rust", "display_name": "Rust", "candidate_extensions": [".rs"], "phases": {}, "complete_compiler": false, "claim_allowed": false},
+    {"id": "go", "display_name": "Go", "candidate_extensions": [".go"], "phases": {}, "complete_compiler": false, "claim_allowed": false},
+    {"id": "python", "display_name": "Python", "candidate_extensions": [".py"], "phases": {}, "complete_compiler": false, "claim_allowed": false},
+    {"id": "lua", "display_name": "Lua", "candidate_extensions": [".lua"], "phases": {}, "complete_compiler": false, "claim_allowed": false},
+    {"id": "javascript", "display_name": "JavaScript", "candidate_extensions": [".js", ".mjs", ".cjs"], "phases": {}, "complete_compiler": false, "claim_allowed": false},
+    {"id": "typescript", "display_name": "TypeScript", "candidate_extensions": [".ts", ".tsx"], "phases": {}, "complete_compiler": false, "claim_allowed": false},
+    {"id": "ruby", "display_name": "Ruby", "candidate_extensions": [".rb"], "phases": {}, "complete_compiler": false, "claim_allowed": false},
+    {"id": "php", "display_name": "PHP", "candidate_extensions": [".php"], "phases": {}, "complete_compiler": false, "claim_allowed": false},
+    {"id": "swift", "display_name": "Swift", "candidate_extensions": [".swift"], "phases": {}, "complete_compiler": false, "claim_allowed": false}
+  ],
+  "default_phase_record": {
+    "state": "TOKEN_VAZIO",
+    "evidence": [],
+    "limitations": ["no APKC-owned implementation evidence registered"]
+  },
+  "completion_rule": "complete_compiler=true requires every phase in phase_order to have accepted proof state and non-empty evidence",
+  "current_result": {
+    "complete_apkc_owned_compilers": 0,
+    "release_claim_allowed": false
+  }
+}
