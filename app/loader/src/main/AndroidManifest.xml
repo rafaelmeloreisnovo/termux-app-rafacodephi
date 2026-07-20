@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="false"
-        android:debuggable="false"
-        android:hasCode="false"
-        android:label="RAFCODEΦ Loader Stub"
+        android:label="RAFCODEΦ Loader"
         android:supportsRtl="true">
 
         <meta-data
@@ -13,10 +13,25 @@
             android:value="1" />
         <meta-data
             android:name="com.termux.rafacodephi.loader.CONTRACT_STATE"
-            android:value="STUB_NO_BOOTSTRAP_PAYLOAD" />
+            android:value="BOOTSTRAP_INSTALL_CAPABLE" />
         <meta-data
             android:name="com.termux.rafacodephi.loader.TARGET_PACKAGE"
             android:value="com.termux.rafacodephi" />
+
+        <activity
+            android:name=".LoaderActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="com.termux.rafacodephi.loader.INSTALL_BOOTSTRAP" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".BootstrapInstallService"
+            android:exported="false" />
+
     </application>
 
 </manifest>
