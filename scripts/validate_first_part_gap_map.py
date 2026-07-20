@@ -23,7 +23,7 @@ def validate(data: dict[str, object]) -> dict[str, object]:
 
     weights = data.get("criterion_states", {})
     domains = data.get("domains", [])
-    check("schema", data.get("schema") == "raf.first-part-gap-map.v1", data.get("schema"))
+    check("schema", data.get("schema") in {"raf.first-part-gap-map.v1", "raf.first-part-gap-map.v2"}, data.get("schema"))
     check("automatic_promotion_disabled", data.get("automatic_claim_promotion") is False,
           data.get("automatic_claim_promotion"))
     check("release_blocked", data.get("release_allowed") is False, data.get("release_allowed"))
@@ -84,7 +84,8 @@ def validate(data: dict[str, object]) -> dict[str, object]:
 
     overall = round(100.0 * total_points / total_criteria, 2) if total_criteria else 0.0
     return {
-        "schema": "raf.first-part-gap-report.v1",
+        "schema": "raf.first-part-gap-report.v2",
+        "source_schema": data.get("schema"),
         "status": "PASS" if not failures else "FAIL",
         "measurement": data.get("measurement"),
         "warning": data.get("warning"),
@@ -130,7 +131,7 @@ def main() -> int:
         data = json.loads(MAP_PATH.read_text(encoding="utf-8"))
         report = validate(data)
     except (OSError, json.JSONDecodeError) as exc:
-        report = {"schema": "raf.first-part-gap-report.v1", "status": "FAIL", "error": str(exc)}
+        report = {"schema": "raf.first-part-gap-report.v2", "status": "FAIL", "error": str(exc)}
 
     if args.format == "markdown":
         rendered = markdown(report)
