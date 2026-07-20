@@ -2,13 +2,15 @@
 
 > Última revisão: 2026-07-20 (UTC)
 
-Este documento consolida o estado **real e verificável** do pipeline Android (Gradle + NDK + CI) desta fork. A regra é separar promessa de prova: quando não houver backend ou teste real, o estado fica marcado como `TOKEN_VAZIO`, `PARCIAL`, `EXPERIMENTAL` ou `FUTURO`.
+Este documento consolida o estado **real e verificável** do pipeline Android (Gradle + NDK + CI) desta fork. A regra é separar promessa de prova: quando não houver backend ou teste real, o estado fica marcado como `TOKEN_VAZIO`, `PARCIAL`, `EXPERIMENTAL`, `NÃO_EXECUTADO`, `FALHA_SEM_ETAPA` ou `FUTURO`.
 
 ## Histórico de Revisões
 
 | Data | Mudanças Principais |
 |------|---------------------|
-| 2026-07-20 | **P0 CI RESOLVIDO**: `actions/checkout@v6`/`@v7` → `@v4` em 28 workflows; `actions/upload-artifact@v7` → `@v4`; apksigner PATH fix (commits 74ecbd69, 99a6d0f, fccb442, 037efb4, 7c9ceb7). Criação de `docs/CANONICAL_INDEX.html` (índice canônico interativo). Atualização de AUDITORIA_TAREFAS (Tarefa 2 resolvida). |
+| 2026-07-20 | **CORREÇÃO OPERACIONAL DO PR #289**: inventário do `master` encontrou `actions/checkout@v7` em 33 workflows. Todas essas referências foram substituídas por `actions/checkout@v6`; `upload-artifact@v7`, `download-artifact@v8`, `setup-java@v5` e `gradle/actions@v6` foram preservados. |
+| 2026-07-20 | **CORREÇÃO EPISTÊMICA**: retirada a afirmação de que `checkout@v6`, `upload-artifact@v7` e `gradle/actions/*@v6` eram inexistentes. A branch foi sincronizada com `master`; política versionada, auditor estático e índice canônico foram adicionados. |
+| 2026-07-20 | Runs intermediários falharam sem steps/logs suficientes para atribuir causa-raiz. O sucesso do HEAD final continua não provado até existir run conclusivo. |
 | 2026-07-12 | Estabelecimento da fonte de verdade de build/release. |
 
 ## Verdade canônica atual
@@ -23,7 +25,11 @@ Este documento consolida o estado **real e verificável** do pipeline Android (G
 ## Estado epistêmico fixo
 
 - **PROVADO**: evidência executável/CI/local confirma o contrato.
-- **PROVADO ESTRUTURAL**: código/contrato existe e é validável estruturalmente, mas ainda pede benchmark/device real para produção.
+- **PROVADO ESTRUTURAL**: código/contrato existe e é validável estruturalmente, mas ainda pede execução, benchmark ou device real para produção.
+- **VERSÃO_PUBLICADA**: o major/tag existe na fonte oficial; não prova execução neste repositório.
+- **COMPATÍVEL_DECLARADO**: a política local aceita a referência; não prova sucesso do workflow.
+- **NÃO_EXECUTADO**: não há run conclusivo associado ao commit analisado.
+- **FALHA_SEM_ETAPA**: um run/job foi criado, mas não forneceu steps/logs suficientes para atribuir causa-raiz.
 - **PARCIAL**: parte funciona, mas falta validação de ambiente real ou dependência externa.
 - **TOKEN_VAZIO**: wrapper/ponte/nome existe, mas backend real ainda não foi entregue; é melhor explicitar isso do que simular verdade.
 - **EXPERIMENTAL**: implementação em exploração, sem contrato de release.
@@ -31,16 +37,16 @@ Este documento consolida o estado **real e verificável** do pipeline Android (G
 
 ## Estado CI/Pipeline (2026-07-20)
 
-- **actions/checkout**: PROVADO — todos os 28 workflows usam `@v4` (estável). Bloqueador P0 resolvido.
-- **actions/upload-artifact**: PROVADO — todos os workflows usam `@v4`.
-- **apksigner PATH**: PROVADO — `compatibility-arm32.yml` e `compatibility-arm32-ndk29.yml` incluem step de PATH fix para build-tools.
-- **RAFAELIA pipeline**: 8 jobs todos com checkout corrigido (`rafaelia_pipeline.yml`).
-- **Workflows ativos (37 total)**:
-  - 9 workflows de build principal (beta-build, android15_arm64_build, debug_build, apk_matrix_build, apk_matrix_artifacts_variants, apk_arm32_signed_unsigned, apk_arm32_signed_unsigned_target29, attach_debug_apks_to_release, run_tests)
-  - 8 workflows de bootstrap/CI (bootstrap-arm64-asm-sanity, bootstrap-rewrite-all-abis, bootstrap-rewrite-arm32, bootstrap-rafaelia-selftest, rafaelia-generated, rafaelia_pipeline, rafcodephi-auditor, arme-add-governance)
-  - 7 workflows de compatibilidade (compatibility-arm32, compatibility-arm32-ndk29, device-runtime-smoke, abi_policy_consistency, pss3-failure-lab, audit-benchmark-contract, arme-benchmark)
-  - 6 workflows de qualidade/validação (vectra-grade-benchmarks, top42_bench, gradle-wrapper-validation, dependency-submission, validate-real-pkg-promotion-contract, validate-bootstrap-package-install-contract)
-  - 4 workflows de release (sign-release, manual_release_cleanup, trigger_library_builds_on_jitpack, rafaelia-native-safety, rafaelia-runtime-runner-ci)
+- **Correção `checkout@v7 → @v6`**: PROVADO ESTRUTURAL — os 33 arquivos encontrados no inventário da base estão no delta corretivo do PR.
+- **Política de GitHub Actions**: PROVADO ESTRUTURAL — `docs/CI_ACTION_VERSION_POLICY.md` registra majors atuais, compatíveis e limites de inferência.
+- **Auditor de referências**: PROVADO ESTRUTURAL — `scripts/audit_github_actions_refs.py` classifica SHA fixo, major atual, major compatível, major não permitido e referência flutuante.
+- **Workflow de auditoria**: FALHA_SEM_ETAPA/NÃO PROVADO — runs intermediários foram criados, mas não expuseram steps/logs úteis; o HEAD final precisa de execução conclusiva.
+- **actions/checkout**: COMPATÍVEL_DECLARADO — `v6` é o major publicado adotado nas 33 correções; `v4` permanece compatível onde ainda existir por decisão explícita.
+- **actions/upload-artifact**: COMPATÍVEL_DECLARADO — `v7` foi preservado porque é publicado para GitHub.com; compatibilidade GHES/runner deve ser tratada separadamente.
+- **actions/download-artifact**: COMPATÍVEL_DECLARADO — `v8` foi preservado; sua versão não deve ser inferida a partir de `upload-artifact`.
+- **gradle/actions**: COMPATÍVEL_DECLARADO — `v6` foi preservado nos fluxos que já o utilizavam.
+- **apksigner PATH**: PROVADO ESTRUTURAL — os workflows de compatibilidade contêm a configuração; a execução no HEAD deve ser confirmada por run próprio.
+- **RAFAELIA pipeline**: PROVADO ESTRUTURAL/PARCIAL — as fases ψ→χ→ρ→Δ→Σ→Ω foram preservadas e oito referências de checkout foram corrigidas; funcionalidade completa depende de CI, segredos, toolchain e artefatos.
 
 ## Runtime e bootstrap
 
@@ -84,7 +90,10 @@ Nome técnico atual: **RAFAELIA deterministic VCPU state kernel** / **VCPU telem
 - Runbook operacional atual: `docs/ENGINEERING_SYSTEM_RUNBOOK.md`.
 - Runbook legado complementar: `docs/ENGINEERING_RUNBOOK_RAFCODEPHI.md`.
 - Visão macro do projeto: `README.md`.
-- **Índice canônico interativo (novo)**: `docs/CANONICAL_INDEX.html`.
+- Política de versões CI: `docs/CI_ACTION_VERSION_POLICY.md`.
+- Auditor estático: `scripts/audit_github_actions_refs.py`.
+- Workflow de auditoria: `.github/workflows/action-reference-audit.yml`.
+- Índice canônico interativo: `docs/CANONICAL_INDEX.html`.
 
 ## Rota mínima para coerência operacional
 
@@ -94,7 +103,10 @@ Para manter a representação documental fiel ao estado real do repositório, a 
 2. `docs/README.md` — hub canônico de navegação e leitura por objetivo.
 3. `docs/ENGINEERING_SYSTEM_RUNBOOK.md` — execução real de build/release/CI.
 4. `docs/RUNTIME_TRUTH_TABLE.md` — verdade operacional detalhada e limites de runtime.
-5. `docs/RAFAELIA_CODE_DOC_SYNC.md` e `docs/RAFAELIA_CODE_DOC_SYNC_REPORT.md` — camada de coerência entre narrativa, código, teste e evidência.
-6. `docs/CANONICAL_INDEX.html` — mapa visual interativo de workflows, bugs, gaps e mapa econômico.
+5. `docs/CI_ACTION_VERSION_POLICY.md` — diferença entre versão publicada, compatibilidade e execução.
+6. `scripts/audit_github_actions_refs.py --strict` — inventário estático determinístico.
+7. Run do workflow `GitHub Actions Reference Audit` associado ao SHA analisado.
+8. `docs/RAFAELIA_CODE_DOC_SYNC.md` e `docs/RAFAELIA_CODE_DOC_SYNC_REPORT.md` — coerência entre narrativa, código, teste e evidência.
+9. `docs/CANONICAL_INDEX.html` — mapa visual do estado corrigido.
 
-Se algum desses documentos divergir do código, do script ou do workflow correspondente, a documentação deve ser corrigida ou rebaixada para `PARCIAL`, `TOKEN_VAZIO` ou gap explícito.
+Se algum documento divergir do código, do script, do workflow, do log ou do artefato correspondente, a documentação deve ser corrigida ou rebaixada para `PARCIAL`, `NÃO_EXECUTADO`, `FALHA_SEM_ETAPA`, `TOKEN_VAZIO` ou gap explícito.

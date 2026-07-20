@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Índice Canônico — Termux RAFCODEΦ</title>
+  <style>
+    :root{color-scheme:light dark;--bg:#f4f6fa;--card:#fff;--text:#162033;--muted:#60708a;--line:#d8dfeb;--accent:#3457d5;--ok:#0b7a55;--warn:#a35b00;--bad:#b42318;--mono:ui-monospace,SFMono-Regular,Consolas,monospace}
+    @media(prefers-color-scheme:dark){:root{--bg:#0d1420;--card:#151f2f;--text:#e4e9f2;--muted:#9aa8bd;--line:#2b3a51;--accent:#82a5ff;--ok:#52d6a2;--warn:#ffbd66;--bad:#ff8b84}}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}.wrap{max-width:1050px;margin:auto;padding:36px 20px 80px}header{padding:24px 0 30px;border-bottom:1px solid var(--line)}h1,h2{line-height:1.2}h1{font:700 clamp(25px,5vw,42px)/1.1 var(--mono);margin:.3rem 0 1rem}h2{font:700 19px var(--mono);margin:0 0 16px}.eyebrow,.mono{font-family:var(--mono)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.08em}.sub{max-width:760px;color:var(--muted)}.meta,.grid{display:grid;gap:12px}.meta{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:22px}.grid{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}.card,section{background:var(--card);border:1px solid var(--line);border-radius:10px}.card{padding:16px}.card strong{display:block;font:700 22px var(--mono);margin-bottom:4px}.card span{color:var(--muted)}section{padding:22px;margin-top:20px}.tag{display:inline-block;border:1px solid currentColor;border-radius:999px;padding:2px 8px;font:700 11px var(--mono)}.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;vertical-align:top;padding:10px;border-bottom:1px solid var(--line)}th{color:var(--muted);font:700 11px var(--mono);text-transform:uppercase}.scroll{overflow:auto}code{font-family:var(--mono);font-size:.92em}ul{padding-left:20px}.notice{border-left:4px solid var(--warn);padding:12px 14px;background:color-mix(in srgb,var(--warn) 10%,transparent);margin:16px 0}.foot{color:var(--muted);font:12px var(--mono);margin-top:24px}@media(max-width:650px){th:nth-child(4),td:nth-child(4){display:none}}
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <div class="eyebrow">RAFCODEΦ · PR #289 · REVISÃO 2026-07-20</div>
+    <h1>Índice Canônico<br>orientado por evidência</h1>
+    <p class="sub">Mapa do estado corrigido do PR e da política de GitHub Actions. Referência publicada, correção estática e execução aprovada permanecem provas separadas.</p>
+    <div class="meta">
+      <div class="card"><strong>master</strong><span>base sincronizada: <code>fe0f0d2f</code></span></div>
+      <div class="card"><strong class="ok">33</strong><span>workflows corrigidos: <code>checkout@v7 → @v6</code></span></div>
+      <div class="card"><strong class="warn">ABERTO</strong><span>workflow run conclusivo no HEAD final</span></div>
+      <div class="card"><strong class="bad">false</strong><span><code>claim_allowed</code> até CI concluir</span></div>
+    </div>
+  </header>
+
+  <section>
+    <h2>§0 — Correção factual e operacional</h2>
+    <div class="notice"><strong>Verdade encontrada:</strong> <code>checkout@v6</code>, <code>upload-artifact@v7</code> e <code>gradle/actions/*@v6</code> são versões publicadas. A referência inválida era <code>checkout@v7</code>, presente em 33 workflows; o PR a substitui por <code>checkout@v6</code> sem rebaixar as actions válidas.</div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Ação</th><th>Major adotado</th><th>Decisão no PR</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td><code>actions/checkout</code></td><td><code>v6</code></td><td><code>v7 → v6</code> em 33 workflows</td><td><span class="tag ok">CORRIGIDO</span></td></tr>
+          <tr><td><code>actions/setup-java</code></td><td><code>v5</code></td><td>preservado</td><td><span class="tag ok">VERSÃO_PUBLICADA</span></td></tr>
+          <tr><td><code>actions/upload-artifact</code></td><td><code>v7</code></td><td>preservado</td><td><span class="tag ok">VERSÃO_PUBLICADA</span></td></tr>
+          <tr><td><code>actions/download-artifact</code></td><td><code>v8</code></td><td>preservado</td><td><span class="tag ok">VERSÃO_PUBLICADA</span></td></tr>
+          <tr><td><code>gradle/actions/*</code></td><td><code>v6</code></td><td>preservado</td><td><span class="tag ok">VERSÃO_PUBLICADA</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>§1 — Ledger de reconstrução do PR #289</h2>
+    <div class="grid">
+      <div class="card"><strong class="ok">Σ1</strong><span>branch realinhada ao <code>master</code>; divergência de 163 commits removida.</span></div>
+      <div class="card"><strong class="ok">Σ2</strong><span>inventário estático fechado: 33 workflows corrigidos.</span></div>
+      <div class="card"><strong class="ok">Σ3</strong><span>política e auditor distinguem major válido, incompatível, SHA e ref flutuante.</span></div>
+      <div class="card"><strong class="warn">Σ4</strong><span>runs intermediários falharam sem steps/logs úteis; execução final continua aberta.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>§2 — Máquina de estados epistêmica</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Estado</th><th>O que prova</th><th>O que não prova</th><th>Gate</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag ok">VERSÃO_PUBLICADA</span></td><td>O tag/major existe na fonte oficial.</td><td>Que este repositório executou com sucesso.</td><td>Auditoria de fonte.</td></tr>
+          <tr><td><span class="tag ok">PROVADO ESTRUTURAL</span></td><td>O delta contém a correção delimitada.</td><td>Que runner, segredos e build funcionam.</td><td>Diff + inventário.</td></tr>
+          <tr><td><span class="tag warn">FALHA_SEM_ETAPA</span></td><td>Um job foi criado, mas faltam steps/logs para causa-raiz.</td><td>Qual componente causou a falha.</td><td>Novo run observável.</td></tr>
+          <tr><td><span class="tag ok">EXECUTADO</span></td><td>Job associado ao SHA terminou com sucesso.</td><td>Validação em dispositivo real.</td><td>Guardar run e artefatos.</td></tr>
+          <tr><td><span class="tag bad">BLOQUEADO</span></td><td>Falha reproduzível e atribuída.</td><td>Que toda a arquitetura está quebrada.</td><td>Log + causa-raiz.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>§3 — Rotas operacionais</h2>
+    <ul>
+      <li><strong>Gate A:</strong> executar <code>python3 scripts/audit_github_actions_refs.py --strict</code>.</li>
+      <li><strong>Gate B:</strong> confirmar o workflow <code>GitHub Actions Reference Audit</code> no HEAD final do PR.</li>
+      <li><strong>Gate C:</strong> guardar o JSON e os logs associados ao SHA.</li>
+      <li><strong>Gate D:</strong> builds Android, assinatura e device smoke permanecem provas independentes.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>§4 — Fontes canônicas internas</h2>
+    <ul>
+      <li><code>docs/CI_ACTION_VERSION_POLICY.md</code> — política humana, inventário e fontes oficiais.</li>
+      <li><code>scripts/audit_github_actions_refs.py</code> — auditor determinístico.</li>
+      <li><code>.github/workflows/action-reference-audit.yml</code> — execução CI da política.</li>
+      <li><code>docs/STATUS.md</code> — estado geral subordinado a código, run e artefato.</li>
+      <li><code>AUDITORIA_TAREFAS.md</code> — estático fechado, execução ainda aberta.</li>
+    </ul>
+  </section>
+
+  <p class="foot">ψ intenção → χ observação → ρ ruído → Δ correção → Σ registro → Ω coerência. Erro medido virou engenharia; prova ausente permanece TOKEN_VAZIO.</p>
+</main>
+</body>
+</html>
