@@ -18,6 +18,7 @@ INDEX = ROOT / "rafaelia" / "termux-packages-manifests" / "INDEX.rafidx"
 CORE_PKG = ROOT / "rafaelia" / "termux-packages-manifests" / "rafacodephi-core.rafpkg"
 NATIVE_COMPILE_GATE = ROOT / "scripts" / "test_raf_native_compile_contract.sh"
 ZERO_RUNTIME_GATE = ROOT / "scripts" / "validate_rafaelia_zero_runtime.py"
+SYSTEM_FINALIZATION_GATE = ROOT / "tools" / "validate_system_finalization.py"
 
 FAILURES: list[str] = []
 
@@ -85,6 +86,23 @@ def main() -> int:
     require(ZERO_RUNTIME_GATE.exists(), f"missing RAFAELIA ZERO gate: {ZERO_RUNTIME_GATE}")
     if ZERO_RUNTIME_GATE.exists():
         run_gate([sys.executable, str(ZERO_RUNTIME_GATE)], "rafaelia-zero-runtime-contract")
+
+    # Close only the static/fail-closed implementation profile. This explicitly
+    # does not promote functional distribution release, device proof, production
+    # signing, TLS, complete compilers or a complete VM.
+    require(SYSTEM_FINALIZATION_GATE.exists(), f"missing system finalization gate: {SYSTEM_FINALIZATION_GATE}")
+    if SYSTEM_FINALIZATION_GATE.exists():
+        run_gate(
+            [
+                sys.executable,
+                str(SYSTEM_FINALIZATION_GATE),
+                "--profile",
+                "safe-core",
+                "--strict",
+                "--write-report",
+            ],
+            "system-finalization-safe-core",
+        )
 
     if FAILURES:
         print("RAFAELIA_NATIVE_SAFETY=fail")
