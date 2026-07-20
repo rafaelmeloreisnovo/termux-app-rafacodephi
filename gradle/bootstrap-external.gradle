@@ -1,0 +1,64 @@
+import java.net.URI
+
+String quoteBuildConfig(String value) {
+    return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+}
+
+void validateBootstrapPin(String abi, String url, String sha256) {
+    boolean hasUrl = url != null && !url.trim().isEmpty()
+    boolean hasSha = sha256 != null && !sha256.trim().isEmpty()
+    if (hasUrl != hasSha) {
+        throw new GradleException("External bootstrap ${abi} requires both URL and SHA-256")
+    }
+    if (!hasUrl) return
+    if (!(sha256 ==~ /^[0-9a-fA-F]{64}$/)) {
+        throw new GradleException("External bootstrap ${abi} SHA-256 must contain 64 hexadecimal characters")
+    }
+    URI parsed
+    try {
+        parsed = new URI(url)
+    } catch (Exception error) {
+        throw new GradleException("External bootstrap ${abi} URL is invalid", error)
+    }
+    int port = parsed.port == -1 ? 443 : parsed.port
+    if (!"https".equalsIgnoreCase(parsed.scheme) || !parsed.host || parsed.userInfo != null ||
+        parsed.fragment != null || port != 443) {
+        throw new GradleException(
+            "External bootstrap ${abi} URL must be HTTPS on port 443 without user-info or fragment")
+    }
+}
+
+Map<String, Map<String, String>> pins = [
+    AARCH64: [
+        url: System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_URL_AARCH64") ?: "",
+        sha: System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_SHA256_AARCH64") ?: "",
+    ],
+    ARM: [
+        url: System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_URL_ARM") ?: "",
+        sha: System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_SHA256_ARM") ?: "",
+    ],
+    I686: [
+        url: System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_URL_I686") ?: "",
+        sha: System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_SHA256_I686") ?: "",
+    ],
+    X86_64: [
+        url: System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_URL_X86_64") ?: "",
+        sha: System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_SHA256_X86_64") ?: "",
+    ],
+]
+
+pins.each { abi, pin -> validateBootstrapPin(abi, pin.url, pin.sha) }
+
+project(':app') {
+    plugins.withId('com.android.application') {
+        android {
+            defaultConfig {
+                pins.each { abi, pin ->
+                    buildConfigField "String", "EXTERNAL_BOOTSTRAP_URL_${abi}", quoteBuildConfig(pin.url)
+                    buildConfigField "String", "EXTERNAL_BOOTSTRAP_SHA256_${abi}",
+                        quoteBuildConfig(pin.sha.toLowerCase(Locale.ROOT))
+                }
+            }
+        }
+    }
+}
