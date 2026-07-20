@@ -2,18 +2,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="com.termux.rafacodephi.permission.BOOTSTRAP_HANDOFF" />
 
     <application
         android:allowBackup="false"
         android:label="RAFCODEΦ Loader"
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="false">
 
         <meta-data
             android:name="com.termux.rafacodephi.loader.CONTRACT_VERSION"
-            android:value="1" />
+            android:value="2" />
         <meta-data
             android:name="com.termux.rafacodephi.loader.CONTRACT_STATE"
-            android:value="BOOTSTRAP_INSTALL_CAPABLE" />
+            android:value="BOOTSTRAP_ACQUIRE_HANDOFF_CAPABLE" />
         <meta-data
             android:name="com.termux.rafacodephi.loader.TARGET_PACKAGE"
             android:value="com.termux.rafacodephi" />
@@ -21,6 +23,7 @@
         <activity
             android:name=".LoaderActivity"
             android:exported="true"
+            android:permission="com.termux.rafacodephi.permission.BOOTSTRAP_HANDOFF"
             android:theme="@android:style/Theme.Translucent.NoTitleBar">
             <intent-filter>
                 <action android:name="com.termux.rafacodephi.loader.INSTALL_BOOTSTRAP" />
@@ -31,6 +34,12 @@
         <service
             android:name=".BootstrapInstallService"
             android:exported="false" />
+
+        <provider
+            android:name=".VerifiedBootstrapProvider"
+            android:authorities="com.termux.rafacodephi.loader.bootstrap"
+            android:exported="false"
+            android:grantUriPermissions="true" />
 
     </application>
 
