@@ -122,7 +122,11 @@ def validate_bundle(bundle_dir: pathlib.Path) -> dict[str, Any]:
     for name, recorded in sums.items():
         require(recorded == sha256_file(bundle_dir / name), f"SHA256SUMS mismatch: {name}")
 
-    receipt = read_object(bundle_dir / "receipt.json", "receipt")
+    receipt_path = bundle_dir / "receipt.json"
+    apk_path = bundle_dir / "apk.bin"
+    receipt_sha256 = sha256_file(receipt_path)
+    apk_sha256 = sha256_file(apk_path)
+    receipt = read_object(receipt_path, "receipt")
     receipt_validator = load_module(RECEIPT_VALIDATOR, "rafz_receipt_bundle")
     receipt_summary = receipt_validator.validate(receipt)
 
@@ -162,6 +166,10 @@ def validate_bundle(bundle_dir: pathlib.Path) -> dict[str, Any]:
 
     transcript = (bundle_dir / "transcript.txt").read_text(encoding="utf-8")
     require("RAFAELIA_ZERO_DEVICE_PROBE=PASS" in transcript, "transcript lacks PASS marker")
+    require(f"receipt_sha256={receipt_sha256}" in transcript,
+            "transcript is not bound to receipt SHA-256")
+    require(f"apk_sha256={apk_sha256}" in transcript,
+            "transcript is not bound to APK SHA-256")
 
     return {
         "schema": BUNDLE_SCHEMA,
@@ -172,8 +180,8 @@ def validate_bundle(bundle_dir: pathlib.Path) -> dict[str, Any]:
         "device_fingerprint": device["fingerprint"],
         "architecture_id": receipt_summary["architecture_id"],
         "process_arch": receipt_summary["process_arch"],
-        "receipt_sha256": sha256_file(bundle_dir / "receipt.json"),
-        "apk_sha256": sha256_file(bundle_dir / "apk.bin"),
+        "receipt_sha256": receipt_sha256,
+        "apk_sha256": apk_sha256,
         "manifest_sha256": sha256_file(bundle_dir / "manifest.json"),
         "claim_allowed_device_single": True,
         "claim_allowed_device_matrix": False,
@@ -201,8 +209,13 @@ def self_test() -> None:
         bundle = root / "bundle"
         receipt_path.write_text(builder.canonical_json(receipt), encoding="utf-8")
         capture_path.write_text(builder.canonical_json(capture), encoding="utf-8")
-        transcript_path.write_text("RAFAELIA_ZERO_DEVICE_PROBE=PASS\n", encoding="utf-8")
         apk_path.write_bytes(b"synthetic-debug-apk")
+        transcript_path.write_text(
+            "RAFAELIA_ZERO_DEVICE_PROBE=PASS\n"
+            f"receipt_sha256={builder.sha256_file(receipt_path)}\n"
+            f"apk_sha256={builder.sha256_file(apk_path)}\n",
+            encoding="utf-8",
+        )
         builder.build_bundle(receipt_path, capture_path, apk_path, transcript_path, bundle)
         summary = validate_bundle(bundle)
         require(summary["result"] == "PASS", "valid self-test bundle rejected")
