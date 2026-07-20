@@ -15,26 +15,27 @@
   <header>
     <div class="eyebrow">RAFCODEΦ · PR #289 · REVISÃO 2026-07-20</div>
     <h1>Índice Canônico<br>orientado por evidência</h1>
-    <p class="sub">Mapa corrigido do estado do PR e da política de GitHub Actions. Este documento não converte leitura estática em prova de execução: referência válida, compatibilidade e workflow aprovado permanecem estados separados.</p>
+    <p class="sub">Mapa do estado corrigido do PR e da política de GitHub Actions. Referência publicada, correção estática e execução aprovada permanecem provas separadas.</p>
     <div class="meta">
       <div class="card"><strong>master</strong><span>base sincronizada: <code>fe0f0d2f</code></span></div>
-      <div class="card"><strong class="ok">0</strong><span>downgrades redundantes mantidos no delta do PR</span></div>
-      <div class="card"><strong class="warn">PENDENTE</strong><span>workflow run conclusivo no HEAD</span></div>
+      <div class="card"><strong class="ok">33</strong><span>workflows corrigidos: <code>checkout@v7 → @v6</code></span></div>
+      <div class="card"><strong class="warn">ABERTO</strong><span>workflow run conclusivo no HEAD final</span></div>
       <div class="card"><strong class="bad">false</strong><span><code>claim_allowed</code> até CI concluir</span></div>
     </div>
   </header>
 
   <section>
-    <h2>§0 — Correção factual</h2>
-    <div class="notice"><strong>Registro anterior incorreto:</strong> <code>checkout@v6</code>, <code>upload-artifact@v7</code> e <code>gradle/actions/*@v6</code> foram descritos como inexistentes. Esses majors são publicados oficialmente. O rebaixamento para majors antigos pode ser compatível, mas não é prova de correção de um bloqueador.</div>
+    <h2>§0 — Correção factual e operacional</h2>
+    <div class="notice"><strong>Verdade encontrada:</strong> <code>checkout@v6</code>, <code>upload-artifact@v7</code> e <code>gradle/actions/*@v6</code> são versões publicadas. A referência inválida era <code>checkout@v7</code>, presente em 33 workflows; o PR a substitui por <code>checkout@v6</code> sem rebaixar as actions válidas.</div>
     <div class="scroll">
       <table>
-        <thead><tr><th>Ação</th><th>Major atual verificado</th><th>Compatíveis na política</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Ação</th><th>Major adotado</th><th>Decisão no PR</th><th>Estado</th></tr></thead>
         <tbody>
-          <tr><td><code>actions/checkout</code></td><td><code>v6</code></td><td><code>v4, v6</code></td><td><span class="tag ok">VERSÃO_PUBLICADA</span></td></tr>
-          <tr><td><code>actions/setup-java</code></td><td><code>v5</code></td><td><code>v4, v5</code></td><td><span class="tag ok">VERSÃO_PUBLICADA</span></td></tr>
-          <tr><td><code>actions/upload-artifact</code></td><td><code>v7</code></td><td><code>v4–v7</code></td><td><span class="tag ok">VERSÃO_PUBLICADA</span></td></tr>
-          <tr><td><code>gradle/actions/*</code></td><td><code>v6</code></td><td><code>v3–v6</code></td><td><span class="tag ok">VERSÃO_PUBLICADA</span></td></tr>
+          <tr><td><code>actions/checkout</code></td><td><code>v6</code></td><td><code>v7 → v6</code> em 33 workflows</td><td><span class="tag ok">CORRIGIDO</span></td></tr>
+          <tr><td><code>actions/setup-java</code></td><td><code>v5</code></td><td>preservado</td><td><span class="tag ok">VERSÃO_PUBLICADA</span></td></tr>
+          <tr><td><code>actions/upload-artifact</code></td><td><code>v7</code></td><td>preservado</td><td><span class="tag ok">VERSÃO_PUBLICADA</span></td></tr>
+          <tr><td><code>actions/download-artifact</code></td><td><code>v8</code></td><td>preservado</td><td><span class="tag ok">VERSÃO_PUBLICADA</span></td></tr>
+          <tr><td><code>gradle/actions/*</code></td><td><code>v6</code></td><td>preservado</td><td><span class="tag ok">VERSÃO_PUBLICADA</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -43,10 +44,10 @@
   <section>
     <h2>§1 — Ledger de reconstrução do PR #289</h2>
     <div class="grid">
-      <div class="card"><strong class="ok">Σ1</strong><span>branch realinhada ao <code>master</code>; divergência histórica removida do delta.</span></div>
-      <div class="card"><strong class="ok">Σ2</strong><span><code>CI_ACTION_VERSION_POLICY.md</code> registra fontes, compatibilidade e limites de prova.</span></div>
-      <div class="card"><strong class="ok">Σ3</strong><span><code>audit_github_actions_refs.py</code> classifica cada referência de forma determinística.</span></div>
-      <div class="card"><strong class="warn">Σ4</strong><span><code>action-reference-audit.yml</code> precisa executar no HEAD para elevar evidência.</span></div>
+      <div class="card"><strong class="ok">Σ1</strong><span>branch realinhada ao <code>master</code>; divergência de 163 commits removida.</span></div>
+      <div class="card"><strong class="ok">Σ2</strong><span>inventário estático fechado: 33 workflows corrigidos.</span></div>
+      <div class="card"><strong class="ok">Σ3</strong><span>política e auditor distinguem major válido, incompatível, SHA e ref flutuante.</span></div>
+      <div class="card"><strong class="warn">Σ4</strong><span>runs intermediários falharam sem steps/logs úteis; execução final continua aberta.</span></div>
     </div>
   </section>
 
@@ -57,8 +58,8 @@
         <thead><tr><th>Estado</th><th>O que prova</th><th>O que não prova</th><th>Gate</th></tr></thead>
         <tbody>
           <tr><td><span class="tag ok">VERSÃO_PUBLICADA</span></td><td>O tag/major existe na fonte oficial.</td><td>Que este repositório executou com sucesso.</td><td>Auditoria de fonte.</td></tr>
-          <tr><td><span class="tag ok">COMPATÍVEL_DECLARADO</span></td><td>O major está aceito pela política local.</td><td>Compatibilidade com todo runner, GHES ou segredo.</td><td>Auditor estático.</td></tr>
-          <tr><td><span class="tag warn">NÃO_EXECUTADO</span></td><td>Não há run conclusivo associado ao commit.</td><td>Nenhuma conclusão funcional.</td><td>Disparar CI.</td></tr>
+          <tr><td><span class="tag ok">PROVADO ESTRUTURAL</span></td><td>O delta contém a correção delimitada.</td><td>Que runner, segredos e build funcionam.</td><td>Diff + inventário.</td></tr>
+          <tr><td><span class="tag warn">FALHA_SEM_ETAPA</span></td><td>Um job foi criado, mas faltam steps/logs para causa-raiz.</td><td>Qual componente causou a falha.</td><td>Novo run observável.</td></tr>
           <tr><td><span class="tag ok">EXECUTADO</span></td><td>Job associado ao SHA terminou com sucesso.</td><td>Validação em dispositivo real.</td><td>Guardar run e artefatos.</td></tr>
           <tr><td><span class="tag bad">BLOQUEADO</span></td><td>Falha reproduzível e atribuída.</td><td>Que toda a arquitetura está quebrada.</td><td>Log + causa-raiz.</td></tr>
         </tbody>
@@ -70,8 +71,8 @@
     <h2>§3 — Rotas operacionais</h2>
     <ul>
       <li><strong>Gate A:</strong> executar <code>python3 scripts/audit_github_actions_refs.py --strict</code>.</li>
-      <li><strong>Gate B:</strong> confirmar o workflow <code>GitHub Actions Reference Audit</code> no HEAD do PR.</li>
-      <li><strong>Gate C:</strong> qualquer upgrade em massa deve ficar em PR separado, com inventário antes/depois.</li>
+      <li><strong>Gate B:</strong> confirmar o workflow <code>GitHub Actions Reference Audit</code> no HEAD final do PR.</li>
+      <li><strong>Gate C:</strong> guardar o JSON e os logs associados ao SHA.</li>
       <li><strong>Gate D:</strong> builds Android, assinatura e device smoke permanecem provas independentes.</li>
     </ul>
   </section>
@@ -79,15 +80,15 @@
   <section>
     <h2>§4 — Fontes canônicas internas</h2>
     <ul>
-      <li><code>docs/CI_ACTION_VERSION_POLICY.md</code> — política humana e fontes oficiais.</li>
+      <li><code>docs/CI_ACTION_VERSION_POLICY.md</code> — política humana, inventário e fontes oficiais.</li>
       <li><code>scripts/audit_github_actions_refs.py</code> — auditor determinístico.</li>
       <li><code>.github/workflows/action-reference-audit.yml</code> — execução CI da política.</li>
-      <li><code>docs/STATUS.md</code> — estado geral, sempre subordinado a código, run e artefato.</li>
-      <li><code>AUDITORIA_TAREFAS.md</code> — lacunas e tarefas, sem declarar resolvido sem evidência.</li>
+      <li><code>docs/STATUS.md</code> — estado geral subordinado a código, run e artefato.</li>
+      <li><code>AUDITORIA_TAREFAS.md</code> — estático fechado, execução ainda aberta.</li>
     </ul>
   </section>
 
-  <p class="foot">ψ intenção → χ observação → ρ ruído → Δ correção → Σ registro → Ω coerência. TOKEN_VAZIO permanece vazio até surgir prova executável.</p>
+  <p class="foot">ψ intenção → χ observação → ρ ruído → Δ correção → Σ registro → Ω coerência. Erro medido virou engenharia; prova ausente permanece TOKEN_VAZIO.</p>
 </main>
 </body>
 </html>
