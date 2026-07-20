@@ -1,0 +1,48 @@
+{
+  "schema": "rafaelia.zero.android-provenance.v1",
+  "source_authority": {
+    "repository": "rafaelmeloreisnovo/Rafaelia_Private",
+    "merge_commit": "5af99c45d30e8d886e466f1b408922857d92744f",
+    "pull_request": 186,
+    "header_path": "native/rafaelia_zero/include/rafz.h",
+    "header_git_blob": "019254937a4d7d50c3a862baa72966722faa38e2",
+    "core_path": "native/rafaelia_zero/src/rafz.c",
+    "core_git_blob": "327f66261719c96e36afb668c180b1628b8c2669"
+  },
+  "consumer": {
+    "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "header_path": "rafaelia/src/main/cpp/zero/include/rafz.h",
+    "core_path": "rafaelia/src/main/cpp/zero/rafz.c",
+    "module_library": "termux_rafaelia_zero",
+    "apk_library": "termux_rafaelia_zero_runtime"
+  },
+  "binary_contract": {
+    "format": "RFZ1",
+    "header_bytes": 40,
+    "max_payload": 1024,
+    "slot_count": 42,
+    "lanes": 8,
+    "phases": 7,
+    "mix_rounds": 2,
+    "memory_owner": "STATIC_NATIVE_CALLER",
+    "core_heap_calls": 0,
+    "core_syscalls": 0,
+    "core_external_dependencies": 0
+  },
+  "android": {
+    "canonical_input": "DirectByteBuffer",
+    "supported_apk_abis": ["armeabi-v7a", "arm64-v8a", "x86", "x86_64"],
+    "page_alignment": 16384,
+    "startup_entry": "com.termux.app.TermuxApplication",
+    "runtime_entry": "com.termux.app.rafaelia.RafaeliaZeroRuntime"
+  },
+  "validation": {
+    "canonical_blobs_match": true,
+    "host_c_jni_syntax": "PASS",
+    "host_java_syntax": "PASS",
+    "android_ndk_build": "TOKEN_VAZIO",
+    "apk_install": "TOKEN_VAZIO",
+    "device_ingest": "TOKEN_VAZIO",
+    "claim_allowed_device_execution": false
+  }
+}
