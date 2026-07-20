@@ -1,0 +1,32 @@
+{
+  "schema": "rafaelia.zero.android-local-validation.v1",
+  "date": "2026-07-20",
+  "status": "PASS_LOCAL",
+  "source_authority": {
+    "repository": "rafaelmeloreisnovo/Rafaelia_Private",
+    "merge_commit": "5af99c45d30e8d886e466f1b408922857d92744f",
+    "header_git_blob_match": true,
+    "core_git_blob_match": true
+  },
+  "checks": {
+    "core_c_compile": "PASS",
+    "core_selfcheck": "PASS",
+    "rfz1_encode_ingest": "PASS",
+    "state_digest_nonzero_after_ingest": "PASS",
+    "corrupted_payload_rejected_crc": "PASS",
+    "jni_c_syntax_with_jdk_headers": "PASS",
+    "module_java_syntax": "PASS",
+    "app_java_syntax": "PASS",
+    "direct_byte_buffer_bounds_hardened": "PASS",
+    "startup_wiring_present": "PASS_STATIC",
+    "android_mk_four_abi_profiles_present": "PASS_STATIC"
+  },
+  "limits": {
+    "android_ndk_build": "TOKEN_VAZIO",
+    "apk_assembly": "TOKEN_VAZIO",
+    "apk_install": "TOKEN_VAZIO",
+    "physical_device_ingest": "TOKEN_VAZIO",
+    "neon_sse_benchmark": "TOKEN_VAZIO",
+    "claim_allowed_device_execution": false
+  }
+}
