@@ -10,8 +10,8 @@ android {
         applicationId "com.termux.rafacodephi.loader"
         minSdk = project.properties.minSdkVersion.toInteger()
         targetSdk = project.properties.targetSdkVersion.toInteger()
-        versionCode 2
-        versionName "0.2.0"
+        versionCode 3
+        versionName "0.3.0"
     }
 
     buildFeatures {
@@ -33,7 +33,7 @@ android {
 
 tasks.register("materializeLoaderApk", Copy) {
     group = "distribution"
-    description = "Builds the loader stub and materializes it as build/dist/loader.apk."
+    description = "Builds the signature-protected verified bootstrap acquisition APK and materializes build/dist/loader.apk."
     dependsOn("assembleDebug")
     from("${buildDir}/outputs/apk/debug/loader-debug.apk")
     into("${buildDir}/dist")
