@@ -57,6 +57,8 @@ def main() -> int:
     release_manifest = RELEASE_MANIFEST.read_text(encoding="utf-8")
     activity = ACTIVITY.read_text(encoding="utf-8")
     runner = RUNNER.read_text(encoding="utf-8")
+    builder_text = BUNDLE_BUILDER.read_text(encoding="utf-8")
+    matrix_text = MATRIX_VALIDATOR.read_text(encoding="utf-8")
     probe_contract = json.loads(PROBE_CONTRACT.read_text(encoding="utf-8"))
     evidence_contract = json.loads(EVIDENCE_CONTRACT.read_text(encoding="utf-8"))
 
@@ -86,10 +88,23 @@ def main() -> int:
         "apk.bin",
         "receipt_sha256=",
         "apk_sha256=",
+        "selected-${ROLE}.txt",
+        "selected-${selected_role}.txt",
         "RAFAELIA_ZERO_OPERATIONAL_EVIDENCE=PASS",
     )
     for token in runner_requirements:
         require(token in runner, f"runner contract token missing: {token}")
+    require("RUN_RECORDED_STATUS" in runner and "return \"$RUN_RECORDED_STATUS\"" in runner,
+            "runner must preserve command failures through transcript capture")
+
+    require("os.replace(staging, output_dir)" in builder_text,
+            "bundle builder must publish with atomic directory rename")
+    require("fsync_directory(staging)" in builder_text,
+            "bundle builder must fsync staging before publication")
+    require("receipt_sha256=" in builder_text and "apk_sha256=" in builder_text,
+            "bundle builder must bind transcript to receipt and APK hashes")
+    require("os.replace(temporary, path)" in matrix_text,
+            "matrix validator must publish output atomically")
 
     require(probe_contract.get("schema") == "rafaelia.zero.device-probe-contract.v1",
             "unexpected probe contract schema")
@@ -114,6 +129,8 @@ def main() -> int:
     require(evidence_contract.get("schema") == "rafaelia.zero.operational-evidence-contract.v1",
             "unexpected operational evidence contract schema")
     bundle = evidence_contract.get("bundle", {})
+    publication = evidence_contract.get("publication", {})
+    selection = evidence_contract.get("selection", {})
     capture = evidence_contract.get("capture", {})
     targets = evidence_contract.get("required_targets", {})
     matrix_promotion = evidence_contract.get("promotion", {})
@@ -122,6 +139,20 @@ def main() -> int:
             "evidence bundle schema mismatch")
     require(bundle.get("digest") == "sha256", "bundle digest must be sha256")
     require(bundle.get("symlink_policy") == "forbidden", "bundle symlinks must be forbidden")
+    require(set(bundle.get("transcript_bindings", [])) == {"receipt_sha256", "apk_sha256"},
+            "transcript bindings must cover receipt and APK")
+    require(publication.get("bundle") == "atomic-staging-fsync-rename",
+            "bundle publication contract mismatch")
+    require(publication.get("matrix") == "atomic-temp-fsync-replace",
+            "matrix publication contract mismatch")
+    require(publication.get("selection_pointer") == "atomic-temp-fsync-replace",
+            "selection pointer publication mismatch")
+    require(selection.get("policy") == "one-validated-bundle-per-role",
+            "selection policy mismatch")
+    require(selection.get("history_preserved") is True,
+            "selection policy must preserve historical bundles")
+    require(selection.get("matrix_reads_selected_only") is True,
+            "matrix must read selected bundles only")
     require(capture.get("schema") == "rafaelia.zero.device.capture.v1",
             "capture schema mismatch")
     require(set(targets) == {"arm32-legacy", "arm64-modern"},
@@ -159,6 +190,8 @@ def main() -> int:
     print("bundle_builder_self_test=PASS")
     print("bundle_validator_self_test=PASS")
     print("matrix_validator_self_test=PASS")
+    print("bundle_publication=atomic")
+    print("matrix_selection=one-validated-bundle-per-role")
     print("arm32_device_receipt=TOKEN_VAZIO")
     print("arm64_device_receipt=TOKEN_VAZIO")
     print("claim_allowed_device_matrix=false")
