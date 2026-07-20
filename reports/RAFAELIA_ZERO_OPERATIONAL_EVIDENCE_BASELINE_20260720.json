@@ -7,18 +7,27 @@
     "runner": "scripts/run_rafaelia_zero_device_probe.sh",
     "bundle_builder": "scripts/create_rafaelia_zero_device_bundle.py",
     "bundle_validator": "scripts/validate_rafaelia_zero_device_bundle.py",
-    "matrix_validator": "scripts/validate_rafaelia_zero_device_matrix.py"
+    "matrix_validator": "scripts/validate_rafaelia_zero_device_matrix.py",
+    "matrix_rebuilder": "scripts/rebuild_rafaelia_zero_device_matrix.py"
   },
   "implemented": {
     "debug_probe": true,
     "app_private_atomic_receipt": true,
-    "apk_capture": true,
+    "installed_apk_capture_via_adb_pull": true,
+    "single_installed_apk_path_gate": true,
+    "input_installed_apk_hash_match": true,
     "receipt_sha256": true,
     "apk_sha256": true,
     "transcript_hash_binding": true,
     "atomic_bundle_publication": true,
+    "atomic_selection_pointer": true,
+    "atomic_matrix_publication": true,
+    "one_validated_bundle_per_role": true,
+    "bundle_history_preserved": true,
+    "selection_path_traversal_rejection": true,
+    "selection_symlink_rejection": true,
     "bundle_file_set_gate": true,
-    "symlink_rejection": true,
+    "bundle_symlink_rejection": true,
     "empty_file_rejection": true,
     "manifest_digest_validation": true,
     "sha256sums_validation": true,
@@ -31,16 +40,17 @@
       "intended_device": "Moto E7 / Android 10",
       "architecture_id": 1,
       "state": "TOKEN_VAZIO",
-      "bundle": null
+      "selected_bundle": null
     },
     "arm64-modern": {
       "intended_device": "Realme Note 50",
       "architecture_id": 2,
       "state": "TOKEN_VAZIO",
-      "bundle": null
+      "selected_bundle": null
     }
   },
   "matrix": {
+    "selection_policy": "one-validated-bundle-per-role",
     "state": "TOKEN_VAZIO",
     "claim_allowed_device_matrix": false,
     "release_claim_allowed": false,
@@ -55,8 +65,8 @@
   "next_evidence": [
     "capture one valid arm32-legacy bundle",
     "capture one valid arm64-modern bundle",
-    "reconstruct matrix from both bundles",
-    "preserve matrix.json and hashes outside the build workspace"
+    "rebuild the selected matrix from both bundles",
+    "preserve matrix.json, pointers and bundle hashes outside the build workspace"
   ],
   "claim_allowed": false
 }
