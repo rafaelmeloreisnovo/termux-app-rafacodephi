@@ -185,14 +185,17 @@ public class TermuxApplication extends Application {
             Logger.logInfo(LOG_TAG, "bootstrap-env-init phase=" + phase + " action=write-shell-environment");
             TermuxShellEnvironment.writeEnvironmentToFile(this);
         } catch (Exception e) {
-            Logger.logError(LOG_TAG, "Failed to write environment file: " + e.getMessage());
+            Logger.logError(LOG_TAG, "Failed to write environment to file: " + e.getMessage());
         }
     }
 
     public static void setLogConfig(Context context) {
         Logger.setDefaultLogTag(TermuxConstants.TERMUX_APP_NAME);
+
+        // Load the log level from shared preferences and set it to the {@link Logger.CURRENT_LOG_LEVEL}
         TermuxAppSharedPreferences preferences = TermuxAppSharedPreferences.build(context);
         if (preferences == null) return;
         preferences.setLogLevel(null, preferences.getLogLevel());
     }
+
 }
