@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build host-smoke
         run: make -C bootstrap_rafaelia clean host-smoke
       - name: Upload host log
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: android-actions/setup-android@v4
       - name: Resolve NDK version
         id: ndk
@@ -59,7 +59,7 @@ jobs:
       matrix:
         arch: [arm32, arm64, x86, x86_64, riscv64, armv7a-neon]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: android-actions/setup-android@v4
       - name: Resolve NDK version
         id: ndk

@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Verify Rafaelia native safety contracts
         run: python3 scripts/verify_rafaelia_native_safety.py
