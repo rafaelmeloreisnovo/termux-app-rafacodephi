@@ -17,15 +17,21 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
+import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * Signature-protected host-side custody boundary for a verified loader URI.
  *
  * The loader never receives the host prefix path. This receiver copies the ZIP
- * into a private inbox only after SHA-256 and canonical per-ABI BLAKE3 checks.
- * TermuxInstaller remains the sole extractor and publisher of $PREFIX.
+ * into a private inbox only after SHA-256, canonical per-ABI BLAKE3 and bounded
+ * ZIP-structure checks. TermuxInstaller remains the sole extractor and
+ * publisher of $PREFIX.
  */
 public final class BootstrapHandoffReceiver extends BroadcastReceiver {
 
@@ -40,6 +46,10 @@ public final class BootstrapHandoffReceiver extends BroadcastReceiver {
     private static final String EXTRA_EXPECTED_SHA256 = "expected_sha256";
     private static final String EXTRA_VERIFIED_BYTES = "verified_bytes";
     private static final long MAX_BOOTSTRAP_BYTES = 128L * 1024L * 1024L;
+    private static final long MAX_UNCOMPRESSED_BYTES = 768L * 1024L * 1024L;
+    private static final long MAX_ENTRY_BYTES = 256L * 1024L * 1024L;
+    private static final int MAX_ZIP_ENTRIES = 65_536;
+    private static final long MAX_COMPRESSION_RATIO = 500L;
     private static final Pattern SHA256 = Pattern.compile("^[0-9a-f]{64}$");
 
     @Override
@@ -147,6 +157,7 @@ public final class BootstrapHandoffReceiver extends BroadcastReceiver {
             deleteQuietly(part);
             throw new SecurityException("HOST_BLAKE3_MISMATCH");
         }
+        validateZipArchive(part);
 
         Os.chmod(part.getAbsolutePath(), 0600);
         JSONObject receiptJson = new JSONObject();
@@ -157,6 +168,7 @@ public final class BootstrapHandoffReceiver extends BroadcastReceiver {
         receiptJson.put("blake3", observedBlake3);
         receiptJson.put("bytes", copied);
         receiptJson.put("provider_authority", PROVIDER_AUTHORITY);
+        receiptJson.put("zip_policy", "bounded-v1");
         receiptJson.put("claim_allowed", false);
         receiptJson.put("observed_at_epoch_ms", System.currentTimeMillis());
         writeJsonPart(receiptPart, receiptJson.toString());
@@ -178,6 +190,57 @@ public final class BootstrapHandoffReceiver extends BroadcastReceiver {
         Intent launch = new Intent(context, TermuxActivity.class);
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         context.startActivity(launch);
+    }
+
+    private static void validateZipArchive(File file) throws IOException {
+        int entries = 0;
+        long totalUncompressed = 0;
+        boolean symlinksManifest = false;
+        Set<String> names = new HashSet<>();
+        try (ZipFile archive = new ZipFile(file)) {
+            Enumeration<? extends ZipEntry> iterator = archive.entries();
+            while (iterator.hasMoreElements()) {
+                ZipEntry entry = iterator.nextElement();
+                entries++;
+                if (entries > MAX_ZIP_ENTRIES) throw new IOException("ZIP_ENTRY_LIMIT_EXCEEDED");
+                String name = entry.getName();
+                validateZipName(name);
+                if (!names.add(name)) throw new IOException("ZIP_DUPLICATE_ENTRY");
+                if ("SYMLINKS.txt".equals(name)) symlinksManifest = true;
+
+                long size = entry.getSize();
+                long compressed = entry.getCompressedSize();
+                if (size < 0 || compressed < 0) throw new IOException("ZIP_SIZE_UNKNOWN");
+                if (size > MAX_ENTRY_BYTES) throw new IOException("ZIP_ENTRY_TOO_LARGE");
+                if (Long.MAX_VALUE - totalUncompressed < size) {
+                    throw new IOException("ZIP_SIZE_OVERFLOW");
+                }
+                totalUncompressed += size;
+                if (totalUncompressed > MAX_UNCOMPRESSED_BYTES) {
+                    throw new IOException("ZIP_UNCOMPRESSED_LIMIT_EXCEEDED");
+                }
+                if (size > 0 && compressed == 0) {
+                    throw new IOException("ZIP_ZERO_COMPRESSED_SIZE");
+                }
+                if (compressed > 0 && size / compressed > MAX_COMPRESSION_RATIO) {
+                    throw new IOException("ZIP_COMPRESSION_RATIO_EXCEEDED");
+                }
+            }
+        }
+        if (entries == 0) throw new IOException("ZIP_EMPTY");
+        if (!symlinksManifest) throw new IOException("ZIP_SYMLINKS_MANIFEST_MISSING");
+    }
+
+    private static void validateZipName(String name) throws IOException {
+        if (name == null || name.isEmpty() || name.length() > 4096
+                || name.startsWith("/") || name.startsWith("\\")
+                || name.indexOf('\0') >= 0 || name.indexOf('\\') >= 0) {
+            throw new IOException("ZIP_ENTRY_NAME_INVALID");
+        }
+        String[] parts = name.split("/");
+        for (String part : parts) {
+            if ("..".equals(part)) throw new IOException("ZIP_TRAVERSAL_ENTRY");
+        }
     }
 
     private static void writeJsonPart(File part, String json) throws Exception {
