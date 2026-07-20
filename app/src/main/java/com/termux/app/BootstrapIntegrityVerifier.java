@@ -9,12 +9,17 @@ import com.termux.shared.logger.Logger;
 
 import org.bouncycastle.crypto.digests.Blake3Digest;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Locale;
 
 final class BootstrapIntegrityVerifier {
 
     private static final String LOG_TAG = "BootstrapIntegrity";
-    private static final String DEBUG_BOOTSTRAP_HASH_BYPASS = "debug-bootstrap-integrity-bypass";
+    private static final String DEBUG_BOOTSTRAP_HASH_BYPASS =
+        "debug-bootstrap-integrity-bypass";
 
     private BootstrapIntegrityVerifier() {}
 
@@ -55,19 +60,43 @@ final class BootstrapIntegrityVerifier {
             !BuildConfig.BOOTSTRAP_BAREMETAL_STRICT) {
             Logger.logWarn(LOG_TAG,
                 "Bootstrap BLAKE3 hash is not configured for this debug/internal build; " +
-                "bypassing integrity comparison so bootstrap can be diagnosed at runtime. " +
-                "Release/strict builds still require TERMUX_BOOTSTRAP_BLAKE3_* values.");
+                "bypassing integrity comparison so the embedded bootstrap can be diagnosed. " +
+                "External loader handoffs reject this bypass.");
             return DEBUG_BOOTSTRAP_HASH_BYPASS;
         }
 
         Blake3Digest digest = new Blake3Digest(256);
         digest.update(bytes, 0, bytes.length);
+        return finishHex(digest);
+    }
+
+    @NonNull
+    static String blake3Hex(@NonNull File file, long maxBytes) throws IOException {
+        if (!file.isFile() || file.length() < 1 || file.length() > maxBytes) {
+            throw new IOException("Invalid bootstrap file size: " + file.length());
+        }
+        Blake3Digest digest = new Blake3Digest(256);
+        long total = 0;
+        try (BufferedInputStream input = new BufferedInputStream(
+                new FileInputStream(file), 65_536)) {
+            byte[] buffer = new byte[65_536];
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                total += read;
+                if (total > maxBytes) throw new IOException("Bootstrap BLAKE3 size limit exceeded");
+                digest.update(buffer, 0, read);
+            }
+        }
+        if (total != file.length()) throw new IOException("Bootstrap file length changed while hashing");
+        return finishHex(digest);
+    }
+
+    @NonNull
+    private static String finishHex(@NonNull Blake3Digest digest) {
         byte[] out = new byte[32];
         digest.doFinal(out, 0);
         StringBuilder sb = new StringBuilder(out.length * 2);
-        for (byte b : out) {
-            sb.append(String.format(Locale.US, "%02x", b));
-        }
+        for (byte b : out) sb.append(String.format(Locale.US, "%02x", b));
         return sb.toString();
     }
 
@@ -76,8 +105,8 @@ final class BootstrapIntegrityVerifier {
         if (!BuildConfig.BOOTSTRAP_BAREMETAL_STRICT) {
             Logger.logWarn(LOG_TAG,
                 "Missing bootstrap BLAKE3 hash for ABI " + abi +
-                "; debug/internal build will bypass comparison. " +
-                "Set TERMUX_BOOTSTRAP_BLAKE3_* for release/strict builds.");
+                "; debug/internal embedded bootstrap will use the diagnostic bypass. " +
+                "Set TERMUX_BOOTSTRAP_BLAKE3_* for release/strict builds and all external handoffs.");
             return DEBUG_BOOTSTRAP_HASH_BYPASS;
         }
         return "";
