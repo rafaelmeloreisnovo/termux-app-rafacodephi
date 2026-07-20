@@ -55,12 +55,14 @@ run_recorded() {
 run_recorded "$ADB" wait-for-device || fail "adb wait-for-device failed"
 record "adb_wait_for_device=PASS"
 
+INPUT_APK_SHA256=""
 if [ -n "$APK" ]; then
     [ -f "$APK" ] || fail "APK not found: $APK"
     [ -s "$APK" ] || fail "APK is empty: $APK"
+    INPUT_APK_SHA256=$(hash_file "$APK")
     run_recorded "$ADB" install -r -t "$APK" || fail "APK install failed"
-    cp "$APK" "$APK_LOCAL"
     record "apk_source=local-install-argument"
+    record "input_apk_sha256=$INPUT_APK_SHA256"
 else
     record "apk_source=installed-package-capture"
 fi
@@ -96,7 +98,10 @@ run_recorded python3 scripts/validate_rafaelia_zero_device_receipt.py "$RECEIPT_
 
 DEVICE_SERIAL=$("$ADB" get-serialno | tr -d '\r')
 DEVICE_FINGERPRINT=$("$ADB" shell getprop ro.build.fingerprint | tr -d '\r')
-APK_PATH=$("$ADB" shell pm path "$PACKAGE" | tr -d '\r' | sed -n '1s/^package://p')
+APK_PATH_OUTPUT=$("$ADB" shell pm path "$PACKAGE" | tr -d '\r')
+APK_PATH_COUNT=$(printf '%s\n' "$APK_PATH_OUTPUT" | grep -c '^package:' || true)
+[ "$APK_PATH_COUNT" -eq 1 ] || fail "expected exactly one installed APK path, got $APK_PATH_COUNT"
+APK_PATH=$(printf '%s\n' "$APK_PATH_OUTPUT" | sed -n '1s/^package://p')
 CAPTURED_AT_MS=$(python3 - <<'PY'
 import time
 print(time.time_ns() // 1_000_000)
@@ -107,13 +112,16 @@ PY
 [ -n "$DEVICE_FINGERPRINT" ] || fail "device fingerprint is empty"
 [ -n "$APK_PATH" ] || fail "installed APK path is empty"
 
-if [ ! -s "$APK_LOCAL" ]; then
-    run_recorded "$ADB" pull "$APK_PATH" "$APK_LOCAL" || fail "installed APK capture failed"
-fi
-[ -s "$APK_LOCAL" ] || fail "captured APK is empty"
+run_recorded "$ADB" pull "$APK_PATH" "$APK_LOCAL" || fail "installed APK capture failed"
+[ -s "$APK_LOCAL" ] || fail "captured installed APK is empty"
 
 RECEIPT_SHA256=$(hash_file "$RECEIPT_LOCAL")
 APK_SHA256=$(hash_file "$APK_LOCAL")
+if [ -n "$INPUT_APK_SHA256" ]; then
+    [ "$INPUT_APK_SHA256" = "$APK_SHA256" ] \
+        || fail "installed APK hash differs from input APK hash"
+    record "input_installed_apk_hash_match=PASS"
+fi
 record "RAFAELIA_ZERO_DEVICE_PROBE=PASS"
 record "receipt_sha256=$RECEIPT_SHA256"
 record "apk_sha256=$APK_SHA256"
