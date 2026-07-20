@@ -7,6 +7,7 @@ import argparse
 import copy
 import importlib.util
 import json
+import os
 import pathlib
 import sys
 import tempfile
@@ -36,6 +37,21 @@ def load_module(path: pathlib.Path, name: str):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def write_atomic(path: pathlib.Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    with temporary.open("w", encoding="utf-8", newline="\n") as stream:
+        stream.write(text)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, path)
+    descriptor = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 def validate_matrix(bundle_paths: list[pathlib.Path]) -> dict[str, Any]:
@@ -112,8 +128,13 @@ def write_source(builder, root: pathlib.Path, name: str, receipt: dict[str, Any]
     apk_path = source / "probe.apk"
     receipt_path.write_text(builder.canonical_json(receipt), encoding="utf-8")
     capture_path.write_text(builder.canonical_json(capture), encoding="utf-8")
-    transcript_path.write_text("RAFAELIA_ZERO_DEVICE_PROBE=PASS\n", encoding="utf-8")
     apk_path.write_bytes(b"same-universal-debug-apk")
+    transcript_path.write_text(
+        "RAFAELIA_ZERO_DEVICE_PROBE=PASS\n"
+        f"receipt_sha256={builder.sha256_file(receipt_path)}\n"
+        f"apk_sha256={builder.sha256_file(apk_path)}\n",
+        encoding="utf-8",
+    )
     bundle = root / f"bundle-{name}"
     builder.build_bundle(receipt_path, capture_path, apk_path, transcript_path, bundle)
     return bundle
@@ -160,6 +181,11 @@ def self_test() -> None:
         else:
             raise AssertionError("duplicate bundle was accepted")
 
+        output = root / "matrix.json"
+        encoded = json.dumps(complete, sort_keys=True, indent=2, ensure_ascii=False) + "\n"
+        write_atomic(output, encoded)
+        require(output.read_text(encoding="utf-8") == encoded, "atomic matrix output mismatch")
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -185,8 +211,7 @@ def main() -> int:
 
     encoded = json.dumps(matrix, sort_keys=True, indent=2, ensure_ascii=False) + "\n"
     if args.output is not None:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(encoded, encoding="utf-8")
+        write_atomic(args.output, encoded)
     print(encoded, end="")
     print(f"RAFAELIA_ZERO_DEVICE_MATRIX={matrix['state']}")
     return 0
