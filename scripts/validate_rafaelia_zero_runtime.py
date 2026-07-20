@@ -14,6 +14,7 @@ MODULE_JAVA = ROOT / "rafaelia/src/main/java/com/termux/rafaelia/RafaeliaZero.ja
 APP_JAVA = ROOT / "app/src/main/java/com/termux/app/rafaelia/RafaeliaZeroRuntime.java"
 APP_INIT = ROOT / "app/src/main/java/com/termux/app/TermuxApplication.java"
 PROBE_CONTRACT = ROOT / "scripts/validate_rafaelia_zero_device_probe_contract.py"
+EVIDENCE_CONTRACT = ROOT / "configs/rafaelia-zero-operational-evidence-contract.json"
 
 EXPECTED_BLOBS = {
     HEADER: "019254937a4d7d50c3a862baa72966722faa38e2",
@@ -36,7 +37,18 @@ def require_text(path: pathlib.Path, needles):
 
 def main() -> int:
     errors = []
-    for path in (HEADER, CORE, MODULE_MK, APP_MK, MODULE_JAVA, APP_JAVA, APP_INIT, PROBE_CONTRACT):
+    required_paths = (
+        HEADER,
+        CORE,
+        MODULE_MK,
+        APP_MK,
+        MODULE_JAVA,
+        APP_JAVA,
+        APP_INIT,
+        PROBE_CONTRACT,
+        EVIDENCE_CONTRACT,
+    )
+    for path in required_paths:
         if not path.is_file():
             errors.append(f"missing:{path.relative_to(ROOT)}")
 
@@ -80,13 +92,39 @@ def main() -> int:
             detail = (completed.stderr or completed.stdout).strip().replace("\n", " | ")
             errors.append(f"device-probe-contract:{detail}")
 
+    evidence_state = {
+        "arm32-legacy": "TOKEN_VAZIO",
+        "arm64-modern": "TOKEN_VAZIO",
+        "matrix": "TOKEN_VAZIO",
+        "claim_allowed_device_matrix": False,
+        "release_claim_allowed": False,
+    }
+    if EVIDENCE_CONTRACT.is_file():
+        try:
+            contract = json.loads(EVIDENCE_CONTRACT.read_text(encoding="utf-8"))
+            current = contract.get("current_state", {})
+            if contract.get("schema") != "rafaelia.zero.operational-evidence-contract.v1":
+                errors.append("operational-evidence-contract:schema")
+            expected_current = {
+                "arm32-legacy": "TOKEN_VAZIO",
+                "arm64-modern": "TOKEN_VAZIO",
+                "matrix": "TOKEN_VAZIO",
+                "claim_allowed_device_matrix": False,
+            }
+            for key, expected in expected_current.items():
+                if current.get(key) != expected:
+                    errors.append(f"operational-evidence-contract:{key}")
+        except (OSError, json.JSONDecodeError) as exc:
+            errors.append(f"operational-evidence-contract:{exc}")
+
     result = {
-        "schema": "rafaelia.zero.android-runtime-validation.v2",
+        "schema": "rafaelia.zero.android-runtime-validation.v3",
         "status": "PASS" if not errors else "FAIL",
         "errors": errors,
         "claim_allowed_device_execution": False,
-        "device_probe_contract": probe_contract_status,
-        "physical_device_receipt": "TOKEN_VAZIO",
+        "device_probe_and_evidence_contract": probe_contract_status,
+        "device_evidence_state": evidence_state,
+        "static_pass_promotes_device_claim": False,
         "core_git_blobs": {str(path.relative_to(ROOT)): sha for path, sha in EXPECTED_BLOBS.items()},
     }
     print(json.dumps(result, sort_keys=True))
