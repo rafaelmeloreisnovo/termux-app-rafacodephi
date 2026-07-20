@@ -44,7 +44,7 @@ content_sha256:
 size_bytes:
 status:
 origin: TOKEN_VAZIO
- author: TOKEN_VAZIO
+author: TOKEN_VAZIO
 license: TOKEN_VAZIO
 references: []
 reference_count: 0
@@ -61,9 +61,6 @@ evidence_state: SOURCE_PRESENT_ONLY
 claim_allowed: false
 next_action:
 ```
-
-> A indentação visual de `author` acima representa o mesmo nível de `origin` e `license`;
-> o JSON gerado é a fonte normativa.
 
 ## Referências
 
