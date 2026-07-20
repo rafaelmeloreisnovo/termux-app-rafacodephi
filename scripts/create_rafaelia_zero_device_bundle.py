@@ -76,6 +76,14 @@ def write_atomic(path: pathlib.Path, text: str) -> None:
     os.replace(temporary, path)
 
 
+def fsync_directory(path: pathlib.Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
 def read_json_object(path: pathlib.Path, label: str) -> dict[str, Any]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -146,18 +154,22 @@ def build_bundle(
     capture = read_json_object(capture_path, "capture")
     validate_capture(capture, receipt)
 
+    receipt_sha256 = sha256_file(receipt_path)
+    apk_sha256 = sha256_file(apk_path)
     transcript = transcript_path.read_text(encoding="utf-8", errors="strict")
     require("RAFAELIA_ZERO_DEVICE_PROBE=PASS" in transcript, "transcript lacks probe PASS marker")
+    require(f"receipt_sha256={receipt_sha256}" in transcript, "transcript is not bound to receipt SHA-256")
+    require(f"apk_sha256={apk_sha256}" in transcript, "transcript is not bound to APK SHA-256")
 
     architecture_id = receipt_summary["architecture_id"]
     role = ROLE_BY_ARCH.get(architecture_id)
     require(role is not None, f"unsupported architecture_id: {architecture_id}")
 
-    if output_dir.exists():
-        require(output_dir.is_dir(), f"output exists and is not a directory: {output_dir}")
-        require(not any(output_dir.iterdir()), f"output directory must be empty: {output_dir}")
-    else:
-        output_dir.mkdir(parents=True, exist_ok=False)
+    require(not output_dir.exists(), f"output path already exists: {output_dir}")
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    staging = output_dir.parent / f".{output_dir.name}.tmp-{os.getpid()}"
+    require(not staging.exists(), f"staging path already exists: {staging}")
+    staging.mkdir(parents=False, exist_ok=False)
 
     sources = {
         FIXED_FILES["receipt"]: receipt_path,
@@ -165,48 +177,55 @@ def build_bundle(
         FIXED_FILES["transcript"]: transcript_path,
         FIXED_FILES["apk"]: apk_path,
     }
-    for destination_name, source in sources.items():
-        shutil.copyfile(source, output_dir / destination_name)
+    try:
+        for destination_name, source in sources.items():
+            shutil.copyfile(source, staging / destination_name)
 
-    file_entries: dict[str, dict[str, Any]] = {}
-    for name in sorted(sources):
-        path = output_dir / name
-        file_entries[name] = {
-            "sha256": sha256_file(path),
-            "bytes": path.stat().st_size,
+        file_entries: dict[str, dict[str, Any]] = {}
+        for name in sorted(sources):
+            path = staging / name
+            file_entries[name] = {
+                "sha256": sha256_file(path),
+                "bytes": path.stat().st_size,
+            }
+
+        manifest = {
+            "schema": BUNDLE_SCHEMA,
+            "result": "PASS",
+            "role": role,
+            "claim_allowed_device_single": True,
+            "claim_allowed_device_matrix": False,
+            "release_claim_allowed": False,
+            "created_at_unix_ms": capture["captured_at_unix_ms"],
+            "package": capture["package"],
+            "device": {
+                "serial": capture["device_serial"],
+                "fingerprint": capture["device_fingerprint"],
+                "installed_apk_path": capture["installed_apk_path"],
+            },
+            "runtime": receipt_summary,
+            "files": file_entries,
+            "limits": {
+                "debug_apk_only": True,
+                "single_bundle_does_not_promote_matrix": True,
+                "independent_reproduction": "TOKEN_VAZIO",
+            },
         }
+        manifest_path = staging / "manifest.json"
+        write_atomic(manifest_path, canonical_json(manifest))
 
-    manifest = {
-        "schema": BUNDLE_SCHEMA,
-        "result": "PASS",
-        "role": role,
-        "claim_allowed_device_single": True,
-        "claim_allowed_device_matrix": False,
-        "release_claim_allowed": False,
-        "created_at_unix_ms": capture["captured_at_unix_ms"],
-        "package": capture["package"],
-        "device": {
-            "serial": capture["device_serial"],
-            "fingerprint": capture["device_fingerprint"],
-            "installed_apk_path": capture["installed_apk_path"],
-        },
-        "runtime": receipt_summary,
-        "files": file_entries,
-        "limits": {
-            "debug_apk_only": True,
-            "single_bundle_does_not_promote_matrix": True,
-            "independent_reproduction": "TOKEN_VAZIO",
-        },
-    }
-    manifest_path = output_dir / "manifest.json"
-    write_atomic(manifest_path, canonical_json(manifest))
-
-    sums = []
-    for name in sorted((*sources.keys(), "manifest.json")):
-        sums.append(f"{sha256_file(output_dir / name)}  {name}")
-    write_atomic(output_dir / "SHA256SUMS", "\n".join(sums) + "\n")
-
-    return manifest
+        sums = []
+        for name in sorted((*sources.keys(), "manifest.json")):
+            sums.append(f"{sha256_file(staging / name)}  {name}")
+        write_atomic(staging / "SHA256SUMS", "\n".join(sums) + "\n")
+        fsync_directory(staging)
+        os.replace(staging, output_dir)
+        fsync_directory(output_dir.parent)
+        return manifest
+    except BaseException:
+        if staging.exists():
+            shutil.rmtree(staging, ignore_errors=True)
+        raise
 
 
 def self_test() -> None:
@@ -229,12 +248,18 @@ def self_test() -> None:
         output = root / "bundle"
         receipt_path.write_text(canonical_json(receipt), encoding="utf-8")
         capture_path.write_text(canonical_json(capture), encoding="utf-8")
-        transcript_path.write_text("RAFAELIA_ZERO_DEVICE_PROBE=PASS\n", encoding="utf-8")
         apk_path.write_bytes(b"synthetic-debug-apk")
+        transcript_path.write_text(
+            "RAFAELIA_ZERO_DEVICE_PROBE=PASS\n"
+            f"receipt_sha256={sha256_file(receipt_path)}\n"
+            f"apk_sha256={sha256_file(apk_path)}\n",
+            encoding="utf-8",
+        )
         manifest = build_bundle(receipt_path, capture_path, apk_path, transcript_path, output)
         require(manifest["result"] == "PASS", "self-test manifest did not pass")
         require(manifest["role"] == "arm32-legacy", "self-test role mismatch")
         require((output / "SHA256SUMS").is_file(), "self-test SHA256SUMS missing")
+        require(not any(root.glob(".bundle.tmp-*")), "self-test left a staging directory")
 
 
 def main() -> int:
