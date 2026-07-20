@@ -1,9 +1,9 @@
 name: RafaCodePhi sensor bridge validation
 
 on:
-  push:
+  pull_request:
     branches:
-      - codex/raf-sensor-app-api-bridge-v1
+      - master
   workflow_dispatch:
 
 permissions:
