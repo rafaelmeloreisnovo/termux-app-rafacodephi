@@ -24,60 +24,53 @@
         android:label="@string/permission_raf_sensor_access_label"
         android:protectionLevel="dangerous" />
 
+    <permission
+        android:name="${TERMUX_PACKAGE_NAME}.permission.BOOTSTRAP_HANDOFF"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="${TERMUX_PACKAGE_NAME}.permission.BOOTSTRAP_HANDOFF" />
+
     <!-- Network permissions -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
-    
+
     <!-- Storage permissions -->
-    <!-- Broad storage permissions for shared external storage access (API 32 and below) -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <!-- Granular media permissions for Android 13+ devices (images, video, audio) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" android:minSdkVersion="33" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" android:minSdkVersion="33" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" android:minSdkVersion="33" />
-    <!-- MANAGE_EXTERNAL_STORAGE is optional for Android 11+ but recommended for full file system access -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
-    
+
     <!-- Power and system management -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    
+
     <!-- Foreground service permissions (Android 14+) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <!-- FOREGROUND_SERVICE_SPECIAL_USE is required when the foreground service doesn't fit
-         standard categories. Termux uses this for terminal sessions and command execution. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    
+
     <!-- Notification permissions (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    
+
     <!-- Alarm and scheduling permissions -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
-    
+
     <!-- Window and overlay permissions -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    
+
     <!-- Installation and package management -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
-    <!-- QUERY_ALL_PACKAGES is a restricted permission that requires justification for Google Play Store.
-         This is necessary for Termux to query and interact with other installed packages. -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
-    
-    <!-- Privileged permissions - not required for basic functionality -->
-    <!-- <uses-permission android:name="android.permission.READ_LOGS" /> -->
-    <!-- <uses-permission android:name="android.permission.DUMP" /> -->
-    <!-- <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" /> -->
-    <!-- <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" /> -->
 
     <application
         android:name="com.termux.app.TermuxApplication"
@@ -90,7 +83,6 @@
         android:theme="@style/Theme.TermuxApp.DayNight.DarkActionBar"
         tools:targetApi="m">
 
-        <!-- Benchmark menu — low-level NEON/CRC32C/ALU parametrization screen -->
         <activity
             android:name="com.termux.app.benchmark.BenchmarkMenuActivity"
             android:exported="false"
@@ -108,15 +100,12 @@
             tools:targetApi="n">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
-
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
@@ -126,11 +115,8 @@
             android:name="${TERMUX_PACKAGE_NAME}.HomeActivity"
             android:exported="true"
             android:targetActivity="com.termux.app.TermuxActivity">
-
-            <!-- Launch activity automatically on boot on Android Things devices -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.IOT_LAUNCHER" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
@@ -180,20 +166,15 @@
             android:noHistory="true"
             android:resizeableActivity="true"
             android:taskAffinity="${TERMUX_PACKAGE_NAME}.filereceiver"
-            tools:targetApi="n">
-        </activity>
+            tools:targetApi="n" />
 
         <activity-alias
             android:name="com.termux.app.api.file.FileShareReceiverActivity"
             android:exported="true"
             android:targetActivity="com.termux.app.api.file.FileReceiverActivity">
-
-            <!-- Accept multiple file types when sending. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
-
                 <category android:name="android.intent.category.DEFAULT" />
-
                 <data android:mimeType="application/*" />
                 <data android:mimeType="audio/*" />
                 <data android:mimeType="image/*" />
@@ -208,13 +189,9 @@
             android:name="com.termux.app.api.file.FileViewReceiverActivity"
             android:exported="true"
             android:targetActivity="com.termux.app.api.file.FileReceiverActivity">
-
-            <!-- Accept multiple file types to let Termux be usable as generic file viewer. -->
             <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
-
                 <category android:name="android.intent.category.DEFAULT" />
-
                 <data android:mimeType="application/*" />
                 <data android:mimeType="audio/*" />
                 <data android:mimeType="image/*" />
@@ -241,10 +218,18 @@
             android:grantUriPermissions="true"
             android:permission="${TERMUX_PACKAGE_NAME}.permission.RUN_COMMAND" />
 
-
         <receiver
             android:name="com.termux.app.TermuxOpenReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name="com.termux.app.BootstrapHandoffReceiver"
+            android:exported="true"
+            android:permission="${TERMUX_PACKAGE_NAME}.permission.BOOTSTRAP_HANDOFF">
+            <intent-filter>
+                <action android:name="${TERMUX_PACKAGE_NAME}.BOOTSTRAP_VERIFIED" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name="com.termux.app.event.SystemEventReceiver"
@@ -260,7 +245,6 @@
         <receiver
             android:name="com.termux.shared.activities.ReportActivity$ReportActivityBroadcastReceiver"
             android:exported="false" />
-
 
         <service
             android:name="com.termux.app.TermuxService"
@@ -294,22 +278,14 @@
                 android:value="sensor_runtime" />
         </service>
 
-
-        <!-- This (or rather, value 2.1 or higher) is needed to make the Samsung Galaxy S8 mark the
-        app with "This app is optimized to run in full screen." -->
         <meta-data
             android:name="android.max_aspect"
             android:value="10.0" />
 
-
-        <!-- https://developer.samsung.com/samsung-dex/modify-optimizing.html -->
-
-        <!-- Version < 3.0. DeX Mode and Screen Mirroring support -->
         <meta-data
             android:name="com.samsung.android.keepalive.density"
             android:value="true" />
 
-        <!-- Version >= 3.0. DeX Dual Mode support -->
         <meta-data
             android:name="com.samsung.android.multidisplay.keep_process_alive"
             android:value="true" />
