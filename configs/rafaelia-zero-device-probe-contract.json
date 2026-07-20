@@ -1,0 +1,58 @@
+{
+  "schema": "rafaelia.zero.device-probe-contract.v1",
+  "authority": {
+    "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "runtime": "app/src/main/java/com/termux/app/rafaelia/RafaeliaZeroRuntime.java",
+    "native_core": "rafaelia/src/main/cpp/zero/rafz.c"
+  },
+  "component": {
+    "source_set": "debug",
+    "activity": "com.termux.app.rafaelia.RafaeliaZeroProbeActivity",
+    "required_permission": "android.permission.DUMP",
+    "exported": true,
+    "release_present": false,
+    "ui": false
+  },
+  "receipt": {
+    "schema": "rafaelia.zero.device.probe.v1",
+    "remote_path": "files/rafaelia-zero/latest.json",
+    "write_mode": "atomic-temp-rename",
+    "capture_mode": "adb-shell-run-as",
+    "host_digest": "sha256"
+  },
+  "required_checks": [
+    "debuggable",
+    "library_available",
+    "init_ok",
+    "architecture_match",
+    "max_payload_match",
+    "ingest_ok",
+    "accepted_increment",
+    "rejected_stable",
+    "digest_changed",
+    "digest_nonzero",
+    "null_guard",
+    "range_guard",
+    "page_size_valid"
+  ],
+  "architecture_ids": {
+    "armeabi-v7a": 1,
+    "arm64-v8a": 2,
+    "x86_64": 3,
+    "x86": 4
+  },
+  "promotion": {
+    "static_contract_pass_promotes_device_claim": false,
+    "valid_device_receipt_required": true,
+    "apk_sha256_required": true,
+    "receipt_sha256_required": true,
+    "command_transcript_required": true,
+    "claim_allowed_device_default": false
+  },
+  "states": {
+    "source_present": "IMPLEMENTED",
+    "static_contract": "LOCALLY_EXECUTABLE",
+    "physical_device_receipt": "TOKEN_VAZIO",
+    "release_allowed_from_static_only": false
+  }
+}
