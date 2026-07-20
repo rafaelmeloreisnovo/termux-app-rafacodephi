@@ -77,21 +77,15 @@ def main() -> int:
         and (ROOT / "scripts/validate_browser_fail_closed.py").is_file(),
         ["scripts/materialize_browser_fail_closed.py", "scripts/validate_browser_fail_closed.py"],
     )
-    check(
-        "browser_tls13_not_promoted",
-        tls13.get("state") == "PROTOTYPE_FAIL_CLOSED_REQUIRED" and tls13.get("claim_allowed") is False,
-        tls13,
-    )
-    check(
-        "browser_tls12_not_promoted",
-        tls12.get("state") == "DOCUMENT_ONLY" and tls12.get("claim_allowed") is False,
-        tls12,
-    )
-    check(
-        "tls_certification_requires_external_evidence",
-        tls_cert.get("state") == "TOKEN_VAZIO" and tls_cert.get("claim_allowed") is False and not tls_cert.get("evidence"),
-        tls_cert,
-    )
+    check("browser_tls13_not_promoted",
+          tls13.get("state") == "PROTOTYPE_FAIL_CLOSED_REQUIRED" and tls13.get("claim_allowed") is False,
+          tls13)
+    check("browser_tls12_not_promoted",
+          tls12.get("state") == "DOCUMENT_ONLY" and tls12.get("claim_allowed") is False,
+          tls12)
+    check("tls_certification_requires_external_evidence",
+          tls_cert.get("state") == "TOKEN_VAZIO" and tls_cert.get("claim_allowed") is False and not tls_cert.get("evidence"),
+          tls_cert)
 
     dex_path = ROOT / "apkc/fmt_dex.h"
     dex = dex_path.read_text(encoding="utf-8") if dex_path.is_file() else ""
@@ -103,39 +97,43 @@ def main() -> int:
         "no class definitions",
     )
     check("dex_contract_source_markers", all(token in dex for token in dex_tokens), dex_tokens)
-    check(
-        "dex_scope_is_structural",
-        by_id.get("apkc.dex.minimal", {}).get("scope", "").startswith("DEX 035 structural"),
-        by_id.get("apkc.dex.minimal"),
-    )
+    check("dex_scope_is_structural",
+          by_id.get("apkc.dex.minimal", {}).get("scope", "").startswith("DEX 035 structural"),
+          by_id.get("apkc.dex.minimal"))
     dex_exec = by_id.get("apkc.dex.executable-content", {})
-    check(
-        "dex_executable_content_not_inferred",
-        dex_exec.get("state") == "TOKEN_VAZIO"
-        and dex_exec.get("claim_allowed") is False
-        and not dex_exec.get("evidence"),
-        dex_exec,
-    )
+    check("dex_executable_content_not_inferred",
+          dex_exec.get("state") == "TOKEN_VAZIO" and dex_exec.get("claim_allowed") is False and not dex_exec.get("evidence"),
+          dex_exec)
 
     sys_path = ROOT / "apkc/sys.h"
     sys_text = sys_path.read_text(encoding="utf-8") if sys_path.is_file() else ""
-    check(
-        "apkc_host_test_is_explicit",
-        "RAF_APKC_HOST_TEST" in sys_text and "supports only ARM32/ARM64" in sys_text,
-        "host adapter and unsupported-architecture fail-fast",
-    )
+    check("apkc_host_test_is_explicit",
+          "RAF_APKC_HOST_TEST" in sys_text and "supports only ARM32/ARM64" in sys_text,
+          "host adapter and unsupported-architecture fail-fast")
 
-    elf_text = (ROOT / "apkc/fmt_elf.h").read_text(encoding="utf-8") \
-        if (ROOT / "apkc/fmt_elf.h").is_file() else ""
+    elf_path = ROOT / "apkc/fmt_elf.h"
+    elf_text = elf_path.read_text(encoding="utf-8") if elf_path.is_file() else ""
     elf_structural = by_id.get("apkc.elf.custom-emitter", {})
     elf_executable = by_id.get("apkc.elf.executable-writer", {})
-    elf_tokens = (
+    elf_linker = by_id.get("apkc.elf.linker", {})
+    elf_runtime = by_id.get("apkc.elf.device-runtime", {})
+
+    rel_tokens = (
         "apkc_elf32_arm_build_checked",
         "apkc_elf64_aarch64_build_checked",
         "APKC_ET_REL",
         "null section only",
     )
-    check("elf_structural_source_markers", all(token in elf_text for token in elf_tokens), elf_tokens)
+    exec_tokens = (
+        "apkc_elf32_arm_exec_build_checked",
+        "apkc_elf64_aarch64_exec_build_checked",
+        "APKC_ET_EXEC",
+        "APKC_PT_LOAD",
+        "0xE3A07001u",
+        "0xD2800BA8u",
+    )
+    check("elf_structural_source_markers", all(token in elf_text for token in rel_tokens), rel_tokens)
+    check("elf_executable_source_markers", all(token in elf_text for token in exec_tokens), exec_tokens)
     check(
         "elf_structural_emitter_bounded_claim",
         elf_structural.get("state") == "VERIFIED_HOST"
@@ -144,18 +142,45 @@ def main() -> int:
         elf_structural,
     )
     check(
-        "elf_structural_tools_present",
-        (ROOT / "tests/native/apkc_emit_minimal_elf.c").is_file()
-        and (ROOT / "scripts/validate_apkc_elf_contract.py").is_file(),
-        ["tests/native/apkc_emit_minimal_elf.c", "scripts/validate_apkc_elf_contract.py"],
-    )
-    check(
-        "elf_executable_not_inferred",
-        elf_executable.get("state") == "TOKEN_VAZIO"
-        and elf_executable.get("claim_allowed") is False
-        and not elf_executable.get("evidence"),
+        "elf_executable_stub_bounded_claim",
+        elf_executable.get("state") == "VERIFIED_HOST"
+        and elf_executable.get("claim_allowed") is True
+        and "fixed" in elf_executable.get("scope", "").lower()
+        and "not a general linker" in elf_executable.get("limitations", [])
+        and bool(elf_executable.get("evidence")),
         elf_executable,
     )
+    check(
+        "elf_emitters_and_validator_present",
+        (ROOT / "tests/native/apkc_emit_minimal_elf.c").is_file()
+        and (ROOT / "tests/native/apkc_emit_exec_elf.c").is_file()
+        and (ROOT / "scripts/validate_apkc_elf_contract.py").is_file(),
+        ["tests/native/apkc_emit_minimal_elf.c", "tests/native/apkc_emit_exec_elf.c", "scripts/validate_apkc_elf_contract.py"],
+    )
+    check(
+        "elf_general_linker_not_inferred",
+        elf_linker.get("state") == "TOKEN_VAZIO"
+        and elf_linker.get("claim_allowed") is False
+        and not elf_linker.get("evidence"),
+        elf_linker,
+    )
+    check(
+        "elf_device_runtime_not_inferred",
+        elf_runtime.get("state") == "TOKEN_VAZIO"
+        and elf_runtime.get("claim_allowed") is False
+        and not elf_runtime.get("evidence"),
+        elf_runtime,
+    )
+
+    validator_text = (ROOT / "scripts/validate_apkc_elf_contract.py").read_text(encoding="utf-8") \
+        if (ROOT / "scripts/validate_apkc_elf_contract.py").is_file() else ""
+    validator_tokens = (
+        'choices=("rel", "exec")',
+        '"load_segment_rx"',
+        '"entry_inside_load_segment"',
+        '"fixed_exit_stub"',
+    )
+    check("elf_validator_covers_exec_contract", all(token in validator_text for token in validator_tokens), validator_tokens)
 
     compiler_matrix = by_id.get("apkc.compiler.capability-matrix", {})
     check(
@@ -165,34 +190,24 @@ def main() -> int:
         and "governance" in " ".join(compiler_matrix.get("limitations", [])).lower(),
         compiler_matrix,
     )
-    check(
-        "compiler_matrix_tools_present",
-        (ROOT / "configs/compiler-capability-matrix.json").is_file()
-        and (ROOT / "scripts/validate_compiler_capability_matrix.py").is_file(),
-        ["configs/compiler-capability-matrix.json", "scripts/validate_compiler_capability_matrix.py"],
-    )
+    check("compiler_matrix_tools_present",
+          (ROOT / "configs/compiler-capability-matrix.json").is_file()
+          and (ROOT / "scripts/validate_compiler_capability_matrix.py").is_file(),
+          ["configs/compiler-capability-matrix.json", "scripts/validate_compiler_capability_matrix.py"])
 
     gap_map = by_id.get("governance.first-part-gap-map", {})
-    check(
-        "first_part_gap_map_registered",
-        gap_map.get("state") == "VERIFIED_HOST"
-        and gap_map.get("claim_allowed") is True
-        and bool(gap_map.get("evidence")),
-        gap_map,
-    )
-    check(
-        "first_part_gap_map_tools_present",
-        (ROOT / "configs/first-part-gap-map.json").is_file()
-        and (ROOT / "scripts/validate_first_part_gap_map.py").is_file(),
-        ["configs/first-part-gap-map.json", "scripts/validate_first_part_gap_map.py"],
-    )
+    check("first_part_gap_map_registered",
+          gap_map.get("state") == "VERIFIED_HOST" and gap_map.get("claim_allowed") is True and bool(gap_map.get("evidence")),
+          gap_map)
+    check("first_part_gap_map_tools_present",
+          (ROOT / "configs/first-part-gap-map.json").is_file()
+          and (ROOT / "scripts/validate_first_part_gap_map.py").is_file(),
+          ["configs/first-part-gap-map.json", "scripts/validate_first_part_gap_map.py"])
 
     loose = by_id.get("documents.loose.corpus", {})
-    check(
-        "loose_documents_are_not_runtime",
-        loose.get("state") == "HISTORICAL_OR_LOOSE" and loose.get("claim_allowed") is False,
-        loose,
-    )
+    check("loose_documents_are_not_runtime",
+          loose.get("state") == "HISTORICAL_OR_LOOSE" and loose.get("claim_allowed") is False,
+          loose)
 
     release = matrix.get("release_invariant", {})
     check("release_remains_blocked", release.get("current_result") is False, release)
