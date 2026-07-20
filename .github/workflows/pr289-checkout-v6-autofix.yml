@@ -1,4 +1,4 @@
-name: PR289 Checkout v6 Autofix
+name: PR289 Checkout v6 Patch Export
 
 on:
   pull_request:
@@ -6,22 +6,17 @@ on:
       - master
     paths:
       - '.github/workflows/**'
-  push:
-    branches:
-      - claude/llamarafaelia-process-analysis-rt4v8f
-    paths:
-      - '.github/workflows/pr289-checkout-v6-autofix.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  replace-invalid-checkout-major:
+  export-patched-workflows:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR branch
+      - name: Checkout PR branch with Git metadata
         uses: actions/checkout@v6
         with:
           ref: claude/llamarafaelia-process-analysis-rt4v8f
@@ -43,6 +38,11 @@ jobs:
                   path.write_text(updated, encoding='utf-8')
                   changed.append(str(path))
 
+          Path('reports').mkdir(exist_ok=True)
+          Path('reports/pr289-changed-workflows.txt').write_text(
+              '\n'.join(changed) + ('\n' if changed else ''),
+              encoding='utf-8',
+          )
           print(f'changed_files={len(changed)}')
           for path in changed:
               print(path)
@@ -56,22 +56,30 @@ jobs:
             echo 'checkout@v7 remains after replacement' >&2
             exit 1
           fi
-          git diff -- .github/workflows | grep -E '^[+-].*uses: actions/checkout@v[67]' || true
           if git diff -- .github/workflows | grep -E '^[+-].*actions/upload-artifact@'; then
             echo 'artifact action changed outside the allowed boundary' >&2
             exit 1
           fi
+          git diff -- .github/workflows > reports/pr289-workflows.patch
+          git rev-parse HEAD > reports/pr289-parent-sha.txt
+          git rev-parse HEAD^{tree} > reports/pr289-base-tree-sha.txt
 
-      - name: Commit deterministic correction
+      - name: Package corrected workflows and Git metadata
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- .github/workflows; then
-            echo 'No remaining checkout@v7 references.'
-            exit 0
-          fi
-          git config user.name 'RAFCODEPHI CI'
-          git config user.email 'actions@users.noreply.github.com'
-          git add .github/workflows
-          git commit -m 'fix(ci): replace invalid checkout v7 with published v6'
-          git push origin HEAD:claude/llamarafaelia-process-analysis-rt4v8f
+          tar -czf reports/pr289-patched-workflows.tar.gz \
+            .github/workflows \
+            .git \
+            reports/pr289-changed-workflows.txt \
+            reports/pr289-workflows.patch \
+            reports/pr289-parent-sha.txt \
+            reports/pr289-base-tree-sha.txt
+
+      - name: Upload deterministic patch bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: pr289-patched-workflows-${{ github.sha }}
+          path: reports/pr289-patched-workflows.tar.gz
+          if-no-files-found: error
+          retention-days: 3
