@@ -6,7 +6,8 @@
     "receipt_validator": "scripts/validate_rafaelia_zero_device_receipt.py",
     "bundle_builder": "scripts/create_rafaelia_zero_device_bundle.py",
     "bundle_validator": "scripts/validate_rafaelia_zero_device_bundle.py",
-    "matrix_validator": "scripts/validate_rafaelia_zero_device_matrix.py"
+    "matrix_validator": "scripts/validate_rafaelia_zero_device_matrix.py",
+    "matrix_rebuilder": "scripts/rebuild_rafaelia_zero_device_matrix.py"
   },
   "bundle": {
     "schema": "rafaelia.zero.device.evidence-bundle.v1",
@@ -32,9 +33,11 @@
   "selection": {
     "policy": "one-validated-bundle-per-role",
     "pointer_pattern": "selected-<role>.txt",
+    "pointer_payload": "direct-child-bundle-name-only",
     "history_preserved": true,
     "automatic_selection": "latest-successful-run-for-role",
-    "matrix_reads_selected_only": true
+    "matrix_reads_selected_only": true,
+    "path_traversal": "rejected"
   },
   "capture": {
     "schema": "rafaelia.zero.device.capture.v1",
@@ -45,6 +48,9 @@
       "installed_apk_path",
       "captured_at_unix_ms"
     ],
+    "installed_apk_source": "adb-pull-of-pm-path",
+    "single_installed_apk_path_required": true,
+    "input_hash_must_match_installed_when_provided": true,
     "identity_cross_check": [
       "capture.package == receipt.package",
       "capture.device_fingerprint == receipt.device.fingerprint"
