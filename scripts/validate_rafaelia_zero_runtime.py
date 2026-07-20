@@ -2,6 +2,7 @@
 import hashlib
 import json
 import pathlib
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -12,6 +13,7 @@ APP_MK = ROOT / "app/src/main/cpp/Android.mk"
 MODULE_JAVA = ROOT / "rafaelia/src/main/java/com/termux/rafaelia/RafaeliaZero.java"
 APP_JAVA = ROOT / "app/src/main/java/com/termux/app/rafaelia/RafaeliaZeroRuntime.java"
 APP_INIT = ROOT / "app/src/main/java/com/termux/app/TermuxApplication.java"
+PROBE_CONTRACT = ROOT / "scripts/validate_rafaelia_zero_device_probe_contract.py"
 
 EXPECTED_BLOBS = {
     HEADER: "019254937a4d7d50c3a862baa72966722faa38e2",
@@ -34,7 +36,7 @@ def require_text(path: pathlib.Path, needles):
 
 def main() -> int:
     errors = []
-    for path in (HEADER, CORE, MODULE_MK, APP_MK, MODULE_JAVA, APP_JAVA, APP_INIT):
+    for path in (HEADER, CORE, MODULE_MK, APP_MK, MODULE_JAVA, APP_JAVA, APP_INIT, PROBE_CONTRACT):
         if not path.is_file():
             errors.append(f"missing:{path.relative_to(ROOT)}")
 
@@ -64,11 +66,27 @@ def main() -> int:
             for needle in require_text(path, needles):
                 errors.append(f"contract:{path.relative_to(ROOT)}:{needle}")
 
+    probe_contract_status = "NOT_RUN"
+    if PROBE_CONTRACT.is_file():
+        completed = subprocess.run(
+            [sys.executable, str(PROBE_CONTRACT)],
+            cwd=str(ROOT),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        probe_contract_status = "PASS" if completed.returncode == 0 else "FAIL"
+        if completed.returncode != 0:
+            detail = (completed.stderr or completed.stdout).strip().replace("\n", " | ")
+            errors.append(f"device-probe-contract:{detail}")
+
     result = {
-        "schema": "rafaelia.zero.android-runtime-validation.v1",
+        "schema": "rafaelia.zero.android-runtime-validation.v2",
         "status": "PASS" if not errors else "FAIL",
         "errors": errors,
         "claim_allowed_device_execution": False,
+        "device_probe_contract": probe_contract_status,
+        "physical_device_receipt": "TOKEN_VAZIO",
         "core_git_blobs": {str(path.relative_to(ROOT)): sha for path, sha in EXPECTED_BLOBS.items()},
     }
     print(json.dumps(result, sort_keys=True))
