@@ -1,6 +1,11 @@
 name: PR289 Checkout v6 Autofix
 
 on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/**'
   push:
     branches:
       - claude/llamarafaelia-process-analysis-rt4v8f
@@ -13,6 +18,7 @@ permissions:
 
 jobs:
   replace-invalid-checkout-major:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR branch
