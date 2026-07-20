@@ -8,6 +8,7 @@ before shipping incomplete JNI code.
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 from typing import Sequence
 
@@ -16,6 +17,7 @@ RAFAELIA_C = ROOT / "rafaelia" / "src" / "main" / "cpp" / "rafaelia.c"
 INDEX = ROOT / "rafaelia" / "termux-packages-manifests" / "INDEX.rafidx"
 CORE_PKG = ROOT / "rafaelia" / "termux-packages-manifests" / "rafacodephi-core.rafpkg"
 NATIVE_COMPILE_GATE = ROOT / "scripts" / "test_raf_native_compile_contract.sh"
+ZERO_RUNTIME_GATE = ROOT / "scripts" / "validate_rafaelia_zero_runtime.py"
 
 FAILURES: list[str] = []
 
@@ -75,6 +77,14 @@ def main() -> int:
     require(NATIVE_COMPILE_GATE.exists(), f"missing native compile gate: {NATIVE_COMPILE_GATE}")
     if NATIVE_COMPILE_GATE.exists():
         run_gate(["bash", str(NATIVE_COMPILE_GATE)], "native-compile-contract")
+
+    # RAFAELIA ZERO keeps its own freestanding/provenance contract and now also
+    # validates the debug-only physical-device probe wiring. A PASS here is
+    # structural only; the runtime validator preserves physical receipt as
+    # TOKEN_VAZIO until an adb capture is supplied.
+    require(ZERO_RUNTIME_GATE.exists(), f"missing RAFAELIA ZERO gate: {ZERO_RUNTIME_GATE}")
+    if ZERO_RUNTIME_GATE.exists():
+        run_gate([sys.executable, str(ZERO_RUNTIME_GATE)], "rafaelia-zero-runtime-contract")
 
     if FAILURES:
         print("RAFAELIA_NATIVE_SAFETY=fail")
