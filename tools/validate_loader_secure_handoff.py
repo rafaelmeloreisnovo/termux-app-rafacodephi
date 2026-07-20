@@ -96,7 +96,7 @@ def validate(files: Mapping[str, str]) -> list[str]:
                     "BootstrapSourcePolicy.requireInitialUrl"):
         errors.append("loader activity does not validate all request pins")
 
-    forbidden_extraction = ("ZipInputStream", "ZipEntry", "targetDir", "mkdirs()")
+    forbidden_extraction = ("ZipInputStream", "ZipEntry", "targetDir", "target_dir")
     if any(token in service for token in forbidden_extraction):
         errors.append("loader service still extracts or handles a host path")
     if not contains(service, "MAX_DOWNLOAD_BYTES", "setInstanceFollowRedirects(false)",
