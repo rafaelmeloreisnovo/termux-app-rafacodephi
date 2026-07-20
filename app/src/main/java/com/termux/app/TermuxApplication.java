@@ -3,6 +3,7 @@ package com.termux.app;
 import android.app.Application;
 import android.content.Context;
 
+import com.termux.app.rafaelia.RafaeliaZeroRuntime;
 import com.termux.rafacodephi.BuildConfig;
 import com.termux.shared.errors.Error;
 import com.termux.shared.logger.Logger;
@@ -62,6 +63,17 @@ public class TermuxApplication extends Application {
             Logger.logDebug(LOG_TAG, "ApiLowLevelBridge.nativeInit() ok");
         } catch (Exception e) {
             Logger.logError(LOG_TAG, "ApiLowLevelBridge nativeInit failed: " + e.getMessage());
+        }
+
+        try {
+            int zeroStatus = RafaeliaZeroRuntime.init();
+            if (zeroStatus == RafaeliaZeroRuntime.OK) {
+                Logger.logDebug(LOG_TAG, "RafaeliaZeroRuntime init ok arch=" + RafaeliaZeroRuntime.architectureId());
+            } else {
+                Logger.logError(LOG_TAG, "RafaeliaZeroRuntime init status=" + zeroStatus);
+            }
+        } catch (Throwable t) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "RafaeliaZeroRuntime initialization failed", t);
         }
 
         try {
@@ -173,17 +185,14 @@ public class TermuxApplication extends Application {
             Logger.logInfo(LOG_TAG, "bootstrap-env-init phase=" + phase + " action=write-shell-environment");
             TermuxShellEnvironment.writeEnvironmentToFile(this);
         } catch (Exception e) {
-            Logger.logError(LOG_TAG, "Failed to write environment to file: " + e.getMessage());
+            Logger.logError(LOG_TAG, "Failed to write environment file: " + e.getMessage());
         }
     }
 
     public static void setLogConfig(Context context) {
         Logger.setDefaultLogTag(TermuxConstants.TERMUX_APP_NAME);
-
-        // Load the log level from shared preferences and set it to the {@link Logger.CURRENT_LOG_LEVEL}
         TermuxAppSharedPreferences preferences = TermuxAppSharedPreferences.build(context);
         if (preferences == null) return;
         preferences.setLogLevel(null, preferences.getLogLevel());
     }
-
 }
