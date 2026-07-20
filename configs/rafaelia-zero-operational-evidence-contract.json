@@ -21,7 +21,20 @@
     "digest": "sha256",
     "path_policy": "relative-posix-no-traversal",
     "symlink_policy": "forbidden",
-    "empty_file_policy": "forbidden"
+    "empty_file_policy": "forbidden",
+    "transcript_bindings": ["receipt_sha256", "apk_sha256"]
+  },
+  "publication": {
+    "bundle": "atomic-staging-fsync-rename",
+    "matrix": "atomic-temp-fsync-replace",
+    "selection_pointer": "atomic-temp-fsync-replace"
+  },
+  "selection": {
+    "policy": "one-validated-bundle-per-role",
+    "pointer_pattern": "selected-<role>.txt",
+    "history_preserved": true,
+    "automatic_selection": "latest-successful-run-for-role",
+    "matrix_reads_selected_only": true
   },
   "capture": {
     "schema": "rafaelia.zero.device.capture.v1",
@@ -74,7 +87,8 @@
     "unique_receipt_sha256": true,
     "unique_device_fingerprint_per_required_target": true,
     "unique_device_serial_per_required_target": true,
-    "duplicate_bundle_rejected": true
+    "duplicate_bundle_rejected": true,
+    "duplicate_role_in_selected_matrix_rejected": true
   },
   "current_state": {
     "arm32-legacy": "TOKEN_VAZIO",
