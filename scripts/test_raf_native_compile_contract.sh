@@ -97,8 +97,8 @@ run_gate validate_compiler_capability_matrix \
   python3 "$ROOT/scripts/validate_compiler_capability_matrix.py" --pretty
 run_gate validate_first_part_gap_map \
   python3 "$ROOT/scripts/validate_first_part_gap_map.py" --pretty
-run_gate validate_operational_coherence \
-  python3 "$ROOT/scripts/validate_operational_technical_coherence.py"
+run_gate validate_operational_coherence_v2 \
+  python3 "$ROOT/scripts/validate_operational_technical_coherence_v2.py"
 run_gate validate_browser_fail_closed \
   python3 "$ROOT/scripts/validate_browser_fail_closed.py"
 run_gate index_loose_artifacts \
