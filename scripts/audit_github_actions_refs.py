@@ -21,6 +21,7 @@ POLICY: dict[str, dict[str, Any]] = {
     "actions/checkout": {"current": 6, "compatible": {4, 6}},
     "actions/setup-java": {"current": 5, "compatible": {4, 5}},
     "actions/upload-artifact": {"current": 7, "compatible": {4, 5, 6, 7}},
+    "actions/download-artifact": {"current": 8, "compatible": {4, 5, 6, 7, 8}},
     "gradle/actions/wrapper-validation": {"current": 6, "compatible": {3, 4, 5, 6}},
     "gradle/actions/dependency-submission": {"current": 6, "compatible": {3, 4, 5, 6}},
     "gradle/actions/setup-gradle": {"current": 6, "compatible": {3, 4, 5, 6}},
