@@ -46,10 +46,13 @@ record() {
 }
 
 run_recorded() {
-    "$@" 2>&1 | tee -a "$TRANSCRIPT_LOCAL"
+    RUN_RECORDED_STATUS=0
+    RUN_RECORDED_OUTPUT=$("$@" 2>&1) || RUN_RECORDED_STATUS=$?
+    printf '%s\n' "$RUN_RECORDED_OUTPUT" | tee -a "$TRANSCRIPT_LOCAL"
+    return "$RUN_RECORDED_STATUS"
 }
 
-"$ADB" wait-for-device
+run_recorded "$ADB" wait-for-device || fail "adb wait-for-device failed"
 record "adb_wait_for_device=PASS"
 
 if [ -n "$APK" ]; then
@@ -88,7 +91,8 @@ record "receipt_poll_attempts=$attempt"
 
 "$ADB" shell run-as "$PACKAGE" cat "$RECEIPT_REMOTE" > "$RECEIPT_LOCAL"
 [ -s "$RECEIPT_LOCAL" ] || fail "captured receipt is empty"
-python3 scripts/validate_rafaelia_zero_device_receipt.py "$RECEIPT_LOCAL" 2>&1 | tee -a "$TRANSCRIPT_LOCAL"
+run_recorded python3 scripts/validate_rafaelia_zero_device_receipt.py "$RECEIPT_LOCAL" \
+    || fail "captured receipt validation failed"
 
 DEVICE_SERIAL=$("$ADB" get-serialno | tr -d '\r')
 DEVICE_FINGERPRINT=$("$ADB" shell getprop ro.build.fingerprint | tr -d '\r')
