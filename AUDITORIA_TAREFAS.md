@@ -6,7 +6,7 @@
 2. **Teste de fixture fora do pipeline padrão**: `scripts/test_export_termux_package_manifests_fixtures.py` não é compatível com descoberta de `pytest`, então `pytest` retorna *no tests ran*.
 3. **Ruído de manutenção em comentário histórico**: há erro de digitação/edição em comentário de changelog (`...DEBUG_BUILD`to...).
 4. **Cobertura de teste limitada**: o validador de parser cobre apenas casos felizes/fallback básico, sem casos de regressão para entradas inválidas e bordas de expansão.
-5. ~~**Bloqueador P0 CI**: 28 workflows usavam `actions/checkout@v6`/`@v7` (inexistentes), bloqueando todo CI.~~ **RESOLVIDO 2026-07-20** — todos os 28 workflows agora usam `actions/checkout@v4` + `actions/upload-artifact@v4`.
+5. **Falha epistêmica no diagnóstico de CI**: majors publicados oficialmente foram classificados como inexistentes, e alterações estáticas foram declaradas “P0 resolvido” sem workflow run associado ao HEAD.
 
 ---
 
@@ -58,13 +58,26 @@
   - `python3 -m pytest -q scripts/test_export_termux_package_manifests_fixtures.py` executa casos e não retorna *no tests ran*;
   - falhas exibem fixture/chave esperada de forma legível.
 
-## Tarefa 5 — fix P0 CI: actions inválidas em todos os workflows ✅ RESOLVIDA (2026-07-20)
+## Tarefa 5 — corrigir diagnóstico e prova de versões GitHub Actions ⚠️ EM VALIDAÇÃO (2026-07-20)
 
-- **Categoria**: bug crítico (CI totalmente bloqueado)
-- **Status**: ✅ **RESOLVIDA** — 28 workflows corrigidos em 4 commits para `master`.
-- **Problema**: 28 de 37 workflows usavam `actions/checkout@v6` ou `actions/checkout@v7` (versões inexistentes no marketplace), bloqueando 100% do CI na etapa de checkout. Idem para `actions/upload-artifact@v7`.
-- **Fix aplicado**: substituição global `@v6`/`@v7` → `@v4` em todos os arquivos afetados.
-- **Commits**: `99a6d0f`, `fccb442`, `037efb4`, `7c9ceb7`.
+- **Categoria**: governança crítica de CI / correção factual.
+- **Status**: ⚠️ **EM VALIDAÇÃO** — a afirmação “majors inexistentes” foi retirada; política e auditor foram adicionados. Falta run conclusivo no HEAD.
+- **Problema real**:
+  - `actions/checkout@v6`, `actions/upload-artifact@v7` e `gradle/actions/*@v6` existem oficialmente;
+  - rebaixar para `@v4`/`@v3` pode ser compatível, mas não prova que a causa de uma falha foi resolvida;
+  - o PR anterior não possuía workflow run associado ao HEAD e estava 163 commits atrás de `master`.
+- **Correção aplicada no PR #289**:
+  - branch sincronizada com o `master` atual;
+  - removido o delta redundante sobre 28 workflows;
+  - criado `docs/CI_ACTION_VERSION_POLICY.md`;
+  - criado `scripts/audit_github_actions_refs.py`;
+  - criado `.github/workflows/action-reference-audit.yml`;
+  - reconstruído `docs/CANONICAL_INDEX.html` com `claim_allowed=false` até a execução.
+- **Critérios de aceite**:
+  - `python3 scripts/audit_github_actions_refs.py --strict` termina com código 0;
+  - workflow `GitHub Actions Reference Audit` executa no SHA do PR;
+  - logs e JSON de auditoria ficam associados ao run;
+  - somente então o estado pode subir de `NÃO_EXECUTADO` para `EXECUTADO`.
 
 ---
 
@@ -78,4 +91,5 @@ python3 scripts/test_export_termux_package_manifests_fixtures.py
 test -f scripts/rafaelia_ci_smoke.sh; echo smoke:$?
 test -f rafaelia_env/tools/doctor.sh; echo doctor:$?
 test -f scripts/rafaelia_upstream_parallel_check.sh; echo upstream:$?
+python3 scripts/audit_github_actions_refs.py --strict --json reports/github-actions-reference-audit.json
 ```
