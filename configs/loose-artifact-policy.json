@@ -1,8 +1,8 @@
 {
-  "schema": "raf.loose-artifact-policy.v1",
+  "schema": "raf.loose-artifact-policy.v2",
   "scan_roots": ["Arme", "BugOrAdd", "rafaelia/old"],
   "scan_root_files": true,
-  "root_extensions": [".txt", ".md", ".html", ".json", ".yaml", ".yml", ".c", ".h", ".s", ".S", ".sh", ".py"],
+  "root_extensions": [".txt", ".md", ".html", ".json", ".yaml", ".yml", ".c", ".h", ".s", ".S", ".asm", ".sh", ".py"],
   "root_exclusions": [
     "README.md",
     "LICENSE",
@@ -33,6 +33,26 @@
     "data": "configs/recovered",
     "unknown": "archive/quarantine"
   },
+  "metadata_defaults": {
+    "origin": "TOKEN_VAZIO",
+    "author": "TOKEN_VAZIO",
+    "license": "TOKEN_VAZIO"
+  },
+  "reference_scan": {
+    "enabled": true,
+    "max_bytes": 1048576,
+    "max_references_per_artifact": 64,
+    "accepted_schemes": ["https://", "http://"]
+  },
+  "promotion_requirements": [
+    "origin",
+    "author",
+    "license",
+    "references_reviewed",
+    "integration_target_approved",
+    "consumer_identified",
+    "tests_identified"
+  ],
   "invariant": "INDEXING_DOES_NOT_PROMOTE_TO_BUILD_OR_RUNTIME",
   "automatic_move": false,
   "automatic_delete": false,
