@@ -159,26 +159,33 @@ public final class BootstrapHandoffReceiver extends BroadcastReceiver {
         receiptJson.put("provider_authority", PROVIDER_AUTHORITY);
         receiptJson.put("claim_allowed", false);
         receiptJson.put("observed_at_epoch_ms", System.currentTimeMillis());
-        writeAtomicJson(receiptPart, receipt, receiptJson.toString());
+        writeJsonPart(receiptPart, receiptJson.toString());
 
-        Os.rename(part.getAbsolutePath(), accepted.getAbsolutePath());
-        Os.chmod(accepted.getAbsolutePath(), 0600);
+        try {
+            Os.rename(part.getAbsolutePath(), accepted.getAbsolutePath());
+            Os.chmod(accepted.getAbsolutePath(), 0600);
+            Os.rename(receiptPart.getAbsolutePath(), receipt.getAbsolutePath());
+            Os.chmod(receipt.getAbsolutePath(), 0600);
+        } catch (Throwable t) {
+            deleteQuietly(part);
+            deleteQuietly(receiptPart);
+            deleteQuietly(accepted);
+            throw t;
+        }
+
         Logger.logInfo(LOG_TAG, "Canonical bootstrap accepted in private inbox: abi="
                 + expectedAbi + " bytes=" + copied);
-
         Intent launch = new Intent(context, TermuxActivity.class);
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         context.startActivity(launch);
     }
 
-    private static void writeAtomicJson(File part, File target, String json) throws Exception {
+    private static void writeJsonPart(File part, String json) throws Exception {
         try (FileOutputStream output = new FileOutputStream(part)) {
             output.write((json + "\n").getBytes("UTF-8"));
             output.getFD().sync();
         }
         Os.chmod(part.getAbsolutePath(), 0600);
-        Os.rename(part.getAbsolutePath(), target.getAbsolutePath());
-        Os.chmod(target.getAbsolutePath(), 0600);
     }
 
     private static String expectedAbiForDevice() {
