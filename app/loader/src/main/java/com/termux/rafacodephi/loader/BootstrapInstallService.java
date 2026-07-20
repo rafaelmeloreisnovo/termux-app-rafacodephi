@@ -1,7 +1,9 @@
 package com.termux.rafacodephi.loader;
 
 import android.app.IntentService;
+import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.util.Log;
 
 import java.io.BufferedInputStream;
@@ -11,27 +13,23 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Locale;
 
 /**
- * Downloads, verifies, and extracts a bootstrap ZIP to the target directory.
+ * Downloads and SHA-256 verifies a bootstrap package in loader-private storage.
  *
- * Dispatch flow:
- *   1. Download bootstrap ZIP from sourceUrl to a temp file
- *   2. Verify SHA-256 against expectedSha256
- *   3. Extract ZIP entries to targetDir (rejects path traversal)
- *   4. Broadcast ACTION_INSTALL_RESULT
- *
- * ARM32/ARM64: uses only java.net.HttpURLConnection and java.util.zip — no NDK.
+ * This service deliberately does not extract files and does not receive a host
+ * filesystem path. Installation remains owned by the host application.
  */
 @SuppressWarnings("deprecation")
-public class BootstrapInstallService extends IntentService {
+public final class BootstrapInstallService extends IntentService {
 
     private static final String TAG = "BootstrapInstallService";
     private static final int CONNECT_TIMEOUT_MS = 15_000;
-    private static final int READ_TIMEOUT_MS    = 60_000;
-    private static final int BUFFER_SIZE        = 65536;
+    private static final int READ_TIMEOUT_MS = 60_000;
+    private static final int BUFFER_SIZE = 65_536;
 
     public BootstrapInstallService() {
         super("BootstrapInstallService");
@@ -40,115 +38,166 @@ public class BootstrapInstallService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         if (intent == null) return;
-
-        String abi       = intent.getStringExtra(BootstrapInstallContract.EXTRA_ABI);
-        String sha256    = intent.getStringExtra(BootstrapInstallContract.EXTRA_SHA256);
-        String sourceUrl = intent.getStringExtra(BootstrapInstallContract.EXTRA_SOURCE_URL);
-        String targetDir = intent.getStringExtra(BootstrapInstallContract.EXTRA_TARGET_DIR);
-
-        if (abi == null || sha256 == null || sourceUrl == null || targetDir == null) {
-            broadcastResult(false, "MISSING_EXTRAS", abi);
-            return;
-        }
-
-        File target = new File(targetDir);
-        if (!target.isDirectory() && !target.mkdirs()) {
-            broadcastResult(false, "TARGET_DIR_CREATE_FAILED", abi);
-            return;
-        }
-
-        File tmpZip = new File(getCacheDir(), "bootstrap-" + abi + ".zip.tmp");
+        String abi = intent.getStringExtra(BootstrapInstallContract.EXTRA_ABI);
         try {
-            Log.i(TAG, "Downloading " + sourceUrl);
-            download(sourceUrl, tmpZip);
-
-            Log.i(TAG, "Verifying SHA-256");
-            if (!BootstrapChecksumValidator.validate(tmpZip, sha256)) {
-                broadcastResult(false, "SHA256_MISMATCH", abi);
-                return;
+            if (!BootstrapInstallContract.ACTION_INSTALL_BOOTSTRAP.equals(intent.getAction())) {
+                throw new IllegalArgumentException("INVALID_ACTION");
             }
+            abi = BootstrapSourcePolicy.requireAbi(abi);
+            String expectedSha256 = BootstrapSourcePolicy.requireSha256(
+                    intent.getStringExtra(BootstrapInstallContract.EXTRA_SHA256));
+            URL initialUrl = BootstrapSourcePolicy.requireInitialUrl(
+                    intent.getStringExtra(BootstrapInstallContract.EXTRA_SOURCE_URL));
 
-            Log.i(TAG, "Extracting to " + targetDir);
-            extractZip(tmpZip, target);
-
-            broadcastResult(true, "", abi);
-        } catch (Exception e) {
-            Log.e(TAG, "Bootstrap install failed", e);
-            broadcastResult(false, e.getClass().getSimpleName() + ": " + e.getMessage(), abi);
-        } finally {
-            //noinspection ResultOfMethodCallIgnored
-            tmpZip.delete();
+            File verifiedDir = new File(getFilesDir(), "verified");
+            if (!verifiedDir.isDirectory() && !verifiedDir.mkdirs()) {
+                throw new IOException("VERIFIED_DIR_CREATE_FAILED");
+            }
+            File target = new File(
+                    verifiedDir,
+                    "bootstrap-" + abi + "-" + expectedSha256 + ".zip");
+            if (!target.isFile() || !BootstrapChecksumValidator.validate(target, expectedSha256)) {
+                File part = new File(verifiedDir, target.getName() + ".part");
+                if (part.exists() && !part.delete()) {
+                    throw new IOException("STALE_PART_DELETE_FAILED");
+                }
+                long bytes;
+                try {
+                    bytes = downloadVerified(initialUrl, part, expectedSha256);
+                    if (target.exists() && !target.delete()) {
+                        throw new IOException("OLD_VERIFIED_DELETE_FAILED");
+                    }
+                    if (!part.renameTo(target)) {
+                        throw new IOException("VERIFIED_ATOMIC_RENAME_FAILED");
+                    }
+                } catch (Throwable t) {
+                    //noinspection ResultOfMethodCallIgnored
+                    part.delete();
+                    throw t;
+                }
+                publishSuccess(this, abi, target, bytes);
+            } else {
+                publishSuccess(this, abi, target, target.length());
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Bootstrap acquisition failed", t);
+            publishFailure(
+                    this,
+                    abi,
+                    t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage());
         }
     }
 
-    private void download(String urlString, File dest) throws IOException {
-        URL url = new URL(urlString);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
-        conn.setReadTimeout(READ_TIMEOUT_MS);
-        conn.setRequestProperty("User-Agent", "RAFCODEΦ-Loader/1");
-        conn.connect();
-
-        int code = conn.getResponseCode();
-        if (code < 200 || code >= 300) {
-            throw new IOException("HTTP " + code + " from " + urlString);
-        }
-
-        try (InputStream in = new BufferedInputStream(conn.getInputStream(), BUFFER_SIZE);
-             FileOutputStream out = new FileOutputStream(dest)) {
-            byte[] buf = new byte[BUFFER_SIZE];
-            int n;
-            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
-        } finally {
-            conn.disconnect();
-        }
-    }
-
-    private void extractZip(File zipFile, File targetDir) throws IOException {
-        String targetCanonical = targetDir.getCanonicalPath();
-        try (ZipInputStream zis = new ZipInputStream(
-                new BufferedInputStream(new java.io.FileInputStream(zipFile), BUFFER_SIZE))) {
-            ZipEntry entry;
-            byte[] buf = new byte[BUFFER_SIZE];
-            while ((entry = zis.getNextEntry()) != null) {
-                String name = entry.getName();
-                /* Reject path traversal */
-                if (name.contains("..") || name.startsWith("/")) {
-                    Log.w(TAG, "Skipping unsafe entry: " + name);
-                    zis.closeEntry();
+    private long downloadVerified(URL initialUrl, File destination, String expectedSha256)
+            throws IOException, NoSuchAlgorithmException {
+        URL origin = initialUrl;
+        URL current = initialUrl;
+        for (int redirects = 0; redirects <= BootstrapSourcePolicy.MAX_REDIRECTS; redirects++) {
+            HttpURLConnection connection = (HttpURLConnection) current.openConnection();
+            connection.setInstanceFollowRedirects(false);
+            connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+            connection.setReadTimeout(READ_TIMEOUT_MS);
+            connection.setUseCaches(false);
+            connection.setRequestProperty("User-Agent", "RAFCODEPhi-Loader/2");
+            try {
+                int code = connection.getResponseCode();
+                if (isRedirect(code)) {
+                    if (redirects == BootstrapSourcePolicy.MAX_REDIRECTS) {
+                        throw new IOException("TOO_MANY_REDIRECTS");
+                    }
+                    current = BootstrapSourcePolicy.requireSameOriginRedirect(
+                            origin,
+                            current,
+                            connection.getHeaderField("Location"));
                     continue;
                 }
-                File out = new File(targetDir, name);
-                /* Canonical-path check */
-                if (!out.getCanonicalPath().startsWith(targetCanonical + File.separator)
-                        && !out.getCanonicalPath().equals(targetCanonical)) {
-                    Log.w(TAG, "Skipping traversal attempt: " + name);
-                    zis.closeEntry();
-                    continue;
+                if (code < 200 || code >= 300) {
+                    throw new IOException("HTTP_" + code);
                 }
-                if (entry.isDirectory()) {
-                    if (!out.isDirectory() && !out.mkdirs()) {
-                        throw new IOException("Failed to create directory: " + out);
-                    }
-                } else {
-                    File parent = out.getParentFile();
-                    if (parent != null && !parent.isDirectory()) parent.mkdirs();
-                    try (FileOutputStream fos = new FileOutputStream(out)) {
-                        int n;
-                        while ((n = zis.read(buf)) > 0) fos.write(buf, 0, n);
-                    }
+                long contentLength = connection.getContentLengthLong();
+                if (contentLength > BootstrapSourcePolicy.MAX_DOWNLOAD_BYTES) {
+                    throw new IOException("DOWNLOAD_TOO_LARGE");
                 }
-                zis.closeEntry();
+                MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                long total = 0;
+                try (InputStream input = new BufferedInputStream(
+                        connection.getInputStream(), BUFFER_SIZE);
+                     FileOutputStream output = new FileOutputStream(destination)) {
+                    byte[] buffer = new byte[BUFFER_SIZE];
+                    int read;
+                    while ((read = input.read(buffer)) != -1) {
+                        total += read;
+                        if (total > BootstrapSourcePolicy.MAX_DOWNLOAD_BYTES) {
+                            throw new IOException("DOWNLOAD_LIMIT_EXCEEDED");
+                        }
+                        digest.update(buffer, 0, read);
+                        output.write(buffer, 0, read);
+                    }
+                    output.getFD().sync();
+                }
+                if (contentLength >= 0 && contentLength != total) {
+                    throw new IOException("CONTENT_LENGTH_MISMATCH");
+                }
+                String observed = toHex(digest.digest());
+                if (!expectedSha256.equals(observed)) {
+                    throw new IOException("SHA256_MISMATCH");
+                }
+                return total;
+            } finally {
+                connection.disconnect();
             }
         }
+        throw new IOException("REDIRECT_STATE_INVALID");
     }
 
-    private void broadcastResult(boolean success, String reason, String abi) {
-        Intent result = new Intent(BootstrapInstallContract.ACTION_INSTALL_RESULT);
+    private static boolean isRedirect(int code) {
+        return code == HttpURLConnection.HTTP_MOVED_PERM
+                || code == HttpURLConnection.HTTP_MOVED_TEMP
+                || code == HttpURLConnection.HTTP_SEE_OTHER
+                || code == 307
+                || code == 308;
+    }
+
+    private static String toHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder(bytes.length * 2);
+        for (byte value : bytes) {
+            result.append(String.format(Locale.US, "%02x", value));
+        }
+        return result.toString();
+    }
+
+    private static void publishSuccess(Context context, String abi, File file, long bytes) {
+        Uri uri = new Uri.Builder()
+                .scheme("content")
+                .authority(BootstrapInstallContract.PROVIDER_AUTHORITY)
+                .appendPath(file.getName())
+                .build();
+        context.grantUriPermission(
+                BootstrapInstallContract.HOST_PACKAGE,
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        Intent result = baseResult(true, "", abi);
+        result.setData(uri);
+        result.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        result.putExtra(BootstrapInstallContract.EXTRA_VERIFIED_BYTES, bytes);
+        context.sendBroadcast(result, BootstrapInstallContract.HANDOFF_PERMISSION);
+        Log.i(TAG, "Verified bootstrap handed to host: abi=" + abi + " bytes=" + bytes);
+    }
+
+    static void publishFailure(Context context, String abi, String reason) {
+        context.sendBroadcast(
+                baseResult(false, reason == null ? "UNKNOWN_FAILURE" : reason, abi),
+                BootstrapInstallContract.HANDOFF_PERMISSION);
+    }
+
+    private static Intent baseResult(boolean success, String reason, String abi) {
+        Intent result = new Intent(BootstrapInstallContract.ACTION_BOOTSTRAP_VERIFIED);
+        result.setPackage(BootstrapInstallContract.HOST_PACKAGE);
         result.putExtra(BootstrapInstallContract.EXTRA_SUCCESS, success);
-        result.putExtra(BootstrapInstallContract.EXTRA_FAILURE_REASON, reason != null ? reason : "");
-        result.putExtra(BootstrapInstallContract.EXTRA_INSTALLED_ABI, abi != null ? abi : "");
-        sendBroadcast(result);
-        Log.i(TAG, "Result: success=" + success + " abi=" + abi + " reason=" + reason);
+        result.putExtra(BootstrapInstallContract.EXTRA_FAILURE_REASON, reason);
+        result.putExtra(
+                BootstrapInstallContract.EXTRA_VERIFIED_ABI,
+                abi == null ? "" : abi);
+        return result;
     }
 }
