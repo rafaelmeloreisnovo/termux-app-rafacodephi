@@ -11,6 +11,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEBUG_MANIFEST = ROOT / "app/src/debug/AndroidManifest.xml"
 MAIN_MANIFEST = ROOT / "app/src/main/AndroidManifest.xml"
+RELEASE_MANIFEST = ROOT / "app/src/release/AndroidManifest.xml"
 ACTIVITY = ROOT / "app/src/debug/java/com/termux/app/rafaelia/RafaeliaZeroProbeActivity.java"
 RUNNER = ROOT / "scripts/run_rafaelia_zero_device_probe.sh"
 RECEIPT_VALIDATOR = ROOT / "scripts/validate_rafaelia_zero_device_receipt.py"
@@ -31,18 +32,28 @@ def load_receipt_validator():
 
 
 def main() -> int:
-    for path in (DEBUG_MANIFEST, MAIN_MANIFEST, ACTIVITY, RUNNER, RECEIPT_VALIDATOR, CONTRACT):
+    for path in (
+        DEBUG_MANIFEST,
+        MAIN_MANIFEST,
+        RELEASE_MANIFEST,
+        ACTIVITY,
+        RUNNER,
+        RECEIPT_VALIDATOR,
+        CONTRACT,
+    ):
         require(path.is_file(), f"missing required file: {path.relative_to(ROOT)}")
 
     debug_manifest = DEBUG_MANIFEST.read_text(encoding="utf-8")
     main_manifest = MAIN_MANIFEST.read_text(encoding="utf-8")
+    release_manifest = RELEASE_MANIFEST.read_text(encoding="utf-8")
     activity = ACTIVITY.read_text(encoding="utf-8")
     runner = RUNNER.read_text(encoding="utf-8")
     contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
 
     component = "com.termux.app.rafaelia.RafaeliaZeroProbeActivity"
     require(component in debug_manifest, "probe activity missing from debug manifest")
-    require(component not in main_manifest, "probe activity must not ship in main/release manifest")
+    require(component not in main_manifest, "probe activity must not ship in main manifest")
+    require(component not in release_manifest, "probe activity must not ship in release manifest")
     require('android:permission="android.permission.DUMP"' in debug_manifest,
             "probe must require android.permission.DUMP")
     require('android:exported="true"' in debug_manifest,
