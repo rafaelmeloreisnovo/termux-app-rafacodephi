@@ -18,6 +18,8 @@ INDEX = ROOT / "rafaelia" / "termux-packages-manifests" / "INDEX.rafidx"
 CORE_PKG = ROOT / "rafaelia" / "termux-packages-manifests" / "rafacodephi-core.rafpkg"
 NATIVE_COMPILE_GATE = ROOT / "scripts" / "test_raf_native_compile_contract.sh"
 ZERO_RUNTIME_GATE = ROOT / "scripts" / "validate_rafaelia_zero_runtime.py"
+SYSTEM_FINALIZATION_GATE = ROOT / "tools" / "validate_system_finalization.py"
+SYSTEM_FINALIZATION_TESTS = ROOT / "tests" / "test_system_finalization.py"
 
 FAILURES: list[str] = []
 
@@ -70,21 +72,39 @@ def main() -> int:
         require("seal=RAFPKG" in pkg, "rafacodephi-core manifest missing RAFPkg seal")
         require("name=rafacodephi-core" in pkg, "rafacodephi-core manifest missing canonical name")
 
-    # Reuse the already-canonical native-safety workflow without creating or
-    # modifying another YAML workflow. This gate compiles the changed C source
-    # with -Werror, executes host invariants, validates section GC and runs the
-    # compiler-warning classifier tests.
     require(NATIVE_COMPILE_GATE.exists(), f"missing native compile gate: {NATIVE_COMPILE_GATE}")
     if NATIVE_COMPILE_GATE.exists():
         run_gate(["bash", str(NATIVE_COMPILE_GATE)], "native-compile-contract")
 
-    # RAFAELIA ZERO keeps its own freestanding/provenance contract and now also
-    # validates the debug-only physical-device probe wiring. A PASS here is
-    # structural only; the runtime validator preserves physical receipt as
-    # TOKEN_VAZIO until an adb capture is supplied.
     require(ZERO_RUNTIME_GATE.exists(), f"missing RAFAELIA ZERO gate: {ZERO_RUNTIME_GATE}")
     if ZERO_RUNTIME_GATE.exists():
         run_gate([sys.executable, str(ZERO_RUNTIME_GATE)], "rafaelia-zero-runtime-contract")
+
+    # The finalization unit tests prove that safe-core closes while release and
+    # full-platform remain blocked by their own evidence requirements.
+    require(SYSTEM_FINALIZATION_TESTS.exists(), f"missing system finalization tests: {SYSTEM_FINALIZATION_TESTS}")
+    if SYSTEM_FINALIZATION_TESTS.exists():
+        run_gate(
+            [sys.executable, "-m", "unittest", "tests/test_system_finalization.py", "-v"],
+            "system-finalization-tests",
+        )
+
+    # Close only the static/fail-closed implementation profile. This explicitly
+    # does not promote functional distribution release, device proof, production
+    # signing, TLS, complete compilers or a complete VM.
+    require(SYSTEM_FINALIZATION_GATE.exists(), f"missing system finalization gate: {SYSTEM_FINALIZATION_GATE}")
+    if SYSTEM_FINALIZATION_GATE.exists():
+        run_gate(
+            [
+                sys.executable,
+                str(SYSTEM_FINALIZATION_GATE),
+                "--profile",
+                "safe-core",
+                "--strict",
+                "--write-report",
+            ],
+            "system-finalization-safe-core",
+        )
 
     if FAILURES:
         print("RAFAELIA_NATIVE_SAFETY=fail")

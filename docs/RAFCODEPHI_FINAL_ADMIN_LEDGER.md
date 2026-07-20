@@ -44,21 +44,33 @@ TOKEN_VAZIO protege o que ainda não foi provado.
 | Memory layers | `raf_memory_layers.c/.h` | `FATO_CODE` |
 | BitRAF | `raf_bitraf.c/.h` | `FATO_CODE` |
 | Commit gate | `rafaelia_commit_gate_ll.c/.h` | `FATO_CODE` |
+| RAFAELIA ZERO | core RFZ1, JNI, probe, receipt, bundle e matriz | `FATO_CODE` |
+| Loader quarantine | contrato e validador fail-closed | `FATO_TESTADO_LOCAL` |
+| Finalization gate | contrato, validador e testes por perfil | `FATO_CODE` |
 
 ---
 
-## Pontos que precisam virar documentação final
+## Pontos de documentação final
 
-| Documento | Finalidade | Prioridade |
+| Documento | Finalidade | Estado |
 |---|---|---|
-| `BITRAF42_BASE60_GUARD_BAND_AND_RECOVERY.md` | Canonizar 42 bits, base60, 60..63 e recuperação | P0 |
-| `BASE20_BASE60_ADDRESSING.md` | Explicar `60 = 3 x 20` e blocos A/B/C | P0 |
-| `EMPTY_SPACE_NEGATIVE_MEMORY.md` | Explicar ponto vazio/não gravado como valor estrutural | P0 |
-| `CLOCK_TTL_HZ_PROTOCOL.md` | Unificar clock, Hz, TTL, jitter e vida útil | P1 |
-| `VOID_NIL_WARNING_PIPELINE.md` | Unificar void, nil, warning, guard e TOKEN_VAZIO | P1 |
-| `NEON_16_LANE_EXECUTION.md` | Explicar 16 lanes físicas e variantes 8/16/32/64 bits | P1 |
-| `SME40_RECOVERY_TEST_PLAN.md` | Testar 40 e poucos % de liberação sem afirmar perda | P0 |
-| `FINAL_BUILD_CLOSURE.md` | Fechar build, ABI, APK, hashes e instalação | P0 |
+| `BITRAF42_BASE60_GUARD_BAND_AND_RECOVERY.md` | Canonizar 42 bits, base60, 60..63 e recuperação | P0 aberto |
+| `BASE20_BASE60_ADDRESSING.md` | Explicar `60 = 3 x 20` e blocos A/B/C | P0 aberto |
+| `EMPTY_SPACE_NEGATIVE_MEMORY.md` | Explicar ponto vazio/não gravado como valor estrutural | P0 aberto |
+| `CLOCK_TTL_HZ_PROTOCOL.md` | Unificar clock, Hz, TTL, jitter e vida útil | P1 aberto |
+| `VOID_NIL_WARNING_PIPELINE.md` | Unificar void, nil, warning, guard e TOKEN_VAZIO | P1 aberto |
+| `NEON_16_LANE_EXECUTION.md` | Explicar 16 lanes físicas e variantes 8/16/32/64 bits | P1 aberto |
+| `SME40_RECOVERY_TEST_PLAN.md` | Testar 40 e poucos % de liberação sem afirmar perda | P0 aberto |
+| `FINAL_BUILD_CLOSURE.md` | Separar safe-core, distribuição funcional e plataforma completa | ENTREGUE |
+
+O fechamento administrativo do build agora possui autoridade executável:
+
+```text
+configs/system-finalization-contract.json
+tools/validate_system_finalization.py
+tests/test_system_finalization.py
+docs/FINAL_BUILD_CLOSURE.md
+```
 
 ---
 
@@ -143,6 +155,7 @@ Estados aceitos:
 |---|---|
 | `FATO_CODE` | existe no código |
 | `FATO_TESTADO` | existe teste passando |
+| `FATO_TESTADO_LOCAL` | teste delimitado executado, sem promoção remota/física |
 | `DOC_ATRASADA` | código existe, documento ainda insuficiente |
 | `INCUBADORA` | existe fora do caminho canônico |
 | `TOKEN_VAZIO` | lacuna marcada, sem inferência |
@@ -150,17 +163,25 @@ Estados aceitos:
 
 ---
 
-## Fechamento
+## Fechamento por perfil
 
 ```text
-RAFCODEphi está no estágio de fechamento:
-- codificação principal presente;
-- documentação ampla presente;
-- falta ledger final, teste de recuperação, build APK, hashes e relatório de instalação.
+safe-core:
+  documentação e gate final presentes
+  release_allowed=false
+
+functional-distribution:
+  bloqueada por package stack prefix-safe, dual ARM, signing, CI e runtime lock
+
+full-platform:
+  pesquisa aberta em TLS, compiladores completos e VM completa
 ```
+
+O projeto não precisa terminar todos os experimentos para encerrar o núcleo seguro. Também não pode promover o núcleo seguro a release sem as provas físicas e operacionais.
 
 Frase final:
 
 ```text
 Libertar bit não é perder bit; perder só é fato depois que a rota de recuperação falha.
+Fechar o núcleo não é fingir que a distribuição inteira já foi provada.
 ```

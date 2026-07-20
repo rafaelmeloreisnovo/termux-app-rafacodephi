@@ -1,112 +1,163 @@
-# STATUS (Fonte de Verdade de Build/Release)
+# STATUS — fonte de verdade de build, runtime e conclusão
 
-> Última revisão: 2026-07-20 (UTC)
+> Última revisão: 2026-07-20  
+> Contrato de conclusão: `configs/system-finalization-contract.json`  
+> Validador: `tools/validate_system_finalization.py`
 
-Este documento consolida o estado **real e verificável** do pipeline Android (Gradle + NDK + CI) desta fork. A regra é separar promessa de prova: quando não houver backend ou teste real, o estado fica marcado como `TOKEN_VAZIO`, `PARCIAL`, `EXPERIMENTAL`, `NÃO_EXECUTADO`, `FALHA_SEM_ETAPA` ou `FUTURO`.
+## Regra principal
 
-## Histórico de Revisões
+```text
+implementado != compilado != executado != provado no Android != liberado para produção
+```
 
-| Data | Mudanças Principais |
-|------|---------------------|
-| 2026-07-20 | **CORREÇÃO OPERACIONAL DO PR #289**: inventário do `master` encontrou `actions/checkout@v7` em 33 workflows. Todas essas referências foram substituídas por `actions/checkout@v6`; `upload-artifact@v7`, `download-artifact@v8`, `setup-java@v5` e `gradle/actions@v6` foram preservados. |
-| 2026-07-20 | **CORREÇÃO EPISTÊMICA**: retirada a afirmação de que `checkout@v6`, `upload-artifact@v7` e `gradle/actions/*@v6` eram inexistentes. A branch foi sincronizada com `master`; política versionada, auditor estático e índice canônico foram adicionados. |
-| 2026-07-20 | Runs intermediários falharam sem steps/logs suficientes para atribuir causa-raiz. O sucesso do HEAD final continua não provado até existir run conclusivo. |
-| 2026-07-12 | Estabelecimento da fonte de verdade de build/release. |
+A palavra **finalizado** deve sempre indicar um perfil:
 
-## Verdade canônica atual
+```text
+SAFE_CORE_IMPLEMENTATION_CLOSED
+FUNCTIONAL_DISTRIBUTION_RELEASE_CLOSED
+FULL_RESEARCH_PLATFORM_CLOSED
+```
 
-- `compileSdkVersion=35`
-- `targetSdkVersion=28`
-- `minSdkVersion=21`
-- ABIs obrigatórias: `armeabi-v7a`, `arm64-v8a`
-- `universalApk=true`
-- package/applicationId: `com.termux.rafacodephi`
+## Estado atual
 
-## Estado epistêmico fixo
+| Perfil | Estado | Release |
+|---|---|---|
+| `safe-core` | candidato a `SAFE_CORE_IMPLEMENTATION_CLOSED`, com gate executável | `false` |
+| `functional-distribution` | `BLOCKED` | `false` |
+| `full-platform` | `BLOCKED` / pesquisa aberta | `false` |
 
-- **PROVADO**: evidência executável/CI/local confirma o contrato.
-- **PROVADO ESTRUTURAL**: código/contrato existe e é validável estruturalmente, mas ainda pede execução, benchmark ou device real para produção.
-- **VERSÃO_PUBLICADA**: o major/tag existe na fonte oficial; não prova execução neste repositório.
-- **COMPATÍVEL_DECLARADO**: a política local aceita a referência; não prova sucesso do workflow.
-- **NÃO_EXECUTADO**: não há run conclusivo associado ao commit analisado.
-- **FALHA_SEM_ETAPA**: um run/job foi criado, mas não forneceu steps/logs suficientes para atribuir causa-raiz.
-- **PARCIAL**: parte funciona, mas falta validação de ambiente real ou dependência externa.
-- **TOKEN_VAZIO**: wrapper/ponte/nome existe, mas backend real ainda não foi entregue; é melhor explicitar isso do que simular verdade.
-- **EXPERIMENTAL**: implementação em exploração, sem contrato de release.
-- **FUTURO**: item planejado, não pronto.
+O perfil `safe-core` verifica metadados Android/NDK/ABI, referências de Actions, quarentena do loader, instrumentação RAFAELIA ZERO e presença das fontes canônicas. Ele não exige nem finge prova física.
 
-## Estado CI/Pipeline (2026-07-20)
+## Evolução consolidada em 2026-07-20
 
-- **Correção `checkout@v7 → @v6`**: PROVADO ESTRUTURAL — os 33 arquivos encontrados no inventário da base estão no delta corretivo do PR.
-- **Política de GitHub Actions**: PROVADO ESTRUTURAL — `docs/CI_ACTION_VERSION_POLICY.md` registra majors atuais, compatíveis e limites de inferência.
-- **Auditor de referências**: PROVADO ESTRUTURAL — `scripts/audit_github_actions_refs.py` classifica SHA fixo, major atual, major compatível, major não permitido e referência flutuante.
-- **Workflow de auditoria**: FALHA_SEM_ETAPA/NÃO PROVADO — runs intermediários foram criados, mas não expuseram steps/logs úteis; o HEAD final precisa de execução conclusiva.
-- **actions/checkout**: COMPATÍVEL_DECLARADO — `v6` é o major publicado adotado nas 33 correções; `v4` permanece compatível onde ainda existir por decisão explícita.
-- **actions/upload-artifact**: COMPATÍVEL_DECLARADO — `v7` foi preservado porque é publicado para GitHub.com; compatibilidade GHES/runner deve ser tratada separadamente.
-- **actions/download-artifact**: COMPATÍVEL_DECLARADO — `v8` foi preservado; sua versão não deve ser inferida a partir de `upload-artifact`.
-- **gradle/actions**: COMPATÍVEL_DECLARADO — `v6` foi preservado nos fluxos que já o utilizavam.
-- **apksigner PATH**: PROVADO ESTRUTURAL — os workflows de compatibilidade contêm a configuração; a execução no HEAD deve ser confirmada por run próprio.
-- **RAFAELIA pipeline**: PROVADO ESTRUTURAL/PARCIAL — as fases ψ→χ→ρ→Δ→Σ→Ω foram preservadas e oito referências de checkout foram corrigidas; funcionalidade completa depende de CI, segredos, toolchain e artefatos.
+- PR #288: catálogo e snapshot governado dos sensores Android;
+- PR #289: `checkout@v7` corrigido para `checkout@v6` em 33 workflows e política de referências adicionada;
+- PR #291: core RAFAELIA ZERO RFZ1 integrado ao APK por JNI/DirectByteBuffer;
+- PR #292: probe físico protegido no build debug;
+- PR #293: receipt v2 selado para Android/Termux;
+- PR #296: captura do APK instalado, bundle atômico e matriz ARM32/ARM64;
+- PR #297: loader parcial inseguro bloqueado; stub inerte preservado por quarentena.
 
-## Runtime e bootstrap
+## Verdade Android/NDK
 
-O bootstrap atual fornece uma base mínima guardada para instalação e diagnóstico, mas ainda não equivale a uma distribuição Termux completa com backend apt real.
+- `compileSdkVersion=35`;
+- `targetSdkVersion=28`;
+- `minSdkVersion=21`;
+- `ndkVersion=26.3.11579264`;
+- ABIs obrigatórias: `armeabi-v7a`, `arm64-v8a`;
+- APK universal habilitado;
+- package: `com.termux.rafacodephi`.
 
-- `bin/sh`: existe como wrapper/base mínima quando presente no payload.
-- `bin/pkg`: existe como bridge operacional.
-- `bin/apt` e `bin/apt-get`: dependem de backend real (`apt`, `dpkg`, `libapt`, repositório e certificados) para instalação real.
-- `bin/busybox`: deve delegar para `toybox`/`toolbox` quando possível, ou ser substituído por busybox real.
-- `bin/proot`: precisa de `proot.real` ou equivalente para ser considerado pronto.
+## Núcleo que pode ser encerrado
 
-## Zero-malloc: limite honesto
+Estado esperado após o gate `safe-core`:
 
-Zero-malloc confirmado:
+```text
+build_metadata=PROVEN_STRUCTURAL
+github_action_references=PROVEN_STRUCTURAL
+loader_quarantine=STUB_SAFE_BLOCKED
+rafaelia_zero_instrumentation=PROVEN_STRUCTURAL
+canonical_truth_sources=PROVEN_STRUCTURAL
+state=SAFE_CORE_IMPLEMENTATION_CLOSED
+claim_allowed_scope=true
+release_allowed=false
+```
 
-- RAFAELIA Direct JNI arena.
-- CTI scanner.
-- ZIPRAF manifest quando usado estaticamente.
-- VCPU state kernel.
+Comando:
 
-Não zero-malloc:
+```bash
+python3 tools/validate_system_finalization.py \
+  --profile safe-core \
+  --strict \
+  --write-report
+```
 
-- `baremetal.c` default em matrizes/arena.
-- Java side.
-- `TermuxInstaller`.
-- bootstrap extraction.
+O mesmo gate é chamado por `scripts/verify_rafaelia_native_safety.py`.
 
-## ZIPRAF
+## Bloqueadores da distribuição funcional
 
-ZIPRAF não comprime fisicamente. ZIPRAF cria endereçamento lógico multirresolução sobre bytes existentes. Portanto, a forma correta de documentar é: **1 GB físico pode ser exposto como 264 GB de espaço lógico endereçável, sem aumentar os bytes físicos armazenados.**
+A distribuição não pode ser liberada enquanto qualquer item abaixo permanecer aberto:
 
-## VCPU
+- CI remoto final sem etapas/logs observáveis;
+- assinatura de produção sem recibo de artefato;
+- bundle físico ARM32 ausente;
+- bundle físico ARM64 ausente;
+- matriz dual ARM ausente;
+- `pkg/apt/apt-get/dpkg/libapt/proot` sem rebuild para o prefixo RAFCODEΦ;
+- `LEGACY_PREFIX_BINARY_RISK` no payload candidato;
+- certificados, DNS e repositório sem teste no aparelho;
+- `runtime-lock.json` histórico/incompleto.
 
-Nome técnico atual: **RAFAELIA deterministic VCPU state kernel** / **VCPU telemétrica determinística**. Ainda não é VM completa. Para virar VM completa faltam bytecode, registradores, memória, instruções, loader, executor, syscall table, testes, dump de estado e replay determinístico.
+Estado correto:
 
-## Fonte de verdade (arquivos canônicos)
+```text
+FUNCTIONAL_DISTRIBUTION_RELEASE_CLOSED=false
+release_allowed=false
+```
 
-- Build e versões Android/NDK: `gradle.properties`.
-- Matriz signed/unsigned: `scripts/build_apk_matrix.sh`.
-- Contrato operacional: `docs/RUNTIME_TRUTH_TABLE.md`.
-- Runbook operacional atual: `docs/ENGINEERING_SYSTEM_RUNBOOK.md`.
-- Runbook legado complementar: `docs/ENGINEERING_RUNBOOK_RAFCODEPHI.md`.
-- Visão macro do projeto: `README.md`.
-- Política de versões CI: `docs/CI_ACTION_VERSION_POLICY.md`.
-- Auditor estático: `scripts/audit_github_actions_refs.py`.
-- Workflow de auditoria: `.github/workflows/action-reference-audit.yml`.
-- Índice canônico interativo: `docs/CANONICAL_INDEX.html`.
+## Loader
 
-## Rota mínima para coerência operacional
+O loader atual é aceito apenas como:
 
-Para manter a representação documental fiel ao estado real do repositório, a leitura mínima deve seguir esta ordem:
+```text
+state=STUB_SAFE_BLOCKED
+android:hasCode=false
+installer_behavior=false
+bootstrap_payload=false
+release_allowed=false
+```
 
-1. `README.md` — entrada institucional e contrato público do fork.
-2. `docs/README.md` — hub canônico de navegação e leitura por objetivo.
-3. `docs/ENGINEERING_SYSTEM_RUNBOOK.md` — execução real de build/release/CI.
-4. `docs/RUNTIME_TRUTH_TABLE.md` — verdade operacional detalhada e limites de runtime.
-5. `docs/CI_ACTION_VERSION_POLICY.md` — diferença entre versão publicada, compatibilidade e execução.
-6. `scripts/audit_github_actions_refs.py --strict` — inventário estático determinístico.
-7. Run do workflow `GitHub Actions Reference Audit` associado ao SHA analisado.
-8. `docs/RAFAELIA_CODE_DOC_SYNC.md` e `docs/RAFAELIA_CODE_DOC_SYNC_REPORT.md` — coerência entre narrativa, código, teste e evidência.
-9. `docs/CANONICAL_INDEX.html` — mapa visual do estado corrigido.
+Uma implementação funcional futura só pode substituir o stub quando toda a fronteira host-loader for aceita pelo contrato de segurança e por provas independentes de APK e Android.
 
-Se algum documento divergir do código, do script, do workflow, do log ou do artefato correspondente, a documentação deve ser corrigida ou rebaixada para `PARCIAL`, `NÃO_EXECUTADO`, `FALHA_SEM_ETAPA`, `TOKEN_VAZIO` ou gap explícito.
+## RAFAELIA ZERO e prova física
+
+Implementado estruturalmente:
+
+- core RFZ1 freestanding;
+- integração JNI/DirectByteBuffer;
+- inicialização no app;
+- probe debug protegido;
+- receipt atômico;
+- captura do `base.apk` instalado;
+- manifesto, transcript e hashes;
+- bundle atômico;
+- seleção por papel;
+- matriz ARM32/ARM64 e anti-replay.
+
+Ainda ausente:
+
+```text
+arm32-legacy=TOKEN_VAZIO
+arm64-modern=TOKEN_VAZIO
+dual_arm_matrix=TOKEN_VAZIO
+DEVICE_RECEIPT_COMPLETE=TOKEN_VAZIO
+```
+
+## Pesquisa que não bloqueia o safe-core
+
+- TLS próprio e certificação;
+- compiladores APKC completos;
+- linker geral e backends arbitrários;
+- VCPU promovida a VM completa;
+- loader funcional opcional.
+
+Esses objetivos pertencem ao perfil `full-platform`, não ao encerramento do núcleo seguro.
+
+## Fontes canônicas
+
+1. `gradle.properties`;
+2. `docs/RUNTIME_TRUTH_TABLE.md`;
+3. `docs/FINAL_BUILD_CLOSURE.md`;
+4. `configs/system-finalization-contract.json`;
+5. `tools/validate_system_finalization.py`;
+6. `configs/loader-functional-security-contract.json`;
+7. `reports/RAFAELIA_ZERO_OPERATIONAL_EVIDENCE_BASELINE_20260720.json`;
+8. `runtime-lock.json`.
+
+## Retroalimentação operacional
+
+```text
+F_ok   = núcleo integrado + gates fail-closed + instrumentos físicos
+F_gap  = package stack prefix-safe + dual ARM + signing + CI observável + lock
+F_next = executar #295 nos dois aparelhos e reconstruir a matriz física
+```
