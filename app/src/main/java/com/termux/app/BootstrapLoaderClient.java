@@ -11,7 +11,11 @@ import com.termux.rafacodephi.BuildConfig;
 import com.termux.shared.logger.Logger;
 import com.termux.shared.termux.TermuxConstants;
 
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.net.URL;
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -33,12 +37,13 @@ final class BootstrapLoaderClient {
     private static final String META_CONTRACT_STATE =
             "com.termux.rafacodephi.loader.CONTRACT_STATE";
     private static final Pattern SHA256 = Pattern.compile("^[0-9a-f]{64}$");
+    private static final int MAX_RECEIPT_BYTES = 8192;
 
     private BootstrapLoaderClient() {}
 
     /**
-     * Starts the loader only when the host build pins both URL and SHA-256.
-     * Returns true when control was transferred to the loader.
+     * Starts the loader only when the host build pins URL, SHA-256 and canonical
+     * BLAKE3. Returns true when control was transferred to the loader.
      */
     static boolean requestIfConfigured(Activity activity) {
         if (prefixReady() || acceptedExternalBootstrapExists(activity)) return false;
@@ -53,6 +58,11 @@ final class BootstrapLoaderClient {
         }
         if (url.isEmpty() || !SHA256.matcher(sha256).matches()) {
             throw new IllegalStateException("EXTERNAL_BOOTSTRAP_PIN_INCOMPLETE");
+        }
+        String canonicalBlake3 = BootstrapIntegrityVerifier.expectedHashForCurrentAbi()
+                .toLowerCase(Locale.US);
+        if (!SHA256.matcher(canonicalBlake3).matches()) {
+            throw new IllegalStateException("EXTERNAL_CANONICAL_BLAKE3_NOT_CONFIGURED");
         }
         validateHttpsUrl(url);
         verifyLoaderIdentity(activity);
@@ -75,8 +85,49 @@ final class BootstrapLoaderClient {
 
     private static boolean acceptedExternalBootstrapExists(Activity activity) {
         File inbox = new File(activity.getFilesDir(), "bootstrap-inbox");
-        return new File(inbox, "bootstrap-external.zip").isFile()
-                && new File(inbox, "bootstrap-external.receipt.json").isFile();
+        File zip = new File(inbox, "bootstrap-external.zip");
+        File receipt = new File(inbox, "bootstrap-external.receipt.json");
+        if (!zip.isFile() || !receipt.isFile()) return false;
+        try {
+            JSONObject data = new JSONObject(readBoundedText(receipt));
+            String expectedAbi = currentBootstrapAbi();
+            String expectedBlake3 = BootstrapIntegrityVerifier.expectedHashForCurrentAbi()
+                    .toLowerCase(Locale.US);
+            boolean valid = "termux.rafacodephi.bootstrap_handoff_receipt.v1".equals(
+                            data.optString("schema"))
+                    && "HOST_ACCEPTED_CANONICAL_BOOTSTRAP".equals(data.optString("state"))
+                    && expectedAbi.equals(data.optString("abi"))
+                    && SHA256.matcher(expectedBlake3).matches()
+                    && expectedBlake3.equals(data.optString("blake3").toLowerCase(Locale.US))
+                    && data.optLong("bytes", -1L) == zip.length()
+                    && !data.optBoolean("claim_allowed", true);
+            if (valid) return true;
+        } catch (Throwable t) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Discarding stale bootstrap inbox", t);
+        }
+        deleteQuietly(zip);
+        deleteQuietly(receipt);
+        return false;
+    }
+
+    private static String readBoundedText(File file) throws Exception {
+        if (file.length() < 1 || file.length() > MAX_RECEIPT_BYTES) {
+            throw new IllegalArgumentException("RECEIPT_SIZE_INVALID");
+        }
+        try (FileInputStream input = new FileInputStream(file);
+             ByteArrayOutputStream output = new ByteArrayOutputStream((int) file.length())) {
+            byte[] buffer = new byte[1024];
+            int total = 0;
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                total += read;
+                if (total > MAX_RECEIPT_BYTES) {
+                    throw new IllegalArgumentException("RECEIPT_SIZE_LIMIT_EXCEEDED");
+                }
+                output.write(buffer, 0, read);
+            }
+            return output.toString("UTF-8");
+        }
     }
 
     private static void verifyLoaderIdentity(Activity activity) {
@@ -148,6 +199,12 @@ final class BootstrapLoaderClient {
             case "i686": return BuildConfig.EXTERNAL_BOOTSTRAP_SHA256_I686;
             case "x86_64": return BuildConfig.EXTERNAL_BOOTSTRAP_SHA256_X86_64;
             default: throw new IllegalArgumentException("UNSUPPORTED_ABI");
+        }
+    }
+
+    private static void deleteQuietly(File file) {
+        if (file.exists() && !file.delete()) {
+            Logger.logWarn(LOG_TAG, "Could not delete stale bootstrap file: " + file);
         }
     }
 }
