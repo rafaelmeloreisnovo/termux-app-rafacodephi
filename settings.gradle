@@ -1,1 +1,3 @@
-include ':app', ':termux-shared', ':terminal-emulator', ':terminal-view', ':rafaelia', ':rmr'
+include ':app', ':termux-shared', ':terminal-emulator', ':terminal-view', ':rafaelia', ':rmr', ':loader'
+
+project(':loader').projectDir = file('app/loader')

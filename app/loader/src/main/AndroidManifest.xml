@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="false"
+        android:debuggable="false"
+        android:hasCode="false"
+        android:label="RAFCODEΦ Loader Stub"
+        android:supportsRtl="true">
+
+        <meta-data
+            android:name="com.termux.rafacodephi.loader.CONTRACT_VERSION"
+            android:value="1" />
+        <meta-data
+            android:name="com.termux.rafacodephi.loader.CONTRACT_STATE"
+            android:value="STUB_NO_BOOTSTRAP_PAYLOAD" />
+        <meta-data
+            android:name="com.termux.rafacodephi.loader.TARGET_PACKAGE"
+            android:value="com.termux.rafacodephi" />
+    </application>
+
+</manifest>

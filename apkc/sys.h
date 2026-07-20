@@ -1,5 +1,6 @@
 /* sys.h — freestanding syscall layer: arm64 / arm32 Android/Linux
- * svc #0 (arm64) / swi #0 (arm32). No libc. No crt. Pure inline ASM. */
+ * svc #0 (arm64) / swi #0 (arm32). No libc in production.
+ * RAF_APKC_HOST_TEST exposes a hosted adapter strictly for contract tests. */
 #pragma once
 
 typedef unsigned char       u8;
@@ -10,16 +11,13 @@ typedef signed char         i8;
 typedef signed short        i16;
 typedef signed int          i32;
 typedef signed long long    i64;
-#ifdef __aarch64__
-typedef unsigned long       uptr;
-typedef long                iptr;
-#else
-typedef unsigned int        uptr;
-typedef int                 iptr;
-#endif
+typedef __UINTPTR_TYPE__    uptr;
+typedef __INTPTR_TYPE__     iptr;
 typedef __SIZE_TYPE__       sz;
 
+#ifndef NULL
 #define NULL ((void*)0)
+#endif
 
 /* open(2) flags */
 #define O_RDONLY  0x00
@@ -29,8 +27,36 @@ typedef __SIZE_TYPE__       sz;
 #define O_TRUNC   0x200
 #define O_CLOEXEC 0x80000
 
+/* ═════════════════ HOST CONTRACT TESTS ════════════════════════════════════ */
+#if defined(RAF_APKC_HOST_TEST)
+
+/* Deliberately avoid pulling libc headers into production headers. These
+ * declarations are used only by host-side tests linked by the normal C driver. */
+extern long read(int fd, void *buf, unsigned long count);
+extern long write(int fd, const void *buf, unsigned long count);
+extern int open(const char *path, int flags, ...);
+extern int close(int fd);
+extern void _exit(int status);
+
+static inline i64 os_read(i32 fd, void *b, sz n) {
+    return (i64)read(fd, b, (unsigned long)n);
+}
+static inline i64 os_write(i32 fd, const void *b, sz n) {
+    return (i64)write(fd, b, (unsigned long)n);
+}
+static inline i32 os_open(const char *p, i32 f, i32 m) {
+    return (i32)open(p, f, m);
+}
+static inline i32 os_close(i32 fd) {
+    return (i32)close(fd);
+}
+static inline __attribute__((noreturn)) void os_exit(i32 c) {
+    _exit(c);
+    __builtin_unreachable();
+}
+
 /* ═══════════════════════════ ARM64 ════════════════════════════════════════ */
-#ifdef __aarch64__
+#elif defined(__aarch64__)
 
 #define _NR_read    63
 #define _NR_write   64
@@ -67,16 +93,25 @@ _sc4(i64 n, i64 a, i64 b, i64 c, i64 d) {
     return x0;
 }
 
-static inline i64  os_read (i32 fd, void *b, sz n)       { return _sc3(_NR_read, (i64)fd,(i64)(uptr)b,(i64)n); }
-static inline i64  os_write(i32 fd, const void *b, sz n) { return _sc3(_NR_write,(i64)fd,(i64)(uptr)b,(i64)n); }
-static inline i32  os_open (const char *p, i32 f, i32 m) { return (i32)_sc4(_NR_openat,-100LL,(i64)(uptr)p,(i64)f,(i64)m); }
-static inline i32  os_close(i32 fd)                      { return (i32)_sc1(_NR_close,(i64)fd); }
+static inline i64 os_read(i32 fd, void *b, sz n) {
+    return _sc3(_NR_read, (i64)fd, (i64)(uptr)b, (i64)n);
+}
+static inline i64 os_write(i32 fd, const void *b, sz n) {
+    return _sc3(_NR_write, (i64)fd, (i64)(uptr)b, (i64)n);
+}
+static inline i32 os_open(const char *p, i32 f, i32 m) {
+    return (i32)_sc4(_NR_openat, -100LL, (i64)(uptr)p, (i64)f, (i64)m);
+}
+static inline i32 os_close(i32 fd) {
+    return (i32)_sc1(_NR_close, (i64)fd);
+}
 static inline __attribute__((noreturn)) void os_exit(i32 c) {
-    _sc1(_NR_exit,(i64)c); __builtin_unreachable();
+    _sc1(_NR_exit, (i64)c);
+    __builtin_unreachable();
 }
 
 /* ═══════════════════════════ ARM32 ════════════════════════════════════════ */
-#else
+#elif defined(__arm__)
 
 #define _NR_exit   1
 #define _NR_read   3
@@ -102,11 +137,23 @@ _sc3_32(i32 n, i32 a, i32 b, i32 c) {
     return r0;
 }
 
-static inline i32  os_read (i32 fd, void *b, sz n)       { return _sc3_32(_NR_read, fd,(i32)(uptr)b,(i32)n); }
-static inline i32  os_write(i32 fd, const void *b, sz n) { return _sc3_32(_NR_write,fd,(i32)(uptr)b,(i32)n); }
-static inline i32  os_open (const char *p, i32 f, i32 m) { return _sc3_32(_NR_open,(i32)(uptr)p,f,m); }
-static inline i32  os_close(i32 fd)                      { return _sc1_32(_NR_close,fd); }
-static inline __attribute__((noreturn)) void os_exit(i32 c) {
-    _sc1_32(_NR_exit,c); __builtin_unreachable();
+static inline i32 os_read(i32 fd, void *b, sz n) {
+    return _sc3_32(_NR_read, fd, (i32)(uptr)b, (i32)n);
 }
+static inline i32 os_write(i32 fd, const void *b, sz n) {
+    return _sc3_32(_NR_write, fd, (i32)(uptr)b, (i32)n);
+}
+static inline i32 os_open(const char *p, i32 f, i32 m) {
+    return _sc3_32(_NR_open, (i32)(uptr)p, f, m);
+}
+static inline i32 os_close(i32 fd) {
+    return _sc1_32(_NR_close, fd);
+}
+static inline __attribute__((noreturn)) void os_exit(i32 c) {
+    _sc1_32(_NR_exit, c);
+    __builtin_unreachable();
+}
+
+#else
+#error "APKC production syscall layer supports only ARM32/ARM64; define RAF_APKC_HOST_TEST for hosted contract tests"
 #endif

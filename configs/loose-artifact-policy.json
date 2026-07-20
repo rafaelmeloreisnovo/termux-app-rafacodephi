@@ -1,0 +1,40 @@
+{
+  "schema": "raf.loose-artifact-policy.v1",
+  "scan_roots": ["Arme", "BugOrAdd", "rafaelia/old"],
+  "scan_root_files": true,
+  "root_extensions": [".txt", ".md", ".html", ".json", ".yaml", ".yml", ".c", ".h", ".s", ".S", ".sh", ".py"],
+  "root_exclusions": [
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "CODE_OF_CONDUCT.md",
+    "AGENTS.md",
+    "Browser.sh"
+  ],
+  "skip_directories": [".git", ".gradle", "build", ".idea", "node_modules", "__pycache__"],
+  "status_default": "REVIEW_REQUIRED",
+  "states": [
+    "REVIEW_REQUIRED",
+    "CANDIDATE_SOURCE",
+    "CANDIDATE_DOCUMENT",
+    "HISTORICAL",
+    "DUPLICATE_CONTENT",
+    "QUARANTINE",
+    "CANONICAL"
+  ],
+  "targets": {
+    "c_source": "apkc/candidates-or-archive",
+    "asm_source": "docs/lowlevel-index-or-native-candidate",
+    "script": "scripts/candidates-or-archive",
+    "document": "docs/recovered",
+    "data": "configs/recovered",
+    "unknown": "archive/quarantine"
+  },
+  "invariant": "INDEXING_DOES_NOT_PROMOTE_TO_BUILD_OR_RUNTIME",
+  "automatic_move": false,
+  "automatic_delete": false,
+  "automatic_claim_promotion": false
+}

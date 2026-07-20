@@ -51,6 +51,18 @@ jobs:
           echo "arm64=$ARM64_APK" >> "$GITHUB_OUTPUT"
           echo "universal=$UNIVERSAL_APK" >> "$GITHUB_OUTPUT"
 
+      - name: Resolve apksigner path
+        run: |
+          APKSIGNER=$(find "${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}/build-tools" \
+            -name 'apksigner' -type f 2>/dev/null | sort -rV | head -1)
+          if [ -z "$APKSIGNER" ]; then
+            sdkmanager --install "build-tools;35.0.1" >/dev/null 2>&1 || true
+            APKSIGNER=$(find "${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}/build-tools" \
+              -name 'apksigner' -type f 2>/dev/null | sort -rV | head -1)
+          fi
+          test -n "$APKSIGNER" || { echo "apksigner not found after install attempt" >&2; exit 1; }
+          echo "APKSIGNER=$APKSIGNER" >> "$GITHUB_ENV"
+
       - name: Generate ARM32 compatibility report
         run: |
           mkdir -p dist/arm32-compatibility
@@ -62,7 +74,7 @@ jobs:
           unzip -p "${{ steps.apks.outputs.arm32 }}" "$lib_path" > /tmp/arm32-lib.so
           readelf -h /tmp/arm32-lib.so > dist/arm32-compatibility/readelf-arm32.txt
           readelf -A /tmp/arm32-lib.so >> dist/arm32-compatibility/readelf-arm32.txt
-          apksigner verify --verbose "${{ steps.apks.outputs.arm32 }}" | tee dist/arm32-compatibility/apk-signature.txt
+          "$APKSIGNER" verify --verbose "${{ steps.apks.outputs.arm32 }}" | tee dist/arm32-compatibility/apk-signature.txt
 
       - name: Enforce compatibility gates
         run: |

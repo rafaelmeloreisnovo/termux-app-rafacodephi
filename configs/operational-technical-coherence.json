@@ -1,0 +1,136 @@
+{
+  "schema": "raf.operational-technical-coherence.v1",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "principle": "SOURCE_PRESENT != INTEGRATED != BUILT != RUNTIME_PROVEN != CERTIFIED",
+  "automatic_claim_promotion": false,
+  "states": [
+    "PROVEN_CI",
+    "VERIFIED_HOST",
+    "IMPLEMENTED_UNPROVEN_RUNTIME",
+    "STRUCTURAL_PRIMITIVE",
+    "PROTOTYPE_FAIL_CLOSED_REQUIRED",
+    "STUB",
+    "DOCUMENT_ONLY",
+    "HISTORICAL_OR_LOOSE",
+    "TOKEN_VAZIO",
+    "BLOCKED"
+  ],
+  "components": [
+    {
+      "id": "android.apk.arm32.pipeline",
+      "path": "app/",
+      "state": "PROVEN_CI",
+      "scope": "ARM32, ARM64 and universal debug APK construction, ELF presence and signature checks",
+      "evidence": ["PR-282", "run-29695525477", "run-29695525491"],
+      "claim_allowed": true,
+      "limitations": ["physical-device execution remains TOKEN_VAZIO", "release signing is not production signing"]
+    },
+    {
+      "id": "apkc.dex.minimal",
+      "path": "apkc/fmt_dex.h",
+      "state": "VERIFIED_HOST",
+      "scope": "DEX 035 structural container with header and map_list, no class definitions",
+      "evidence": ["scripts/validate_apkc_dex_contract.py", "tests/native/apkc_emit_minimal_dex.c"],
+      "claim_allowed": true,
+      "limitations": ["not a Java compiler", "not a Kotlin compiler", "not a functional Android application"]
+    },
+    {
+      "id": "apkc.language.routing",
+      "path": "apkc/",
+      "state": "STRUCTURAL_PRIMITIVE",
+      "scope": "language classification, routing and minimal emission primitives",
+      "evidence": ["source-tree"],
+      "claim_allowed": false,
+      "limitations": ["language profile is not equivalent to a complete compiler frontend/backend"]
+    },
+    {
+      "id": "apkc.elf.custom-emitter",
+      "path": "apkc/",
+      "state": "TOKEN_VAZIO",
+      "scope": "custom ELF writer independent of the Android NDK linker",
+      "evidence": [],
+      "claim_allowed": false,
+      "limitations": ["NDK-produced ELF libraries do not prove a custom ELF emitter"]
+    },
+    {
+      "id": "browser.http.textmode",
+      "path": "Browser.sh",
+      "state": "IMPLEMENTED_UNPROVEN_RUNTIME",
+      "scope": "freestanding syscall-oriented HTTP/1.1 text-mode prototype",
+      "evidence": ["source-tree"],
+      "claim_allowed": false,
+      "limitations": ["DNS, HTTP parsing and device execution require dedicated reproducible tests"]
+    },
+    {
+      "id": "browser.https.failclosed.materializer",
+      "path": "scripts/materialize_browser_fail_closed.py",
+      "state": "VERIFIED_HOST",
+      "scope": "canonical materialization removes the known HTTPS-to-HTTP downgrade and terminates with an explicit TLS error",
+      "evidence": ["scripts/validate_browser_fail_closed.py", "Rafaelia Native Safety"],
+      "claim_allowed": true,
+      "limitations": [
+        "does not implement TLS 1.2 or TLS 1.3",
+        "does not validate certificates",
+        "raw Browser.sh remains a historical prototype generator and is not the canonical build entrypoint"
+      ]
+    },
+    {
+      "id": "browser.tls13",
+      "path": "Browser.sh",
+      "state": "PROTOTYPE_FAIL_CLOSED_REQUIRED",
+      "scope": "ClientHello construction and record-header parsing only",
+      "evidence": ["Browser.sh:br_tls.h", "Browser.sh:DO_FETCH", "scripts/materialize_browser_fail_closed.py"],
+      "claim_allowed": false,
+      "limitations": [
+        "no cryptographically secure client random",
+        "no key_share payload",
+        "no X25519 shared secret",
+        "no HKDF key schedule",
+        "no AEAD record protection",
+        "no certificate-chain validation",
+        "no Finished verification",
+        "canonical materialization fails closed; TLS functionality remains absent"
+      ]
+    },
+    {
+      "id": "browser.tls12",
+      "path": "Browser.sh",
+      "state": "DOCUMENT_ONLY",
+      "scope": "TLS 1.2 appears only as legacy wire-version constants/fields",
+      "evidence": ["Browser.sh:TLS_VER_12"],
+      "claim_allowed": false,
+      "limitations": ["no TLS 1.2 handshake or cipher implementation"]
+    },
+    {
+      "id": "browser.tls.certification",
+      "path": "TOKEN_VAZIO",
+      "state": "TOKEN_VAZIO",
+      "scope": "external TLS protocol/certificate conformance certification",
+      "evidence": [],
+      "claim_allowed": false,
+      "limitations": ["source comments, build success and self-tests are not certification"]
+    },
+    {
+      "id": "loader.apk",
+      "path": "app/loader/",
+      "state": "STUB",
+      "scope": "signed structural loader APK without bootstrap installation payload",
+      "evidence": ["PR-282", "run-29695934190"],
+      "claim_allowed": true,
+      "limitations": ["STUB_NO_BOOTSTRAP_PAYLOAD", "not a functional installer"]
+    },
+    {
+      "id": "documents.loose.corpus",
+      "path": "Arme/, BugOrAdd/, rafaelia/old/, root-level *.txt/*.md",
+      "state": "HISTORICAL_OR_LOOSE",
+      "scope": "documents and source fragments outside canonical build paths",
+      "evidence": ["repository-tree"],
+      "claim_allowed": false,
+      "limitations": ["presence does not establish integration", "must be indexed with origin, status and target"]
+    }
+  ],
+  "release_invariant": {
+    "expression": "BUILD && TESTS && LICENSE && SBOM && ARTIFACT_HASH && DEVICE_SMOKE && RUNTIME_EVIDENCE",
+    "current_result": false
+  }
+}

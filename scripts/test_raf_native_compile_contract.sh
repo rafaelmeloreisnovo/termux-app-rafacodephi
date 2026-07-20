@@ -6,7 +6,25 @@ CC_BIN="${CC:-cc}"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-"$CC_BIN" \
+run_gate() {
+  local name="$1"
+  shift
+  local log="$TMP/${name}.log"
+  echo "::group::${name}"
+  if "$@" >"$log" 2>&1; then
+    echo "${name}: PASS"
+    echo "::endgroup::"
+    return 0
+  fi
+  local rc=$?
+  echo "::error title=${name} failed::exit_code=${rc}"
+  cat "$log"
+  echo "::endgroup::"
+  return "$rc"
+}
+
+run_gate compile_numbase \
+  "$CC_BIN" \
   -std=c11 -Wall -Wextra -Werror -Os \
   -fno-common -ffunction-sections -fdata-sections \
   -I"$ROOT/rafaelia/src/main/cpp" \
@@ -15,7 +33,8 @@ trap 'rm -rf "$TMP"' EXIT
   -Wl,--gc-sections -lm \
   -o "$TMP/test_raf_numbase"
 
-"$CC_BIN" \
+run_gate compile_ecc32_compact \
+  "$CC_BIN" \
   -std=c11 -Wall -Wextra -Werror -Os \
   -DRAF_ECC32_FORCE_COMPACT=1 \
   -fno-common -ffunction-sections -fdata-sections \
@@ -24,7 +43,8 @@ trap 'rm -rf "$TMP"' EXIT
   -Wl,--gc-sections \
   -o "$TMP/test_raf_ecc32_compact"
 
-"$CC_BIN" \
+run_gate compile_ecc32_unrolled \
+  "$CC_BIN" \
   -std=c11 -Wall -Wextra -Werror -O2 \
   -DRAF_ECC32_FORCE_UNROLL=1 \
   -fno-common -ffunction-sections -fdata-sections \
@@ -33,10 +53,34 @@ trap 'rm -rf "$TMP"' EXIT
   -Wl,--gc-sections \
   -o "$TMP/test_raf_ecc32_unrolled"
 
-"$TMP/test_raf_numbase"
-"$TMP/test_raf_ecc32_compact"
-"$TMP/test_raf_ecc32_unrolled"
-python3 "$ROOT/scripts/validate_raf_native_gc_contract.py"
-python3 "$ROOT/tests/test_raf_compile_warning_contract.py"
+# APKC's production syscall layer remains ARM-only. The test source explicitly
+# enables RAF_APKC_HOST_TEST and emits a structural DEX for independent checks.
+run_gate compile_apkc_dex_emitter \
+  "$CC_BIN" \
+  -std=c11 -Wall -Wextra -Werror -Os \
+  -Wno-error=unused-function -Wno-error=unused-variable \
+  -fno-common -ffunction-sections -fdata-sections \
+  -I"$ROOT/apkc" \
+  "$ROOT/tests/native/apkc_emit_minimal_dex.c" \
+  -Wl,--gc-sections \
+  -o "$TMP/apkc_emit_minimal_dex"
+
+run_gate test_numbase "$TMP/test_raf_numbase"
+run_gate test_ecc32_compact "$TMP/test_raf_ecc32_compact"
+run_gate test_ecc32_unrolled "$TMP/test_raf_ecc32_unrolled"
+run_gate emit_apkc_dex "$TMP/apkc_emit_minimal_dex" "$TMP/classes.dex"
+
+run_gate validate_apkc_dex \
+  python3 "$ROOT/scripts/validate_apkc_dex_contract.py" "$TMP/classes.dex" --pretty
+run_gate validate_operational_coherence \
+  python3 "$ROOT/scripts/validate_operational_technical_coherence.py"
+run_gate validate_browser_fail_closed \
+  python3 "$ROOT/scripts/validate_browser_fail_closed.py"
+run_gate index_loose_artifacts \
+  python3 "$ROOT/scripts/index_loose_operational_artifacts.py" --validate --summary
+run_gate validate_native_gc \
+  python3 "$ROOT/scripts/validate_raf_native_gc_contract.py"
+run_gate test_warning_contract \
+  python3 "$ROOT/tests/test_raf_compile_warning_contract.py"
 
 echo "RAFCODE-Phi native compile contract: PASS"
