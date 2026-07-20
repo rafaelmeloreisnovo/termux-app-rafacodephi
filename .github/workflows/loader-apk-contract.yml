@@ -5,6 +5,17 @@ on:
   pull_request:
     paths:
       - 'app/loader/**'
+      - 'app/src/main/AndroidManifest.xml'
+      - 'app/src/main/java/com/termux/app/BootstrapGateActivity.java'
+      - 'app/src/main/java/com/termux/app/BootstrapLoaderClient.java'
+      - 'app/src/main/java/com/termux/app/BootstrapHandoffReceiver.java'
+      - 'app/src/main/java/com/termux/app/BootstrapIntegrityVerifier.java'
+      - 'app/src/main/cpp/termux-bootstrap.c'
+      - 'gradle/bootstrap-external.gradle'
+      - 'configs/loader-functional-security-contract.json'
+      - 'tools/validate_loader_functional_security.py'
+      - 'tests/test_loader_functional_security.py'
+      - 'docs/security/LOADER_FUNCTIONAL_QUARANTINE.md'
       - 'settings.gradle'
       - 'gradle.properties'
       - 'scripts/find_android_sdk_tool.sh'
@@ -14,13 +25,29 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: loader-contract-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   loader-apk-contract:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Validate loader functional quarantine
+        run: |
+          python3 -m py_compile tools/validate_loader_functional_security.py
+          python3 -m py_compile tests/test_loader_functional_security.py
+          python3 -m unittest tests/test_loader_functional_security.py -v
+          mkdir -p dist/loader
+          python3 tools/validate_loader_functional_security.py \
+            --strict --write-report
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -47,6 +74,7 @@ jobs:
           name: termux-rafcodephi-loader-stub-${{ github.sha }}
           path: app/loader/build/dist/loader.apk
           if-no-files-found: warn
+          retention-days: 30
 
       - name: Upload loader contract diagnostics
         if: always()
@@ -54,6 +82,9 @@ jobs:
         with:
           name: termux-rafcodephi-loader-contract-${{ github.sha }}
           path: |
+            dist/loader/loader-functional-security.json
             dist/loader/loader-contract.txt
             dist/loader/loader-badging.txt
+            dist/loader/loader-manifest-tree.txt
           if-no-files-found: warn
+          retention-days: 30
