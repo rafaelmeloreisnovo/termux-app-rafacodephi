@@ -1,0 +1,69 @@
+{
+  "schema": "raf.apkc-dex-capability.v1",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "automatic_claim_promotion": false,
+  "contracts": [
+    {
+      "id": "empty-structural-dex035",
+      "state": "VERIFIED_HOST",
+      "scope": "header and map_list with no class definitions",
+      "producer": "apkc/fmt_dex.h",
+      "fixture": "tests/native/apkc_emit_minimal_dex.c",
+      "validator": "scripts/validate_apkc_dex_contract.py",
+      "claim_allowed": true
+    },
+    {
+      "id": "one-class-return-void-dex035",
+      "state": "VERIFIED_HOST",
+      "scope": "Lraf/apkc/Stub; with public static run()V containing one return-void code unit",
+      "producer": "apkc/fmt_dex_one_class.h",
+      "fixture": "tests/native/apkc_emit_one_class_dex.c",
+      "validator": "scripts/validate_apkc_one_class_dex.py",
+      "claim_allowed": true,
+      "fixed_layout": {
+        "file_size": 392,
+        "strings": 4,
+        "types": 3,
+        "prototypes": 1,
+        "methods": 1,
+        "classes": 1,
+        "code_units": 1,
+        "map_items": 10
+      }
+    },
+    {
+      "id": "arbitrary-dex-backend",
+      "state": "TOKEN_VAZIO",
+      "scope": "arbitrary pools, classes, fields, methods, instructions, branches, exceptions, annotations and debug information",
+      "evidence": [],
+      "claim_allowed": false
+    },
+    {
+      "id": "multidex-merge",
+      "state": "TOKEN_VAZIO",
+      "scope": "multiple input DEX files, reference-budget partitioning and merge verification",
+      "evidence": [],
+      "claim_allowed": false
+    },
+    {
+      "id": "art-dalvik-runtime",
+      "state": "TOKEN_VAZIO",
+      "scope": "target Android verifier acceptance and method execution",
+      "evidence": [],
+      "claim_allowed": false
+    },
+    {
+      "id": "java-kotlin-compiler",
+      "state": "TOKEN_VAZIO",
+      "scope": "source frontend, semantic analysis, IR and general DEX backend",
+      "evidence": [],
+      "claim_allowed": false
+    }
+  ],
+  "invariants": [
+    "ONE_FIXED_CLASS != ARBITRARY_DEX_BACKEND",
+    "DEX_CODE_ITEM != JAVA_OR_KOTLIN_COMPILER",
+    "HOST_VALIDATION != ART_DALVIK_RUNTIME"
+  ],
+  "release_allowed": false
+}
