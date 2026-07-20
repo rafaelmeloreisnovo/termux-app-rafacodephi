@@ -16,6 +16,8 @@ allprojects {
     }
 }
 
+apply from: "$rootDir/gradle/bootstrap-external.gradle"
+
 tasks.register("verifyReleaseContract", Exec) {
     group = "verification"
     description = "Validates release APK contract for official/internal CI tracks."
