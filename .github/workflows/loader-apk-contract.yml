@@ -1,26 +1,41 @@
-name: Loader APK Contract
+name: Loader APK Secure Handoff Contract
 
 on:
   workflow_dispatch:
   pull_request:
     paths:
       - 'app/loader/**'
+      - 'app/src/main/AndroidManifest.xml'
+      - 'app/src/main/java/com/termux/app/BootstrapGateActivity.java'
+      - 'app/src/main/java/com/termux/app/BootstrapLoaderClient.java'
+      - 'app/src/main/java/com/termux/app/BootstrapHandoffReceiver.java'
+      - 'app/src/main/java/com/termux/app/BootstrapIntegrityVerifier.java'
+      - 'app/src/main/cpp/termux-bootstrap.c'
+      - 'gradle/bootstrap-external.gradle'
+      - 'build.gradle'
       - 'settings.gradle'
-      - 'gradle.properties'
-      - 'scripts/find_android_sdk_tool.sh'
-      - 'scripts/verify_loader_apk.sh'
+      - 'tools/validate_loader_secure_handoff.py'
+      - 'tools/verify_loader_artifacts.py'
+      - 'tests/test_loader_secure_handoff_contract.py'
+      - 'docs/audits/LOADER_SECURE_HANDOFF_V2.md'
       - '.github/workflows/loader-apk-contract.yml'
 
 permissions:
   contents: read
 
+concurrency:
+  group: loader-secure-handoff-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   loader-apk-contract:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -28,32 +43,66 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Setup Android SDK/NDK
+      - name: Validate source security contract
+        run: |
+          python3 -m py_compile tools/validate_loader_secure_handoff.py
+          python3 -m py_compile tools/verify_loader_artifacts.py
+          python3 -m py_compile tests/test_loader_secure_handoff_contract.py
+          python3 -m unittest tests/test_loader_secure_handoff_contract.py -v
+          mkdir -p dist/loader
+          python3 tools/validate_loader_secure_handoff.py \
+            --write-report dist/loader/loader-secure-handoff-validation.json
+
+      - name: Setup Android SDK and NDK
         run: ./scripts/setup_android_toolchain.sh
 
-      - name: Build loader APK
-        run: ./gradlew :loader:materializeLoaderApk --no-daemon
-
-      - name: Verify loader APK contract
+      - name: Build host and loader APKs
         run: |
-          bash scripts/verify_loader_apk.sh \
-            app/loader/build/dist/loader.apk \
-            dist/loader/loader-contract.txt
+          ./gradlew :app:assembleDebug :loader:materializeLoaderApk --no-daemon
+          mkdir -p dist/loader
+          host_apk="$(find app/build/outputs/apk -type f -name '*debug*universal*.apk' | sort | head -n1)"
+          if [[ -z "${host_apk}" ]]; then
+            host_apk="$(find app/build/outputs/apk -type f -name '*debug*.apk' | sort | head -n1)"
+          fi
+          test -n "${host_apk}"
+          cp "${host_apk}" dist/loader/host-debug.apk
+          cp app/loader/build/dist/loader.apk dist/loader/loader.apk
+          sha256sum dist/loader/host-debug.apk dist/loader/loader.apk > dist/loader/APK_SHA256SUMS
+          sha256sum -c dist/loader/APK_SHA256SUMS
+
+      - name: Verify functional loader and matching signer
+        run: |
+          python3 tools/verify_loader_artifacts.py \
+            --loader dist/loader/loader.apk \
+            --host dist/loader/host-debug.apk \
+            --write-report dist/loader/loader-artifact-verification.json
 
       - name: Upload loader APK
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: termux-rafcodephi-loader-stub-${{ github.sha }}
-          path: app/loader/build/dist/loader.apk
-          if-no-files-found: warn
+          name: termux-rafcodephi-loader-secure-${{ github.sha }}
+          path: dist/loader/loader.apk
+          if-no-files-found: error
+          retention-days: 30
 
-      - name: Upload loader contract diagnostics
+      - name: Upload host debug APK
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: termux-rafcodephi-loader-contract-${{ github.sha }}
+          name: termux-rafcodephi-host-debug-${{ github.sha }}
+          path: dist/loader/host-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload loader security evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: termux-rafcodephi-loader-security-${{ github.sha }}
           path: |
-            dist/loader/loader-contract.txt
-            dist/loader/loader-badging.txt
-          if-no-files-found: warn
+            dist/loader/loader-secure-handoff-validation.json
+            dist/loader/loader-artifact-verification.json
+            dist/loader/APK_SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
