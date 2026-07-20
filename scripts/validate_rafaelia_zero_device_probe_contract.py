@@ -18,6 +18,7 @@ RECEIPT_VALIDATOR = ROOT / "scripts/validate_rafaelia_zero_device_receipt.py"
 BUNDLE_BUILDER = ROOT / "scripts/create_rafaelia_zero_device_bundle.py"
 BUNDLE_VALIDATOR = ROOT / "scripts/validate_rafaelia_zero_device_bundle.py"
 MATRIX_VALIDATOR = ROOT / "scripts/validate_rafaelia_zero_device_matrix.py"
+MATRIX_REBUILDER = ROOT / "scripts/rebuild_rafaelia_zero_device_matrix.py"
 PROBE_CONTRACT = ROOT / "configs/rafaelia-zero-device-probe-contract.json"
 EVIDENCE_CONTRACT = ROOT / "configs/rafaelia-zero-operational-evidence-contract.json"
 
@@ -46,6 +47,7 @@ def main() -> int:
         BUNDLE_BUILDER,
         BUNDLE_VALIDATOR,
         MATRIX_VALIDATOR,
+        MATRIX_REBUILDER,
         PROBE_CONTRACT,
         EVIDENCE_CONTRACT,
     )
@@ -59,6 +61,7 @@ def main() -> int:
     runner = RUNNER.read_text(encoding="utf-8")
     builder_text = BUNDLE_BUILDER.read_text(encoding="utf-8")
     matrix_text = MATRIX_VALIDATOR.read_text(encoding="utf-8")
+    rebuilder_text = MATRIX_REBUILDER.read_text(encoding="utf-8")
     probe_contract = json.loads(PROBE_CONTRACT.read_text(encoding="utf-8"))
     evidence_contract = json.loads(EVIDENCE_CONTRACT.read_text(encoding="utf-8"))
 
@@ -82,14 +85,14 @@ def main() -> int:
         "validate_rafaelia_zero_device_receipt.py",
         "create_rafaelia_zero_device_bundle.py",
         "validate_rafaelia_zero_device_bundle.py",
-        "validate_rafaelia_zero_device_matrix.py",
+        "rebuild_rafaelia_zero_device_matrix.py",
         "capture.json",
         "transcript.txt",
         "apk.bin",
         "receipt_sha256=",
         "apk_sha256=",
-        "selected-${ROLE}.txt",
-        "selected-${selected_role}.txt",
+        "input_installed_apk_hash_match=PASS",
+        "expected exactly one installed APK path",
         "RAFAELIA_ZERO_OPERATIONAL_EVIDENCE=PASS",
     )
     for token in runner_requirements:
@@ -105,6 +108,12 @@ def main() -> int:
             "bundle builder must bind transcript to receipt and APK hashes")
     require("os.replace(temporary, path)" in matrix_text,
             "matrix validator must publish output atomically")
+    require("one-validated-bundle-per-role" in rebuilder_text,
+            "matrix rebuilder selection policy missing")
+    require("direct child of evidence root" in rebuilder_text,
+            "matrix rebuilder path boundary missing")
+    require("selection pointer symlink is forbidden" in rebuilder_text,
+            "matrix rebuilder symlink rejection missing")
 
     require(probe_contract.get("schema") == "rafaelia.zero.device-probe-contract.v1",
             "unexpected probe contract schema")
@@ -128,6 +137,7 @@ def main() -> int:
 
     require(evidence_contract.get("schema") == "rafaelia.zero.operational-evidence-contract.v1",
             "unexpected operational evidence contract schema")
+    authority = evidence_contract.get("authority", {})
     bundle = evidence_contract.get("bundle", {})
     publication = evidence_contract.get("publication", {})
     selection = evidence_contract.get("selection", {})
@@ -135,6 +145,8 @@ def main() -> int:
     targets = evidence_contract.get("required_targets", {})
     matrix_promotion = evidence_contract.get("promotion", {})
     current_state = evidence_contract.get("current_state", {})
+    require(authority.get("matrix_rebuilder") == "scripts/rebuild_rafaelia_zero_device_matrix.py",
+            "matrix rebuilder authority mismatch")
     require(bundle.get("schema") == "rafaelia.zero.device.evidence-bundle.v1",
             "evidence bundle schema mismatch")
     require(bundle.get("digest") == "sha256", "bundle digest must be sha256")
@@ -149,12 +161,20 @@ def main() -> int:
             "selection pointer publication mismatch")
     require(selection.get("policy") == "one-validated-bundle-per-role",
             "selection policy mismatch")
+    require(selection.get("pointer_payload") == "direct-child-bundle-name-only",
+            "selection pointer payload mismatch")
     require(selection.get("history_preserved") is True,
             "selection policy must preserve historical bundles")
     require(selection.get("matrix_reads_selected_only") is True,
             "matrix must read selected bundles only")
     require(capture.get("schema") == "rafaelia.zero.device.capture.v1",
             "capture schema mismatch")
+    require(capture.get("installed_apk_source") == "adb-pull-of-pm-path",
+            "installed APK capture source mismatch")
+    require(capture.get("single_installed_apk_path_required") is True,
+            "single installed APK path must be required")
+    require(capture.get("input_hash_must_match_installed_when_provided") is True,
+            "input/installed APK hash match must be required")
     require(set(targets) == {"arm32-legacy", "arm64-modern"},
             "required device targets must be ARM32 and ARM64")
     require(targets["arm32-legacy"].get("architecture_id") == 1,
@@ -178,10 +198,12 @@ def main() -> int:
     builder_module = load_module(BUNDLE_BUILDER, "rafz_builder_contract")
     bundle_module = load_module(BUNDLE_VALIDATOR, "rafz_bundle_contract")
     matrix_module = load_module(MATRIX_VALIDATOR, "rafz_matrix_contract")
+    rebuilder_module = load_module(MATRIX_REBUILDER, "rafz_rebuilder_contract")
     receipt_module.self_test()
     builder_module.self_test()
     bundle_module.self_test()
     matrix_module.self_test()
+    rebuilder_module.self_test()
 
     print("RAFAELIA_ZERO_DEVICE_PROBE_CONTRACT=PASS")
     print("release_component_present=false")
@@ -190,6 +212,8 @@ def main() -> int:
     print("bundle_builder_self_test=PASS")
     print("bundle_validator_self_test=PASS")
     print("matrix_validator_self_test=PASS")
+    print("matrix_rebuilder_self_test=PASS")
+    print("installed_apk_capture=adb-pull-of-pm-path")
     print("bundle_publication=atomic")
     print("matrix_selection=one-validated-bundle-per-role")
     print("arm32_device_receipt=TOKEN_VAZIO")
