@@ -1,0 +1,71 @@
+{
+  "schema": "rafcodephi.bitraf.phase-release-contract.v1",
+  "authority": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "claim_allowed": false,
+  "release_allowed": false,
+  "units": {
+    "logical_period": "microseconds",
+    "frequency": "millihertz",
+    "phase": "unsigned Q0.32 turn"
+  },
+  "default_configuration": {
+    "logical_period_us": 100000,
+    "base_frequency_mhz": 10000,
+    "frequency_step_mhz": 100,
+    "max_frequency_mhz": 999000,
+    "phases_per_cycle": 4,
+    "window_cycles": 8,
+    "phase_observations_per_release": 32,
+    "nominal_window_us": 800000
+  },
+  "release_law": {
+    "ordered_phases": [0, 1, 2, 3],
+    "completed_cycle_mask": "0xFF",
+    "release_before_cycle_8": false,
+    "frequency_changes_inside_window": false,
+    "frequency_step_after_release": true,
+    "publication": "staged digest becomes released digest only at the final phase of cycle 8"
+  },
+  "failure_policy": {
+    "out_of_order_phase": "FAULT_LATCHED",
+    "missing_evidence": "FAULT_LATCHED",
+    "implicit_recovery": false,
+    "explicit_reset_required": true,
+    "partial_window_publishable": false
+  },
+  "sampling_boundary": {
+    "ten_hz_at_one_hundred_ms": "ALIAS_ANCHOR",
+    "meaning": "10 Hz advances exactly one whole turn per 100 ms logical frame, so sampled phase repeats",
+    "after_first_release": "10.1 Hz leaves a residual 0.01 turn = 3.6 degrees per 100 ms frame",
+    "physical_clock_proven": false
+  },
+  "implementation_constraints": {
+    "heap": false,
+    "floating_point": false,
+    "trigonometric_runtime": false,
+    "sleep_or_clock_syscalls": false,
+    "libc_required_by_kernel": false,
+    "physical_scheduler_owned_by_caller": true
+  },
+  "promotion_evidence": [
+    "freestanding C compile with warnings as errors",
+    "seven cycles produce no release",
+    "cycle 8 final phase produces exactly one release",
+    "frequency advances from 10.0 Hz to 10.1 Hz only after release",
+    "out-of-order phase is latched",
+    "missing evidence is latched",
+    "Android ARM32 receipt",
+    "Android ARM64 receipt"
+  ],
+  "current_state": {
+    "kernel_module": "IMPLEMENTED",
+    "host_native_test": "PASS_LOCAL",
+    "android_build": "TOKEN_VAZIO",
+    "runtime_scheduler_integration": "TOKEN_VAZIO",
+    "physical_100ms_cadence": "TOKEN_VAZIO",
+    "arm32_device_receipt": "TOKEN_VAZIO",
+    "arm64_device_receipt": "TOKEN_VAZIO",
+    "claim_allowed": false,
+    "release_allowed": false
+  }
+}
