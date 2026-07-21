@@ -40,6 +40,7 @@ static void raf_phase_gate_fill_event(
     return;
   }
   event->frequency_mhz = gate->frequency_mhz;
+  event->released_frequency_mhz = gate->released_frequency_mhz;
   event->phase_q32 = gate->phase_q32;
   event->logical_cycle = gate->logical_cycle;
   event->release_epoch = gate->release_epoch;
@@ -176,6 +177,7 @@ raf_phase_gate_status_t raf_phase_release_gate_step(
       if (gate->completed_mask != RAF_PHASE_GATE_WINDOW_MASK) {
         return raf_phase_gate_latch_fault(gate, RAF_PHASE_GATE_ERR_EVIDENCE, event);
       }
+      gate->released_frequency_mhz = gate->frequency_mhz;
       gate->released_digest = gate->staged_digest;
       gate->release_epoch++;
       gate->completed_mask = 0u;
