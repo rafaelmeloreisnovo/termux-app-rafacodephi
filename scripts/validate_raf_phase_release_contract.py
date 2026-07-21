@@ -130,8 +130,16 @@ def validate_snapshot(files: Mapping[str, str]) -> list[str]:
             errors.append(f"canonical native gate missing: {token}")
 
     release_position = source.find("gate->released_digest = gate->staged_digest")
-    frequency_position = source.find("raf_phase_gate_advance_frequency(gate)", release_position)
-    if release_position < 0 or frequency_position < release_position:
+    call_token = "raf_phase_gate_advance_frequency(gate)"
+    call_positions: list[int] = []
+    cursor = 0
+    while True:
+        position = source.find(call_token, cursor)
+        if position < 0:
+            break
+        call_positions.append(position)
+        cursor = position + len(call_token)
+    if release_position < 0 or len(call_positions) != 1 or call_positions[0] < release_position:
         errors.append("frequency must advance only after atomic release")
 
     return errors
