@@ -53,9 +53,19 @@ run_gate compile_ecc32_unrolled \
   -Wl,--gc-sections \
   -o "$TMP/test_raf_ecc32_unrolled"
 
+run_gate compile_phase_release_gate \
+  "$CC_BIN" \
+  -std=c11 -Wall -Wextra -Werror -Wpedantic -Os \
+  -ffreestanding -fno-builtin -fno-common \
+  -ffunction-sections -fdata-sections \
+  -I"$ROOT/rafaelia/src/main/cpp" \
+  "$ROOT/rafaelia/src/main/cpp/raf_phase_release_gate.c" \
+  "$ROOT/tests/native/test_raf_phase_release_gate.c" \
+  -Wl,--gc-sections \
+  -o "$TMP/test_raf_phase_release_gate"
+
 # APKC's production syscall layer remains ARM-only. Host emitters explicitly
-# enable RAF_APKC_HOST_TEST and write bounded format fixtures for independent
-# validators; this does not alter the production syscall implementation.
+# enable RAF_APKC_HOST_TEST and write bounded fixtures for independent parsers.
 run_gate compile_apkc_dex_emitter \
   "$CC_BIN" \
   -std=c11 -Wall -Wextra -Werror -Os \
@@ -76,19 +86,36 @@ run_gate compile_apkc_elf_emitter \
   -Wl,--gc-sections \
   -o "$TMP/apkc_emit_minimal_elf"
 
+run_gate compile_apkc_exec_elf_emitter \
+  "$CC_BIN" \
+  -std=c11 -Wall -Wextra -Werror -Os \
+  -Wno-error=unused-function -Wno-error=unused-variable \
+  -fno-common -ffunction-sections -fdata-sections \
+  -I"$ROOT/apkc" \
+  "$ROOT/tests/native/apkc_emit_exec_elf.c" \
+  -Wl,--gc-sections \
+  -o "$TMP/apkc_emit_exec_elf"
+
 run_gate test_numbase "$TMP/test_raf_numbase"
 run_gate test_ecc32_compact "$TMP/test_raf_ecc32_compact"
 run_gate test_ecc32_unrolled "$TMP/test_raf_ecc32_unrolled"
+run_gate test_phase_release_gate "$TMP/test_raf_phase_release_gate"
 run_gate emit_apkc_dex "$TMP/apkc_emit_minimal_dex" "$TMP/classes.dex"
-run_gate emit_apkc_elf \
+run_gate emit_apkc_elf_rel \
   "$TMP/apkc_emit_minimal_elf" "$TMP/apkc-arm32.o" "$TMP/apkc-arm64.o"
+run_gate emit_apkc_elf_exec \
+  "$TMP/apkc_emit_exec_elf" "$TMP/apkc-arm32-exec" "$TMP/apkc-arm64-exec"
 
 run_gate validate_apkc_dex \
   python3 "$ROOT/scripts/validate_apkc_dex_contract.py" "$TMP/classes.dex" --pretty
-run_gate validate_apkc_elf32 \
-  python3 "$ROOT/scripts/validate_apkc_elf_contract.py" "$TMP/apkc-arm32.o" --expect arm32 --pretty
-run_gate validate_apkc_elf64 \
-  python3 "$ROOT/scripts/validate_apkc_elf_contract.py" "$TMP/apkc-arm64.o" --expect arm64 --pretty
+run_gate validate_apkc_elf32_rel \
+  python3 "$ROOT/scripts/validate_apkc_elf_contract.py" "$TMP/apkc-arm32.o" --expect arm32 --kind rel --pretty
+run_gate validate_apkc_elf64_rel \
+  python3 "$ROOT/scripts/validate_apkc_elf_contract.py" "$TMP/apkc-arm64.o" --expect arm64 --kind rel --pretty
+run_gate validate_apkc_elf32_exec \
+  python3 "$ROOT/scripts/validate_apkc_elf_contract.py" "$TMP/apkc-arm32-exec" --expect arm32 --kind exec --pretty
+run_gate validate_apkc_elf64_exec \
+  python3 "$ROOT/scripts/validate_apkc_elf_contract.py" "$TMP/apkc-arm64-exec" --expect arm64 --kind exec --pretty
 run_gate validate_compiler_capability_matrix \
   python3 "$ROOT/scripts/validate_compiler_capability_matrix.py" --pretty
 run_gate validate_first_part_gap_map \
@@ -101,6 +128,10 @@ run_gate index_loose_artifacts \
   python3 "$ROOT/scripts/index_loose_operational_artifacts.py" --validate --summary
 run_gate validate_native_gc \
   python3 "$ROOT/scripts/validate_raf_native_gc_contract.py"
+run_gate validate_phase_release_contract \
+  python3 "$ROOT/scripts/validate_raf_phase_release_contract.py" --strict --write-report
+run_gate test_phase_release_contract \
+  python3 "$ROOT/tests/test_raf_phase_release_contract.py"
 run_gate test_warning_contract \
   python3 "$ROOT/tests/test_raf_compile_warning_contract.py"
 

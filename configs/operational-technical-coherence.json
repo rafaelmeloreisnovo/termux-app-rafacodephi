@@ -68,24 +68,43 @@
       "scope": "bounded structural ELF32 EM_ARM EABI5 and ELF64 EM_AARCH64 ET_REL containers with a null section only",
       "evidence": ["apkc/fmt_elf.h", "tests/native/apkc_emit_minimal_elf.c", "scripts/validate_apkc_elf_contract.py"],
       "claim_allowed": true,
-      "limitations": [
-        "no named sections",
-        "no symbols",
-        "no relocations",
-        "no PT_LOAD segments",
-        "not executable",
-        "not a linker",
-        "not runtime-proven"
-      ]
+      "limitations": ["no named sections", "no symbols", "no relocations", "not a linker", "not runtime-proven"]
     },
     {
       "id": "apkc.elf.executable-writer",
+      "path": "apkc/fmt_elf.h",
+      "state": "VERIFIED_HOST",
+      "scope": "bounded ELF32 ARM and ELF64 AArch64 ET_EXEC fixed exit(0) stubs with one RX PT_LOAD segment",
+      "evidence": ["apkc/fmt_elf.h", "tests/native/apkc_emit_exec_elf.c", "scripts/validate_apkc_elf_contract.py", "scripts/test_raf_native_compile_contract.sh"],
+      "claim_allowed": true,
+      "limitations": [
+        "fixed architecture-specific exit(0) payload only",
+        "no arbitrary user code",
+        "no section table",
+        "no symbols",
+        "no relocations",
+        "no dynamic linking",
+        "not a general linker",
+        "physical-device execution remains TOKEN_VAZIO"
+      ]
+    },
+    {
+      "id": "apkc.elf.linker",
       "path": "TOKEN_VAZIO",
       "state": "TOKEN_VAZIO",
-      "scope": "loadable ELF executable or shared-object writer with symbols, relocations and segments",
+      "scope": "general object linker and arbitrary-code executable/shared-object writer with sections, symbols and relocations",
       "evidence": [],
       "claim_allowed": false,
-      "limitations": ["structural ET_REL headers do not prove executable ELF generation"]
+      "limitations": ["a fixed executable stub does not prove object linking or arbitrary code generation"]
+    },
+    {
+      "id": "apkc.elf.device-runtime",
+      "path": "TOKEN_VAZIO",
+      "state": "TOKEN_VAZIO",
+      "scope": "execution of emitted ARM32 and AArch64 ET_EXEC artifacts on matching Android/Linux devices",
+      "evidence": [],
+      "claim_allowed": false,
+      "limitations": ["host parsing and CI construction do not prove target-kernel execution"]
     },
     {
       "id": "browser.http.textmode",
@@ -103,11 +122,7 @@
       "scope": "canonical materialization removes the known HTTPS-to-HTTP downgrade and terminates with an explicit TLS error",
       "evidence": ["scripts/validate_browser_fail_closed.py", "Rafaelia Native Safety"],
       "claim_allowed": true,
-      "limitations": [
-        "does not implement TLS 1.2 or TLS 1.3",
-        "does not validate certificates",
-        "raw Browser.sh remains a historical prototype generator and is not the canonical build entrypoint"
-      ]
+      "limitations": ["does not implement TLS 1.2 or TLS 1.3", "does not validate certificates", "raw Browser.sh remains a historical prototype generator and is not the canonical build entrypoint"]
     },
     {
       "id": "browser.tls13",
@@ -116,16 +131,7 @@
       "scope": "ClientHello construction and record-header parsing only",
       "evidence": ["Browser.sh:br_tls.h", "Browser.sh:DO_FETCH", "scripts/materialize_browser_fail_closed.py"],
       "claim_allowed": false,
-      "limitations": [
-        "no cryptographically secure client random",
-        "no key_share payload",
-        "no X25519 shared secret",
-        "no HKDF key schedule",
-        "no AEAD record protection",
-        "no certificate-chain validation",
-        "no Finished verification",
-        "canonical materialization fails closed; TLS functionality remains absent"
-      ]
+      "limitations": ["no cryptographically secure client random", "no key_share payload", "no X25519 shared secret", "no HKDF key schedule", "no AEAD record protection", "no certificate-chain validation", "no Finished verification", "canonical materialization fails closed; TLS functionality remains absent"]
     },
     {
       "id": "browser.tls12",

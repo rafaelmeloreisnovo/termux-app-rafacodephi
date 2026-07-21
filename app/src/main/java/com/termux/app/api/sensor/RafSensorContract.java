@@ -12,16 +12,20 @@ import java.util.Set;
 public final class RafSensorContract {
 
     public static final int PROTOCOL_VERSION_1 = 1;
+    public static final int PROTOCOL_VERSION_2 = 2;
 
     public static final String PERMISSION = BuildConfig.APPLICATION_ID + ".permission.RAF_SENSOR_ACCESS";
     public static final String ACTION_SENSOR_SNAPSHOT = BuildConfig.APPLICATION_ID + ".action.RAF_SENSOR_SNAPSHOT";
     public static final String ACTION_CANCEL_SENSOR_REQUEST = BuildConfig.APPLICATION_ID + ".action.RAF_SENSOR_CANCEL";
+    public static final String ACTION_SENSOR_CATALOG = BuildConfig.APPLICATION_ID + ".action.RAF_SENSOR_CATALOG";
+    public static final String ACTION_SENSOR_SNAPSHOT_ALL = BuildConfig.APPLICATION_ID + ".action.RAF_SENSOR_SNAPSHOT_ALL";
 
     public static final String EXTRA_PROTOCOL_VERSION = "protocol_version";
     public static final String EXTRA_REQUEST_ID = "request_id";
     public static final String EXTRA_SENSOR_NAME = "sensor_name";
     public static final String EXTRA_SAMPLING_PERIOD_US = "sampling_period_us";
     public static final String EXTRA_MAX_REPORT_LATENCY_US = "max_report_latency_us";
+    public static final String EXTRA_TIMEOUT_MS = "timeout_ms";
     public static final String EXTRA_CALLBACK = "callback";
     public static final String EXTRA_CLIENT_PACKAGE = "client_package";
 
@@ -42,6 +46,8 @@ public final class RafSensorContract {
     public static final String RESULT_PAGE_SIZE = "page_size";
     public static final String RESULT_CACHE_LINE = "cache_line";
     public static final String RESULT_CPUS_ONLINE = "cpus_online";
+    public static final String RESULT_SENSOR_CATALOG_JSON = "sensor_catalog_json";
+    public static final String RESULT_SENSOR_BATCH_JSON = "sensor_batch_json";
 
     public static final String STATUS_ACCEPTED = "ACCEPTED";
     public static final String STATUS_SAMPLING = "SAMPLING";
@@ -62,8 +68,13 @@ public final class RafSensorContract {
     public static final int DEFAULT_MAX_REPORT_LATENCY_US = 0;
     public static final int MAX_SAMPLING_PERIOD_US = 1_000_000;
     public static final int MAX_REPORT_LATENCY_US = 5_000_000;
+    public static final int DEFAULT_BATCH_TIMEOUT_MS = 5_000;
+    public static final int MIN_BATCH_TIMEOUT_MS = 500;
+    public static final int MAX_BATCH_TIMEOUT_MS = 15_000;
     public static final int MAX_REQUEST_ID_LENGTH = 64;
     public static final int MAX_CLIENT_PACKAGE_LENGTH = 200;
+    public static final int MAX_CATALOG_SENSORS = 128;
+    public static final int MAX_SENSOR_VALUES = 32;
 
     private static final Set<String> ALLOWED_SENSOR_NAMES = Collections.unmodifiableSet(
         new LinkedHashSet<>(Arrays.asList(
@@ -99,21 +110,28 @@ public final class RafSensorContract {
     }
 
     public static int normalizeSamplingPeriodUs(int samplingPeriodUs) {
-        if (samplingPeriodUs <= 0) {
-            return DEFAULT_SAMPLING_PERIOD_US;
-        }
+        if (samplingPeriodUs <= 0) return DEFAULT_SAMPLING_PERIOD_US;
         return samplingPeriodUs;
     }
 
     public static int normalizeMaxReportLatencyUs(int maxReportLatencyUs) {
-        if (maxReportLatencyUs < 0) {
-            return DEFAULT_MAX_REPORT_LATENCY_US;
-        }
+        if (maxReportLatencyUs < 0) return DEFAULT_MAX_REPORT_LATENCY_US;
         return maxReportLatencyUs;
+    }
+
+    public static int normalizeBatchTimeoutMs(int timeoutMs) {
+        if (timeoutMs <= 0) return DEFAULT_BATCH_TIMEOUT_MS;
+        if (timeoutMs < MIN_BATCH_TIMEOUT_MS) return MIN_BATCH_TIMEOUT_MS;
+        if (timeoutMs > MAX_BATCH_TIMEOUT_MS) return MAX_BATCH_TIMEOUT_MS;
+        return timeoutMs;
     }
 
     public static boolean isAllowedSensorName(String sensorName) {
         return sensorName != null && ALLOWED_SENSOR_NAMES.contains(sensorName);
+    }
+
+    public static boolean isSupportedProtocol(int protocolVersion) {
+        return protocolVersion == PROTOCOL_VERSION_1 || protocolVersion == PROTOCOL_VERSION_2;
     }
 
     public static ValidationResult validateSnapshotRequest(int protocolVersion,
@@ -123,36 +141,58 @@ public final class RafSensorContract {
                                                            int maxReportLatencyUs,
                                                            boolean hasCallback,
                                                            String clientPackage) {
-        if (protocolVersion != PROTOCOL_VERSION_1) {
+        if (!isSupportedProtocol(protocolVersion)) {
             return ValidationResult.error("ERR_PROTOCOL_VERSION", "Unsupported protocol version");
         }
-
-        if (!isSafeToken(requestId, MAX_REQUEST_ID_LENGTH)) {
-            return ValidationResult.error("ERR_REQUEST_ID", "Request id must be 1-64 chars of [A-Za-z0-9._:-]");
-        }
-
+        ValidationResult common = validateCommonRequest(requestId, hasCallback, clientPackage);
+        if (!common.valid) return common;
         if (!isAllowedSensorName(sensorName)) {
             return ValidationResult.error("ERR_SENSOR_NAME", "Unsupported sensor name");
         }
-
         int normalizedSampling = normalizeSamplingPeriodUs(samplingPeriodUs);
         if (normalizedSampling <= 0 || normalizedSampling > MAX_SAMPLING_PERIOD_US) {
             return ValidationResult.error("ERR_SAMPLING_PERIOD", "Sampling period is out of range");
         }
-
         int normalizedLatency = normalizeMaxReportLatencyUs(maxReportLatencyUs);
         if (normalizedLatency < 0 || normalizedLatency > MAX_REPORT_LATENCY_US) {
             return ValidationResult.error("ERR_REPORT_LATENCY", "Max report latency is out of range");
         }
+        return ValidationResult.ok();
+    }
 
+    public static ValidationResult validateBridgeRequest(int protocolVersion,
+                                                         String requestId,
+                                                         int timeoutMs,
+                                                         boolean hasCallback,
+                                                         String clientPackage) {
+        if (protocolVersion != PROTOCOL_VERSION_2) {
+            return ValidationResult.error("ERR_PROTOCOL_VERSION", "Bridge operations require protocol version 2");
+        }
+        ValidationResult common = validateCommonRequest(requestId, hasCallback, clientPackage);
+        if (!common.valid) return common;
+        int normalizedTimeout = normalizeBatchTimeoutMs(timeoutMs);
+        if (normalizedTimeout < MIN_BATCH_TIMEOUT_MS || normalizedTimeout > MAX_BATCH_TIMEOUT_MS) {
+            return ValidationResult.error("ERR_TIMEOUT", "Timeout is out of range");
+        }
+        return ValidationResult.ok();
+    }
+
+    public static boolean callbackBelongsToClient(String callbackCreatorPackage, String clientPackage) {
+        return callbackCreatorPackage != null && callbackCreatorPackage.equals(clientPackage);
+    }
+
+    private static ValidationResult validateCommonRequest(String requestId,
+                                                          boolean hasCallback,
+                                                          String clientPackage) {
+        if (!isSafeToken(requestId, MAX_REQUEST_ID_LENGTH)) {
+            return ValidationResult.error("ERR_REQUEST_ID", "Request id must be 1-64 chars of [A-Za-z0-9._:-]");
+        }
         if (!hasCallback) {
             return ValidationResult.error("ERR_CALLBACK", "PendingIntent callback is required");
         }
-
         if (!isPackageNameLike(clientPackage)) {
             return ValidationResult.error("ERR_CLIENT_PACKAGE", "Client package is missing or invalid");
         }
-
         return ValidationResult.ok();
     }
 

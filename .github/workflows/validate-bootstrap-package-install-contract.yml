@@ -83,7 +83,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
 
       - name: Install test dependencies
         run: python3 -m pip install --disable-pip-version-check pytest

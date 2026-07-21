@@ -1,0 +1,66 @@
+{
+  "schema": "termux.rafacodephi.loader-functional-quarantine-local-validation.v1",
+  "generated_at": "2026-07-20T17:40:00Z",
+  "branch": "security/loader-functional-quarantine-20260720",
+  "execution_scope": "LOGIC_ONLY_RECONSTRUCTION",
+  "status": "PASS",
+  "state": "STUB_SAFE_BLOCKED",
+  "compiled_validator": true,
+  "checks_total": 19,
+  "checks_passed": 19,
+  "checks_failed": 0,
+  "positive_cases": [
+    "current inert stub accepted only as STUB_SAFE_BLOCKED",
+    "complete synthetic functional boundary accepted as FUNCTIONAL_SECURITY_GATED"
+  ],
+  "adversarial_cases_rejected": [
+    "stub without android:hasCode=false",
+    "stub claiming functional installer",
+    "hybrid Java sources with hasCode=false",
+    "EXTRA_TARGET_DIR or target_dir",
+    "ZipInputStream or ZipEntry extraction",
+    "cleartext-enabled functional manifest",
+    "plaintext HTTP source",
+    "implicit redirects",
+    "missing download budget",
+    "writable provider",
+    "missing host-loader signer check",
+    "missing host BLAKE3 custody",
+    "invented external URL default",
+    "native malloc in bootstrap path",
+    "missing host boundary file",
+    "canonical workflow no longer invoking gate",
+    "release_allowed promoted to true"
+  ],
+  "source_blobs": {
+    "contract": "ea90d31559f95037c3f60508ec9f936b8d52ccc3",
+    "validator": "b5b85ae43a5fe5429513ef297a6360c240646d72",
+    "tests": "3c93045a38299bb31b547850705ef97fe7ff1ec4",
+    "stub_manifest": "add2b8b667650de31117237fa3c66bbd46eaac8e",
+    "stub_readme": "fde2d8be79b985d4cc918f4bb9eae204e28261c1",
+    "stub_gradle": "86e8fe00652b732faf1cde01464372d27e93f1e4",
+    "stub_artifact_verifier": "3fb982601b97425d769e73c0d87cd7027d86d6ed",
+    "workflow": "f383f17d32fdb4e2885ad382e693299e59644f5a"
+  },
+  "remote_observation": {
+    "workflow_run_id": 29764328504,
+    "job_id": 88426584875,
+    "classification": "ZERO_STEP_NO_LOGS",
+    "steps": 0,
+    "logs": "BlobNotFound",
+    "remote_PASS": false,
+    "code_failure_demonstrated": false
+  },
+  "not_proven": [
+    "Gradle loader APK build on this head",
+    "APK manifest and DEX artifact inspection on this head",
+    "APK signature receipt on this head",
+    "functional loader implementation",
+    "Android unauthorized-caller rejection",
+    "DEVICE_RECEIPT_COMPLETE",
+    "release readiness"
+  ],
+  "functional_capability": false,
+  "release_allowed": false,
+  "claim_allowed": false
+}

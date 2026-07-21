@@ -119,3 +119,31 @@ LOCAL_CFLAGS += -DAPI_LL_NOMALLOC=1
 LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
 LOCAL_LDLIBS := -llog
 include $(BUILD_SHARED_LIBRARY)
+
+# RAFAELIA ZERO runtime — same canonical source compiled directly into the APK.
+include $(CLEAR_VARS)
+LOCAL_MODULE := termux_rafaelia_zero_runtime
+LOCAL_SRC_FILES := \
+    ../../../../rafaelia/src/main/cpp/zero/rafz.c \
+    lowlevel/rafaelia_zero_runtime_jni.c
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../../rafaelia/src/main/cpp/zero/include
+LOCAL_CFLAGS := -std=c11 -O3 -Wall -Wextra -Werror \
+    -ffreestanding -fno-builtin -fno-stack-protector -fno-common \
+    -fvisibility=hidden -ffunction-sections -fdata-sections \
+    -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-ident
+ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
+    LOCAL_CFLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=softfp
+endif
+ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+    LOCAL_CFLAGS += -march=armv8-a+simd
+endif
+ifeq ($(TARGET_ARCH_ABI),x86)
+    LOCAL_CFLAGS += -march=i686 -msse2
+endif
+ifeq ($(TARGET_ARCH_ABI),x86_64)
+    LOCAL_CFLAGS += -march=x86-64 -msse2
+endif
+LOCAL_LDFLAGS := -Wl,--gc-sections \
+    -Wl,-z,max-page-size=16384 \
+    -Wl,-z,common-page-size=16384
+include $(BUILD_SHARED_LIBRARY)

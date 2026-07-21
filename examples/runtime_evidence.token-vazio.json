@@ -1,1 +1,102 @@
-{"schema":"termux.rafacodephi.runtime_evidence.v1","claim_allowed":false,"observed_at":"2026-07-17T00:00:00Z","device_abi":"TOKEN_VAZIO","prefix":"TOKEN_VAZIO","apk_sha256":"TOKEN_VAZIO","package_backend_status":"TOKEN_VAZIO","proot_present":false,"commands":[{"name":"sh","path":"TOKEN_VAZIO","exists":false,"executable":false,"probe_exit_code":127,"version":"TOKEN_VAZIO"},{"name":"ls","path":"TOKEN_VAZIO","exists":false,"executable":false,"probe_exit_code":127,"version":"TOKEN_VAZIO"},{"name":"pkg","path":"TOKEN_VAZIO","exists":false,"executable":false,"probe_exit_code":127,"version":"TOKEN_VAZIO"},{"name":"apt","path":"TOKEN_VAZIO","exists":false,"executable":false,"probe_exit_code":127,"version":"TOKEN_VAZIO"},{"name":"dpkg","path":"TOKEN_VAZIO","exists":false,"executable":false,"probe_exit_code":127,"version":"TOKEN_VAZIO"},{"name":"proot","path":"TOKEN_VAZIO","exists":false,"executable":false,"probe_exit_code":127,"version":"TOKEN_VAZIO"}],"runtime_status":"TOKEN_VAZIO","install_or_mutation_performed":false,"rollback":"Retain previous APK hash and data backup.","next_action":"Run the collector on the target Android device and attach the generated evidence."}
+{
+  "adapter_state": "IMPLEMENTED",
+  "apk_path_observed": "TOKEN_VAZIO",
+  "apk_sha256": "TOKEN_VAZIO",
+  "authority": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "claim_allowed": false,
+  "commands": [
+    {
+      "executable": false,
+      "exists": false,
+      "name": "sh",
+      "path": "TOKEN_VAZIO",
+      "probe_exit_code": 127,
+      "stderr_sha256": "TOKEN_VAZIO",
+      "stdout_sha256": "TOKEN_VAZIO",
+      "version_preview": "TOKEN_VAZIO"
+    },
+    {
+      "executable": false,
+      "exists": false,
+      "name": "ls",
+      "path": "TOKEN_VAZIO",
+      "probe_exit_code": 127,
+      "stderr_sha256": "TOKEN_VAZIO",
+      "stdout_sha256": "TOKEN_VAZIO",
+      "version_preview": "TOKEN_VAZIO"
+    },
+    {
+      "executable": false,
+      "exists": false,
+      "name": "pkg",
+      "path": "TOKEN_VAZIO",
+      "probe_exit_code": 127,
+      "stderr_sha256": "TOKEN_VAZIO",
+      "stdout_sha256": "TOKEN_VAZIO",
+      "version_preview": "TOKEN_VAZIO"
+    },
+    {
+      "executable": false,
+      "exists": false,
+      "name": "apt",
+      "path": "TOKEN_VAZIO",
+      "probe_exit_code": 127,
+      "stderr_sha256": "TOKEN_VAZIO",
+      "stdout_sha256": "TOKEN_VAZIO",
+      "version_preview": "TOKEN_VAZIO"
+    },
+    {
+      "executable": false,
+      "exists": false,
+      "name": "dpkg",
+      "path": "TOKEN_VAZIO",
+      "probe_exit_code": 127,
+      "stderr_sha256": "TOKEN_VAZIO",
+      "stdout_sha256": "TOKEN_VAZIO",
+      "version_preview": "TOKEN_VAZIO"
+    },
+    {
+      "executable": false,
+      "exists": false,
+      "name": "proot",
+      "path": "TOKEN_VAZIO",
+      "probe_exit_code": 127,
+      "stderr_sha256": "TOKEN_VAZIO",
+      "stdout_sha256": "TOKEN_VAZIO",
+      "version_preview": "TOKEN_VAZIO"
+    }
+  ],
+  "device": {
+    "abi_list": "TOKEN_VAZIO",
+    "abi_primary": "TOKEN_VAZIO",
+    "android_release": "TOKEN_VAZIO",
+    "device": "TOKEN_VAZIO",
+    "kernel_exit_code": 127,
+    "kernel_preview": "TOKEN_VAZIO",
+    "kernel_sha256": "TOKEN_VAZIO",
+    "manufacturer": "TOKEN_VAZIO",
+    "model": "TOKEN_VAZIO",
+    "sdk_int": "TOKEN_VAZIO"
+  },
+  "evidence_state": "HOST_SIMULATION",
+  "execution_evidence_usable": false,
+  "install_or_mutation_performed": false,
+  "next_action": "Run on the target Android device with --producer-commit and --apk-path, then archive the receipt and APK hash.",
+  "observed_at": "2026-07-20T00:00:00Z",
+  "package_name": "com.termux.rafacodephi",
+  "prefix": "TOKEN_VAZIO",
+  "producer_commit": "TOKEN_VAZIO",
+  "producer_repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "receipt_sha256": "f3fa49691e4e8f391b8b73161471201ed17bac96fd48adbb0cc5add91d372daa",
+  "rollback": "No mutation was performed; retain the previous APK, app data backup and producer commit.",
+  "runtime_claim_scope": "device environment and bounded command probes only",
+  "schema": "termux.rafacodephi.runtime_receipt.v2",
+  "termux_info": {
+    "exit_code": 127,
+    "present": false,
+    "preview": "TOKEN_VAZIO",
+    "stderr_sha256": "TOKEN_VAZIO",
+    "stdout_sha256": "TOKEN_VAZIO"
+  },
+  "version": 2
+}

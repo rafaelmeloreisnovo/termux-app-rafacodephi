@@ -3,6 +3,7 @@ package com.termux.app;
 import android.app.Application;
 import android.content.Context;
 
+import com.termux.app.rafaelia.RafaeliaZeroRuntime;
 import com.termux.rafacodephi.BuildConfig;
 import com.termux.shared.errors.Error;
 import com.termux.shared.logger.Logger;
@@ -62,6 +63,17 @@ public class TermuxApplication extends Application {
             Logger.logDebug(LOG_TAG, "ApiLowLevelBridge.nativeInit() ok");
         } catch (Exception e) {
             Logger.logError(LOG_TAG, "ApiLowLevelBridge nativeInit failed: " + e.getMessage());
+        }
+
+        try {
+            int zeroStatus = RafaeliaZeroRuntime.init();
+            if (zeroStatus == RafaeliaZeroRuntime.OK) {
+                Logger.logDebug(LOG_TAG, "RafaeliaZeroRuntime init ok arch=" + RafaeliaZeroRuntime.architectureId());
+            } else {
+                Logger.logError(LOG_TAG, "RafaeliaZeroRuntime init status=" + zeroStatus);
+            }
+        } catch (Throwable t) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "RafaeliaZeroRuntime initialization failed", t);
         }
 
         try {

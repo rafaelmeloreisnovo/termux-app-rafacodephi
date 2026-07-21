@@ -1,0 +1,105 @@
+{
+  "schema": "rafaelia.zero.operational-evidence-contract.v1",
+  "authority": {
+    "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "probe_contract": "configs/rafaelia-zero-device-probe-contract.json",
+    "receipt_validator": "scripts/validate_rafaelia_zero_device_receipt.py",
+    "bundle_builder": "scripts/create_rafaelia_zero_device_bundle.py",
+    "bundle_validator": "scripts/validate_rafaelia_zero_device_bundle.py",
+    "matrix_validator": "scripts/validate_rafaelia_zero_device_matrix.py",
+    "matrix_rebuilder": "scripts/rebuild_rafaelia_zero_device_matrix.py"
+  },
+  "bundle": {
+    "schema": "rafaelia.zero.device.evidence-bundle.v1",
+    "required_files": [
+      "receipt.json",
+      "capture.json",
+      "transcript.txt",
+      "apk.bin",
+      "manifest.json",
+      "SHA256SUMS"
+    ],
+    "digest": "sha256",
+    "path_policy": "relative-posix-no-traversal",
+    "symlink_policy": "forbidden",
+    "empty_file_policy": "forbidden",
+    "transcript_bindings": ["receipt_sha256", "apk_sha256"]
+  },
+  "publication": {
+    "bundle": "atomic-staging-fsync-rename",
+    "matrix": "atomic-temp-fsync-replace",
+    "selection_pointer": "atomic-temp-fsync-replace"
+  },
+  "selection": {
+    "policy": "one-validated-bundle-per-role",
+    "pointer_pattern": "selected-<role>.txt",
+    "pointer_payload": "direct-child-bundle-name-only",
+    "history_preserved": true,
+    "automatic_selection": "latest-successful-run-for-role",
+    "matrix_reads_selected_only": true,
+    "path_traversal": "rejected"
+  },
+  "capture": {
+    "schema": "rafaelia.zero.device.capture.v1",
+    "required_fields": [
+      "package",
+      "device_serial",
+      "device_fingerprint",
+      "installed_apk_path",
+      "captured_at_unix_ms"
+    ],
+    "installed_apk_source": "adb-pull-of-pm-path",
+    "single_installed_apk_path_required": true,
+    "input_hash_must_match_installed_when_provided": true,
+    "identity_cross_check": [
+      "capture.package == receipt.package",
+      "capture.device_fingerprint == receipt.device.fingerprint"
+    ]
+  },
+  "required_targets": {
+    "arm32-legacy": {
+      "architecture_id": 1,
+      "accepted_process_arch_tokens": ["armv7l", "armv7", "arm"],
+      "accepted_abi_tokens": ["armeabi-v7a"]
+    },
+    "arm64-modern": {
+      "architecture_id": 2,
+      "accepted_process_arch_tokens": ["aarch64", "arm64"],
+      "accepted_abi_tokens": ["arm64-v8a"]
+    }
+  },
+  "optional_targets": {
+    "x86": {"architecture_id": 4},
+    "x86_64": {"architecture_id": 3}
+  },
+  "promotion": {
+    "zero_valid_required_targets": {
+      "state": "TOKEN_VAZIO",
+      "claim_allowed_device_matrix": false
+    },
+    "one_valid_required_target": {
+      "state": "PARTIAL_DEVICE_PROOF",
+      "claim_allowed_device_matrix": false
+    },
+    "all_valid_required_targets": {
+      "state": "DUAL_ARM_DEVICE_PROOF",
+      "claim_allowed_device_matrix": true
+    },
+    "static_contract_can_promote": false,
+    "single_bundle_can_promote_matrix": false,
+    "release_claim_from_debug_evidence": false
+  },
+  "anti_replay": {
+    "unique_receipt_sha256": true,
+    "unique_device_fingerprint_per_required_target": true,
+    "unique_device_serial_per_required_target": true,
+    "duplicate_bundle_rejected": true,
+    "duplicate_role_in_selected_matrix_rejected": true
+  },
+  "current_state": {
+    "arm32-legacy": "TOKEN_VAZIO",
+    "arm64-modern": "TOKEN_VAZIO",
+    "matrix": "TOKEN_VAZIO",
+    "claim_allowed_device_matrix": false
+  }
+}

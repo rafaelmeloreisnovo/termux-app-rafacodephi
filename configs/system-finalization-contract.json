@@ -1,0 +1,96 @@
+{
+  "schema": "termux.rafacodephi.system-finalization.v1",
+  "verified_on": "2026-07-20",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "principle": "implementation closure, release closure and research completion are independent claims",
+  "automatic_release_promotion": false,
+  "profiles": {
+    "safe-core": {
+      "success_state": "SAFE_CORE_IMPLEMENTATION_CLOSED",
+      "claim_scope": "static implementation, fail-closed boundaries and executable host validators",
+      "release_allowed": false,
+      "required_checks": [
+        "build_metadata",
+        "github_action_references",
+        "loader_quarantine",
+        "rafaelia_zero_instrumentation",
+        "canonical_truth_sources"
+      ],
+      "allowed_open_gaps": [
+        "observable_remote_ci",
+        "production_release_signing",
+        "dual_arm_device_evidence",
+        "prefix_safe_real_package_stack",
+        "current_federation_runtime_lock",
+        "functional_loader",
+        "browser_tls",
+        "complete_apkc_compilers",
+        "complete_vcpu_vm"
+      ]
+    },
+    "functional-distribution": {
+      "success_state": "FUNCTIONAL_DISTRIBUTION_RELEASE_CLOSED",
+      "claim_scope": "installable Termux distribution with real package stack and exact-device evidence",
+      "release_allowed": true,
+      "required_checks": [
+        "build_metadata",
+        "github_action_references",
+        "loader_quarantine",
+        "rafaelia_zero_instrumentation",
+        "canonical_truth_sources",
+        "observable_remote_ci",
+        "production_release_signing",
+        "dual_arm_device_evidence",
+        "prefix_safe_real_package_stack",
+        "current_federation_runtime_lock"
+      ],
+      "allowed_open_gaps": [
+        "functional_loader",
+        "browser_tls",
+        "complete_apkc_compilers",
+        "complete_vcpu_vm"
+      ]
+    },
+    "full-platform": {
+      "success_state": "FULL_RESEARCH_PLATFORM_CLOSED",
+      "claim_scope": "functional distribution plus owned TLS, complete APKC compilers and complete VCPU/VM",
+      "release_allowed": true,
+      "required_checks": [
+        "build_metadata",
+        "github_action_references",
+        "loader_quarantine",
+        "rafaelia_zero_instrumentation",
+        "canonical_truth_sources",
+        "observable_remote_ci",
+        "production_release_signing",
+        "dual_arm_device_evidence",
+        "prefix_safe_real_package_stack",
+        "current_federation_runtime_lock",
+        "browser_tls",
+        "complete_apkc_compilers",
+        "complete_vcpu_vm"
+      ],
+      "allowed_open_gaps": []
+    }
+  },
+  "canonical_sources": {
+    "build": "gradle.properties",
+    "actions_policy": "scripts/audit_github_actions_refs.py",
+    "loader_contract": "configs/loader-functional-security-contract.json",
+    "loader_evidence": "reports/loader-functional-quarantine-local-validation.json",
+    "device_evidence": "reports/RAFAELIA_ZERO_OPERATIONAL_EVIDENCE_BASELINE_20260720.json",
+    "runtime_truth": "docs/RUNTIME_TRUTH_TABLE.md",
+    "capability_map": "configs/first-part-gap-map.json",
+    "federation_lock": "runtime-lock.json",
+    "remote_ci_evidence": "reports/ci-finalization-evidence.json"
+  },
+  "invariants": {
+    "safe_core_may_close_without_release": true,
+    "stub_loader_is_acceptable_only_when_inert_and_quarantined": true,
+    "host_validation_is_not_device_evidence": true,
+    "single_device_evidence_is_not_dual_arm_evidence": true,
+    "fixed_dex_or_elf_fixture_is_not_a_complete_compiler": true,
+    "fail_closed_https_is_not_functional_tls": true,
+    "release_allowed_requires_all_functional_distribution_checks": true
+  }
+}

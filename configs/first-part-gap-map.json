@@ -1,6 +1,7 @@
 {
-  "schema": "raf.first-part-gap-map.v1",
+  "schema": "raf.first-part-gap-map.v2",
   "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "revised_on": "2026-07-20",
   "measurement": "evidence_coverage_percent",
   "warning": "percentage measures registered evidence criteria, not market readiness, certification or physical runtime",
   "automatic_claim_promotion": false,
@@ -24,7 +25,51 @@
         {"id": "production_release_signing", "state": "TOKEN_VAZIO", "evidence": []}
       ],
       "claim_allowed": true,
-      "claim_scope": "CI build and packaging only"
+      "claim_scope": "historical CI build and packaging only"
+    },
+    {
+      "id": "rafaelia.zero.runtime",
+      "criteria": [
+        {"id": "freestanding_core", "state": "PROVEN", "evidence": ["PR-291"]},
+        {"id": "jni_direct_buffer_bridge", "state": "PROVEN", "evidence": ["PR-291"]},
+        {"id": "application_startup_wiring", "state": "PROVEN", "evidence": ["PR-291"]},
+        {"id": "debug_device_probe", "state": "PROVEN", "evidence": ["PR-292"]},
+        {"id": "sealed_runtime_receipt_v2", "state": "PROVEN", "evidence": ["PR-293"]},
+        {"id": "installed_apk_capture", "state": "PROVEN", "evidence": ["PR-296"]},
+        {"id": "atomic_evidence_bundle", "state": "PROVEN", "evidence": ["PR-296"]},
+        {"id": "dual_arm_matrix_validator", "state": "PROVEN", "evidence": ["PR-296"]},
+        {"id": "arm32_physical_bundle", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "arm64_physical_bundle", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "dual_arm_device_proof", "state": "TOKEN_VAZIO", "evidence": []}
+      ],
+      "claim_allowed": true,
+      "claim_scope": "instrumentation and static contracts; physical execution excluded"
+    },
+    {
+      "id": "loader.security",
+      "criteria": [
+        {"id": "stub_inert", "state": "PROVEN", "evidence": ["PR-297"]},
+        {"id": "partial_functionality_quarantine", "state": "PROVEN", "evidence": ["PR-297"]},
+        {"id": "local_adversarial_logic_tests", "state": "PROVEN", "evidence": ["PR-297", "19/19"]},
+        {"id": "functional_loader", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "loader_apk_artifact_current_head", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "android_security_boundary_receipt", "state": "TOKEN_VAZIO", "evidence": []}
+      ],
+      "claim_allowed": true,
+      "claim_scope": "STUB_SAFE_BLOCKED only; functional capability excluded"
+    },
+    {
+      "id": "sensors.runtime",
+      "criteria": [
+        {"id": "signature_permission", "state": "PROVEN", "evidence": ["PR-288"]},
+        {"id": "protocol_v2", "state": "PROVEN", "evidence": ["PR-288"]},
+        {"id": "type_all_catalog", "state": "PROVEN", "evidence": ["PR-288"]},
+        {"id": "bounded_snapshot_all", "state": "PROVEN", "evidence": ["PR-288"]},
+        {"id": "callback_creator_package_gate", "state": "PROVEN", "evidence": ["PR-288"]},
+        {"id": "physical_oem_matrix", "state": "TOKEN_VAZIO", "evidence": []}
+      ],
+      "claim_allowed": true,
+      "claim_scope": "Android service implementation; hardware availability excluded"
     },
     {
       "id": "apkc.dex.structural",
@@ -33,32 +78,36 @@
         {"id": "map_list", "state": "PROVEN", "evidence": ["apkc/fmt_dex.h"]},
         {"id": "sha1_signature", "state": "PROVEN", "evidence": ["scripts/validate_apkc_dex_contract.py"]},
         {"id": "adler32_checksum", "state": "PROVEN", "evidence": ["scripts/validate_apkc_dex_contract.py"]},
-        {"id": "strings_types_protos", "state": "TOKEN_VAZIO", "evidence": []},
-        {"id": "fields_methods_classes", "state": "TOKEN_VAZIO", "evidence": []},
-        {"id": "code_items", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "strings_types_protos", "state": "PROVEN", "evidence": ["PR-286"]},
+        {"id": "fields_methods_classes", "state": "PARTIAL", "evidence": ["PR-286: one class and one method; no field backend"]},
+        {"id": "code_items", "state": "PROVEN", "evidence": ["PR-286: return-void"]},
         {"id": "debug_info_annotations", "state": "TOKEN_VAZIO", "evidence": []},
         {"id": "multidex_merge", "state": "TOKEN_VAZIO", "evidence": []},
         {"id": "art_dalvik_runtime", "state": "TOKEN_VAZIO", "evidence": []}
       ],
       "claim_allowed": true,
-      "claim_scope": "empty structural DEX 035 container only"
+      "claim_scope": "empty DEX plus fixed one-class/one-method DEX 035 fixture"
     },
     {
       "id": "apkc.elf.structural",
       "criteria": [
-        {"id": "elf32_arm_header", "state": "PROVEN", "evidence": ["apkc/fmt_elf.h"]},
-        {"id": "elf64_aarch64_header", "state": "PROVEN", "evidence": ["apkc/fmt_elf.h"]},
-        {"id": "bounded_writer", "state": "PROVEN", "evidence": ["tests/native/apkc_emit_minimal_elf.c"]},
-        {"id": "independent_validator", "state": "PROVEN", "evidence": ["scripts/validate_apkc_elf_contract.py"]},
+        {"id": "elf32_arm_rel_header", "state": "PROVEN", "evidence": ["apkc/fmt_elf.h"]},
+        {"id": "elf64_aarch64_rel_header", "state": "PROVEN", "evidence": ["apkc/fmt_elf.h"]},
+        {"id": "bounded_rel_writer", "state": "PROVEN", "evidence": ["tests/native/apkc_emit_minimal_elf.c"]},
+        {"id": "rel_independent_validator", "state": "PROVEN", "evidence": ["scripts/validate_apkc_elf_contract.py"]},
+        {"id": "elf32_arm_exec_header", "state": "PROVEN", "evidence": ["PR-285"]},
+        {"id": "elf64_aarch64_exec_header", "state": "PROVEN", "evidence": ["PR-285"]},
+        {"id": "rx_pt_load_segment", "state": "PROVEN", "evidence": ["PR-285"]},
+        {"id": "fixed_exit_stub", "state": "PROVEN", "evidence": ["PR-285"]},
         {"id": "named_sections", "state": "TOKEN_VAZIO", "evidence": []},
         {"id": "symbols", "state": "TOKEN_VAZIO", "evidence": []},
         {"id": "relocations", "state": "TOKEN_VAZIO", "evidence": []},
-        {"id": "load_segments", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "general_linker", "state": "TOKEN_VAZIO", "evidence": []},
         {"id": "dynamic_linking", "state": "TOKEN_VAZIO", "evidence": []},
-        {"id": "runtime_execution", "state": "TOKEN_VAZIO", "evidence": []}
+        {"id": "physical_runtime_execution", "state": "TOKEN_VAZIO", "evidence": []}
       ],
       "claim_allowed": true,
-      "claim_scope": "minimal ET_REL containers with null section only"
+      "claim_scope": "ET_REL containers plus fixed ET_EXEC exit(0) stubs"
     },
     {
       "id": "browser.http.textmode",
@@ -126,13 +175,13 @@
         {"id": "claim_validator", "state": "PROVEN", "evidence": ["scripts/validate_compiler_capability_matrix.py"]},
         {"id": "complete_owned_compiler", "state": "TOKEN_VAZIO", "evidence": []},
         {"id": "cross_language_ir", "state": "TOKEN_VAZIO", "evidence": []},
-        {"id": "dex_backend", "state": "TOKEN_VAZIO", "evidence": []},
-        {"id": "elf_backend", "state": "TOKEN_VAZIO", "evidence": []},
+        {"id": "dex_backend", "state": "PARTIAL", "evidence": ["PR-286: fixed one-class fixture"]},
+        {"id": "elf_backend", "state": "PARTIAL", "evidence": ["PR-285: fixed exit stubs"]},
         {"id": "apk_packager_end_to_end", "state": "TOKEN_VAZIO", "evidence": []},
         {"id": "runtime_test_matrix", "state": "TOKEN_VAZIO", "evidence": []}
       ],
       "claim_allowed": true,
-      "claim_scope": "governance and gap mapping only; zero complete APKC-owned compilers"
+      "claim_scope": "governance plus fixed DEX/ELF fixtures; zero complete APKC-owned compilers"
     },
     {
       "id": "documents.loose.corpus",
