@@ -41,6 +41,7 @@ typedef struct {
 typedef struct {
   raf_phase_gate_config_t config;
   uint32_t frequency_mhz;
+  uint32_t released_frequency_mhz;
   uint32_t phase_q32;
   uint32_t phase_remainder;
   uint32_t logical_cycle;
@@ -56,6 +57,7 @@ typedef struct {
 
 typedef struct {
   uint32_t frequency_mhz;
+  uint32_t released_frequency_mhz;
   uint32_t phase_q32;
   uint32_t logical_cycle;
   uint32_t release_epoch;
