@@ -39,11 +39,15 @@ int main(void) {
     complete_cycle(&gate, cycle, &event, 0);
     assert(gate.release_epoch == 0u);
     assert(gate.released_digest == 0u);
+    assert(gate.released_frequency_mhz == 0u);
   }
 
   complete_cycle(&gate, 7u, &event, 1);
   assert(gate.release_epoch == 1u);
+  assert(gate.released_frequency_mhz == 10000u);
+  assert(event.released_frequency_mhz == 10000u);
   assert(gate.frequency_mhz == 10100u);
+  assert(event.frequency_mhz == 10100u);
   assert(gate.completed_mask == 0u);
   assert(gate.window_cycle == 0u);
   assert((event.flags & RAF_PHASE_GATE_FLAG_ALIAS_ANCHOR) != 0u);
@@ -63,6 +67,7 @@ int main(void) {
   assert(raf_phase_release_gate_step(&gate, 0u, 0u, 0u, &event) ==
          RAF_PHASE_GATE_ERR_EVIDENCE);
   assert(gate.release_epoch == 1u);
+  assert(gate.released_frequency_mhz == 10000u);
 
   puts("raf_phase_release_gate: PASS");
   return 0;
