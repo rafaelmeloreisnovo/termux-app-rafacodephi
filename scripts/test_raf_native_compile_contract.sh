@@ -53,6 +53,17 @@ run_gate compile_ecc32_unrolled \
   -Wl,--gc-sections \
   -o "$TMP/test_raf_ecc32_unrolled"
 
+run_gate compile_phase_release_gate \
+  "$CC_BIN" \
+  -std=c11 -Wall -Wextra -Werror -Wpedantic -Os \
+  -ffreestanding -fno-builtin -fno-common \
+  -ffunction-sections -fdata-sections \
+  -I"$ROOT/rafaelia/src/main/cpp" \
+  "$ROOT/rafaelia/src/main/cpp/raf_phase_release_gate.c" \
+  "$ROOT/tests/native/test_raf_phase_release_gate.c" \
+  -Wl,--gc-sections \
+  -o "$TMP/test_raf_phase_release_gate"
+
 # APKC's production syscall layer remains ARM-only. Host emitters explicitly
 # enable RAF_APKC_HOST_TEST and write bounded fixtures for independent parsers.
 run_gate compile_apkc_dex_emitter \
@@ -88,6 +99,7 @@ run_gate compile_apkc_exec_elf_emitter \
 run_gate test_numbase "$TMP/test_raf_numbase"
 run_gate test_ecc32_compact "$TMP/test_raf_ecc32_compact"
 run_gate test_ecc32_unrolled "$TMP/test_raf_ecc32_unrolled"
+run_gate test_phase_release_gate "$TMP/test_raf_phase_release_gate"
 run_gate emit_apkc_dex "$TMP/apkc_emit_minimal_dex" "$TMP/classes.dex"
 run_gate emit_apkc_elf_rel \
   "$TMP/apkc_emit_minimal_elf" "$TMP/apkc-arm32.o" "$TMP/apkc-arm64.o"
@@ -116,6 +128,10 @@ run_gate index_loose_artifacts \
   python3 "$ROOT/scripts/index_loose_operational_artifacts.py" --validate --summary
 run_gate validate_native_gc \
   python3 "$ROOT/scripts/validate_raf_native_gc_contract.py"
+run_gate validate_phase_release_contract \
+  python3 "$ROOT/scripts/validate_raf_phase_release_contract.py" --strict --write-report
+run_gate test_phase_release_contract \
+  python3 "$ROOT/tests/test_raf_phase_release_contract.py"
 run_gate test_warning_contract \
   python3 "$ROOT/tests/test_raf_compile_warning_contract.py"
 
