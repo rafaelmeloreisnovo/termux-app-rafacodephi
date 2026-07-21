@@ -261,6 +261,14 @@
             android:name="com.termux.shared.activities.ReportActivity$ReportActivityBroadcastReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name="com.termux.app.integration.VectrasIntegrationReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.vectras.vm.ACTION_QUERY_INTEGRATION" />
+            </intent-filter>
+        </receiver>
+
 
         <service
             android:name="com.termux.app.TermuxService"
