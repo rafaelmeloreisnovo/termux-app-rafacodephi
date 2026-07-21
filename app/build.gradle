@@ -24,7 +24,50 @@ ext {
     bootstrapBlake3Arm = System.getenv("TERMUX_BOOTSTRAP_BLAKE3_ARM") ?: ""
     bootstrapBlake3I686 = System.getenv("TERMUX_BOOTSTRAP_BLAKE3_I686") ?: ""
     bootstrapBlake3X8664 = System.getenv("TERMUX_BOOTSTRAP_BLAKE3_X86_64") ?: ""
+
+    // Optional external acquisition route. Empty URL+SHA pairs disable the loader and preserve
+    // the embedded bootstrap. The build never invents either value.
+    externalBootstrapUrlAarch64 = System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_URL_AARCH64") ?: ""
+    externalBootstrapUrlArm = System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_URL_ARM") ?: ""
+    externalBootstrapUrlI686 = System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_URL_I686") ?: ""
+    externalBootstrapUrlX8664 = System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_URL_X86_64") ?: ""
+    externalBootstrapSha256Aarch64 = System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_SHA256_AARCH64") ?: ""
+    externalBootstrapSha256Arm = System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_SHA256_ARM") ?: ""
+    externalBootstrapSha256I686 = System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_SHA256_I686") ?: ""
+    externalBootstrapSha256X8664 = System.getenv("TERMUX_EXTERNAL_BOOTSTRAP_SHA256_X86_64") ?: ""
 }
+
+def buildConfigString(String value) {
+    return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+}
+
+def validateExternalBootstrapPin(String abi, String url, String sha256) {
+    boolean hasUrl = url != null && !url.trim().isEmpty()
+    boolean hasSha = sha256 != null && !sha256.trim().isEmpty()
+    if (hasUrl != hasSha) {
+        throw new GradleException("External bootstrap ${abi} requires both URL and SHA-256")
+    }
+    if (!hasUrl) return
+    if (!(sha256 ==~ /^[0-9a-fA-F]{64}$/)) {
+        throw new GradleException("External bootstrap ${abi} SHA-256 must contain 64 hexadecimal characters")
+    }
+    java.net.URI parsed
+    try {
+        parsed = new java.net.URI(url)
+    } catch (Exception e) {
+        throw new GradleException("External bootstrap ${abi} URL is invalid", e)
+    }
+    int port = parsed.port == -1 ? 443 : parsed.port
+    if (!"https".equalsIgnoreCase(parsed.scheme) || !parsed.host || parsed.userInfo != null ||
+        parsed.fragment != null || port != 443) {
+        throw new GradleException("External bootstrap ${abi} URL must be HTTPS on port 443 without user-info or fragment")
+    }
+}
+
+validateExternalBootstrapPin("aarch64", project.ext.externalBootstrapUrlAarch64, project.ext.externalBootstrapSha256Aarch64)
+validateExternalBootstrapPin("arm", project.ext.externalBootstrapUrlArm, project.ext.externalBootstrapSha256Arm)
+validateExternalBootstrapPin("i686", project.ext.externalBootstrapUrlI686, project.ext.externalBootstrapSha256I686)
+validateExternalBootstrapPin("x86_64", project.ext.externalBootstrapUrlX8664, project.ext.externalBootstrapSha256X8664)
 
 def validateVersionName(String candidateVersionName) {
     def semverRegex = '^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$'
@@ -59,15 +102,23 @@ android {
         versionName effectiveVersionName
         versionNameSuffix "-rafacodephi"
 
-        buildConfigField "String", "TERMUX_PACKAGE_VARIANT", "\"" + project.ext.packageVariant + "\"" // Used by TermuxApplication class
-        buildConfigField "String", "BOOTSTRAP_BLAKE3_AARCH64", "\"" + project.ext.bootstrapBlake3Aarch64 + "\""
-        buildConfigField "String", "BOOTSTRAP_BLAKE3_ARM", "\"" + project.ext.bootstrapBlake3Arm + "\""
-        buildConfigField "String", "BOOTSTRAP_BLAKE3_I686", "\"" + project.ext.bootstrapBlake3I686 + "\""
-        buildConfigField "String", "BOOTSTRAP_BLAKE3_X86_64", "\"" + project.ext.bootstrapBlake3X8664 + "\""
+        buildConfigField "String", "TERMUX_PACKAGE_VARIANT", buildConfigString(project.ext.packageVariant)
+        buildConfigField "String", "BOOTSTRAP_BLAKE3_AARCH64", buildConfigString(project.ext.bootstrapBlake3Aarch64)
+        buildConfigField "String", "BOOTSTRAP_BLAKE3_ARM", buildConfigString(project.ext.bootstrapBlake3Arm)
+        buildConfigField "String", "BOOTSTRAP_BLAKE3_I686", buildConfigString(project.ext.bootstrapBlake3I686)
+        buildConfigField "String", "BOOTSTRAP_BLAKE3_X86_64", buildConfigString(project.ext.bootstrapBlake3X8664)
         buildConfigField "boolean", "BOOTSTRAP_BAREMETAL_STRICT", baremetalStrictValue
+        buildConfigField "String", "EXTERNAL_BOOTSTRAP_URL_AARCH64", buildConfigString(project.ext.externalBootstrapUrlAarch64)
+        buildConfigField "String", "EXTERNAL_BOOTSTRAP_URL_ARM", buildConfigString(project.ext.externalBootstrapUrlArm)
+        buildConfigField "String", "EXTERNAL_BOOTSTRAP_URL_I686", buildConfigString(project.ext.externalBootstrapUrlI686)
+        buildConfigField "String", "EXTERNAL_BOOTSTRAP_URL_X86_64", buildConfigString(project.ext.externalBootstrapUrlX8664)
+        buildConfigField "String", "EXTERNAL_BOOTSTRAP_SHA256_AARCH64", buildConfigString(project.ext.externalBootstrapSha256Aarch64.toLowerCase(Locale.ROOT))
+        buildConfigField "String", "EXTERNAL_BOOTSTRAP_SHA256_ARM", buildConfigString(project.ext.externalBootstrapSha256Arm.toLowerCase(Locale.ROOT))
+        buildConfigField "String", "EXTERNAL_BOOTSTRAP_SHA256_I686", buildConfigString(project.ext.externalBootstrapSha256I686.toLowerCase(Locale.ROOT))
+        buildConfigField "String", "EXTERNAL_BOOTSTRAP_SHA256_X86_64", buildConfigString(project.ext.externalBootstrapSha256X8664.toLowerCase(Locale.ROOT))
 
         buildConfigField "int", "CONFIGURED_MIN_SDK", String.valueOf(project.properties.minSdkVersion.toInteger())
-        buildConfigField "String", "SUPPORTED_APK_ABIS", "\"" + project.findProperty('termux.abi.matrix').toString() + "\""
+        buildConfigField "String", "SUPPORTED_APK_ABIS", buildConfigString(project.findProperty('termux.abi.matrix').toString())
 
         manifestPlaceholders.TERMUX_PACKAGE_NAME = project.ext.appPackageName
         manifestPlaceholders.TERMUX_APP_NAME = "Termux RAFCODEΦ"
@@ -81,12 +132,9 @@ android {
         externalNativeBuild {
             ndkBuild {
                 cFlags "-std=c11", "-Wall", "-Wextra", "-Werror", "-Os", "-fno-stack-protector"
-                // Critical: 16KB page alignment for Android 15/16 compatibility
-                // Note: ldFlags are set in Android.mk with LOCAL_LDFLAGS
                 arguments "NDK_APP_LDFLAGS=-Wl,--gc-sections -Wl,-z,max-page-size=16384"
             }
         }
-
     }
 
     splits {
@@ -167,9 +215,7 @@ android {
     }
 
     compileOptions {
-        // Flag to enable support for the new language APIs
         coreLibraryDesugaringEnabled = true
-
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
@@ -228,7 +274,6 @@ def rafcodephiBootstrapZips = [
     file("src/main/cpp/rewritten-bootstrap-x86_64.zip"),
 ]
 
-
 tasks.register("validateAndroid15Compatibility") {
     group = "verification"
     description = "Validates Android 15/16 16KB page-size alignment contract for api_lowlevel."
@@ -257,159 +302,4 @@ tasks.register("validateSideBySideContract", Exec) {
     description = "Validates canonical RAFCODEPHI side-by-side package/bootstrap contract."
     workingDir rootProject.projectDir
     commandLine "python3", "scripts/validate_side_by_side_contract.py"
-}
-
-tasks.register("generateRafcodephiBootstraps", Exec) {
-    group = "build setup"
-    description = "Generate installable RAFCODEPHI bootstrap packages before native incbin."
-    workingDir rootProject.projectDir
-    commandLine "bash", "scripts/build_rafaelia_bootstraps.sh"
-    environment "TERMUX_BOOTSTRAP_PACKAGE_NAME", project.ext.bootstrapMetadataPackageName
-    environment "TERMUX_BOOTSTRAP_PAGE_SIZE", project.ext.bootstrapRequiredPageSize
-    outputs.files(rafcodephiBootstrapZips)
-}
-
-def rafcodephiRewriteAbiMap = [
-    [arch: "aarch64", abi: "arm64-v8a"  ],
-    [arch: "arm",     abi: "armeabi-v7a"],
-    [arch: "i686",    abi: "x86"        ],
-    [arch: "x86_64",  abi: "x86_64"     ],
-]
-
-tasks.register("rewriteBootstraps") {
-    group = "build setup"
-    description = "Rewrite RAFCODEPHI bootstrap ZIPs via scripts/rewrite_bootstrap.py (4 ABIs)."
-    dependsOn("generateRafcodephiBootstraps")
-    outputs.files(rafcodephiBootstrapZips)
-    outputs.files(
-        file("${rootProject.projectDir}/build/reports/bootstrap-rewrite/bootstrap-elf-report.txt"),
-        file("${rootProject.projectDir}/build/reports/bootstrap-rewrite/bootstrap-text-rewrite-report.txt")
-    )
-    doLast {
-        def reportDir = file("${rootProject.projectDir}/build/reports/bootstrap-rewrite")
-        reportDir.mkdirs()
-        def workDir = file("${buildDir}/bootstrap-rewrite-work")
-        workDir.mkdirs()
-        rafcodephiRewriteAbiMap.each { e ->
-            project.exec {
-                workingDir rootProject.projectDir
-                commandLine "python3", "scripts/rewrite_bootstrap.py",
-                    "--input",        "app/src/main/cpp/bootstrap-${e.arch}.zip",
-                    "--output",       "app/src/main/cpp/rewritten-bootstrap-${e.arch}.zip",
-                    "--arch",         e.arch,
-                    "--abi",          e.abi,
-                    "--package-name", project.ext.bootstrapMetadataPackageName,
-                    "--prefix",       "/data/data/${project.ext.bootstrapMetadataPackageName}/files/usr",
-                    "--home",         "/data/data/${project.ext.bootstrapMetadataPackageName}/files/home",
-                    "--page-size",    project.ext.bootstrapRequiredPageSize,
-                    "--variant",      project.ext.packageVariant,
-                    "--workdir",      workDir.absolutePath,
-                    "--report-dir",   reportDir.absolutePath
-            }
-        }
-    }
-}
-
-tasks.register("validateRewrittenBootstraps") {
-    group = "verification"
-    description = "Validates BOOTSTRAP_INFO tokens and required entries in all four rewritten ZIPs."
-    dependsOn("rewriteBootstraps")
-    doLast {
-        def reportELF  = file("${rootProject.projectDir}/build/reports/bootstrap-rewrite/bootstrap-elf-report.txt")
-        def reportText = file("${rootProject.projectDir}/build/reports/bootstrap-rewrite/bootstrap-text-rewrite-report.txt")
-        if (!reportELF.exists() || reportELF.length() == 0L)
-            throw new GradleException("Missing or empty: ${reportELF}")
-        if (!reportText.exists() || reportText.length() == 0L)
-            throw new GradleException("Missing or empty: ${reportText}")
-
-        def legacyPrefix = "/data/data/com.termux/files/usr"
-        def requiredTokens = [
-            "BOOTSTRAP_KIND"            : "rewritten",
-            "BOOTSTRAP_RUNTIME_READY"   : "1",
-            "BOOTSTRAP_UTILS_READY"     : "1",
-            "BOOTSTRAP_APKMANAGER_READY": "1",
-            "BOOTSTRAP_SHELLBASH_READY" : "1",
-            "BOOTSTRAP_REWRITE_VERSION" : "2",
-            "TERMUX_PACKAGE_NAME"       : project.ext.bootstrapMetadataPackageName,
-        ]
-        def requiredEntries = ["bin/sh", "bin/pkg", "bin/apkmanager", "bin/shellbash", "BOOTSTRAP_INFO"]
-        def binaryExtensions = [".so", ".a", ".o", ".zip", ".deb", ".apk"] as Set
-
-        rafcodephiBootstrapZips.each { zipFile ->
-            if (!zipFile.exists())
-                throw new GradleException("Missing rewritten ZIP: ${zipFile}")
-            def zf = new java.util.zip.ZipFile(zipFile)
-            try {
-                def infoEntry = zf.getEntry("BOOTSTRAP_INFO")
-                if (!infoEntry) throw new GradleException("${zipFile.name}: missing BOOTSTRAP_INFO")
-                def tokens = [:]
-                zf.getInputStream(infoEntry).text.eachLine { line ->
-                    def idx = line.indexOf('=')
-                    if (idx > 0) tokens[line[0..<idx].trim()] = line[(idx + 1)..-1].trim()
-                }
-                requiredTokens.each { k, v ->
-                    if (tokens[k] != v)
-                        throw new GradleException("${zipFile.name}: expected ${k}=${v}, got '${tokens[k]}'")
-                }
-                requiredEntries.each { name ->
-                    if (!zf.getEntry(name))
-                        throw new GradleException("${zipFile.name}: missing required entry '${name}'")
-                }
-                def entries = zf.entries()
-                while (entries.hasMoreElements()) {
-                    def e = entries.nextElement()
-                    if (e.directory) continue
-                    if (binaryExtensions.any { ext -> e.name.endsWith(ext) }) continue
-                    def bytes = zf.getInputStream(e).bytes
-                    if (bytes.length >= 4 && bytes[0] == 0x7f && bytes[1] == 0x45 && bytes[2] == 0x4c && bytes[3] == 0x46) continue
-                    if (new String(bytes, "UTF-8").contains(legacyPrefix))
-                        throw new GradleException("${zipFile.name}!${e.name}: contains legacy prefix '${legacyPrefix}'")
-                }
-            } finally {
-                zf.close()
-            }
-        }
-        logger.lifecycle("validateRewrittenBootstraps: all checks passed.")
-    }
-}
-
-tasks.register("printVersionName") {
-    group = "build info"
-    description = "Prints the app versionName to stdout (consumed by CI pipeline scripts via gradlew -q)."
-    doLast {
-        println android.defaultConfig.versionName
-    }
-}
-
-tasks.named("preBuild") {
-    dependsOn(tasks.named("generateRafcodephiBootstraps"))
-}
-
-tasks.configureEach { task ->
-    if (task.name.startsWith("externalNativeBuild") || task.name.startsWith("generateJsonModel")) {
-        task.dependsOn(tasks.named("generateRafcodephiBootstraps"))
-    }
-}
-
-dependencies {
-    implementation "androidx.annotation:annotation:1.9.0"
-    implementation "androidx.core:core:1.13.1"
-    implementation "androidx.drawerlayout:drawerlayout:1.2.0"
-    implementation "androidx.preference:preference:1.2.1"
-    implementation "androidx.viewpager:viewpager:1.0.0"
-    implementation "com.google.android.material:material:1.12.0"
-    implementation "com.google.guava:guava:32.1.3-jre"
-    implementation "io.noties.markwon:core:$markwonVersion"
-    implementation "io.noties.markwon:ext-strikethrough:$markwonVersion"
-    implementation "io.noties.markwon:linkify:$markwonVersion"
-    implementation "io.noties.markwon:recycler:$markwonVersion"
-    implementation "org.bouncycastle:bcprov-jdk18on:1.78.1"
-    implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
-
-    implementation project(":terminal-view")
-    implementation project(":termux-shared")
-
-    testImplementation "junit:junit:4.13.2"
-
-    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"
 }

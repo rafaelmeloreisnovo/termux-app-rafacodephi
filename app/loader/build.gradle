@@ -10,17 +10,53 @@ android {
         applicationId "com.termux.rafacodephi.loader"
         minSdk = project.properties.minSdkVersion.toInteger()
         targetSdk = project.properties.targetSdkVersion.toInteger()
-        versionCode 2
-        versionName "0.2.0"
+        versionCode 3
+        versionName "0.3.0"
     }
 
     buildFeatures {
         buildConfig = false
     }
 
+    def releaseSigningEnabled =
+        (System.getenv("TERMUX_ENABLE_RELEASE_SIGNING") ?: "false").toBoolean()
+    def releaseKeystoreFilePath = System.getenv("TERMUX_RELEASE_KEYSTORE_FILE") ?: ""
+    def releaseKeystorePassword = System.getenv("TERMUX_RELEASE_KEYSTORE_PASSWORD") ?: ""
+    def releaseKeyAlias = System.getenv("TERMUX_RELEASE_KEY_ALIAS") ?: ""
+    def releaseKeyPassword = System.getenv("TERMUX_RELEASE_KEY_PASSWORD") ?: ""
+    def hasReleaseSigningMaterial = releaseKeystoreFilePath && releaseKeystorePassword &&
+        releaseKeyAlias && releaseKeyPassword
+    def useReleaseSigning = false
+
+    if (releaseSigningEnabled) {
+        if (!hasReleaseSigningMaterial) {
+            throw new GradleException(
+                "TERMUX_ENABLE_RELEASE_SIGNING=true requires the same host and loader keystore variables")
+        }
+        File releaseKeystoreFile = file(releaseKeystoreFilePath)
+        if (!releaseKeystoreFile.exists()) {
+            throw new GradleException(
+                "Loader release keystore not found at '${releaseKeystoreFile.absolutePath}'")
+        }
+        signingConfigs {
+            release {
+                storeFile releaseKeystoreFile
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+                enableV1Signing true
+                enableV2Signing true
+            }
+        }
+        useReleaseSigning = true
+    }
+
     buildTypes {
         release {
             minifyEnabled false
+            if (useReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
@@ -33,7 +69,7 @@ android {
 
 tasks.register("materializeLoaderApk", Copy) {
     group = "distribution"
-    description = "Builds the loader stub and materializes it as build/dist/loader.apk."
+    description = "Builds the signature-protected verified bootstrap acquisition APK and materializes build/dist/loader.apk."
     dependsOn("assembleDebug")
     from("${buildDir}/outputs/apk/debug/loader-debug.apk")
     into("${buildDir}/dist")
