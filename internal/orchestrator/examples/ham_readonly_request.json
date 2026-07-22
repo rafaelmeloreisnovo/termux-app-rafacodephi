@@ -1,0 +1,74 @@
+{
+  "schema": "raf.human-ai.middleware.v1",
+  "request_id": "HAM-20260722-TERMUXREAD001",
+  "created_at": "2026-07-22T12:00:00Z",
+  "intent": {
+    "objective": "Executar somente git status e git diff stat em um repositório local selecionado pelo titular.",
+    "expected_usefulness_target": 0.94,
+    "measured_usefulness": null,
+    "scope": ["local-git-metadata", "read-only", "bounded"]
+  },
+  "people": {
+    "requester_role": "DATA_SUBJECT",
+    "affected_people": [
+      {"category": "DATA_SUBJECT", "count": 1, "minor": false, "consent_required": false}
+    ],
+    "human_final_decision": true,
+    "appeal_path": "Local RafGitTools decision and receipt review"
+  },
+  "data_boundary": {
+    "classification": "INTERNAL",
+    "categories": ["SOURCE_CODE"],
+    "minimized_fields": ["git_status", "git_diff_stat", "stdout_sha256", "stderr_sha256"],
+    "excluded_fields": [
+      "access_token", "refresh_token", "password", "secret", "api_key",
+      "private_key", "authorization_header", "cookie", "session_token"
+    ],
+    "retention_seconds": 86400,
+    "destination_visibility": "LOCAL_ONLY",
+    "raw_data_export": false
+  },
+  "risk": {
+    "level": "LOW",
+    "privacy": "LOW",
+    "security": "LOW",
+    "rights": "LOW",
+    "uncertainty": "BOUNDED"
+  },
+  "ai_lane": {
+    "duties": ["IDENTIFY_RISK", "MINIMIZE_DATA", "EXPLAIN_LIMITS", "PRESERVE_PROVENANCE", "ABSTAIN_WHEN_UNCERTAIN"],
+    "may_finalize": false,
+    "may_expand_scope": false,
+    "may_execute": false
+  },
+  "human_lane": {
+    "consent_state": "NOT_REQUIRED",
+    "decision": "APPROVE_BOUNDED",
+    "reviewers": ["OPERATOR"],
+    "revocation_supported": true
+  },
+  "execution": {
+    "target_repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "operation": "GIT_READONLY_PROBE",
+    "effect_class": "READ_ONLY",
+    "dry_run_first": true,
+    "irreversible": false,
+    "idempotency_key": "ham:20260722:termux:readonly:001",
+    "limits": {"max_bytes": 1048576, "timeout_seconds": 60, "max_attempts": 1},
+    "rollback": {"available": false, "strategy": null}
+  },
+  "evidence": {
+    "F_ok": ["bounded read-only request declared"],
+    "F_gap": ["runtime receipt not yet produced"],
+    "F_next": ["execute the governed read-only vertical slice"],
+    "state": "TOKEN_VAZIO",
+    "claim_allowed": false,
+    "refs": []
+  },
+  "friction": {
+    "loop_budget": 1,
+    "current_loop": 0,
+    "stop_on_no_new_evidence": true,
+    "token_vazio_reason": "Awaiting the first bounded runtime receipt."
+  }
+}

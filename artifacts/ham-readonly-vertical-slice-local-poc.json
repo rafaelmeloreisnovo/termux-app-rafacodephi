@@ -1,0 +1,41 @@
+{
+  "schema": "raf.human-ai.runtime-poc.v1",
+  "operation": "HAM_READONLY_VERTICAL_SLICE",
+  "execution_scope": "LOCAL_EQUIVALENT_RUNTIME_POC",
+  "source_identity": "TOKEN_VAZIO_UNTIL_EXACT_CHECKOUT_RUN",
+  "positive_case": {
+    "result": "PASS",
+    "gate": "ALLOW_BOUNDED",
+    "git_readonly_probe": "EXECUTED",
+    "execution_receipt": "GENERATED",
+    "receipt_sha256": "3050746a2b05bad54808e36b201de9acfd3abe3fd000db8d38bfd1b9a6487f06",
+    "stdout_sha256": "49fb6157d1d0fb51d5019bcadabbf4b116f307aecfd64b3f036280b5b20e1c47",
+    "claim_allowed": false
+  },
+  "negative_cases": {
+    "result": "4/4_PASS",
+    "all_blocked_before_execution": true,
+    "cases": [
+      {"name": "AI_EXECUTE", "exit_code": 5},
+      {"name": "GIT_WRITE_EFFECT", "exit_code": 5},
+      {"name": "SECRET_MATERIAL", "exit_code": 5},
+      {"name": "WRONG_TARGET_REPOSITORY", "exit_code": 5}
+    ]
+  },
+  "exact_git_checkout_execution": "TOKEN_VAZIO",
+  "Android_device_execution": "TOKEN_VAZIO",
+  "measured_usefulness_0_94": "TOKEN_VAZIO",
+  "F_ok": [
+    "bounded gate allowed the declared read-only operation",
+    "execution receipt and hashes were generated",
+    "four adversarial requests were blocked before execution"
+  ],
+  "F_gap": [
+    "execute the merged checkout with the canonical base vertical slice",
+    "execute on an Android Termux device",
+    "measure usefulness with a declared protocol"
+  ],
+  "F_next": [
+    "run tests/vertical_slice/test_ham_readonly_flow.py from the merged checkout and attach the receipt"
+  ]
+}
