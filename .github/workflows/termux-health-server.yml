@@ -1,0 +1,60 @@
+name: Termux Health Server
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/termux_health_server.py'
+      - 'tests/test_termux_health_server.py'
+      - 'docs/TERMUX_HEALTH_SERVER_CONTRACT.md'
+      - '.github/workflows/termux-health-server.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: termux-health-server-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  readonly-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python identity
+        run: python3 --version
+
+      - name: Syntax
+        run: python3 -m py_compile scripts/termux_health_server.py tests/test_termux_health_server.py
+
+      - name: Unit and HTTP integration tests
+        run: python3 -m unittest tests/test_termux_health_server.py -v
+
+      - name: Snapshot boundary
+        run: |
+          RAF_TERMUX_COMMIT="${GITHUB_SHA}" \
+            python3 scripts/termux_health_server.py --print-snapshot \
+            > termux-health-snapshot.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path('termux-health-snapshot.json').read_text())
+          assert payload['schema'] == 'raf.termux-health.v1'
+          assert payload['status'] == 'ok'
+          assert payload['runtime'] == 'termux-rafcodephi'
+          assert payload['commit']
+          assert 'health.readonly' in payload['capabilities']
+          forbidden = {'token', 'password', 'secret', 'home', 'prefix', 'path'}
+          assert not forbidden.intersection(key.lower() for key in payload)
+          print('PASS termux-health-snapshot-boundary')
+          PY
+
+      - name: Upload contract artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-health-contract
+          path: termux-health-snapshot.json
+          if-no-files-found: error
