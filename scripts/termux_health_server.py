@@ -9,6 +9,7 @@ import os
 import platform
 import re
 import signal
+import socket
 import sys
 import time
 from dataclasses import asdict, dataclass
@@ -121,6 +122,9 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
     def do_DELETE(self) -> None:  # noqa: N802
         self._send(405, error_payload("method_not_allowed", "read_only_endpoint"))
 
+    def do_PATCH(self) -> None:  # noqa: N802
+        self._send(405, error_payload("method_not_allowed", "read_only_endpoint"))
+
     def log_message(self, _format: str, *_args: object) -> None:
         # Avoid writing request material or accidental query values to logs.
         return
@@ -147,6 +151,10 @@ class HealthHTTPServer(HTTPServer):
     ) -> None:
         self.snapshot_factory = snapshot_factory
         super().__init__(server_address, HealthRequestHandler)
+
+
+class HealthHTTPServerV6(HealthHTTPServer):
+    address_family = socket.AF_INET6
 
 
 def normalize_host(host: str) -> str:
@@ -178,7 +186,8 @@ def create_server(
     normalized_port = validate_port(port, allow_ephemeral=allow_ephemeral)
     started_ns = time.monotonic_ns()
     factory = snapshot_factory or (lambda: build_snapshot(started_ns=started_ns))
-    return HealthHTTPServer((normalized_host, normalized_port), factory)
+    server_type = HealthHTTPServerV6 if normalized_host == "::1" else HealthHTTPServer
+    return server_type((normalized_host, normalized_port), factory)
 
 
 def install_shutdown_handlers(server: HTTPServer) -> None:
