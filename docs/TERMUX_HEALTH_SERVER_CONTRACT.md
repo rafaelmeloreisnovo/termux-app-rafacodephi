@@ -5,7 +5,9 @@
 ```yaml
 server_implementation: IMPLEMENTED
 unit_http_tests: IMPLEMENTED
-workflow_execution: TOKEN_VAZIO
+local_isolated_smoke: PASS
+local_client_server_loopback: PASS
+workflow_execution: TOKEN_VAZIO_STARTUP
 rafgittools_client: IMPLEMENTED_IN_PR_297
 end_to_end_device: TOKEN_VAZIO
 mutating_commands: false
@@ -65,10 +67,7 @@ Hosts aceitos:
 {
   "abi": "armv7l",
   "capabilities": [
-    "health.readonly",
-    "job.submit.readonly",
-    "artifact.inspect",
-    "rafpolimata.status"
+    "health.readonly"
   ],
   "commit": "TOKEN_VAZIO",
   "pid": 1234,
@@ -78,6 +77,8 @@ Hosts aceitos:
   "uptime_ms": 42000
 }
 ```
+
+Somente capacidades com handler e teste podem ser anunciadas. `job.submit.readonly`, `artifact.inspect` e `rafpolimata.status` permanecem fora do snapshot até implementação real.
 
 A chave `commit` só aceita hexadecimal de 7–64 caracteres via `RAF_TERMUX_COMMIT`. Qualquer outro valor vira `TOKEN_VAZIO`.
 
@@ -152,15 +153,21 @@ servidor ausente != Termux quebrado
 - HEAD sem corpo;
 - encerramento limpo da thread de teste.
 
-## Fronteira de segurança
+A execução independente também fechou a ponte local:
 
-A capacidade declarada `job.submit.readonly` é apenas um identificador de capacidade futura. Este servidor não implementa submissão de job nesta PR.
+```text
+PASS termux-health-end-to-end-local code=200 state=PASS bytes=176
+```
+
+Esse resultado é host/local. Não substitui execução Termux Android ARM32/ARM64.
+
+## Fronteira de segurança
 
 ```yaml
 HEALTH_READ: IMPLEMENTED
-JOB_SUBMIT_READONLY: DECLARED_ONLY
-ARTIFACT_INSPECT: DECLARED_ONLY
-RAFPOLIMATA_STATUS: DECLARED_ONLY
+JOB_SUBMIT_READONLY: NOT_ADVERTISED_TOKEN_VAZIO
+ARTIFACT_INSPECT: NOT_ADVERTISED_TOKEN_VAZIO
+RAFPOLIMATA_STATUS: NOT_ADVERTISED_TOKEN_VAZIO
 REMOTE_BIND: PROHIBITED
 MUTATION: PROHIBITED
 ```
@@ -168,13 +175,14 @@ MUTATION: PROHIBITED
 ## Próximos gates
 
 ```yaml
-H0_PYTHON_TESTS: TOKEN_VAZIO_UNTIL_RUN
-H1_RAFGITTOOLS_CLIENT_TESTS: TOKEN_VAZIO_UNTIL_RUN
-H2_LOCAL_END_TO_END: TOKEN_VAZIO
-H3_TERMUX_ARM32: TOKEN_VAZIO
-H4_TERMUX_ARM64: TOKEN_VAZIO
-H5_AUTO_START_POLICY: TOKEN_VAZIO
-H6_LATENCY_P50_P95_P99: TOKEN_VAZIO
+H0_LOCAL_PYTHON_SMOKE: PASS
+H1_LOCAL_RAFGITTOOLS_CLIENT_COMPILE: PASS
+H2_LOCAL_END_TO_END: PASS
+H3_GITHUB_ACTIONS: TOKEN_VAZIO_STARTUP
+H4_TERMUX_ARM32: TOKEN_VAZIO
+H5_TERMUX_ARM64: TOKEN_VAZIO
+H6_AUTO_START_POLICY: TOKEN_VAZIO
+H7_LATENCY_P50_P95_P99: TOKEN_VAZIO
 ```
 
 Autostart não deve ser adicionado antes de decidir consumo de bateria, lifecycle, lockfile, porta ocupada e política de desligamento.
@@ -182,7 +190,7 @@ Autostart não deve ser adicionado antes de decidir consumo de bateria, lifecycl
 ## Retroalimentação
 
 ```text
-F_ok   = servidor local read-only, schema sanitizado, métodos bloqueados e testes implementados
+F_ok   = servidor local read-only, cliente Kotlin e loopback ponta a ponta executados
 F_gap  = execução nos devices e lifecycle/autostart
-F_next = validar PRs cliente+servidor localmente e medir integração ARM32/ARM64
+F_next = validar em Termux ARM32/ARM64 e medir p50/p95/p99
 ```
