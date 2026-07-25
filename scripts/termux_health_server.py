@@ -23,12 +23,7 @@ DEFAULT_PORT = 8765
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1"}
 ALLOWED_PATHS = {"/health", "/v1/health"}
 COMMIT_RE = re.compile(r"^[0-9a-fA-F]{7,64}$")
-CAPABILITIES = (
-    "health.readonly",
-    "job.submit.readonly",
-    "artifact.inspect",
-    "rafpolimata.status",
-)
+CAPABILITIES = ("health.readonly",)
 
 
 @dataclass(frozen=True)
