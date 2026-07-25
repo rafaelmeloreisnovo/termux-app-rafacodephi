@@ -1,0 +1,25 @@
+name: Vectras IPC v2
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "app/src/main/java/com/termux/app/integration/VectrasIntegrationReceiver.kt"
+      - "scripts/validate_vectras_ipc_v2.py"
+      - "docs/VECTRAS_IPC_V2_CONTRACT.md"
+      - ".github/workflows/vectras-ipc-v2.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Validate privacy and capability boundary
+        run: python3 scripts/validate_vectras_ipc_v2.py
