@@ -6,55 +6,75 @@ import android.content.Intent
 import java.io.File
 
 /**
- * VectrasIntegrationReceiver — responds to Vectras-VM-Android integration queries.
+ * Protocol v2 discovery endpoint for Vectras-VM-Android.
  *
- * Vectras sends ACTION_QUERY_INTEGRATION (targeted to this package) to discover whether
- * the termux bootstrap is installed and which QEMU binaries are available on this device.
- * The reply is sent back explicitly to the Vectras package only, so the response cannot
- * be intercepted by third-party apps.
- *
- * Closes X5 (cross-repo integration consumer) and T3 (Vectras↔termux bridge).
+ * It exposes bounded capability names, never private sandbox paths.
+ * Actual execution is delegated to RunCommandService and remains subject to
+ * the user-controlled allow-external-apps policy and RUN_COMMAND permission.
  */
 class VectrasIntegrationReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ACTION_QUERY) return
 
+        val nonce = intent.getStringExtra(KEY_NONCE)
+        if (!isValidNonce(nonce)) return
+
         val filesParent = context.filesDir.parentFile?.absolutePath
             ?: "/data/data/${context.packageName}"
         val prefixPath = "$filesParent/files/usr"
         val binDir = File(prefixPath, "bin")
 
-        val qemuBinaryPaths = QEMU_BINARY_NAMES.mapNotNull { name ->
-            val f = File(binDir, name)
-            if (f.exists() && f.canExecute()) f.absolutePath else null
+        val qemuBinaryNames = QEMU_BINARY_NAMES.filter { name ->
+            val file = File(binDir, name)
+            file.isFile && file.canExecute()
         }.toTypedArray()
 
         val bootstrapReady = File(prefixPath).isDirectory && binDir.isDirectory
-
         val appVersion = runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
         }.getOrDefault("unknown")
 
         val response = Intent(ACTION_RESPONSE).apply {
             setPackage(VECTRAS_PACKAGE)
+            putExtra(KEY_NONCE, nonce)
+            putExtra(KEY_PROTOCOL_VERSION, PROTOCOL_VERSION)
             putExtra(KEY_BOOTSTRAP_READY, bootstrapReady)
-            putExtra(KEY_PREFIX_PATH, prefixPath)
-            putExtra(KEY_QEMU_BINARY_PATHS, qemuBinaryPaths)
+            putExtra(KEY_QEMU_BINARY_NAMES, qemuBinaryNames)
             putExtra(KEY_TERMUX_VERSION, appVersion)
+            putExtra(KEY_EXECUTION_MODE, EXECUTION_MODE_RUN_COMMAND_SERVICE)
+            putExtra(KEY_RUN_COMMAND_PERMISSION, RUN_COMMAND_PERMISSION)
+            putExtra(KEY_PRIVATE_PATHS_EXPOSED, false)
         }
-        context.sendBroadcast(response)
+
+        // Only receivers holding the user-granted RUN_COMMAND permission may
+        // consume this response. The payload still contains no private path.
+        context.sendBroadcast(response, RUN_COMMAND_PERMISSION)
     }
 
+    private fun isValidNonce(value: String?): Boolean =
+        value != null && value.length in 16..128 &&
+            value.all { it.isLetterOrDigit() || it == '-' || it == '_' }
+
     companion object {
+        const val PROTOCOL_VERSION = 2
+
         const val ACTION_QUERY = "com.vectras.vm.ACTION_QUERY_INTEGRATION"
         const val ACTION_RESPONSE = "com.vectras.vm.ACTION_INTEGRATION_RESPONSE"
         const val VECTRAS_PACKAGE = "com.rafacodephi.app"
 
+        const val RUN_COMMAND_PERMISSION =
+            "com.termux.rafacodephi.permission.RUN_COMMAND"
+        const val EXECUTION_MODE_RUN_COMMAND_SERVICE = "run_command_service"
+
+        const val KEY_NONCE = "nonce"
+        const val KEY_PROTOCOL_VERSION = "protocol_version"
         const val KEY_BOOTSTRAP_READY = "bootstrap_ready"
-        const val KEY_PREFIX_PATH = "prefix_path"
-        const val KEY_QEMU_BINARY_PATHS = "qemu_binary_paths"
+        const val KEY_QEMU_BINARY_NAMES = "qemu_binary_names"
         const val KEY_TERMUX_VERSION = "termux_version"
+        const val KEY_EXECUTION_MODE = "execution_mode"
+        const val KEY_RUN_COMMAND_PERMISSION = "run_command_permission"
+        const val KEY_PRIVATE_PATHS_EXPOSED = "private_paths_exposed"
 
         private val QEMU_BINARY_NAMES = listOf(
             "qemu-system-x86_64",
