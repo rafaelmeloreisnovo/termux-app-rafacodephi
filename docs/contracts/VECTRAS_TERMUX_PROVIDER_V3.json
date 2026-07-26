@@ -1,0 +1,59 @@
+{
+  "schema": "raf.termux-run-command-provider.v3",
+  "state": "IMPLEMENTED_EXECUTION_PENDING",
+  "claim_allowed": false,
+  "provider": {
+    "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "base_commit": "508efb3d01594cc20d51b7fb01d5f2a790169bf2",
+    "package_default": "com.termux.rafacodephi",
+    "service_class": "com.termux.app.RunCommandService",
+    "permission": "com.termux.rafacodephi.permission.RUN_COMMAND",
+    "action": "com.termux.rafacodephi.RUN_COMMAND"
+  },
+  "consumer": {
+    "repository": "rafaelmeloreisnovo/Vectras-VM-Android",
+    "base_commit": "a29392e65948463ab9cb6dbfefe64eb060e23a07",
+    "protocol": "raf.vectras-termux-ipc.v3"
+  },
+  "request_keys": {
+    "command_path": "com.termux.rafacodephi.RUN_COMMAND_PATH",
+    "arguments": "com.termux.rafacodephi.RUN_COMMAND_ARGUMENTS",
+    "workdir": "com.termux.rafacodephi.RUN_COMMAND_WORKDIR",
+    "runner": "com.termux.rafacodephi.RUN_COMMAND_RUNNER",
+    "pending_intent": "com.termux.rafacodephi.RUN_COMMAND_PENDING_INTENT"
+  },
+  "runner": {
+    "app_shell": "app-shell",
+    "terminal_session": "terminal-session",
+    "background_alias_deprecated": true
+  },
+  "result_keys": {
+    "bundle": "result",
+    "stdout": "stdout",
+    "stdout_original_length": "stdout_original_length",
+    "stderr": "stderr",
+    "stderr_original_length": "stderr_original_length",
+    "exit_code": "exitCode",
+    "error_code": "err",
+    "error_message": "errmsg"
+  },
+  "provider_semantics": {
+    "pending_intent_supported": true,
+    "command_path_canonicalized": true,
+    "arguments_passed_without_shell_concatenation": true,
+    "workdir_canonicalized": true,
+    "stdout_stderr_may_be_truncated": true,
+    "original_lengths_reported": true,
+    "process_exit_code_separate_from_internal_error": true
+  },
+  "claim_boundary": {
+    "provider_static_contract": "IMPLEMENTED_NOT_EXECUTED",
+    "android_build": "TOKEN_VAZIO",
+    "provider_installed": "TOKEN_VAZIO",
+    "permission_granted": "TOKEN_VAZIO",
+    "real_result_bundle": "TOKEN_VAZIO",
+    "qemu_execution": "TOKEN_VAZIO",
+    "guest_boot": "TOKEN_VAZIO",
+    "claim_allowed": false
+  }
+}
