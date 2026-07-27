@@ -246,7 +246,6 @@
             </intent-filter>
         </receiver>
 
-
         <service
             android:name="com.termux.app.TermuxService"
             android:exported="false"
@@ -277,6 +276,16 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="sensor_runtime" />
+        </service>
+
+        <service
+            android:name="com.termux.app.api.sensor.RafSpectralApiService"
+            android:exported="true"
+            android:foregroundServiceType="dataSync|specialUse"
+            android:permission="${TERMUX_PACKAGE_NAME}.permission.RAF_SENSOR_ACCESS">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="bounded_sensor_spectral_analysis" />
         </service>
 
         <meta-data
