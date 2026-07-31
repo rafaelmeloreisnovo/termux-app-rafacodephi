@@ -1,0 +1,84 @@
+{
+  "schema": "rafaelia.repository-role-adapter/v1",
+  "schema_version": "1.0.0",
+  "status": "DECLARATION_ONLY",
+  "policy": {
+    "append_only": true,
+    "destructive_writes": false,
+    "automatic_promotion": false,
+    "claim_allowed": false
+  },
+  "federated_control_plane": {
+    "repository": "rafaelmeloreisnovo/Mapa",
+    "authority_matrix": {
+      "path": "governance/AUTHORITY_MATRIX_V1.yaml",
+      "ref": "b2a5d10fb3f386a69b26029cbc6d4355dc7ce0ed"
+    },
+    "role_contract": {
+      "path": "contracts/vertical_slice_v1_repository_adapters.json",
+      "ref": "b2a5d10fb3f386a69b26029cbc6d4355dc7ce0ed"
+    }
+  },
+  "data_boundary": {
+    "raw_private_content": "FORBIDDEN",
+    "credentials_and_secrets": "FORBIDDEN",
+    "permitted_inputs": [
+      "descriptor-only records",
+      "immutable source references",
+      "hashes and checksums",
+      "bounded metadata",
+      "explicitly authorized test inputs"
+    ],
+    "deletion_move_share_or_publication": "NOT_AUTHORIZED_BY_THIS_ADAPTER"
+  },
+  "evidence_envelope": {
+    "required_for_any_result": [
+      "source locator",
+      "immutable version",
+      "method or command",
+      "environment when executed",
+      "output artifact or explicit absence",
+      "checksum when bytes exist",
+      "failure mode",
+      "next verifiable step"
+    ],
+    "invariant": "SOURCE != IMPLEMENTATION != EXECUTION != EVIDENCE != CLAIM"
+  },
+  "claim_policy": {
+    "claim_allowed": false,
+    "no_automatic_promotion": true,
+    "missing_evidence_state": "TOKEN_VAZIO",
+    "ci_or_merge_is_not_execution_proof": true
+  },
+  "adapter_id": "adapter:termux-android-local-runtime-v1",
+  "repository": {
+    "full_name": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "default_branch": "master",
+    "observed_base_commit": "64ec50266709b38ff2dcf18a0f24411f313448a1"
+  },
+  "role": "ANDROID_LOCAL_RUNTIME",
+  "input_contract": [
+    "exact source bytes",
+    "immutable commit",
+    "bounded command or test protocol",
+    "minimal device metadata"
+  ],
+  "output_contract": [
+    "device-bound local execution receipt",
+    "environment record",
+    "stdout/stderr hashes",
+    "failure-safe result"
+  ],
+  "authority_boundary": {
+    "may_authorize": [
+      "local_execution_receipt",
+      "device_environment"
+    ],
+    "may_not_authorize": [
+      "scientific_validity",
+      "cross_device_generalization",
+      "production_readiness_without_release_gate"
+    ]
+  },
+  "next_verifiable_step": "Execute the pinned command on the authorized Android device and return a receipt bound to APK or source hashes, ABI, API level, exit code, and captured output hashes."
+}
