@@ -3,23 +3,25 @@
 #
 # Usage:
 #   bash scripts/vertical_slice/run_ham_readonly_flow.sh \
-#     <ham_request.json> <intent_ir.json> [working_directory]
+#     <ham_request.json> <intent_ir.json> [working_directory] [result_root]
 #
 # The wrapper adds no executable capability. It validates the human/AI request,
 # pins the local repository adapter, invokes the existing read-only vertical
-# slice and emits ham_execution_receipt.json.
+# slice and emits an immutable HAM receipt beside the base-flow receipt.
 set -euo pipefail
+umask 077
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
 HAM_FILE="${1:-}"
 INTENT_FILE="${2:-}"
 WORK_DIR="${3:-$(pwd)}"
+RESULT_ROOT_INPUT="${4:-${RAFAELIA_RESULT_ROOT:-${XDG_STATE_HOME:-${HOME:-$PWD}/.local/state}/rafaelia/vertical-slice/runs}}"
 ADAPTER_FILE="${REPO_ROOT}/contracts/rafaelia-human-ai-adapter.v1.json"
 BASE_FLOW="${SCRIPT_DIR}/run_readonly_flow.sh"
 
 if [[ -z "${HAM_FILE}" || -z "${INTENT_FILE}" ]]; then
-  echo "[ERROR] Usage: $0 <ham_request.json> <intent_ir.json> [working_directory]" >&2
+  echo "[ERROR] Usage: $0 <ham_request.json> <intent_ir.json> [working_directory] [result_root]" >&2
   exit 1
 fi
 for required in "${HAM_FILE}" "${INTENT_FILE}" "${ADAPTER_FILE}" "${BASE_FLOW}"; do
@@ -34,7 +36,8 @@ if [[ ! -d "${WORK_DIR}" ]]; then
 fi
 
 HAM_DECISION_FILE="$(mktemp "${TMPDIR:-/tmp}/raf-ham-decision.XXXXXX.json")"
-trap 'rm -f "${HAM_DECISION_FILE}"' EXIT
+BASE_LOG="$(mktemp "${TMPDIR:-/tmp}/raf-ham-base.XXXXXX.log")"
+trap 'rm -f "${HAM_DECISION_FILE}" "${BASE_LOG}"' EXIT
 export HAM_FILE ADAPTER_FILE HAM_DECISION_FILE
 
 python3 - <<'PY'
@@ -121,25 +124,45 @@ if errors:
     sys.exit(5)
 PY
 
-# The existing v1 flow remains the sole command executor and its allowlist is
-# unchanged: git status and git diff --stat only.
-bash "${BASE_FLOW}" "${INTENT_FILE}" "${WORK_DIR}"
+# The base flow remains the sole command executor and its allowlist is
+# unchanged in effect: Git metadata/status/diff reads only.
+set +e
+bash "${BASE_FLOW}" "${INTENT_FILE}" "${WORK_DIR}" "${RESULT_ROOT_INPUT}" >"${BASE_LOG}" 2>&1
+BASE_EXIT=$?
+set -e
+cat "${BASE_LOG}"
 
-if [[ ! -f execution_result.json ]]; then
-  echo "[ERROR] Base flow did not emit execution_result.json" >&2
+RESULT_PATH="$(awk -F= '$1 == "RESULT_PATH" {path=$2} END {print path}' "${BASE_LOG}")"
+if [[ -z "${RESULT_PATH}" || ! -f "${RESULT_PATH}" ]]; then
+  echo "[ERROR] Base flow did not emit an execution result path." >&2
   exit 6
 fi
-export INTENT_FILE WORK_DIR
 
+mkdir -p -- "${RESULT_ROOT_INPUT}"
+RESULT_ROOT="$(cd "${RESULT_ROOT_INPUT}" && pwd -P)"
+case "${RESULT_PATH}" in
+  "${RESULT_ROOT}"/*) ;;
+  *)
+    echo "[ERROR] Base flow result escaped the declared result root." >&2
+    exit 7
+    ;;
+esac
+
+export INTENT_FILE WORK_DIR RESULT_PATH BASE_EXIT
 python3 - <<'PY'
 import hashlib
 import json
 import os
+from pathlib import Path
 
 request = json.load(open(os.environ["HAM_FILE"], encoding="utf-8"))
 decision = json.load(open(os.environ["HAM_DECISION_FILE"], encoding="utf-8"))
-result = json.load(open("execution_result.json", encoding="utf-8"))
+result_path = Path(os.environ["RESULT_PATH"])
+result_bytes = result_path.read_bytes()
+result = json.loads(result_bytes)
 intent = json.load(open(os.environ["INTENT_FILE"], encoding="utf-8"))
+base_exit_code = int(os.environ["BASE_EXIT"])
+base_success = base_exit_code == 0 and result.get("final_state") == "success"
 
 receipt = {
     "schema": "raf.human-ai.execution-receipt.v1",
@@ -153,17 +176,28 @@ receipt = {
     "intent_id": intent.get("intent_id"),
     "effect_class": decision["effect_class"],
     "working_directory_logical": ".",
+    "execution_result_path": str(result_path),
+    "execution_result_sha256": hashlib.sha256(result_bytes).hexdigest(),
     "execution_result": result,
+    "base_exit_code": base_exit_code,
+    "final_state": "success" if base_success else "failure",
     "source_preserved": True,
     "claim_allowed": False,
-    "F_ok": ["HAM gate allowed bounded read", "base read-only flow emitted hashes"],
-    "F_gap": [],
+    "F_ok": ["HAM gate allowed bounded read"] + (
+        ["base read-only flow recorded success with faithful exit codes"] if base_success else []
+    ),
+    "F_gap": [] if base_success else [
+        f"base read-only flow exit={base_exit_code}, state={result.get('final_state')}"
+    ],
     "F_next": ["human review of receipt before any broader capability"],
 }
 canonical = json.dumps(receipt, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
 receipt["receipt_sha256"] = hashlib.sha256(canonical).hexdigest()
-with open("ham_execution_receipt.json", "w", encoding="utf-8") as handle:
+receipt_path = result_path.with_name("ham_execution_receipt.json")
+with receipt_path.open("x", encoding="utf-8") as handle:
     json.dump(receipt, handle, ensure_ascii=False, sort_keys=True, indent=2)
     handle.write("\n")
-print(f"[HAM][OK] ham_execution_receipt.json sha256={receipt['receipt_sha256']}")
+print(f"[HAM][OK] HAM_RECEIPT_PATH={receipt_path} sha256={receipt['receipt_sha256']}")
 PY
+
+exit "${BASE_EXIT}"
