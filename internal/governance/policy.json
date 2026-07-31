@@ -1,7 +1,7 @@
 {
   "schema": "rafaelia.governance.policy.v1",
   "description": "Runtime enforcement policy for the governance gate.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "rules": [
     {
       "id": "RULE-001",
@@ -19,14 +19,16 @@
     },
     {
       "id": "RULE-003",
-      "description": "Only allow git status and git diff --stat in v1 execution",
+      "description": "Only allow provenance, status, and diff reads in v1 execution",
       "condition": "stage == v1",
       "action": "restrict_to_allowlist_v1",
       "allowed_v1_commands": [
-        ["git", "status"],
-        ["git", "diff", "--stat"]
+        ["git", "rev-parse", "--is-inside-work-tree"],
+        ["git", "rev-parse", "HEAD"],
+        ["git", "status", "--short", "--branch"],
+        ["git", "diff", "--no-ext-diff", "--stat"]
       ],
-      "rationale": "v1 is strictly read-only probe to validate the pipeline"
+      "rationale": "v1 is strictly a read-only probe that records target identity and truthful command outcomes"
     },
     {
       "id": "RULE-004",
