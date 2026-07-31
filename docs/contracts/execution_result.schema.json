@@ -28,6 +28,11 @@
       "type": "string",
       "pattern": "^[a-zA-Z0-9_-]{8,64}$"
     },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{8,64}$",
+      "description": "Unique append-only execution directory identifier."
+    },
     "intent_id": {
       "type": "string"
     },
@@ -40,12 +45,16 @@
     },
     "args": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {"type": "string"},
       "description": "Exact argument list passed (no shell expansion)"
     },
     "working_directory": {
       "type": "string",
       "description": "Absolute path where the command ran"
+    },
+    "result_directory": {
+      "type": "string",
+      "description": "Immutable directory that contains this receipt and its command logs."
     },
     "started_at": {
       "type": "string",
@@ -56,27 +65,28 @@
       "format": "date-time"
     },
     "exit_code": {
-      "type": "integer"
+      "type": "integer",
+      "description": "Nonzero when any required command failed."
     },
     "stdout_truncated": {
       "type": "string",
       "maxLength": 4096,
-      "description": "First 4096 chars of stdout"
+      "description": "First 4096 chars of combined stdout"
     },
     "stderr_truncated": {
       "type": "string",
       "maxLength": 4096,
-      "description": "First 4096 chars of stderr"
+      "description": "First 4096 chars of combined stderr"
     },
     "stdout_sha256": {
       "type": "string",
       "pattern": "^[a-f0-9]{64}$",
-      "description": "SHA-256 of complete stdout before truncation"
+      "description": "SHA-256 of complete combined stdout before truncation"
     },
     "stderr_sha256": {
       "type": "string",
       "pattern": "^[a-f0-9]{64}$",
-      "description": "SHA-256 of complete stderr before truncation"
+      "description": "SHA-256 of complete combined stderr before truncation"
     },
     "artifacts": {
       "type": "array",
@@ -85,9 +95,35 @@
         "type": "object",
         "required": ["name", "path"],
         "properties": {
-          "name": { "type": "string" },
-          "path": { "type": "string" },
-          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          "name": {"type": "string"},
+          "path": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        }
+      }
+    },
+    "command_results": {
+      "type": "array",
+      "description": "Per-command evidence preserving exact exit codes and log hashes.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "args",
+          "exit_code",
+          "stdout_path",
+          "stderr_path",
+          "stdout_sha256",
+          "stderr_sha256"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {"type": "string"},
+          "args": {"type": "array", "items": {"type": "string"}},
+          "exit_code": {"type": "integer"},
+          "stdout_path": {"type": "string"},
+          "stderr_path": {"type": "string"},
+          "stdout_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "stderr_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
         }
       }
     },
@@ -96,6 +132,37 @@
       "enum": ["success", "failure", "timeout", "blocked"],
       "description": "Terminal state of the execution"
     },
+    "evidence_state": {
+      "type": "string",
+      "enum": ["complete", "partial"],
+      "description": "Whether command outcome and provenance are both available."
+    },
+    "target_commit": {
+      "type": "string",
+      "description": "HEAD of the repository inspected, or a typed TOKEN_VAZIO."
+    },
+    "runner_commit": {
+      "type": "string",
+      "description": "Commit that supplied the runner, or a typed TOKEN_VAZIO."
+    },
+    "input_hashes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "description": "SHA-256 identities of inputs and the runner."
+    },
+    "receipt_payload_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 of canonical receipt payload before this field is added."
+    },
+    "claim_allowed": {
+      "type": "boolean",
+      "const": false,
+      "description": "A read-only receipt never promotes a broader claim."
+    },
     "rollback_available": {
       "type": "boolean",
       "description": "Whether the operation can be rolled back (always false for read-only)"
@@ -103,7 +170,7 @@
     "source_chunk_refs": {
       "type": "array",
       "description": "Chunk IDs that ultimately triggered this execution",
-      "items": { "type": "string" }
+      "items": {"type": "string"}
     }
   }
 }
