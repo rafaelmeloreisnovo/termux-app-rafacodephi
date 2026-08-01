@@ -1,0 +1,62 @@
+{
+  "schema": "termux-rafacodephi.living-book-cockpit/v1",
+  "state": "IMPLEMENTED_INSPECT_ONLY_PENDING_ANDROID_UI",
+  "claim_allowed": false,
+  "runtime_execution_allowed": false,
+  "menu": [
+    {"id": "profile", "label": "Perfil ativo", "actions": ["inspect"]},
+    {"id": "domain", "label": "Domínio e semente", "actions": ["inspect_descriptor"]},
+    {"id": "mirrors", "label": "Espelhos humano / IA", "actions": ["inspect_authority"]},
+    {"id": "modules", "label": "Módulos", "actions": ["inspect", "validate"]},
+    {"id": "proposals", "label": "Propostas", "actions": ["inspect", "request_human_review"]},
+    {"id": "permissions", "label": "Permissões", "actions": ["inspect", "deny_by_default"]},
+    {"id": "receipts", "label": "Receipts", "actions": ["inspect", "export_template"]},
+    {"id": "privacy", "label": "Privacidade e segurança", "actions": ["inspect", "validate"]},
+    {"id": "sync", "label": "Sincronização", "actions": ["inspect_status"]},
+    {"id": "audit", "label": "Auditoria", "actions": ["inspect", "validate", "record_token_vazio"]}
+  ],
+  "allowed_actions": [
+    "inspect", "inspect_descriptor", "inspect_authority", "validate",
+    "request_human_review", "deny_by_default", "export_template",
+    "inspect_status", "record_token_vazio"
+  ],
+  "forbidden_actions": [
+    "dispatch", "execute", "publish", "merge", "delete", "share",
+    "sync_write", "shell_eval", "open_network_target"
+  ],
+  "bundle_requirements": {
+    "schema": "rafgittools.living-book-ir-bundle/v1",
+    "state": "READY_FOR_REVIEW_NOT_DISPATCHED",
+    "transport_mode": "DESCRIPTOR_ONLY",
+    "human_approval_state": "REQUIRED_BEFORE_DISPATCH",
+    "dispatch_allowed": false,
+    "execution_allowed": false,
+    "publication_allowed": false,
+    "claim_allowed": false,
+    "network_target": null,
+    "ir_embedded": false,
+    "private_source_embedded": false
+  },
+  "privacy": {
+    "raw_private_content": "FORBIDDEN",
+    "credentials_and_secrets": "FORBIDDEN",
+    "logs_may_include": [
+      "bundle_id", "cell_id", "intent_id", "module_id", "action",
+      "digests", "policy_state", "validation_errors"
+    ],
+    "logs_may_not_include": [
+      "seed", "summary", "messages", "conversation", "private_content",
+      "credential", "secret", "token", "password", "cookie", "authorization"
+    ]
+  },
+  "receipt_template": {
+    "schema": "termux-rafacodephi.living-book-cockpit-receipt/v1",
+    "execution_performed": false,
+    "claim_allowed": false,
+    "required": [
+      "event_id", "bundle_id", "bundle_digests", "observed_at",
+      "device_profile", "validation", "decision", "TOKEN_VAZIO",
+      "F_ok", "F_gap", "F_next"
+    ]
+  }
+}
