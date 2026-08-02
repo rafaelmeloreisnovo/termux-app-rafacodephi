@@ -1,46 +1,17 @@
 {
-  "schema": "rafcodephi.pa.embedded-runtime.receipt.v1",
-  "created_at_utc": "2026-08-02T05:55:00Z",
-  "updated_at_utc": "2026-08-02T06:24:00Z",
-  "source": {
-    "name": "pa.zip",
-    "bytes": 48366,
-    "entries": 84,
-    "sha256": "1655dc886b549a006e28553ddf3e76dcee9d4838956aa81a1cac4f56b594a08f"
-  },
-  "integration": {
-    "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
-    "pull_request": 317,
-    "branch": "feature/embed-pa-runtime-v1-20260802",
-    "install_root": "$PREFIX/libexec/rafcodephi-pa-v1",
-    "command": "$PREFIX/bin/pa",
-    "user_override": "$HOME/PEDRA_ANGULAR",
-    "network_required": false,
-    "sensor_api_required": false,
-    "install_trigger": "BootstrapBaremetalGuard.validateAfterBootstrap"
-  },
-  "guards": {
-    "payload_sha256_required": true,
-    "payload_size_required": 48366,
-    "zip_entry_count_required": 84,
-    "zip_entry_limit": 512,
-    "extracted_byte_limit": 16777216,
-    "zip_slip_rejected": true,
-    "atomic_staging": true,
-    "existing_user_tree_overwritten": false
-  },
-  "validation": {
-    "local_payload_reconstruction": "PASS",
-    "local_sha256": "PASS",
-    "local_zip_entry_count": "PASS",
-    "java_installer_compilation_with_android_stubs": "PASS",
-    "simulated_prefix_first_install": "PASS",
-    "simulated_prefix_idempotent_second_install": "PASS",
-    "simulated_wrapper_publication": "PASS",
-    "github_ci": "BLOCKED_RUNNER_NO_STEPS_NO_LOGS",
-    "github_ci_arm32_rerun": "BLOCKED_RUNNER_NO_STEPS_NO_LOGS",
-    "apk_compilation": "TOKEN_VAZIO_NOT_EXECUTED_BY_CI",
-    "physical_android_runtime": "TOKEN_VAZIO_NOT_EXECUTED"
-  },
-  "claim_allowed": false
+  "schema": "rafaelia.receipt/v1",
+  "event_id": "PA-ZIP-INTEGRATION-REJECTED-20260802",
+  "state": "REJECTED_WRONG_ARCHITECTURE",
+  "claim_allowed": false,
+  "rejected": [
+    "zip payload runtime",
+    "Java installer",
+    "JNI-oriented integration",
+    "added Gradle dependency",
+    "bootstrap placement"
+  ],
+  "required_replacement": "direct ELF freestanding C/ASM launched from benchmark settings through existing DEX edge",
+  "F_ok": "rejection recorded and external dependency removed",
+  "F_gap": "rejected files remain isolated on closed draft branch",
+  "F_next": "implement clean freestanding branch from master"
 }
