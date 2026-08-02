@@ -1,3 +1,0 @@
-github_ci=TOKEN_VAZIO_PENDING_PR
-apk_compilation=TOKEN_VAZIO_PENDING_PR
-physical_android_runtime=TOKEN_VAZIO_NOT_EXECUTED
