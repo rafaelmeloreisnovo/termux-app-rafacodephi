@@ -1,4 +1,0 @@
-title=feat(pa): embed PEDRA_ANGULAR runtime in Termux RAFCODEPhi
-base=master
-head=feature/embed-pa-runtime-v1-20260802
-draft=true
