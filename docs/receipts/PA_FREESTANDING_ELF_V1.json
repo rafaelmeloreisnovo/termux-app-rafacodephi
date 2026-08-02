@@ -1,0 +1,57 @@
+{
+  "schema": "rafaelia.freestanding-elf-receipt/v1",
+  "event_id": "TERMUX-RAFACODEPHI-PA-FREESTANDING-ELF-V1-20260802",
+  "source_branch": "feature/pa-freestanding-elf-v1-20260802",
+  "runtime_path": "Settings XML -> existing BenchmarkMenuActivity DEX -> Android linker -> libraf_pa_core.so::_start",
+  "core": {
+    "language": ["C11 freestanding", "ARMv7 assembly", "AArch64 assembly"],
+    "headers": 0,
+    "heap": false,
+    "libc": false,
+    "jni": false,
+    "java_native_methods": false,
+    "zip_payload": false,
+    "network": false,
+    "external_runtime_dependency": false,
+    "entry": "_start",
+    "output": "stdout by direct write syscall"
+  },
+  "architectures": {
+    "armeabi-v7a": {
+      "format": "ELF32 ARM EABI5 ET_DYN",
+      "entry": "non-zero",
+      "exit_group_syscall": 248,
+      "write_syscall": 4,
+      "clock_gettime_syscall": 263
+    },
+    "arm64-v8a": {
+      "format": "ELF64 AArch64 ET_DYN",
+      "entry": "non-zero",
+      "exit_group_syscall": 94,
+      "write_syscall": 64,
+      "timer": "cntvct_el0"
+    }
+  },
+  "local_gate": {
+    "command": "scripts/verify_pa_freestanding_elf.sh",
+    "result": "PASS",
+    "arm32_dt_needed": 0,
+    "arm64_dt_needed": 0,
+    "arm32_external_undefined_symbols": 0,
+    "arm64_external_undefined_symbols": 0
+  },
+  "benchmark_blocks": [
+    "ALU flag mixing",
+    "42-state prime/flag machine",
+    "10x10x10 fixed matrix traversal",
+    "CRC32C software gate",
+    "1008-step geometric permutation",
+    "raw ARM32/AArch64 opcode flag stream"
+  ],
+  "android_apk_build": "TOKEN_VAZIO_NOT_EXECUTED",
+  "physical_android_runtime": "TOKEN_VAZIO_NOT_EXECUTED",
+  "claim_allowed": false,
+  "F_ok": "ARM32 and ARM64 standalone ELFs compile with non-zero entry, no DT_NEEDED and no external undefined symbols",
+  "F_gap": "observable APK build and physical Android execution from Settings",
+  "F_next": "build APK, open Settings > PA Silicon, execute ELF and record stdout plus APK/ELF hashes"
+}
