@@ -16,14 +16,6 @@ allprojects {
     }
 }
 
-project(":app") {
-    plugins.withId("com.android.application") {
-        dependencies {
-            coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.2"
-        }
-    }
-}
-
 tasks.register("verifyReleaseContract", Exec) {
     group = "verification"
     description = "Validates release APK contract for official/internal CI tracks."
