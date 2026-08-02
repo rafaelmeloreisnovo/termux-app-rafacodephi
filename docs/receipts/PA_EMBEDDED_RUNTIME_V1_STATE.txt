@@ -1,2 +1,0 @@
-state=READY_FOR_DRAFT_PR
-head=ca0c99914452858dc15ae3c427b2def47ca7634e
