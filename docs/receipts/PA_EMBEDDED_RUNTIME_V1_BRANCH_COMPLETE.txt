@@ -1,2 +1,0 @@
-branch_complete=true
-head=9109fcf3e156cc9d630f36155ef14c06b9567b9f
