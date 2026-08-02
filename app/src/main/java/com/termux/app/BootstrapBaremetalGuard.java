@@ -69,6 +69,8 @@ final class BootstrapBaremetalGuard {
     static void validateAfterBootstrap(String prefix) {
         validateInstallFilesystemAndShell(prefix);
 
+        PaPayloadInstaller.ensureInstalled(prefix);
+
         if (!LIB_LOADED) {
             String msg = "Skipped guard validation: native lib not loaded";
             if (BuildConfig.BOOTSTRAP_BAREMETAL_STRICT) throw new RuntimeException(msg);
