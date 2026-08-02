@@ -1,8 +1,0 @@
-target=termux-app-rafacodephi
-not_target=termux-api_rafcodephi
-not_dependency=sensor-service
-install_source=APK-embedded
-network_required=false
-runtime_command=$PREFIX/bin/pa
-embedded_root=$PREFIX/libexec/rafcodephi-pa-v1
-user_tree_priority=$HOME/PEDRA_ANGULAR
