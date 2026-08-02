@@ -40,6 +40,19 @@
     "arm32_external_undefined_symbols": 0,
     "arm64_external_undefined_symbols": 0
   },
+  "github_actions": {
+    "state": "BLOCKED_RUNNER_NO_STEPS_NO_LOGS",
+    "observed_runs": [
+      30736262135,
+      30736262138,
+      30736262145,
+      30736262158,
+      30736262156
+    ],
+    "checkout_executed": false,
+    "gradle_executed": false,
+    "elf_gate_executed_by_actions": false
+  },
   "benchmark_blocks": [
     "ALU flag mixing",
     "42-state prime/flag machine",
@@ -52,6 +65,6 @@
   "physical_android_runtime": "TOKEN_VAZIO_NOT_EXECUTED",
   "claim_allowed": false,
   "F_ok": "ARM32 and ARM64 standalone ELFs compile with non-zero entry, no DT_NEEDED and no external undefined symbols",
-  "F_gap": "observable APK build and physical Android execution from Settings",
-  "F_next": "build APK, open Settings > PA Silicon, execute ELF and record stdout plus APK/ELF hashes"
+  "F_gap": "GitHub runner did not start any step; observable APK build and physical Android execution remain absent",
+  "F_next": "run the isolated gate in Termux, build APK, open Settings > PA Silicon, execute ELF and record stdout plus APK/ELF hashes"
 }
