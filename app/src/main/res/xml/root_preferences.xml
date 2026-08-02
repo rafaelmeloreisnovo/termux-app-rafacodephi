@@ -1,4 +1,6 @@
-<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <Preference
         app:key="termux"
@@ -23,6 +25,16 @@
         app:title="@string/industrial_diagnostics_title"
         app:summary="@string/industrial_diagnostics_summary"
         app:persistent="false"/>
+
+    <Preference
+        app:key="pa_freestanding_elf"
+        app:title="PA Silicon · Freestanding ELF"
+        app:summary="Execute o núcleo C/ASM diretamente pelo linker Android; sem JNI, libc, malloc ou ZIP"
+        app:persistent="false">
+        <intent
+            android:targetPackage="com.termux.rafacodephi"
+            android:targetClass="com.termux.app.benchmark.BenchmarkMenuActivity"/>
+    </Preference>
 
     <Preference
         app:key="vectra_runtime"
@@ -62,7 +74,6 @@
         app:key="about"
         app:title="@string/about_preference_title"
         app:persistent="false"/>
-    <!-- app:layout="@layout/preference_markdown_text" -->
 
     <Preference
         app:key="donate"
