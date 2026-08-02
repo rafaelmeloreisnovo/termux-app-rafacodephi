@@ -1,0 +1,6 @@
+branch=feature/embed-pa-runtime-v1-20260802
+last_content_commit=3dc6ac53cc982b8acdda64c8f8300ca7c69e99b6
+base=master@86c854132cb4a5ac5f2fe6c87f6d815ff0505533
+payload_sha256=1655dc886b549a006e28553ddf3e76dcee9d4838956aa81a1cac4f56b594a08f
+claim_allowed=false
+physical_android_runtime=TOKEN_VAZIO_NOT_EXECUTED
