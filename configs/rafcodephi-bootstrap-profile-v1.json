@@ -1,0 +1,57 @@
+{
+  "package_name": "com.termux.rafacodephi",
+  "prefix": "/data/data/com.termux.rafacodephi/files/usr",
+  "profiles": {
+    "bridge": {
+      "claim_allowed": false,
+      "package_layer": "bridge",
+      "pkg_update_expected": false,
+      "release_allowed": false,
+      "required_entries": [
+        "BOOTSTRAP_INFO",
+        "SYMLINKS.txt",
+        "bin/sh",
+        "bin/pkg",
+        "bin/apt",
+        "bin/apt-get",
+        "bin/busybox",
+        "bin/proot"
+      ]
+    },
+    "real-pkg": {
+      "claim_allowed": false,
+      "device_validation_required": "DEVICE_REAL_PKG_VALIDATED",
+      "legacy_prefix_forbidden": "/data/data/com.termux/files/usr",
+      "package_layer": "real-pkg",
+      "release_allowed": false,
+      "required_binary_types": {
+        "bin/apt": "ELF",
+        "bin/apt-get": "ELF",
+        "bin/dpkg": "ELF"
+      },
+      "required_entries": [
+        "BOOTSTRAP_INFO",
+        "SYMLINKS.txt",
+        "bin/sh",
+        "bin/pkg",
+        "bin/apt",
+        "bin/apt-get",
+        "bin/dpkg",
+        "bin/busybox",
+        "bin/proot",
+        "etc/apt/sources.list",
+        "var/lib/dpkg/status"
+      ],
+      "required_library_pattern": "lib/libapt-pkg.so*"
+    }
+  },
+  "promotion_rule": "STRUCTURAL_REAL_PKG_CANDIDATE != DEVICE_REAL_PKG_VALIDATED",
+  "schema": "rafcodephi-bootstrap-profile-contract/v1",
+  "token_vazio": [
+    "device_runtime",
+    "pkg_update",
+    "pkg_install",
+    "dns_tls_repository",
+    "dual_arm_receipt"
+  ]
+}
