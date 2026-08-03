@@ -20,7 +20,7 @@ BOOTSTRAP_SOURCE="${RAF_BOOTSTRAP_SOURCE:-local}"
 log "Bootstrap source: $BOOTSTRAP_SOURCE"
 case "$BOOTSTRAP_SOURCE" in
   local)
-    ./scripts/build_bootstrap_profile.sh >&2
+    bash scripts/build_bootstrap_profile.sh >&2
     ;;
   upstream)
     ./gradlew :app:downloadBootstraps --no-daemon >&2
