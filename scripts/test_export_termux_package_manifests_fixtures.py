@@ -4,6 +4,8 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from termux_build_parser import parse_build_sh
 
 FIXTURES = [
@@ -55,7 +57,23 @@ TERMUX_PKG_DESCRIPTION='fallback path'
 ]
 
 
+def _fixture_ids():
+    return [f["name"] for f in FIXTURES]
+
+
+@pytest.mark.parametrize("fixture", FIXTURES, ids=_fixture_ids())
+def test_parse_build_sh(fixture, tmp_path):
+    p = tmp_path / f"{fixture['name']}.sh"
+    p.write_text(fixture["build_sh"].lstrip("\n"), encoding="utf-8")
+    result = parse_build_sh(p)
+    for key, expected_value in fixture["expect"].items():
+        assert result.get(key) == expected_value, (
+            f"[{fixture['name']}] {key}: expected={expected_value!r} got={result.get(key)!r}"
+        )
+
+
 def main() -> int:
+    """Direct-run entry point (kept for backwards compatibility)."""
     failures = []
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
