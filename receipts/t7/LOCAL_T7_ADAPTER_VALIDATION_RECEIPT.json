@@ -1,0 +1,10 @@
+{
+  "state": "TOKEN_VAZIO",
+  "errors": [],
+  "receipt_count": 0,
+  "claim_allowed": false,
+  "release_claim_allowed": false,
+  "generated_at": "2026-08-03T04:10:00-03:00",
+  "script_sha256": "31ec74cfe8cf511e0754ae7a246d66f1095d84650b490e0a6e38cd76663da668",
+  "contract_sha256": "9cd1b5249de06efdb3ee6e2cd912d115686c092bfb8810481db388fa80d605ce"
+}

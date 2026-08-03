@@ -1,0 +1,16 @@
+{
+  "schema": "RAFAELIA_T7_DEVICE_RUNTIME_MATRIX/v1",
+  "product_id": "T7-P04",
+  "owner_repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "generated_at": "2026-08-03T04:10:00-03:00",
+  "claim_allowed": false,
+  "release_claim_allowed": false,
+  "roles": [
+    {"role":"arm32-legacy","abi":"armeabi-v7a","state":"TOKEN_VAZIO","device_intent":"Moto E7 / Android 10"},
+    {"role":"arm64-modern","abi":"arm64-v8a","state":"TOKEN_VAZIO","device_intent":"Realme Note 50"}
+  ],
+  "required_receipt_fields": ["role","abi","device_fingerprint","serial_hash","apk_sha256","source_revision","command","exit_code","transcript_sha256","environment_sha256"],
+  "promotion": {"0":"TOKEN_VAZIO","1":"PARTIAL_DEVICE_PROOF","2":"DUAL_ARM_DEVICE_PROOF"},
+  "gates": ["O2","O3","O6","O7","O8","O9","O12"],
+  "invariants": ["distinct_device_fingerprints","distinct_roles","installed_apk_hash_bound","no_release_claim_from_device_matrix"]
+}
