@@ -13,6 +13,7 @@ LOCAL_SRC_FILES := \
     baremetal_nomalloc.c \
     rafaelia_jni_direct.c \
     rafaelia_orchestrator.c \
+    raf_b7_orchestrator.c \
     cti_raw_reader.c \
     zipraf_index.c
 
