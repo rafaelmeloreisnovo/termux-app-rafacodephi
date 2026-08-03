@@ -157,7 +157,7 @@ jobs:
           python3 scripts/validate_native_structure.py
 
       - name: "✅ Validate Gradle Wrapper"
-        uses: gradle/actions/wrapper-validation@v6
+        uses: gradle/actions/wrapper-validation@v6.2.0
 
       - name: "🕒 Validate MVP Metadata Timestamp"
         run: |
