@@ -20,10 +20,11 @@ BOOTSTRAP_SOURCE="${RAF_BOOTSTRAP_SOURCE:-local}"
 log "Bootstrap source: $BOOTSTRAP_SOURCE"
 case "$BOOTSTRAP_SOURCE" in
   local)
-    ./scripts/build_rafaelia_bootstraps.sh >&2
+    ./scripts/build_bootstrap_profile.sh >&2
     ;;
   upstream)
     ./gradlew :app:downloadBootstraps --no-daemon >&2
+    log "Upstream source does not receive RAFCODEPhi profile promotion automatically"
     ;;
   *)
     echo "Unsupported RAF_BOOTSTRAP_SOURCE=$BOOTSTRAP_SOURCE (allowed: local, upstream)" >&2
