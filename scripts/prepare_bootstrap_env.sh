@@ -50,21 +50,23 @@ from blake3 import blake3
 import hashlib
 import re
 
+# termux-bootstrap-zip.S embeds rewritten-bootstrap-*.zip. Hash the exact bytes
+# returned by TermuxInstaller.getZip(), not the pre-rewrite source archives.
 base = Path('app/src/main/cpp')
 mapping = {
-    'TERMUX_BOOTSTRAP_SHA256_AARCH64': 'bootstrap-aarch64.zip',
-    'TERMUX_BOOTSTRAP_SHA256_ARM': 'bootstrap-arm.zip',
-    'TERMUX_BOOTSTRAP_SHA256_I686': 'bootstrap-i686.zip',
-    'TERMUX_BOOTSTRAP_SHA256_X86_64': 'bootstrap-x86_64.zip',
-    'TERMUX_BOOTSTRAP_BLAKE3_AARCH64': 'bootstrap-aarch64.zip',
-    'TERMUX_BOOTSTRAP_BLAKE3_ARM': 'bootstrap-arm.zip',
-    'TERMUX_BOOTSTRAP_BLAKE3_I686': 'bootstrap-i686.zip',
-    'TERMUX_BOOTSTRAP_BLAKE3_X86_64': 'bootstrap-x86_64.zip',
+    'TERMUX_BOOTSTRAP_SHA256_AARCH64': 'rewritten-bootstrap-aarch64.zip',
+    'TERMUX_BOOTSTRAP_SHA256_ARM': 'rewritten-bootstrap-arm.zip',
+    'TERMUX_BOOTSTRAP_SHA256_I686': 'rewritten-bootstrap-i686.zip',
+    'TERMUX_BOOTSTRAP_SHA256_X86_64': 'rewritten-bootstrap-x86_64.zip',
+    'TERMUX_BOOTSTRAP_BLAKE3_AARCH64': 'rewritten-bootstrap-aarch64.zip',
+    'TERMUX_BOOTSTRAP_BLAKE3_ARM': 'rewritten-bootstrap-arm.zip',
+    'TERMUX_BOOTSTRAP_BLAKE3_I686': 'rewritten-bootstrap-i686.zip',
+    'TERMUX_BOOTSTRAP_BLAKE3_X86_64': 'rewritten-bootstrap-x86_64.zip',
 }
 for env_key, file_name in mapping.items():
     path = base / file_name
     if not path.is_file():
-        raise SystemExit(f"Missing bootstrap archive: {path}")
+        raise SystemExit(f"Missing embedded bootstrap archive: {path}")
     data = path.read_bytes()
     if env_key.startswith('TERMUX_BOOTSTRAP_BLAKE3_'):
         digest = blake3(data).hexdigest()
@@ -80,12 +82,12 @@ PY
   readarray -t HASH_LINES <<<"$HASH_OUTPUT"
 else
   HASH_STATUS=$?
-  log "ERROR: Bootstrap hash generation failed (python exit ${HASH_STATUS})"
+  log "ERROR: Embedded bootstrap hash generation failed (python exit ${HASH_STATUS})"
   exit "$HASH_STATUS"
 fi
 
 if [[ ${#HASH_LINES[@]} -ne 8 ]]; then
-  log "ERROR: Expected 8 bootstrap hash lines (BLAKE3+SHA256), got ${#HASH_LINES[@]}"
+  log "ERROR: Expected 8 embedded bootstrap hash lines (BLAKE3+SHA256), got ${#HASH_LINES[@]}"
   exit 1
 fi
 
@@ -101,4 +103,4 @@ else
   done
 fi
 
-log "Bootstrap environment OK (${#HASH_LINES[@]} hashes)"
+log "Bootstrap environment OK (${#HASH_LINES[@]} hashes from embedded rewritten archives)"
