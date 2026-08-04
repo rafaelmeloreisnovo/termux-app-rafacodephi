@@ -1,0 +1,65 @@
+name: B7 Selftest Receipt
+
+on:
+  pull_request:
+    branches: ['master']
+    paths:
+      - 'rmr/Rrr/raf_b7_orchestrator.h'
+      - 'rmr/Rrr/raf_b7_orchestrator.c'
+      - 'tools/raf_b7_orchestrator_selftest.c'
+      - 'scripts/run_raf_b7_selftest.sh'
+      - 'scripts/run_raf_b7_selftest_receipt.sh'
+      - 'tests/test_raf_b7_selftest_receipt.py'
+      - '.github/workflows/b7-selftest-receipt.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: b7-selftest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  b7-selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Syntax checks
+        run: |
+          set -euo pipefail
+          sh -n scripts/run_raf_b7_selftest.sh
+          sh -n scripts/run_raf_b7_selftest_receipt.sh
+          python3 -m py_compile tests/test_raf_b7_selftest_receipt.py
+
+      - name: Compile and execute B7 selftest
+        run: |
+          set -euo pipefail
+          sh scripts/run_raf_b7_selftest.sh | tee b7-selftest.stdout
+          grep -Eq '^PASS bytes=8192 crc32c=[0-9a-f]{8} caps=[0-9a-f]{8} receipts=[0-9]+$' b7-selftest.stdout
+          sha256sum b7-selftest.stdout | tee b7-selftest.stdout.sha256
+
+      - name: Run receipt custody tests
+        run: |
+          set -euo pipefail
+          python3 -m unittest tests.test_raf_b7_selftest_receipt -v
+
+      - name: Generate append-only CI receipt
+        run: |
+          set -euo pipefail
+          mkdir -p runtime-receipts
+          sh scripts/run_raf_b7_selftest_receipt.sh runtime-receipts
+          find runtime-receipts -maxdepth 1 -type f -print -exec sha256sum {} \; | sort
+
+      - name: Upload receipt evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: b7-selftest-receipt-${{ github.run_id }}
+          path: |
+            b7-selftest.stdout
+            b7-selftest.stdout.sha256
+            runtime-receipts/*
+          if-no-files-found: error

@@ -1,0 +1,40 @@
+{
+  "schema": "rafaelia.microtest-receipt.v1",
+  "event_id": "D-B7-CI-TRIGGER-20260804T111000Z",
+  "recorded_at": "2026-08-04T11:10:00Z",
+  "stage": 4,
+  "microtest": {
+    "id": "D-004",
+    "type": "safe_ci",
+    "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "branch": "ops/b7-device-receipt-20260804",
+    "commit": "9d30b54f4325a35701add2b7d9ec2d03468312ea",
+    "workflow": ".github/workflows/b7-selftest-receipt.yml",
+    "fixture_class": "PUBLIC_SAFE_SOURCE",
+    "expected_checks": [
+      "POSIX shell syntax",
+      "Python syntax",
+      "C11 compile with warnings-as-errors",
+      "B7 deterministic 8192-byte execution",
+      "PASS line parser",
+      "stdout SHA-256",
+      "success receipt custody",
+      "failure receipt custody",
+      "artifact upload"
+    ]
+  },
+  "observation": {
+    "workflow_commit_created": true,
+    "workflow_runs_for_commit": 0,
+    "jobs_observed": 0,
+    "steps_observed": 0,
+    "runner_started": false,
+    "commands_executed_remotely": false,
+    "artifacts_produced": false
+  },
+  "classification": "TOKEN_VAZIO_RUNNER",
+  "claim_allowed": false,
+  "F_ok": "isolated public-safe workflow and exact expected gates were committed on an audit branch",
+  "F_gap": "GitHub returned no workflow run, job, step, command output or artifact for the workflow commit",
+  "F_next": "consume a physical Termux B7 receipt produced by scripts/run_raf_b7_selftest_receipt.sh and compare its CRC32C and source hashes"
+}
