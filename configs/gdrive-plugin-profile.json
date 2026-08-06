@@ -1,0 +1,63 @@
+{
+  "package_name": "com.termux.rafacodephi",
+  "plugin_name": "gdrive-plugin",
+  "prefix": "/data/data/com.termux.rafacodephi/files/usr",
+  "profiles": {
+    "plugin-base": {
+      "claim_allowed": false,
+      "package_layer": "plugin",
+      "plugin_type": "sync-engine",
+      "release_allowed": false,
+      "required_entries": [
+        "bin/bash",
+        "bin/curl",
+        "bin/sed",
+        "bin/grep",
+        "bin/awk",
+        "bin/find",
+        "bin/md5sum"
+      ]
+    }
+  },
+  "promotion_rule": "PLUGIN_AVAILABLE AND DEPENDENCIES_MET",
+  "schema": "gdrive-plugin-profile-contract/v1",
+  "plugin_config": {
+    "directories": {
+      "plugin_home": "~/.config/gdrive-plugin",
+      "shadow_dir": "~/.config/gdrive-plugin/.gdrive-shadow",
+      "logs": "~/.config/gdrive-plugin/logs"
+    },
+    "scripts": {
+      "auth": "plugins/gdrive-plugin/gdrive-auth.sh",
+      "sync": "plugins/gdrive-plugin/gdrive-sync.sh",
+      "webservice": "plugins/gdrive-plugin/gdrive-webservice.sh"
+    },
+    "initialization": {
+      "auto_init": false,
+      "init_command": "gdrive-auth.sh init",
+      "verify_tokens": true
+    },
+    "webservice": {
+      "auto_start": false,
+      "default_port": 8080,
+      "enable_browser_access": true
+    }
+  },
+  "permissions": {
+    "required": [
+      "read_storage",
+      "write_storage",
+      "network_access",
+      "file_operations"
+    ],
+    "optional": [
+      "background_sync",
+      "scheduled_tasks"
+    ]
+  },
+  "token_vazio": [
+    "plugin_signed",
+    "verified_scripts",
+    "auto_update_enabled"
+  ]
+}

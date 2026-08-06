@@ -1,0 +1,96 @@
+{
+  "schema": "gdrive-plugin-config/v1",
+  "plugin_name": "google-drive-sync",
+  "plugin_version": "1.0.0",
+  "plugin_author": "RAFCODEΦ Team",
+  "plugin_description": "Google Drive synchronization plugin for Termux RAFCODEΦ",
+
+  "authentication": {
+    "type": "oauth2",
+    "oauth_endpoints": {
+      "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
+      "token_url": "https://oauth2.googleapis.com/token",
+      "revoke_url": "https://oauth2.googleapis.com/revoke"
+    },
+    "scopes": [
+      "https://www.googleapis.com/auth/drive"
+    ],
+    "tokens_file": "~/.config/gdrive-plugin/tokens.json"
+  },
+
+  "api": {
+    "version": "v3",
+    "base_url": "https://www.googleapis.com/drive/v3",
+    "timeout": 30,
+    "retry_attempts": 3,
+    "retry_delay": 2
+  },
+
+  "sync": {
+    "shadow_directory": "~/.config/gdrive-plugin/.gdrive-shadow",
+    "ignore_file": "~/.config/gdrive-plugin/.gdrive-ignore",
+    "status_file": "~/.config/gdrive-plugin/sync.status",
+    "log_file": "~/.config/gdrive-plugin/sync.log",
+    "hash_algorithm": "md5",
+    "batch_size": 1000,
+    "chunk_size": 262144
+  },
+
+  "webservice": {
+    "enabled": true,
+    "default_port": 8080,
+    "protocol": "http",
+    "host": "localhost",
+    "enable_cors": true,
+    "log_requests": true
+  },
+
+  "operations": {
+    "upload": {
+      "enabled": true,
+      "description": "Upload files from local directory to Google Drive",
+      "requires_auth": true
+    },
+    "download": {
+      "enabled": true,
+      "description": "Download files from Google Drive to local directory",
+      "requires_auth": true
+    },
+    "mirror": {
+      "enabled": true,
+      "description": "Bidirectional synchronization (mirror mode)",
+      "requires_auth": true
+    },
+    "list": {
+      "enabled": true,
+      "description": "List files in Google Drive folder",
+      "requires_auth": true
+    },
+    "delete": {
+      "enabled": true,
+      "description": "Delete files from Google Drive",
+      "requires_auth": true
+    }
+  },
+
+  "defaults": {
+    "sync_interval": 300,
+    "auto_sync_enabled": false,
+    "log_level": "INFO"
+  },
+
+  "version_history": {
+    "1.0.0": {
+      "date": "2024-08-06",
+      "changes": [
+        "Initial release",
+        "OAuth 2.0 authentication",
+        "Upload/Download operations",
+        "Bidirectional mirror sync",
+        "Shadow files hash tracking",
+        "Web interface",
+        "Low-level bash implementation"
+      ]
+    }
+  }
+}
