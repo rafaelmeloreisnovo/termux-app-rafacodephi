@@ -1,0 +1,88 @@
+{
+  "schema": "rafaelia.termux_packages_authority_reconciliation.v1",
+  "event_id": "TERMUX-PACKAGES-AUTHORITY-RECONCILIATION-20260806-V1",
+  "generated_at": "2026-08-06T08:36:28Z",
+  "claim_allowed": false,
+  "release_allowed": false,
+  "origin": {
+    "termux_app_prior_merge": "ff500183d1b3dafcda9e15807c05bc9390fa2712",
+    "prior_runtime_lock_state": "fork_status=empty",
+    "upstream_production_reference": {
+      "repository": "termux/termux-packages",
+      "branch": "master",
+      "commit": "eb124b51a949c7a0943275a18f94371e69756449"
+    },
+    "fork_observed_main": {
+      "repository": "rafaelmeloreisnovo/termux-packages",
+      "branch": "main",
+      "commit": "cde7ed15e5c529847f9e27904a4d454f166bcb8f"
+    },
+    "experimental_manifest_gate": {
+      "pull_request": 4,
+      "branch": "fix/manifest-gate-provenance-20260806",
+      "commit": "e111c2f81b13ee9b30cb5cc0d675c37b9feec659",
+      "state": "OPEN_DRAFT"
+    }
+  },
+  "delta": {
+    "established": [
+      "the fork is no longer empty",
+      "host hello-world configure/make/install/package was previously observed on fork main",
+      "PR #4 links the binary manifest into the builder and adds fail-closed gates",
+      "runtime-lock now separates production reference from experimental builder"
+    ],
+    "not_promoted": [
+      "fork as production package source",
+      "Android ARMv7 build",
+      "Android AArch64 build",
+      "deb/apt/dpkg compatibility",
+      "APK installation",
+      "device runtime",
+      "release"
+    ]
+  },
+  "validation": {
+    "local_syntax": {
+      "state": "PASS",
+      "c_flags": "-std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Wshadow -Werror -fsyntax-only",
+      "python": "py_compile PASS"
+    },
+    "remote_ci": "TOKEN_VAZIO_NOT_OBSERVED",
+    "ndk": {
+      "expected_version": "26.3.11579264",
+      "state": "NDK_NOT_FOUND_ON_VERIFIED_HOST"
+    }
+  },
+  "token_vazio": [
+    "TOKEN_VAZIO_TOOLCHAIN_RECEIPT",
+    "TOKEN_VAZIO_SOURCE_FETCH",
+    "TOKEN_VAZIO_PATCH_EXECUTION",
+    "TOKEN_VAZIO_MANIFEST_V2_REQUIRED",
+    "TOKEN_VAZIO_DEPENDENCY_CLOSURE",
+    "TOKEN_VAZIO_DEB_APT_DPKG_CONTRACT",
+    "TOKEN_VAZIO_ARMV7_DEVICE_RECEIPT",
+    "TOKEN_VAZIO_AARCH64_DEVICE_RECEIPT",
+    "TOKEN_VAZIO_INSTALL_EXEC_ROLLBACK_RECEIPT"
+  ],
+  "promotion_gate": {
+    "required": [
+      "NDK verifier PASS",
+      "ARMv7 build and prefix scan PASS",
+      "AArch64 build and prefix scan PASS",
+      "distribution format decision",
+      "signed package hashes",
+      "physical device installation and execution",
+      "rollback receipt"
+    ],
+    "current_state": "BLOCKED_FAIL_CLOSED"
+  },
+  "runtime_lock": {
+    "path": "runtime-lock.json",
+    "reconciled_sha256": "678e17452ebd772e7f22b8b1b83a292acdc66f8d9f0ff868a367c5a2664ee0ca"
+  },
+  "R3": {
+    "F_ok": "dual authority recorded; experimental progress preserved without production overclaim",
+    "F_gap": "NDK, Android builds, package contract and physical receipts",
+    "F_next": "review PR #4, verify NDK, build ARMv7/AArch64 and seal device receipts"
+  }
+}
