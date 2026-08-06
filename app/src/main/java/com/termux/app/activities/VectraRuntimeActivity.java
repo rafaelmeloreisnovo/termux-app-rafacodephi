@@ -167,30 +167,29 @@ public class VectraRuntimeActivity extends AppCompatActivity {
     }
 
     private String buildBenchmarkSummary() {
-        final String[] catNames = {
-            "CPU Single", "CPU Multi", "Memory", "Storage", "Integrity", "Emulation"
-        };
         StringBuilder sb = new StringBuilder();
-        long total = 0L;
-        for (int i = 0; i < catNames.length; i++) {
-            long raw = com.termux.app.benchmark.BenchmarkMenuActivity.nativeBenchRun(0, i);
-            long score = (raw >>> 32) & 0xFFFFFFFFL;
-            total += score;
-            sb.append(String.format(Locale.US, "• %-14s %,d\n", catNames[i] + ":", score));
+        sb.append("• Scores: TOKEN_VAZIO_RUNTIME_NOT_EXECUTED\n");
+        sb.append("• Proof route: BenchmarkMenuActivity → Android linker → packaged freestanding ELF\n");
+        sb.append("• Java/JNI proxy: disabled; the benchmark contract declares no Java native methods\n");
+        sb.append("• Next proof: execute the ELF benchmark and preserve stdout, exit code, ABI and artifact hash\n");
+
+        try {
+            long state = com.termux.app.api.ApiLowLevelBridge.nativeStateQuery();
+            int hiWord       = (int)(state >>> 32);
+            int statePhase   = (hiWord >>> 24) & 0xFF;
+            int stateAtt     = (hiWord >>> 16) & 0xFF;
+            int stateFlags   = (hiWord >>> 8) & 0xFF;
+            int stateEntropy = hiWord & 0xFF;
+            int stateEvents  = (int)(state & 0xFFFFFFFFL);
+            sb.append(String.format(Locale.US,
+                "• State: phase=%d att=%d flags=0x%02x entropy=0x%02x events=%d",
+                statePhase, stateAtt, stateFlags, stateEntropy, stateEvents));
+        } catch (Throwable error) {
+            sb.append("• State: TOKEN_VAZIO_STATE_QUERY_FAILED (")
+                .append(error.getClass().getSimpleName())
+                .append(")");
         }
-        sb.append(String.format(Locale.US, "• Total:         %,d\n", total));
-        long cycles = com.termux.app.benchmark.BenchmarkMenuActivity.nativeCycleRead();
-        sb.append("• Cycle counter: 0x").append(Long.toHexString(cycles));
-        long state = com.termux.app.api.ApiLowLevelBridge.nativeStateQuery();
-        int hiWord       = (int)(state >>> 32);
-        int statePhase   = (hiWord >>> 24) & 0xFF;
-        int stateAtt     = (hiWord >>> 16) & 0xFF;
-        int stateFlags   = (hiWord >>> 8) & 0xFF;
-        int stateEntropy = hiWord & 0xFF;
-        int stateEvents  = (int)(state & 0xFFFFFFFFL);
-        sb.append(String.format(Locale.US,
-            "\n• State: phase=%d att=%d flags=0x%02x entropy=0x%02x events=%d",
-            statePhase, stateAtt, stateFlags, stateEntropy, stateEvents));
+
         return sb.toString();
     }
 }

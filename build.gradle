@@ -16,6 +16,43 @@ allprojects {
     }
 }
 
+// The :app module enables core library desugaring and references resources,
+// classes and views supplied by the canonical Termux dependency matrix.
+// Keep this restoration explicit until the dependencies are moved back into
+// app/build.gradle in a later refactor with a byte-for-byte migration receipt.
+subprojects { subproject ->
+    subproject.pluginManager.withPlugin("com.android.application") {
+        if (subproject.path == ":app") {
+            subproject.dependencies.add(
+                "coreLibraryDesugaring",
+                "com.android.tools:desugar_jdk_libs:2.1.2"
+            )
+
+            subproject.dependencies.add("implementation", "androidx.annotation:annotation:1.9.0")
+            subproject.dependencies.add("implementation", "androidx.core:core:1.13.1")
+            subproject.dependencies.add("implementation", "androidx.drawerlayout:drawerlayout:1.2.0")
+            subproject.dependencies.add("implementation", "androidx.preference:preference:1.2.1")
+            subproject.dependencies.add("implementation", "androidx.viewpager:viewpager:1.0.0")
+            subproject.dependencies.add("implementation", "com.google.android.material:material:1.12.0")
+            subproject.dependencies.add("implementation", "com.google.guava:guava:24.1-jre")
+            subproject.dependencies.add("implementation", "org.bouncycastle:bcprov-jdk18on:1.84")
+            subproject.dependencies.add("implementation", "io.noties.markwon:core:${markwonVersion}")
+            subproject.dependencies.add("implementation", "io.noties.markwon:ext-strikethrough:${markwonVersion}")
+            subproject.dependencies.add("implementation", "io.noties.markwon:linkify:${markwonVersion}")
+            subproject.dependencies.add("implementation", "io.noties.markwon:recycler:${markwonVersion}")
+            subproject.dependencies.add(
+                "implementation",
+                "com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava"
+            )
+            subproject.dependencies.add("implementation", project(":terminal-view"))
+            subproject.dependencies.add("implementation", project(":termux-shared"))
+
+            subproject.dependencies.add("testImplementation", "junit:junit:4.13.2")
+            subproject.dependencies.add("testImplementation", "org.robolectric:robolectric:4.10")
+        }
+    }
+}
+
 tasks.register("verifyReleaseContract", Exec) {
     group = "verification"
     description = "Validates release APK contract for official/internal CI tracks."
