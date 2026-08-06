@@ -1,17 +1,17 @@
 {
   "schema": "rafaelia.runtime-lock.v1",
   "description": "Pinned repository commits and toolchain for reproducible builds. TOKEN_VAZIO entries must be filled before production use.",
-  "locked_at": "2026-08-06T06:31:00Z",
-  "last_update_reason": "R3.2_NDK_VERIFICATION_RUN",
+  "locked_at": "2026-08-06T08:36:28Z",
+  "last_update_reason": "R3.2B_TERMUX_PACKAGES_AUTHORITY_RECONCILIATION",
   "repositories": [
     {
       "name": "termux-app-rafacodephi",
       "url": "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi.git",
       "branch": "master",
-      "commit": "42eac03826aa9d0f5f373b81c06af48f83ef92c5",
+      "commit": "ff500183d1b3dafcda9e15807c05bc9390fa2712",
       "commit_hash_sha256": "TOKEN_VAZIO",
       "role": "primary_integration",
-      "notes": "Updated to current master; R0/R1/R2 scripts and R3 docs added"
+      "notes": "Current master after PR #330; R0-R3.2 scripts, decisions and NDK fail-closed receipt present"
     },
     {
       "name": "CONVERSATIONS_CHUNKS_PRIVATE",
@@ -51,12 +51,20 @@
       "branch": "master",
       "commit": "eb124b51a949c7a0943275a18f94371e69756449",
       "commit_hash_sha256": "TOKEN_VAZIO",
-      "role": "package_source_r3",
-      "status": "R3.1_PINNED",
+      "role": "production_reference_source_r3",
+      "status": "R3.1_UPSTREAM_PINNED_FORK_EXPERIMENTAL",
       "prefix_override": "/data/data/com.termux.rafacodephi/files/usr",
-      "notes": "R3.1: Pinned to termux upstream (fork empty). Decision B1: Use upstream for now; can fork+sync if reproducibility requires",
+      "notes": "Upstream remains the production reference. The Rafael fork was populated after PR #330 and is tracked separately as an experimental builder; it is not promoted to package source or release authority.",
       "fork_url": "https://github.com/rafaelmeloreisnovo/termux-packages.git",
-      "fork_status": "empty"
+      "fork_status": "ACTIVE_EXPERIMENTAL_BUILDER",
+      "fork_main_branch": "main",
+      "fork_main_commit": "cde7ed15e5c529847f9e27904a4d454f166bcb8f",
+      "fork_experimental_branch": "fix/manifest-gate-provenance-20260806",
+      "fork_experimental_commit": "e111c2f81b13ee9b30cb5cc0d675c37b9feec659",
+      "fork_pull_request": 4,
+      "fork_claim_allowed": false,
+      "fork_release_allowed": false,
+      "fork_promotion_gate": "TOKEN_VAZIO_ARMV7_AARCH64_PREFIX_SAFE_DEVICE_RECEIPTS"
     }
   ],
   "abi": {
@@ -82,10 +90,10 @@
     "scripts/vertical_slice/run_readonly_flow.sh": "1c33f66ba54f810a23535ca8302b3e3e504c7f1efb0d752531c10477e6baa758"
   },
   "r3_status": {
-    "phase": "R3.2_ACTIVE",
-    "maturity": "R3.2_NDK_VERIFICATION_BLOCKED",
+    "phase": "R3.2B_AUTHORITY_RECONCILED_NDK_BLOCKED",
+    "maturity": "R3.2_NDK_VERIFICATION_BLOCKED_WITH_EXPERIMENTAL_BUILDER",
     "created_at": "2026-08-06T06:20:00Z",
-    "updated_at": "2026-08-06T06:31:00Z",
+    "updated_at": "2026-08-06T08:36:28Z",
     "claim_allowed": false,
     "release_allowed": false,
     "next_gate": "R3.2_NDK_INSTALLATION_REQUIRED",
@@ -98,18 +106,39 @@
     ],
     "docs_added": [
       "docs/R3_PREFIX_SAFE_REBUILD_STRATEGY.md",
-      "docs/R3_BLOCKERS_AND_DECISIONS.md"
+      "docs/R3_BLOCKERS_AND_DECISIONS.md",
+      "auditoria/TERMUX_PACKAGES_AUTHORITY_RECONCILIATION_20260806.json"
     ],
     "blockers": {
-      "termux_packages_repo": "RESOLVED (eb124b51a949c7a0943275a18f94371e69756449)",
-      "ndk_version": "26.3.11579264 (from gradle.properties, corrected) — NDK_NOT_INSTALLED on this build host",
-      "arm32_device": "TOKEN_VAZIO (Moto E7 needed for R3.8 testing)",
-      "arm64_device": "TOKEN_VAZIO (Realme Note 50 needed for R3.8 testing)",
-      "build_flags_final": "DRAFT (in R3_BLOCKERS_AND_DECISIONS.md) — NEXT: finalize in R3.3"
+      "termux_packages_production_reference": "RESOLVED: upstream eb124b51a949c7a0943275a18f94371e69756449 remains pinned",
+      "termux_packages_experimental_builder": "PR #4 open draft at e111c2f81b13ee9b30cb5cc0d675c37b9feec659; not production-promoted",
+      "ndk_version": "26.3.11579264 — NDK_NOT_INSTALLED on the verified build host",
+      "manifest_global_v1": "TOKEN_VAZIO_MANIFEST_V2_REQUIRED if any package exceeds 16 dependencies or cannot be represented losslessly",
+      "source_fetch_and_hash": "TOKEN_VAZIO_SOURCE_FETCH",
+      "patch_execution": "TOKEN_VAZIO_PATCH_EXECUTION",
+      "distribution_contract": "TOKEN_VAZIO_DEB_APT_DPKG_CONTRACT",
+      "arm32_device": "TOKEN_VAZIO (Moto E7 required for physical receipt)",
+      "arm64_device": "TOKEN_VAZIO (Realme Note 50 required for physical receipt)",
+      "build_flags_final": "DRAFT — finalize in R3.3 after NDK gate"
+    },
+    "authority_reconciliation": {
+      "event_id": "TERMUX-PACKAGES-AUTHORITY-RECONCILIATION-20260806-V1",
+      "prior_state": "fork_status=empty",
+      "observed_delta": "fork populated with phases 1-8 after the prior lock was written",
+      "production_authority": "termux/termux-packages@eb124b51a949c7a0943275a18f94371e69756449",
+      "experimental_authority": "rafaelmeloreisnovo/termux-packages PR #4 @ e111c2f81b13ee9b30cb5cc0d675c37b9feec659",
+      "promotion_forbidden_until": [
+        "NDK 26.3.11579264 receipt",
+        "ARMv7 package build receipt",
+        "AArch64 package build receipt",
+        "legacy prefix scan PASS",
+        "package format decision TAR versus deb/apt/dpkg",
+        "device install, execution and rollback receipts"
+      ]
     },
     "r3_2_result": {
       "ran_at": "2026-08-06T06:30:41Z",
-      "host": "linux x86_64 (this session's build environment)",
+      "host": "linux x86_64 (verified build environment)",
       "status": "NDK_NOT_FOUND",
       "expected_ndk_version": "26.3.11579264",
       "searched_locations": [
@@ -119,18 +148,20 @@
         "$ANDROID_SDK_ROOT/ndk/26.3.11579264 or $ANDROID_HOME/ndk/26.3.11579264",
         "~/Android/Sdk, /usr/local/lib/android/sdk, /opt/android-sdk, /opt/android-sdk-linux"
       ],
-      "remediation": "Run scripts/setup_android_toolchain.sh (reads gradle.properties, installs ndk;26.3.11579264 via sdkmanager), then re-run scripts/verify_ndk_r26_installation.sh",
-      "note": "This is an honest fail-closed result, not a fabricated pass. R3.4 (ARM32/ARM64 package build) cannot start until this gate is green on the build host that will run it."
+      "remediation": "Run scripts/setup_android_toolchain.sh on a host with Android SDK access, then re-run scripts/verify_ndk_r26_installation.sh",
+      "note": "Fail-closed result preserved. Experimental builder progress does not bypass the missing toolchain gate."
     },
     "next_steps": [
-      "✓ R3.1: Clone termux-packages fork and pin commit (COMPLETE)",
-      "✓ R3.2: Verification script written and run (scripts/verify_ndk_r26_installation.sh) — result: NDK_NOT_FOUND on this host, remediation documented",
-      "→ R3.2b: Run scripts/setup_android_toolchain.sh on a host with Android SDK access, then re-verify",
-      "→ R3.3: Finalize build flags (--prefix, CFLAGS, LDFLAGS, SOURCE_DATE_EPOCH)",
-      "→ R3.4: Build ARM32 + ARM64 packages (configure + make + install)",
-      "→ R3.5: Validate each .deb with validate_deb_prefix_safe.sh",
-      "→ R3.6: Sign artefatos (SHA256SUMS + GPG/BLAKE3)",
-      "→ R4: Incorporate in bootstrap, rebuild APK"
+      "✓ R3.1: upstream production reference pinned",
+      "✓ R3.2: NDK verifier written and run; NDK_NOT_FOUND preserved",
+      "✓ R3.2b: fork authority drift reconciled without production promotion",
+      "→ Review termux-packages PR #4 and preserve draft until full tests",
+      "→ Install NDK 26.3.11579264 and re-run verification",
+      "→ R3.3: finalize --prefix, CFLAGS, LDFLAGS and SOURCE_DATE_EPOCH",
+      "→ R3.4: build ARMv7 and AArch64 closure",
+      "→ R3.5: validate every package with validate_deb_prefix_safe.sh or the selected distribution contract",
+      "→ R3.6: sign SHA256SUMS/BLAKE3 and create provenance receipt",
+      "→ R4: incorporate only verified packages into bootstrap and rebuild APK"
     ]
   }
 }
