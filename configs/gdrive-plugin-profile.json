@@ -1,63 +1,53 @@
 {
+  "schema": "gdrive-plugin-profile-contract/v2",
   "package_name": "com.termux.rafacodephi",
   "plugin_name": "gdrive-plugin",
   "prefix": "/data/data/com.termux.rafacodephi/files/usr",
-  "profiles": {
-    "plugin-base": {
-      "claim_allowed": false,
-      "package_layer": "plugin",
-      "plugin_type": "sync-engine",
-      "release_allowed": false,
-      "required_entries": [
-        "bin/bash",
-        "bin/curl",
-        "bin/sed",
-        "bin/grep",
-        "bin/awk",
-        "bin/find",
-        "bin/md5sum"
-      ]
-    }
+  "package_layer": "plugin-source",
+  "maturity": "DRAFT_FAIL_CLOSED_CLI",
+  "claim_allowed": false,
+  "release_allowed": false,
+  "required_entries": [
+    "bin/bash",
+    "bin/curl",
+    "bin/jq",
+    "bin/md5sum",
+    "bin/awk",
+    "bin/find",
+    "bin/stat",
+    "bin/base64",
+    "bin/od",
+    "bin/tr"
+  ],
+  "optional_entries": [
+    "bin/python3",
+    "bin/termux-open-url"
+  ],
+  "scripts": {
+    "auth": "plugins/gdrive-plugin/gdrive-auth.sh",
+    "sync": "plugins/gdrive-plugin/gdrive-sync.sh",
+    "status_service": "plugins/gdrive-plugin/gdrive-webservice.sh"
   },
-  "promotion_rule": "PLUGIN_AVAILABLE AND DEPENDENCIES_MET",
-  "schema": "gdrive-plugin-profile-contract/v1",
-  "plugin_config": {
-    "directories": {
-      "plugin_home": "~/.config/gdrive-plugin",
-      "shadow_dir": "~/.config/gdrive-plugin/.gdrive-shadow",
-      "logs": "~/.config/gdrive-plugin/logs"
-    },
-    "scripts": {
-      "auth": "plugins/gdrive-plugin/gdrive-auth.sh",
-      "sync": "plugins/gdrive-plugin/gdrive-sync.sh",
-      "webservice": "plugins/gdrive-plugin/gdrive-webservice.sh"
-    },
-    "initialization": {
-      "auto_init": false,
-      "init_command": "gdrive-auth.sh init",
-      "verify_tokens": true
-    },
-    "webservice": {
-      "auto_start": false,
-      "default_port": 8080,
-      "enable_browser_access": true
-    }
+  "invariants": {
+    "http_2xx_required": true,
+    "checksum_confirmation_required": true,
+    "remote_identity_is_drive_id": true,
+    "initial_mismatch_is_conflict": true,
+    "concurrent_change_is_conflict": true,
+    "downloads_are_atomic": true,
+    "recursive_sync": false,
+    "deletion_propagation": false,
+    "web_write_api": false
   },
-  "permissions": {
-    "required": [
-      "read_storage",
-      "write_storage",
-      "network_access",
-      "file_operations"
-    ],
-    "optional": [
-      "background_sync",
-      "scheduled_tasks"
-    ]
-  },
+  "promotion_rule": "LOCAL_CONTRACT_PASS AND DEVICE_REAL_ACCOUNT_RECEIPTS AND SECURITY_REVIEW",
   "token_vazio": [
-    "plugin_signed",
-    "verified_scripts",
-    "auto_update_enabled"
+    "device_oauth",
+    "real_drive_roundtrip",
+    "network_fault_injection",
+    "armv7_receipt",
+    "arm64_receipt",
+    "packaging",
+    "signature",
+    "release"
   ]
 }
