@@ -16,6 +16,20 @@ allprojects {
     }
 }
 
+// The :app module enables core library desugaring in compileOptions.
+// Keep its dependency explicit and version-aligned with :termux-shared so
+// AGP can create l8DexDesugarLib tasks deterministically in every build lane.
+subprojects { subproject ->
+    subproject.pluginManager.withPlugin("com.android.application") {
+        if (subproject.path == ":app") {
+            subproject.dependencies.add(
+                "coreLibraryDesugaring",
+                "com.android.tools:desugar_jdk_libs:2.1.2"
+            )
+        }
+    }
+}
+
 tasks.register("verifyReleaseContract", Exec) {
     group = "verification"
     description = "Validates release APK contract for official/internal CI tracks."
