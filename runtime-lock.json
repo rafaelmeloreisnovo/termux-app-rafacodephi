@@ -1,8 +1,8 @@
 {
   "schema": "rafaelia.runtime-lock.v1",
   "description": "Pinned repository commits and toolchain for reproducible builds. TOKEN_VAZIO entries must be filled before production use.",
-  "locked_at": "2026-08-06T06:25:00Z",
-  "last_update_reason": "R3.1_TERMUX_PACKAGES_PINNED",
+  "locked_at": "2026-08-06T06:31:00Z",
+  "last_update_reason": "R3.2_NDK_VERIFICATION_RUN",
   "repositories": [
     {
       "name": "termux-app-rafacodephi",
@@ -65,7 +65,8 @@
     "android_api_min": 28
   },
   "toolchain": {
-    "ndk_version": "r26+",
+    "ndk_version": "26.3.11579264",
+    "ndk_version_source": "gradle.properties (corrected 2026-08-06; prior lock value 26.2.11900637 did not match repo source of truth)",
     "compiler": "clang",
     "host": "aarch64-linux-android28",
     "build_script": "./build.sh",
@@ -81,18 +82,19 @@
     "scripts/vertical_slice/run_readonly_flow.sh": "1c33f66ba54f810a23535ca8302b3e3e504c7f1efb0d752531c10477e6baa758"
   },
   "r3_status": {
-    "phase": "R3.1_ACTIVE",
-    "maturity": "R3.1_TERMUX_PACKAGES_PINNED",
+    "phase": "R3.2_ACTIVE",
+    "maturity": "R3.2_NDK_VERIFICATION_BLOCKED",
     "created_at": "2026-08-06T06:20:00Z",
-    "updated_at": "2026-08-06T06:25:00Z",
+    "updated_at": "2026-08-06T06:31:00Z",
     "claim_allowed": false,
     "release_allowed": false,
-    "next_gate": "R3.2_NDK_VERIFICATION",
+    "next_gate": "R3.2_NDK_INSTALLATION_REQUIRED",
     "scripts_added": [
       "scripts/environment_identity_failsafe.sh (R0)",
       "scripts/capture_installed_apk_receipt.sh (R1)",
       "scripts/link_receipt_to_commit.sh (R2)",
-      "scripts/validate_deb_prefix_safe.sh (R3)"
+      "scripts/validate_deb_prefix_safe.sh (R3)",
+      "scripts/verify_ndk_r26_installation.sh (R3.2)"
     ],
     "docs_added": [
       "docs/R3_PREFIX_SAFE_REBUILD_STRATEGY.md",
@@ -100,14 +102,30 @@
     ],
     "blockers": {
       "termux_packages_repo": "RESOLVED (eb124b51a949c7a0943275a18f94371e69756449)",
-      "ndk_version": "r26.2.11900637 (from app/build.gradle) — NEXT: verify installation",
+      "ndk_version": "26.3.11579264 (from gradle.properties, corrected) — NDK_NOT_INSTALLED on this build host",
       "arm32_device": "TOKEN_VAZIO (Moto E7 needed for R3.8 testing)",
       "arm64_device": "TOKEN_VAZIO (Realme Note 50 needed for R3.8 testing)",
       "build_flags_final": "DRAFT (in R3_BLOCKERS_AND_DECISIONS.md) — NEXT: finalize in R3.3"
     },
+    "r3_2_result": {
+      "ran_at": "2026-08-06T06:30:41Z",
+      "host": "linux x86_64 (this session's build environment)",
+      "status": "NDK_NOT_FOUND",
+      "expected_ndk_version": "26.3.11579264",
+      "searched_locations": [
+        "$ANDROID_NDK",
+        "$ANDROID_NDK_HOME",
+        "$ANDROID_NDK_ROOT",
+        "$ANDROID_SDK_ROOT/ndk/26.3.11579264 or $ANDROID_HOME/ndk/26.3.11579264",
+        "~/Android/Sdk, /usr/local/lib/android/sdk, /opt/android-sdk, /opt/android-sdk-linux"
+      ],
+      "remediation": "Run scripts/setup_android_toolchain.sh (reads gradle.properties, installs ndk;26.3.11579264 via sdkmanager), then re-run scripts/verify_ndk_r26_installation.sh",
+      "note": "This is an honest fail-closed result, not a fabricated pass. R3.4 (ARM32/ARM64 package build) cannot start until this gate is green on the build host that will run it."
+    },
     "next_steps": [
       "✓ R3.1: Clone termux-packages fork and pin commit (COMPLETE)",
-      "→ R3.2: Verify NDK r26 installed ($ANDROID_NDK/toolchains/llvm/...)",
+      "✓ R3.2: Verification script written and run (scripts/verify_ndk_r26_installation.sh) — result: NDK_NOT_FOUND on this host, remediation documented",
+      "→ R3.2b: Run scripts/setup_android_toolchain.sh on a host with Android SDK access, then re-verify",
       "→ R3.3: Finalize build flags (--prefix, CFLAGS, LDFLAGS, SOURCE_DATE_EPOCH)",
       "→ R3.4: Build ARM32 + ARM64 packages (configure + make + install)",
       "→ R3.5: Validate each .deb with validate_deb_prefix_safe.sh",

@@ -10,7 +10,7 @@
 
 ### B1: Repositório termux-packages — Qual versão clonar?
 
-**Estado**: TOKEN_VAZIO  
+**Estado**: ✅ RESOLVIDO (R3.1, 2026-08-06)
 **Impacto**: Determina quais fontes serão compiladas  
 
 **Opções**:
@@ -18,39 +18,63 @@
 | Opção | URL | Vantagem | Risco |
 |-------|-----|---------|-------|
 | Upstream | `https://github.com/termux/termux-packages.git` | Comunidade mantida, patches recentes | Não garantida reprodutibilidade RAFCODEΦ |
-| Fork próprio | `https://github.com/rafaelmeloreisnovo/termux-packages.git` | Controle total, reproducível | Requer manutenção |
+| Fork próprio | `https://github.com/rafaelmeloreisnovo/termux-packages.git` | Controle total, reproducível | **Repositório vazio** (verificado via `git ls-remote`) |
 
-**Recomendação**: Usar fork próprio, mas sincronizar regularmente com upstream.
+**Decisão real (R3.1)**: O fork `rafaelmeloreisnovo/termux-packages` existe mas está **vazio** — `git ls-remote --heads` não retorna nenhuma branch. Como não há nada para clonar do fork, foi usado o **upstream** como fonte, com o commit pinado em `runtime-lock.json`:
 
-**Ação necessária antes de R4**:
+```
+url:    https://github.com/termux/termux-packages.git
+branch: master
+commit: eb124b51a949c7a0943275a18f94371e69756449
+```
+
+Se reprodutibilidade estrita exigir um fork privado no futuro, popular o fork a partir deste commit exato e atualizar `runtime-lock.json.repositories[].fork_url`/`fork_status`.
+
+**Verificação (já executada, sem clone completo)**:
 ```bash
-git clone https://github.com/rafaelmeloreisnovo/termux-packages.git termux-packages
-cd termux-packages
-git log --oneline -1  # Capturar commit para runtime-lock.json
+git ls-remote https://github.com/rafaelmeloreisnovo/termux-packages.git HEAD  # vazio
+git ls-remote https://github.com/termux/termux-packages.git HEAD             # eb124b51a949c7a0943275a18f94371e69756449
 ```
 
 ---
 
 ### B2: NDK Versão & Toolchain Path
 
-**Estado**: Parcialmente documentado em `app/build.gradle`  
+**Estado**: ⚠️ VERIFICADO E BLOQUEADO (R3.2, 2026-08-06) — versão confirmada, mas NDK **não está instalado** no host de build usado nesta sessão.
+
 **Impacto**: Compatibilidade clang, flags disponíveis, size binários  
 
-**Valores Conhecidos** (de `app/build.gradle`):
-```gradle
-ndkVersion = "26.2.11900637"
-compileSdkVersion = 35
+**Correção importante**: A versão documentada anteriormente aqui (`26.2.11900637`, citada de `app/build.gradle`) estava **desatualizada**. A fonte de verdade real é `gradle.properties`:
+
+```properties
+ndkVersion=26.3.11579264
+compileSdkVersion=35
+targetSdkVersion=28
+minSdkVersion=21
 ```
 
-**Verificação necessária**:
-```bash
-# Verificar NDK instalado
-ls -d $ANDROID_NDK/toolchains/llvm/prebuilt/*/bin/aarch64-linux-android*-clang
+`app/build.gradle` apenas lê `ndkVersion` de `gradle.properties` via `project.properties.ndkVersion` — não a declara diretamente. `runtime-lock.json.toolchain.ndk_version` foi corrigido de `"r26+"` para `"26.3.11579264"`.
 
-# Expected: /opt/android-ndk-r26/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android28-clang
+**Script de verificação criado**: `scripts/verify_ndk_r26_installation.sh` (read-only, não instala nada)
+- Lê `ndkVersion` de `gradle.properties`
+- Resolve `$ANDROID_NDK` / `$ANDROID_NDK_HOME` / `$ANDROID_NDK_ROOT` / `$ANDROID_SDK_ROOT/ndk/<version>`
+- Confirma versão real via `source.properties` dentro do NDK (não confia só no nome do path)
+- Verifica presença dos compiladores cross exigidos pela matriz ABI (`armeabi-v7a` + `arm64-v8a`):
+  - `aarch64-linux-android${targetSdkVersion}-clang`
+  - `armv7a-linux-androideabi${targetSdkVersion}-clang`
+
+**Resultado real desta execução** (host Linux x86_64 desta sessão):
+```
+status=NDK_NOT_FOUND
+expected_ndk_version=26.3.11579264
+r3_gate=R3.2_BLOCKED
 ```
 
-**Decisão**: Usar r26+ conforme app/build.gradle.
+Nenhum SDK/NDK Android está instalado neste ambiente de build. Isso é um achado honesto, não uma falha do script — não existe simulação de "PASS" quando o pré-requisito real não está presente.
+
+**Remediação**: Rodar `scripts/setup_android_toolchain.sh` (já existente no repositório) em um host com acesso ao Android SDK/`sdkmanager`, que instala `ndk;26.3.11579264` a partir de `gradle.properties`. Depois, re-rodar `scripts/verify_ndk_r26_installation.sh` para confirmar `r3_gate=R3.2_COMPLETE` antes de iniciar R3.4 (build real).
+
+**Decisão**: Usar NDK `26.3.11579264` (não `r26+` genérico) para reprodutibilidade exata, conforme `gradle.properties`.
 
 ---
 
@@ -217,8 +241,8 @@ git log --oneline -1
 
 Antes de prosseguir para **R4 (Bootstrap real-pkg)**:
 
-- [ ] termux-packages.git clonado e commit pinned em runtime-lock.json
-- [ ] NDK r26+ verificado e PATH configurado
+- [x] termux-packages commit pinned em runtime-lock.json (R3.1 — upstream eb124b51a949c7a0943275a18f94371e69756449; fork vazio)
+- [ ] NDK 26.3.11579264 instalado e verificado (`scripts/verify_ndk_r26_installation.sh` → `r3_gate=R3.2_COMPLETE`); bloqueado nesta sessão por ausência de SDK/NDK no host de build
 - [ ] Todas flags de configuração (--prefix, LDFLAGS) documentadas
 - [ ] ARM32 + ARM64 builds testados localmente (ou em CI)
 - [ ] Cada .deb passou `validate_deb_prefix_safe.sh`
