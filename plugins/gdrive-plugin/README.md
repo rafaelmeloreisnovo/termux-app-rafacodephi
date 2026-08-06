@@ -1,387 +1,270 @@
-# Google Drive Sync Plugin for Termux RAFCODEΦ
+# Google Drive Sync Plugin for Termux RAFCODEΦ — V2 Draft
 
-A low-level, pure bash implementation of Google Drive synchronization for Termux RAFCODEΦ. No external dependencies, no abstractions—just direct bash commands and Google Drive API calls.
+This branch contains a **fail-closed CLI prototype**, not a released Google Drive client.
 
-## Features
-
-✅ **OAuth 2.0 Authentication** - Secure Google account access  
-✅ **Bidirectional Sync** - Mirror mode keeps directories synchronized  
-✅ **Hash Tracking** - Shadow files system to detect changes efficiently  
-✅ **Upload/Download** - Transfer files to and from Google Drive  
-✅ **Web Interface** - Access via Chrome/browser on http://localhost:8080  
-✅ **Low-Level Implementation** - Pure bash, minimal dependencies  
-✅ **Ignore Patterns** - `.gdrive-ignore` file support  
-
-## Installation
-
-### 1. Prerequisites
-
-Required commands (usually available in Termux):
-```bash
-bash, curl, sed, grep, awk, find, md5sum
+```text
+claim_allowed=false
+release_allowed=false
+device_runtime=TOKEN_VAZIO
 ```
 
-Optional for better performance:
-```bash
-socat or nc (netcat) - for webservice
+The V2 revision intentionally narrows the original proposal. It preserves one local directory level, stable Google Drive file identity, explicit conflict states and verified transfers. Features that do not yet have a safe policy—recursive trees, deletion propagation and browser-triggered writes—are disabled rather than simulated.
+
+## Sustaining invariant
+
+A sync result may be called successful only when all applicable conditions hold:
+
+```text
+authentication valid
++ HTTP response is 2xx
++ local path maps to one stable Drive file ID
++ no unresolved initial/concurrent conflict
++ uploaded/downloaded MD5 is confirmed
++ state is written only after the confirmed operation
 ```
 
-### 2. Copy Plugin
+Formally:
 
-```bash
-cp -r plugins/gdrive-plugin ~/.config/gdrive-plugin
-chmod +x ~/.config/gdrive-plugin/gdrive-*.sh
+```text
+SUCCESS ⇔ AUTH ∧ HTTP_2XX ∧ UNIQUE_ID ∧ NO_CONFLICT ∧ HASH_CONFIRMED ∧ STATE_COMMITTED
 ```
 
-### 3. Get Google OAuth Credentials
+A failure or unknown state never becomes `success` through `|| true`.
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project
-3. Enable Google Drive API
-4. Create OAuth 2.0 credentials (Desktop application)
-5. Copy `Client ID` and `Client Secret`
+## Current scope
 
-## Quick Start
+| Capability | State |
+|---|---|
+| OAuth 2.0 installed-application flow | Implemented structurally; real-account receipt pending |
+| OAuth state verification | Implemented |
+| Token refresh | Implemented using protected credentials file |
+| Flat folder upload | Implemented structurally |
+| Update existing Drive file | Implemented using stable Drive file ID |
+| Flat folder download | Temporary file → MD5 → atomic rename |
+| Bidirectional planning | Implemented with three-state comparison |
+| Concurrent local + remote change | Explicit conflict; no overwrite |
+| Duplicate remote names | Explicit conflict |
+| Pagination beyond 1,000 files | Implemented |
+| Nested directory hierarchy | Disabled in V2 |
+| Deletion propagation | Disabled in V2 |
+| Google Docs/Sheets/Slides export | Disabled until format policy exists |
+| Browser write API | Disabled |
+| Read-only localhost status page | Optional, implemented with Python standard library |
+| Android ARMv7/ARM64 device proof | `TOKEN_VAZIO` |
+| APK/bootstrap packaging | `TOKEN_VAZIO` |
 
-### 1. Authenticate with Google
+## Dependencies
 
-```bash
-./gdrive-auth.sh init <CLIENT_ID> <CLIENT_SECRET>
+Required:
+
+```text
+bash curl jq md5sum awk find stat base64 od tr python3
 ```
 
-Follow the browser redirect and paste the authorization code.
+Optional:
 
-### 2. Upload Files
-
-```bash
-./gdrive-sync.sh upload /path/to/local/dir <DRIVE_FOLDER_ID>
+```text
+termux-open-url opens the OAuth URL automatically
 ```
 
-### 3. Download Files
+This is a low-dependency Bash + Python implementation. It is **not dependency-free**: OAuth orchestration uses Bash and `jq`; the three-state sync planner/executor uses Python standard library; HTTP transfers use `curl`; content identity is checked against Google Drive `md5Checksum`.
+
+## Installation in a source checkout
 
 ```bash
-./gdrive-sync.sh download <DRIVE_FOLDER_ID> /path/to/local/dir
+cd plugins/gdrive-plugin
+chmod +x gdrive-auth.sh gdrive-sync.sh gdrive-webservice.sh tests/test_gdrive_plugin.sh
 ```
 
-### 4. Mirror Sync (Bidirectional)
+The PR does not yet copy these scripts into the APK, bootstrap ZIP or `$PREFIX/bin`. Repository presence is not installation proof.
 
-```bash
-./gdrive-sync.sh mirror /path/to/local/dir <DRIVE_FOLDER_ID>
+## OAuth setup
+
+Create an OAuth client of type **Desktop app** in Google Cloud and enable Google Drive API.
+
+The default scope is the least-privilege scope:
+
+```text
+https://www.googleapis.com/auth/drive.file
 ```
 
-### 5. Start Web Interface
+That scope may not expose an arbitrary pre-existing folder unless the folder/files were created or explicitly opened through the application. Full arbitrary Drive access requires an explicit wider scope:
 
 ```bash
-./gdrive-webservice.sh start
-# Open browser: http://localhost:8080
+export GDRIVE_SCOPE='https://www.googleapis.com/auth/drive'
 ```
 
-## Commands Reference
+The full Drive scope is restricted and may require additional Google verification depending on distribution and use.
 
-### Authentication (gdrive-auth.sh)
+Authenticate without putting the client secret in shell history:
 
 ```bash
-# Initialize OAuth flow
-./gdrive-auth.sh init <CLIENT_ID> <CLIENT_SECRET> [REDIRECT_URI]
+./gdrive-auth.sh init YOUR_CLIENT_ID
+```
 
-# Get current access token
-./gdrive-auth.sh token
+The script:
 
-# Refresh token manually
-./gdrive-auth.sh refresh <CLIENT_ID> <CLIENT_SECRET>
+1. prompts for the desktop client secret with hidden input;
+2. creates a random OAuth `state` value;
+3. opens or prints the Google authorization URL;
+4. asks for the **complete loopback redirect URL**;
+5. verifies `state` before extracting the authorization code;
+6. stores credentials and tokens with mode `0600`.
 
-# Revoke tokens (logout)
+Commands:
+
+```bash
+./gdrive-auth.sh status
+./gdrive-auth.sh token      # prints only the access token to stdout
+./gdrive-auth.sh refresh
 ./gdrive-auth.sh revoke
-
-# Show token status
-./gdrive-auth.sh status
+./gdrive-auth.sh selftest
 ```
 
-### Sync Operations (gdrive-sync.sh)
+Logs are written to stderr and never intentionally include access or refresh tokens.
+
+## Planning before execution
+
+Always inspect a plan first:
 
 ```bash
-# Upload local directory to Drive
-./gdrive-sync.sh upload <LOCAL_DIR> <DRIVE_FOLDER_ID>
-
-# Download from Drive to local directory
-./gdrive-sync.sh download <DRIVE_FOLDER_ID> [LOCAL_DIR]
-
-# Bidirectional mirror sync
-./gdrive-sync.sh mirror <LOCAL_DIR> <DRIVE_FOLDER_ID>
-
-# Show sync status
-./gdrive-sync.sh status
+./gdrive-sync.sh plan /path/to/local-folder DRIVE_FOLDER_ID | jq .
 ```
 
-### Webservice (gdrive-webservice.sh)
+The planner compares:
+
+```text
+S0 = last confirmed state
+SL = current local MD5
+SR = current Drive MD5
+```
+
+Possible actions include:
+
+```text
+upload
+update_remote
+download_remote
+baseline
+noop
+conflict_initial_mismatch
+conflict_both_changed
+conflict_duplicate_remote
+conflict_local_deleted
+conflict_remote_deleted
+unsupported_google_native
+state_orphan
+```
+
+Any conflict, unsupported object, unsafe name or orphaned state blocks execution.
+
+## Sync commands
 
 ```bash
-# Start on default port (8080)
-./gdrive-webservice.sh start
+# Bidirectional, only when the plan has no blocker
+./gdrive-sync.sh mirror /path/to/local-folder DRIVE_FOLDER_ID
 
-# Start on custom port
-./gdrive-webservice.sh port 9090
+# One-way local → Drive; a required download blocks the run before mutation
+./gdrive-sync.sh upload /path/to/local-folder DRIVE_FOLDER_ID
 
-# Stop webservice
-./gdrive-webservice.sh stop
+# One-way Drive → local; a required upload/update blocks the run before mutation
+./gdrive-sync.sh download DRIVE_FOLDER_ID /path/to/local-folder
 
-# Show status
-./gdrive-webservice.sh status
+./gdrive-sync.sh status | jq .
 ```
 
-## Configuration
+### Important V2 boundaries
 
-### Config Directory Structure
+- The local directory must contain files only at depth 1.
+- Nested files cause a hard failure; their paths are never silently flattened.
+- Remote deletions and local deletions become conflicts because tombstone semantics are not yet defined.
+- Initial local/remote name matches with different content become conflicts.
+- A changed local file updates the same Drive ID; it does not create another same-name object.
+- A download is written to a temporary file, checked against the Drive MD5, then atomically renamed.
+- State records are updated only after a confirmed transfer.
 
-```
-~/.config/gdrive-plugin/
-├── tokens.json              # OAuth tokens (auto-created)
-├── config.json              # Configuration file
-├── .gdrive-shadow/          # Hash tracking directory
-│   └── *.shadow             # File hash records
-├── .gdrive-ignore           # Patterns to ignore
-├── sync.log                 # Sync operations log
-├── sync.status              # Last sync status
-└── webservice.log           # Webservice logs
-```
+## Ignore patterns
 
-### Ignore Patterns (.gdrive-ignore)
+`~/.config/gdrive-plugin/.gdrive-ignore` contains Bash glob patterns matched against direct child names:
 
-Create `~/.config/gdrive-plugin/.gdrive-ignore`:
-
-```
-# Comments start with #
-.git
-node_modules
+```text
 *.tmp
+*.part
 .DS_Store
-__pycache__
 ```
 
-### Configuration File (config.json)
+This is not a full `.gitignore` implementation.
 
-Edit `~/.config/gdrive-plugin/config.json`:
+## Read-only status service
 
-```json
-{
-  "local_dir": "/path/to/sync",
-  "drive_folder_id": "your-folder-id",
-  "auto_sync_enabled": false,
-  "sync_interval": 300,
-  "log_level": "INFO"
-}
-```
-
-## How It Works
-
-### Shadow Files System
-
-1. **First Sync**: Plugin creates hash records for each file
-2. **Subsequent Syncs**: Compares current hashes with stored hashes
-3. **Changed Files**: Only syncs files with different hashes
-4. **Efficiency**: Reduces bandwidth and speeds up sync
-
-### Hash Algorithm
-
-- Primary: MD5 (fast, good for sync comparison)
-- Fallback: SHA256 (if md5sum unavailable)
-- Fallback: File size (if no hash command available)
-
-### Mirror Sync Flow
-
-```
-Upload Phase:
-  1. Find all local files
-  2. Check if ignored
-  3. Compare hash with shadow
-  4. Upload if changed
-
-Download Phase:
-  1. List all files in Drive folder
-  2. Check if ignored
-  3. Compare hash with Drive metadata
-  4. Download if changed
-```
-
-## Examples
-
-### Example 1: Sync Downloads Folder
+The optional web component is intentionally read-only and binds only to loopback:
 
 ```bash
-# Set up
-./gdrive-auth.sh init YOUR_CLIENT_ID YOUR_CLIENT_SECRET
+./gdrive-webservice.sh daemon 8080
+# Open http://127.0.0.1:8080
 
-# Get Drive folder ID (visible in URL: docs.google.com/drive/folders/FOLDER_ID)
-
-# First sync
-./gdrive-sync.sh mirror ~/storage/downloads FOLDER_ID
-
-# Check status
-./gdrive-sync.sh status
+./gdrive-webservice.sh status
+./gdrive-webservice.sh stop
 ```
 
-### Example 2: Automated Sync Script
+Available endpoints:
+
+```text
+GET /api/status
+GET /api/logs
+GET /
+```
+
+All `POST` requests return `405 write_api_disabled`. Sync remains CLI-only until request-body parsing, authentication, CSRF protection and an authorization model are implemented and tested.
+
+## Local contract tests
 
 ```bash
-#!/bin/bash
-PLUGIN_DIR="$HOME/.config/gdrive-plugin"
-LOCAL_DIR="$HOME/storage/downloads"
-DRIVE_ID="your-folder-id"
-
-# Run mirror sync every 5 minutes
-while true; do
-    "$PLUGIN_DIR/gdrive-sync.sh" mirror "$LOCAL_DIR" "$DRIVE_ID"
-    sleep 300
-done
+./tests/test_gdrive_plugin.sh
 ```
 
-### Example 3: Web Interface
+The test suite checks:
 
-```bash
-# Start webservice
-./gdrive-webservice.sh start &
+- Bash syntax and Python bytecode compilation;
+- JSON contracts;
+- token JSON roundtrip without stdout contamination;
+- planner decisions for local, remote and simultaneous changes;
+- rejection of nested paths;
+- correct upload endpoint and escaped metadata;
+- loopback read-only status service and disabled writes.
 
-# Open in Chrome/browser
-# Type in address bar: http://localhost:8080
+A passing local contract suite does **not** prove Google OAuth, real Drive transfer, Android device behavior or packaging.
 
-# Configure and click "Mirror Sync"
+## Promotion gates
+
+The branch must remain draft until receipts exist for:
+
+1. real OAuth account flow;
+2. upload → same-ID update → download roundtrip;
+3. network interruption and HTTP error behavior;
+4. conflict preservation;
+5. Termux ARMv7 physical device;
+6. Termux ARM64 physical device;
+7. bootstrap/APK installation route;
+8. security review and restricted-scope decision.
+
+## Epistemic state
+
+```text
+F_ok:
+  local parser/planner/endpoint/status contracts are testable
+  identity and conflict invariants are explicit
+  false-success paths were removed
+
+F_gap:
+  real Google account and Drive receipts
+  PKCE
+  resumable uploads and bounded retry policy
+  recursive hierarchy and tombstones
+  Workspace-native export
+  ARMv7/ARM64 device and packaging proof
+
+F_next:
+  run the real-account matrix on an isolated test folder
+  preserve HTTP, IDs, MD5 values, timestamps and device metadata in a receipt
 ```
-
-## Troubleshooting
-
-### "No tokens found"
-
-```bash
-# Solution: Run authentication
-./gdrive-auth.sh init <CLIENT_ID> <CLIENT_SECRET>
-```
-
-### "Authentication failed"
-
-```bash
-# Check token status
-./gdrive-auth.sh status
-
-# Refresh manually
-./gdrive-auth.sh refresh <CLIENT_ID> <CLIENT_SECRET>
-```
-
-### "Upload failed"
-
-```bash
-# Check logs
-tail -f ~/.config/gdrive-plugin/sync.log
-
-# Verify file exists
-ls -la /path/to/file
-
-# Verify Drive folder ID
-echo "Folder ID should be visible in Drive URL"
-```
-
-### "Webservice won't start"
-
-```bash
-# Check if port is available
-netstat -tuln | grep 8080
-
-# Try different port
-./gdrive-webservice.sh port 9090
-
-# Check dependencies
-which socat nc
-```
-
-## Performance Tips
-
-1. **Use Mirror Sync** - More efficient than separate upload/download
-2. **Set Up Ignore Patterns** - Skip unnecessary files
-3. **Regular Syncs** - Small incremental syncs faster than full syncs
-4. **Close Browser** - If not using webservice, close it to save resources
-
-## API Reference
-
-### REST API Endpoints (Webservice)
-
-```
-GET  /                      HTML interface
-GET  /api/status            Get sync status (JSON)
-POST /api/sync/upload       Start upload
-POST /api/sync/download     Start download
-POST /api/sync/mirror       Start mirror sync
-POST /api/config            Save configuration
-GET  /api/logs              Get recent logs
-POST /api/logs/clear        Clear logs
-```
-
-### JSON Response Format
-
-```json
-{
-  "status": "success|error|running",
-  "message": "Operation description",
-  "timestamp": "2024-08-06T12:34:56Z",
-  "duration": 42.5
-}
-```
-
-## Security Notes
-
-- **Tokens File**: Stored with restricted permissions (mode 600)
-- **No Plaintext**: Never stores credentials in plaintext
-- **OAuth 2.0**: Uses secure OAuth 2.0 flow
-- **HTTPS**: All API calls use HTTPS
-- **Revoke**: Run `gdrive-auth.sh revoke` to logout
-
-## Limitations
-
-- Single folder sync (not recursive into subfolders)
-- Requires manually configured Drive folder IDs
-- No built-in scheduling (use cron/systemd timer)
-- Webservice is HTTP only (use behind proxy for HTTPS)
-
-## Development
-
-### File Structure
-
-```
-plugins/gdrive-plugin/
-├── gdrive-auth.sh           # OAuth handler
-├── gdrive-sync.sh           # Sync engine
-├── gdrive-webservice.sh     # HTTP server
-├── gdrive-config.json       # Configuration schema
-└── README.md               # This file
-```
-
-### Adding New Features
-
-1. Edit appropriate shell script
-2. Keep pure bash implementation
-3. No external dependencies
-4. Test thoroughly
-5. Update docs
-
-## License
-
-This plugin is part of Termux RAFCODEΦ and follows the same GPLv3 license.
-
-## Support
-
-For issues and feature requests, visit:
-- GitHub Issues: [termux-app-rafacodephi](https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi)
-- Documentation: See docs/plugins/
-
-## Changelog
-
-### v1.0.0 (2024-08-06)
-- Initial release
-- OAuth 2.0 authentication
-- Upload/Download/Mirror operations
-- Shadow files hash tracking
-- Web interface
-- Low-level bash implementation
-- Ignore patterns support
-
----
-
-**Made with ❤️ for Termux RAFCODEΦ**
