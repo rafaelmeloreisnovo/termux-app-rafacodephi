@@ -16,22 +16,8 @@
     "web_interface": "read-only-status"
   },
   "dependencies": {
-    "required": [
-      "bash",
-      "curl",
-      "jq",
-      "md5sum",
-      "awk",
-      "find",
-      "stat",
-      "base64",
-      "od",
-      "tr",
-      "python3"
-    ],
-    "optional": [
-      "termux-open-url"
-    ]
+    "required": ["bash","curl","jq","md5sum","awk","find","stat","base64","od","tr","python3"],
+    "optional": ["termux-open-url"]
   },
   "authentication": {
     "type": "oauth2-installed-application",
@@ -41,7 +27,7 @@
     "state_verification": true,
     "token_permissions": "0600",
     "credentials_permissions": "0600",
-    "pkce": "TOKEN_VAZIO_NOT_IMPLEMENTED"
+    "pkce": "S256"
   },
   "api": {
     "version": "v3",
@@ -70,9 +56,7 @@
     "cors": false,
     "dependency": "python3"
   },
-  "scripts": {
-    "sync_core": "gdrive-sync-core.py"
-  },
+  "scripts": {"sync_core": "gdrive-sync-core.py"},
   "promotion_gates": [
     "LOCAL_CONTRACT_TESTS_PASS",
     "OAUTH_REAL_ACCOUNT_RECEIPT",
@@ -84,7 +68,6 @@
   ],
   "token_vazio": [
     "oauth_real_account",
-    "pkce",
     "retry_backoff",
     "recursive_hierarchy",
     "deletion_tombstones",
