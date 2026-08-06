@@ -26,10 +26,10 @@
       "stat",
       "base64",
       "od",
-      "tr"
+      "tr",
+      "python3"
     ],
     "optional": [
-      "python3",
       "termux-open-url"
     ]
   },
@@ -69,6 +69,9 @@
     "write_api": false,
     "cors": false,
     "dependency": "python3"
+  },
+  "scripts": {
+    "sync_core": "gdrive-sync-core.py"
   },
   "promotion_gates": [
     "LOCAL_CONTRACT_TESTS_PASS",
