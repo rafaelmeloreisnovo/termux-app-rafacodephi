@@ -1,96 +1,95 @@
 {
-  "schema": "gdrive-plugin-config/v1",
+  "schema": "gdrive-plugin-config/v2",
   "plugin_name": "google-drive-sync",
-  "plugin_version": "1.0.0",
+  "plugin_version": "2.0.0-draft",
   "plugin_author": "RAFCODEΦ Team",
-  "plugin_description": "Google Drive synchronization plugin for Termux RAFCODEΦ",
-
-  "authentication": {
-    "type": "oauth2",
-    "oauth_endpoints": {
-      "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
-      "token_url": "https://oauth2.googleapis.com/token",
-      "revoke_url": "https://oauth2.googleapis.com/revoke"
-    },
-    "scopes": [
-      "https://www.googleapis.com/auth/drive"
-    ],
-    "tokens_file": "~/.config/gdrive-plugin/tokens.json"
+  "maturity": "DRAFT_FAIL_CLOSED_CLI",
+  "claim_allowed": false,
+  "release_allowed": false,
+  "scope": {
+    "local_directory_depth": 1,
+    "recursive_directories": false,
+    "deletion_propagation": false,
+    "google_workspace_native_export": false,
+    "conflict_policy": "fail-closed",
+    "write_interface": "cli-only",
+    "web_interface": "read-only-status"
   },
-
+  "dependencies": {
+    "required": [
+      "bash",
+      "curl",
+      "jq",
+      "md5sum",
+      "awk",
+      "find",
+      "stat",
+      "base64",
+      "od",
+      "tr"
+    ],
+    "optional": [
+      "python3",
+      "termux-open-url"
+    ]
+  },
+  "authentication": {
+    "type": "oauth2-installed-application",
+    "default_scope": "https://www.googleapis.com/auth/drive.file",
+    "full_drive_scope": "https://www.googleapis.com/auth/drive",
+    "redirect_uri": "http://127.0.0.1:53682/",
+    "state_verification": true,
+    "token_permissions": "0600",
+    "credentials_permissions": "0600",
+    "pkce": "TOKEN_VAZIO_NOT_IMPLEMENTED"
+  },
   "api": {
     "version": "v3",
-    "base_url": "https://www.googleapis.com/drive/v3",
-    "timeout": 30,
-    "retry_attempts": 3,
-    "retry_delay": 2
+    "metadata_base_url": "https://www.googleapis.com/drive/v3",
+    "upload_base_url": "https://www.googleapis.com/upload/drive/v3",
+    "pagination": true,
+    "http_success_required": true,
+    "retry_policy": "TOKEN_VAZIO_NOT_IMPLEMENTED"
   },
-
   "sync": {
-    "shadow_directory": "~/.config/gdrive-plugin/.gdrive-shadow",
+    "state_file": "~/.config/gdrive-plugin/sync-state.json",
+    "status_file": "~/.config/gdrive-plugin/sync.status.json",
     "ignore_file": "~/.config/gdrive-plugin/.gdrive-ignore",
-    "status_file": "~/.config/gdrive-plugin/sync.status",
     "log_file": "~/.config/gdrive-plugin/sync.log",
     "hash_algorithm": "md5",
-    "batch_size": 1000,
-    "chunk_size": 262144
+    "remote_identity": "drive_file_id",
+    "download_write": "temporary-file + checksum + atomic-rename",
+    "concurrency_lock": "mkdir-lock"
   },
-
   "webservice": {
-    "enabled": true,
+    "enabled": false,
+    "optional": true,
+    "host": "127.0.0.1",
     "default_port": 8080,
-    "protocol": "http",
-    "host": "localhost",
-    "enable_cors": true,
-    "log_requests": true
+    "write_api": false,
+    "cors": false,
+    "dependency": "python3"
   },
-
-  "operations": {
-    "upload": {
-      "enabled": true,
-      "description": "Upload files from local directory to Google Drive",
-      "requires_auth": true
-    },
-    "download": {
-      "enabled": true,
-      "description": "Download files from Google Drive to local directory",
-      "requires_auth": true
-    },
-    "mirror": {
-      "enabled": true,
-      "description": "Bidirectional synchronization (mirror mode)",
-      "requires_auth": true
-    },
-    "list": {
-      "enabled": true,
-      "description": "List files in Google Drive folder",
-      "requires_auth": true
-    },
-    "delete": {
-      "enabled": true,
-      "description": "Delete files from Google Drive",
-      "requires_auth": true
-    }
-  },
-
-  "defaults": {
-    "sync_interval": 300,
-    "auto_sync_enabled": false,
-    "log_level": "INFO"
-  },
-
-  "version_history": {
-    "1.0.0": {
-      "date": "2024-08-06",
-      "changes": [
-        "Initial release",
-        "OAuth 2.0 authentication",
-        "Upload/Download operations",
-        "Bidirectional mirror sync",
-        "Shadow files hash tracking",
-        "Web interface",
-        "Low-level bash implementation"
-      ]
-    }
-  }
+  "promotion_gates": [
+    "LOCAL_CONTRACT_TESTS_PASS",
+    "OAUTH_REAL_ACCOUNT_RECEIPT",
+    "UPLOAD_UPDATE_DOWNLOAD_REAL_RECEIPT",
+    "ARMV7_TERMUX_DEVICE_RECEIPT",
+    "ARM64_TERMUX_DEVICE_RECEIPT",
+    "CONFLICT_AND_NETWORK_FAILURE_RECEIPT",
+    "SECURITY_REVIEW"
+  ],
+  "token_vazio": [
+    "oauth_real_account",
+    "pkce",
+    "retry_backoff",
+    "recursive_hierarchy",
+    "deletion_tombstones",
+    "google_workspace_export",
+    "armv7_device_runtime",
+    "arm64_device_runtime",
+    "plugin_packaging",
+    "plugin_signature",
+    "release_receipt"
+  ]
 }
