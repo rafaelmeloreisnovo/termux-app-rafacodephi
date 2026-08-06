@@ -1,0 +1,58 @@
+{
+  "claim_allowed": false,
+  "environment": {
+    "bash": "GNU bash, version 5.2.37(1)-release (x86_64-pc-linux-gnu)",
+    "curl": "curl 8.10.1 (x86_64-pc-linux-gnu) libcurl/8.10.1 OpenSSL/3.5.5 zlib/1.3.1 brotli/1.1.0 zstd/1.5.7 libidn2/2.3.8 libpsl/0.21.2 nghttp2/1.64 librtmp/2.3 OpenLDAP/2.6.10",
+    "jq": "jq-1.7",
+    "machine": "x86_64",
+    "os": "Linux",
+    "python": "Python 3.13.5"
+  },
+  "files": {
+    "configs/gdrive-plugin-profile.json": {"bytes": 1468,"sha256": "bc7e2695a8ca98343328ee8ae50570f1e0e1c25079a332e7e3602758a617f3ec"},
+    "plugins/gdrive-plugin/README.md": {"bytes": 8091,"sha256": "f6a48fa66abc6ef2d411fec56ff165787b91f0c5da4bd4cc1f29ef3ca70d01af"},
+    "plugins/gdrive-plugin/gdrive-auth.sh": {"bytes": 11564,"sha256": "97cf895697762f2e043702f52bd13e0dba8a480dbee35473506eb527176f2354"},
+    "plugins/gdrive-plugin/gdrive-config.json": {"bytes": 2693,"sha256": "d329946f5f0bb86ef336b6b127738316a17d4a5d2fa200974f14a9b9127e46bf"},
+    "plugins/gdrive-plugin/gdrive-sync-core.py": {"bytes": 16296,"sha256": "1115a3220953c91c524b165e9f93af69dcd5642d3eb71735870c044e109234dc"},
+    "plugins/gdrive-plugin/gdrive-sync.sh": {"bytes": 242,"sha256": "4b0cab34629b845f320d64f44fcdaaf15832ec579dba926726e2ff09dd256a51"},
+    "plugins/gdrive-plugin/gdrive-webservice.sh": {"bytes": 4521,"sha256": "76b975fac84d8d456e8214f6ecce832b97a2d0a2a268f0e359e66f99701a5ddd"},
+    "plugins/gdrive-plugin/tests/test_gdrive_plugin.sh": {"bytes": 6012,"sha256": "c635213b69eef377607d52706a72000813d3b482f3e349dd12d2b8bdd927ccd8"}
+  },
+  "invariants_verified": [
+    "fail_closed_status",
+    "oauth_stdout_token_only",
+    "json_parser_not_regex",
+    "plan_before_mutation",
+    "stable_drive_id_updates",
+    "initial_mismatch_conflict",
+    "concurrent_change_conflict",
+    "nested_path_rejection",
+    "correct_upload_endpoint",
+    "escaped_metadata_json",
+    "atomic_download_contract",
+    "read_only_loopback_status"
+  ],
+  "merge_allowed_by_receipt": false,
+  "release_allowed": false,
+  "schema": "gdrive-plugin-local-contract-receipt/v2",
+  "source_branch": "claude/termux-config-plugin-pjicjo",
+  "source_pr": 328,
+  "tests": {
+    "log_sha256": "ac4eaccc2e2db7ae8532dee22ba78f3381b45bf8a575ecf31c6e571fb3959be0",
+    "passed": 9,
+    "state": "LOCAL_CONTRACT_PASS",
+    "total": 9
+  },
+  "timestamp": "2026-08-06T01:33:00Z",
+  "token_vazio": [
+    "oauth_real_account",
+    "real_drive_upload_update_download",
+    "network_fault_injection",
+    "armv7_termux_device",
+    "arm64_termux_device",
+    "apk_bootstrap_packaging",
+    "signature",
+    "security_review",
+    "release"
+  ]
+}
