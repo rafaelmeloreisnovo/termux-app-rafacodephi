@@ -14,7 +14,7 @@ merge_allowed_by_receipt=false
 SUCCESS ⇔ AUTH ∧ HTTP_2XX ∧ UNIQUE_DRIVE_ID ∧ NO_CONFLICT ∧ HASH_CONFIRMED ∧ STATE_COMMITTED
 ```
 
-A execução local comprovou somente contratos e testes sintéticos em Linux x86_64. Não acessou conta Google real, Android físico, APK ou bootstrap.
+A execução local comprovou contratos e testes sintéticos em Linux x86_64, incluindo OAuth `state` e PKCE S256. Não acessou conta Google real, Android físico, APK ou bootstrap.
 
 ## TOKEN_VAZIO preservados
 
@@ -28,9 +28,9 @@ A execução local comprovou somente contratos e testes sintéticos em Linux x86
 ## Arquivos e hashes
 
 - `configs/gdrive-plugin-profile.json` — `bc7e2695a8ca98343328ee8ae50570f1e0e1c25079a332e7e3602758a617f3ec`
-- `plugins/gdrive-plugin/README.md` — `f6a48fa66abc6ef2d411fec56ff165787b91f0c5da4bd4cc1f29ef3ca70d01af`
-- `plugins/gdrive-plugin/gdrive-auth.sh` — `97cf895697762f2e043702f52bd13e0dba8a480dbee35473506eb527176f2354`
-- `plugins/gdrive-plugin/gdrive-config.json` — `d329946f5f0bb86ef336b6b127738316a17d4a5d2fa200974f14a9b9127e46bf`
+- `plugins/gdrive-plugin/README.md` — `7cf6af13da6e48605adb976a23840a3ac92eca1b57fe55bbfa2aca539a49359c`
+- `plugins/gdrive-plugin/gdrive-auth.sh` — `9f4c970b34edab8a5602efa2882d93d94fe30a9bdc2af45b01db3616640a2b59`
+- `plugins/gdrive-plugin/gdrive-config.json` — `ff1e27680cefb1bd97176df98735474800fd6f32d3adef3566f1afb0911c116e`
 - `plugins/gdrive-plugin/gdrive-sync.sh` — `4b0cab34629b845f320d64f44fcdaaf15832ec579dba926726e2ff09dd256a51`
 - `plugins/gdrive-plugin/gdrive-sync-core.py` — `1115a3220953c91c524b165e9f93af69dcd5642d3eb71735870c044e109234dc`
 - `plugins/gdrive-plugin/gdrive-webservice.sh` — `76b975fac84d8d456e8214f6ecce832b97a2d0a2a268f0e359e66f99701a5ddd`
@@ -38,6 +38,6 @@ A execução local comprovou somente contratos e testes sintéticos em Linux x86
 
 ## Resultado
 
-`F_ok`: núcleo fail-closed e 9/9 contratos locais.  
-`F_gap`: prova remota/física e empacotamento.  
-`F_next`: dispositivo real + conta de teste + receipts, sem merge antecipado.
+`F_ok`: núcleo fail-closed, PKCE S256 e 9/9 contratos locais.  
+`F_gap`: prova remota/física, fault injection e empacotamento.  
+`F_next`: conta/pasta isolada + dispositivos reais + receipts, sem merge antecipado.
