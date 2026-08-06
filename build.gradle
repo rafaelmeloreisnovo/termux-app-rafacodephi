@@ -35,6 +35,7 @@ subprojects { subproject ->
             subproject.dependencies.add("implementation", "androidx.viewpager:viewpager:1.0.0")
             subproject.dependencies.add("implementation", "com.google.android.material:material:1.12.0")
             subproject.dependencies.add("implementation", "com.google.guava:guava:24.1-jre")
+            subproject.dependencies.add("implementation", "org.bouncycastle:bcprov-jdk18on:1.84")
             subproject.dependencies.add("implementation", "io.noties.markwon:core:${markwonVersion}")
             subproject.dependencies.add("implementation", "io.noties.markwon:ext-strikethrough:${markwonVersion}")
             subproject.dependencies.add("implementation", "io.noties.markwon:linkify:${markwonVersion}")
