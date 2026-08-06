@@ -17,16 +17,17 @@
     "bin/stat",
     "bin/base64",
     "bin/od",
-    "bin/tr"
+    "bin/tr",
+    "bin/python3"
   ],
   "optional_entries": [
-    "bin/python3",
     "bin/termux-open-url"
   ],
   "scripts": {
     "auth": "plugins/gdrive-plugin/gdrive-auth.sh",
     "sync": "plugins/gdrive-plugin/gdrive-sync.sh",
-    "status_service": "plugins/gdrive-plugin/gdrive-webservice.sh"
+    "status_service": "plugins/gdrive-plugin/gdrive-webservice.sh",
+    "sync_core": "plugins/gdrive-plugin/gdrive-sync-core.py"
   },
   "invariants": {
     "http_2xx_required": true,
