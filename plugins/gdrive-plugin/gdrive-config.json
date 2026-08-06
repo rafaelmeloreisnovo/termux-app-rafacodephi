@@ -1,0 +1,81 @@
+{
+  "schema": "gdrive-plugin-config/v2",
+  "plugin_name": "google-drive-sync",
+  "plugin_version": "2.0.0-draft",
+  "plugin_author": "RAFCODEΦ Team",
+  "maturity": "DRAFT_FAIL_CLOSED_CLI",
+  "claim_allowed": false,
+  "release_allowed": false,
+  "scope": {
+    "local_directory_depth": 1,
+    "recursive_directories": false,
+    "deletion_propagation": false,
+    "google_workspace_native_export": false,
+    "conflict_policy": "fail-closed",
+    "write_interface": "cli-only",
+    "web_interface": "read-only-status"
+  },
+  "dependencies": {
+    "required": ["bash","curl","jq","md5sum","awk","find","stat","base64","od","tr","python3"],
+    "optional": ["termux-open-url"]
+  },
+  "authentication": {
+    "type": "oauth2-installed-application",
+    "default_scope": "https://www.googleapis.com/auth/drive.file",
+    "full_drive_scope": "https://www.googleapis.com/auth/drive",
+    "redirect_uri": "http://127.0.0.1:53682/",
+    "state_verification": true,
+    "token_permissions": "0600",
+    "credentials_permissions": "0600",
+    "pkce": "S256"
+  },
+  "api": {
+    "version": "v3",
+    "metadata_base_url": "https://www.googleapis.com/drive/v3",
+    "upload_base_url": "https://www.googleapis.com/upload/drive/v3",
+    "pagination": true,
+    "http_success_required": true,
+    "retry_policy": "TOKEN_VAZIO_NOT_IMPLEMENTED"
+  },
+  "sync": {
+    "state_file": "~/.config/gdrive-plugin/sync-state.json",
+    "status_file": "~/.config/gdrive-plugin/sync.status.json",
+    "ignore_file": "~/.config/gdrive-plugin/.gdrive-ignore",
+    "log_file": "~/.config/gdrive-plugin/sync.log",
+    "hash_algorithm": "md5",
+    "remote_identity": "drive_file_id",
+    "download_write": "temporary-file + checksum + atomic-rename",
+    "concurrency_lock": "mkdir-lock"
+  },
+  "webservice": {
+    "enabled": false,
+    "optional": true,
+    "host": "127.0.0.1",
+    "default_port": 8080,
+    "write_api": false,
+    "cors": false,
+    "dependency": "python3"
+  },
+  "scripts": {"sync_core": "gdrive-sync-core.py"},
+  "promotion_gates": [
+    "LOCAL_CONTRACT_TESTS_PASS",
+    "OAUTH_REAL_ACCOUNT_RECEIPT",
+    "UPLOAD_UPDATE_DOWNLOAD_REAL_RECEIPT",
+    "ARMV7_TERMUX_DEVICE_RECEIPT",
+    "ARM64_TERMUX_DEVICE_RECEIPT",
+    "CONFLICT_AND_NETWORK_FAILURE_RECEIPT",
+    "SECURITY_REVIEW"
+  ],
+  "token_vazio": [
+    "oauth_real_account",
+    "retry_backoff",
+    "recursive_hierarchy",
+    "deletion_tombstones",
+    "google_workspace_export",
+    "armv7_device_runtime",
+    "arm64_device_runtime",
+    "plugin_packaging",
+    "plugin_signature",
+    "release_receipt"
+  ]
+}
