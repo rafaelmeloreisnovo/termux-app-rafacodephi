@@ -68,6 +68,7 @@ def main() -> int:
             "for side-by-side bootstrap paths"
         )
 
+    bootstrap_profile = read_text("scripts/build_bootstrap_profile.sh")
     bootstrap_builder = read_text("scripts/build_rafaelia_bootstraps.sh")
     bootstrap_zip_builder = read_text("scripts/bootstrap_zip_builder.c")
     errors += filter(
@@ -79,14 +80,19 @@ def main() -> int:
                 "app/build.gradle: manifest TERMUX_PACKAGE_NAME must be derived from appPackageName",
             ),
             require(
-                r'environment\s+"TERMUX_BOOTSTRAP_PACKAGE_NAME",\s*project\.ext\.bootstrapMetadataPackageName',
-                build_gradle,
-                "app/build.gradle: bootstrap generation must use bootstrapMetadataPackageName",
+                rf'PACKAGE_NAME="\$\{{TERMUX_BOOTSTRAP_PACKAGE_NAME:-{re.escape(CANONICAL_PACKAGE)}\}}"',
+                bootstrap_profile,
+                "scripts/build_bootstrap_profile.sh: profile package must derive from TERMUX_BOOTSTRAP_PACKAGE_NAME",
             ),
             require(
-                r'environment\s+"TERMUX_BOOTSTRAP_PAGE_SIZE",\s*project\.ext\.bootstrapRequiredPageSize',
-                build_gradle,
-                "app/build.gradle: bootstrap generation must use bootstrapRequiredPageSize",
+                rf': "\$\{{TERMUX_BOOTSTRAP_PACKAGE_NAME:={re.escape(CANONICAL_PACKAGE)}\}}"',
+                bootstrap_builder,
+                "scripts/build_rafaelia_bootstraps.sh: bootstrap package default must be canonical",
+            ),
+            require(
+                rf': "\$\{{TERMUX_BOOTSTRAP_PAGE_SIZE:={REQUIRED_PAGE_SIZE}\}}"',
+                bootstrap_builder,
+                "scripts/build_rafaelia_bootstraps.sh: bootstrap page size default must be 16384",
             ),
             require(
                 r'prefix="/data/data/\$\{TERMUX_BOOTSTRAP_PACKAGE_NAME\}/files/usr"',
