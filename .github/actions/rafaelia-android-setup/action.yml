@@ -1,0 +1,36 @@
+name: RAFAELIA Android CI Setup
+description: Deterministic Java, Android toolchain, Gradle cache and bootstrap preparation for RAFAELIA jobs.
+
+inputs:
+  java-version:
+    description: Java version used by Android/Gradle builds.
+    required: false
+    default: '17'
+  prepare-bootstrap:
+    description: Prepare and hash embedded bootstrap archives.
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Java
+      uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: ${{ inputs.java-version }}
+        cache: gradle
+
+    - name: Setup Android command-line tools
+      uses: android-actions/setup-android@v4
+      with:
+        packages: platform-tools
+
+    - name: Install canonical Android toolchain
+      shell: bash
+      run: ./scripts/ci_android_preflight.sh
+
+    - name: Prepare bootstrap environment
+      if: inputs.prepare-bootstrap == 'true'
+      shell: bash
+      run: ./scripts/prepare_bootstrap_env.sh --github-env --skip-android-preflight
