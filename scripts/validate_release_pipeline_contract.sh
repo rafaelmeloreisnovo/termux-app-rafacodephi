@@ -7,12 +7,13 @@ cd "$ROOT_DIR"
 fail() { echo "❌ $*" >&2; exit 1; }
 
 [[ -x scripts/prepare_bootstrap_env.sh ]] || fail "scripts/prepare_bootstrap_env.sh missing or not executable"
+[[ -f .github/actions/rafaelia-android-setup/action.yml ]] || fail "central RAFAELIA Android setup action is missing"
 
 grep -Eq 'prepare_bootstrap_env\.sh' scripts/build_release_artifacts.sh || fail "build_release_artifacts.sh must call prepare_bootstrap_env.sh"
 grep -Eq 'prepare_bootstrap_env\.sh' scripts/build_apk_matrix.sh || fail "build_apk_matrix.sh must call prepare_bootstrap_env.sh"
 
-grep -Eq '🧬 Prepare Bootstrap Environment' .github/workflows/rafaelia_pipeline.yml || fail "workflow must contain standardized bootstrap step"
-grep -Eq 'prepare_bootstrap_env\.sh --github-env' .github/workflows/rafaelia_pipeline.yml || fail "workflow must call prepare_bootstrap_env.sh --github-env"
+grep -Eq 'rafaelia-android-setup' .github/workflows/rafaelia_pipeline.yml || fail "workflow must use centralized RAFAELIA Android setup action"
+grep -Eq 'prepare_bootstrap_env\.sh --github-env --skip-android-preflight' .github/actions/rafaelia-android-setup/action.yml || fail "central setup action must prepare bootstrap exactly once after Android preflight"
 
 if grep -En 'LOCAL_CFLAGS.*(fno-rtti|fno-exceptions)|fno-rtti|fno-exceptions' app/src/main/cpp/Android.mk | grep -q 'LOCAL_CFLAGS'; then
   fail "Android.mk LOCAL_CFLAGS must not include -fno-rtti or -fno-exceptions"
