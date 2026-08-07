@@ -1,29 +1,14 @@
 # ci_track: ops
-# ci_abis: n/a
+# ci_abis: armeabi-v7a,arm64-v8a
 # =============================================================================
-# RAFAELIA Orchestrated Pipeline - Unified CI/CD Workflow
+# RAFAELIA Orchestrated Pipeline - fail-closed CI/CD
 # =============================================================================
-#
-# This is the primary orchestration pipeline for CI/CD operations in this repository.
-# It implements the RAFAELIA methodology cycle (ψχρΔΣΩ) with sequential stages.
-#
-# Release-specific post-publish flows are also orchestrated here via reusable workflows.
-#
-# Stages:
-#   ψ (Psi)   - Perception: Quality gate, validation, gradle wrapper check
-#   χ (Chi)   - Feedback: Security scan, dependency check
-#   ρ (Rho)   - Expansion: Build ARM64 first (debug + release), then other ABIs
-#   Δ (Delta) - Validation: Run unit tests
-#   Σ (Sigma) - Execution: Android 15 compatibility validation
-#   Ω (Omega) - Alignment: Artifact upload and final quality report
-#
-# Best Practices Implemented:
-#   - Single trigger point to avoid duplicate builds
-#   - Concurrency control to ensure sequential execution
-#   - ARM64 prioritized builds (v8a first)
-#   - Debug and Release builds in sequence
-#   - Guaranteed APK output with continue-on-error for non-critical steps
-#
+# ψ Perception  : cheap/static contracts first; expensive toolchain only after gates
+# χ Feedback    : security/compatibility invariants without Android bootstrap overhead
+# ρ Expansion   : ARM64 fast lane; full canonical ABI matrix only when requested
+# Δ Validation  : unit tests
+# Σ Execution   : Android 15/16 compatibility contract (parallel with builds/tests)
+# Ω Alignment   : terminal status gate; green only when every requested stage is green
 # =============================================================================
 
 name: "🔄 RAFAELIA Pipeline (ψχρΔΣΩ)"
@@ -53,329 +38,257 @@ on:
       - 'art/**'
       - 'site/**'
   release:
-    types:
-      - published
+    types: [published]
   workflow_dispatch:
     inputs:
       build_type:
-        description: 'Build Type'
+        description: Build Type
         required: true
-        default: 'both'
+        default: both
         type: choice
-        options:
-          - debug
-          - release
-          - both
+        options: [debug, release, both]
       skip_tests:
-        description: 'Skip Tests'
+        description: Skip Tests
         required: false
         default: false
         type: boolean
       package_variant:
-        description: 'Package Variant'
+        description: Package Variant
         required: false
-        default: 'both'
+        default: both
         type: choice
-        options:
-          - both
-          - apt-android-7
-          - apt-android-5
+        options: [both, apt-android-7, apt-android-5]
 
-# Critical: Concurrency control ensures only one pipeline runs at a time per branch
-# This prevents multiple simultaneous builds from the same push
 concurrency:
-  group: rafaelia-pipeline-${{ github.ref }}
-  cancel-in-progress: true
+  group: rafaelia-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
 
 env:
   JAVA_VERSION: '17'
+  CI: 'true'
 
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   # ===========================================================================
-  # ψ (PSI) - PERCEPTION STAGE
-  # Quality gate and initial validation
+  # ψ - PERCEPTION: fail early, before Android/NDK/bootstrap costs
   # ===========================================================================
   psi-perception:
-    name: "ψ Perception - Quality Gate"
+    name: "ψ Perception - Contract Gate"
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     outputs:
-      should_continue: ${{ steps.quality-check.outputs.should_continue }}
+      should_continue: ${{ steps.gate.outputs.should_continue }}
       version_name: ${{ steps.version.outputs.version_name }}
       version_tag: ${{ steps.version.outputs.version_tag }}
       build_debug: ${{ steps.build-config.outputs.build_debug }}
       build_release: ${{ steps.build-config.outputs.build_release }}
+      build_full_debug: ${{ steps.build-config.outputs.build_full_debug }}
+      run_tests: ${{ steps.build-config.outputs.run_tests }}
       variants: ${{ steps.build-config.outputs.variants }}
 
     steps:
       - name: "📥 Checkout Repository"
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
+          persist-credentials: false
 
-      - name: "🔍 Quality Check - Critical Files"
-        id: quality-check
+      - name: "🔍 Critical File Gate"
         run: |
-          echo "=========================================="
-          echo "ψ PERCEPTION - Quality Gate"
-          echo "=========================================="
-          echo ""
-          
-          CRITICAL_FILES=(
-            "app/build.gradle"
-            "gradle.properties"
-            "settings.gradle"
-            "gradlew"
+          set -euo pipefail
+          critical_files=(
+            app/build.gradle
+            gradle.properties
+            settings.gradle
+            gradlew
+            scripts/prepare_bootstrap_env.sh
+            scripts/validate_side_by_side_contract.py
+            .github/actions/rafaelia-android-setup/action.yml
           )
-          
-          MISSING_FILES=0
-          for file in "${CRITICAL_FILES[@]}"; do
-            if [ ! -f "$file" ]; then
-              echo "❌ Missing: $file"
-              MISSING_FILES=1
-            else
-              echo "✓ Found: $file"
-            fi
+          for file in "${critical_files[@]}"; do
+            [[ -f "$file" ]] || { echo "❌ Missing critical file: $file"; exit 1; }
+            echo "✓ $file"
           done
-          
-          if [ $MISSING_FILES -eq 1 ]; then
-            echo "should_continue=false" >> $GITHUB_OUTPUT
-            echo ""
-            echo "❌ Quality gate FAILED - missing critical files"
-            exit 1
-          fi
-          
-          echo "should_continue=true" >> $GITHUB_OUTPUT
-          echo ""
-          echo "✅ Quality gate PASSED"
 
       - name: "🧩 Validate Native Module Structure"
-        run: |
-          python3 scripts/validate_native_structure.py
+        run: python3 scripts/validate_native_structure.py
 
       - name: "✅ Validate Gradle Wrapper"
         uses: gradle/actions/wrapper-validation@v6
 
       - name: "🕒 Validate MVP Metadata Timestamp"
-        run: |
-          ./scripts/mvp_metadata_timestamp.sh validate
+        run: ./scripts/mvp_metadata_timestamp.sh validate
 
-      - name: "☕ Setup Java"
-        uses: actions/setup-java@v5
+      - name: "🧬 Validate Side-by-Side Contract (static)"
+        run: python3 scripts/validate_side_by_side_contract.py
+
+      - name: "🧩 Validate Release Pipeline Contract (static)"
+        run: ./scripts/validate_release_pipeline_contract.sh
+
+      - name: "🧰 Setup Canonical Android Build Environment"
+        uses: ./.github/actions/rafaelia-android-setup
         with:
-          distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
-
-      - name: "🤖 Setup Android SDK/NDK"
-        uses: android-actions/setup-android@v4
-
-      - name: "📦 Install Android toolchain components"
-        run: |
-          ./scripts/ci_android_preflight.sh
-
-      - name: "🧬 Prepare Bootstrap Environment"
-        run: |
-          ./scripts/prepare_bootstrap_env.sh --github-env
-
-      - name: "🧩 Validate Release Pipeline Contract"
-        run: |
-          ./scripts/validate_release_pipeline_contract.sh
-
-      - name: "🧬 Validate Side-by-Side Contract"
-        run: |
-          ./gradlew :app:validateSideBySideContract --no-daemon
+          prepare-bootstrap: 'true'
 
       - name: "📋 Extract Version Information"
         id: version
         run: |
-          VERSION_NAME=$(./gradlew -q :app:printVersionName | tail -n 1)
-          
-          if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+          set -euo pipefail
+          VERSION_NAME="$(./gradlew -q :app:printVersionName --no-daemon | tail -n 1)"
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
             COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
           else
             COMMIT_SHA="$GITHUB_SHA"
           fi
-          
           VERSION_TAG="v${VERSION_NAME}+${COMMIT_SHA:0:7}"
-          
-          echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
-          echo "version_tag=$VERSION_TAG" >> $GITHUB_OUTPUT
-          
-          echo "Version Name: $VERSION_NAME"
-          echo "Version Tag: $VERSION_TAG"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "version_tag=$VERSION_TAG" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION_TAG"
 
-      - name: "⚙️ Determine Build Configuration"
+      - name: "⚙️ Determine Requested Build Surface"
         id: build-config
         run: |
-          if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
-            echo "build_debug=true" >> $GITHUB_OUTPUT
-            echo "build_release=false" >> $GITHUB_OUTPUT
+          set -euo pipefail
+
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            BUILD_INPUT=debug
+            BUILD_FULL_DEBUG=false
           else
-          # Determine build types
-          BUILD_INPUT="${{ github.event.inputs.build_type || 'both' }}"
-          
-          if [ "$BUILD_INPUT" == "debug" ]; then
-            echo "build_debug=true" >> $GITHUB_OUTPUT
-            echo "build_release=false" >> $GITHUB_OUTPUT
-          elif [ "$BUILD_INPUT" == "release" ]; then
-            echo "build_debug=false" >> $GITHUB_OUTPUT
-            echo "build_release=true" >> $GITHUB_OUTPUT
-          else
-            echo "build_debug=true" >> $GITHUB_OUTPUT
-            echo "build_release=true" >> $GITHUB_OUTPUT
-          fi
-          fi
-          
-          # Determine package variants
-          VARIANT_INPUT="${{ github.event.inputs.package_variant }}"
-          if [ -z "$VARIANT_INPUT" ] || [ "$VARIANT_INPUT" == "both" ]; then
-            echo 'variants=["apt-android-7", "apt-android-5"]' >> $GITHUB_OUTPUT
-          else
-            echo "variants=[\"$VARIANT_INPUT\"]" >> $GITHUB_OUTPUT
+            BUILD_INPUT="${{ inputs.build_type }}"
+            [[ -n "$BUILD_INPUT" ]] || BUILD_INPUT=both
+            BUILD_FULL_DEBUG=true
           fi
 
+          case "$BUILD_INPUT" in
+            debug)
+              BUILD_DEBUG=true
+              BUILD_RELEASE=false
+              ;;
+            release)
+              BUILD_DEBUG=false
+              BUILD_RELEASE=true
+              BUILD_FULL_DEBUG=false
+              ;;
+            both)
+              BUILD_DEBUG=true
+              BUILD_RELEASE=true
+              ;;
+            *)
+              echo "❌ Unsupported build_type=$BUILD_INPUT"
+              exit 2
+              ;;
+          esac
+
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "${{ inputs.skip_tests }}" == "true" ]]; then
+            RUN_TESTS=false
+          else
+            RUN_TESTS=true
+          fi
+
+          VARIANT_INPUT="${{ inputs.package_variant }}"
+          if [[ -z "$VARIANT_INPUT" || "$VARIANT_INPUT" == "both" ]]; then
+            VARIANTS='["apt-android-7","apt-android-5"]'
+          else
+            VARIANTS="[\"$VARIANT_INPUT\"]"
+          fi
+
+          echo "build_debug=$BUILD_DEBUG" >> "$GITHUB_OUTPUT"
+          echo "build_release=$BUILD_RELEASE" >> "$GITHUB_OUTPUT"
+          echo "build_full_debug=$BUILD_FULL_DEBUG" >> "$GITHUB_OUTPUT"
+          echo "run_tests=$RUN_TESTS" >> "$GITHUB_OUTPUT"
+          echo "variants=$VARIANTS" >> "$GITHUB_OUTPUT"
+
+          printf 'build_debug=%s\nbuild_release=%s\nbuild_full_debug=%s\nrun_tests=%s\nvariants=%s\n' \
+            "$BUILD_DEBUG" "$BUILD_RELEASE" "$BUILD_FULL_DEBUG" "$RUN_TESTS" "$VARIANTS"
+
+      - name: "✅ Open Downstream Gate"
+        id: gate
+        run: echo "should_continue=true" >> "$GITHUB_OUTPUT"
+
   # ===========================================================================
-  # χ (CHI) - FEEDBACK STAGE
-  # Security scan and dependency analysis
+  # χ - FEEDBACK: cheap invariant checks; no Java/SDK/NDK/bootstrap
   # ===========================================================================
   chi-feedback:
-    name: "χ Feedback - Security Check"
+    name: "χ Feedback - Invariant Check"
     needs: psi-perception
-    if: needs.psi-perception.outputs.should_continue == 'true'
+    if: needs.psi-perception.result == 'success' && needs.psi-perception.outputs.should_continue == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - name: "📥 Checkout Repository"
         uses: actions/checkout@v6
-
-      - name: "☕ Setup Java"
-        uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
-          java-version: ${{ env.JAVA_VERSION }}
+          persist-credentials: false
 
-      - name: "🤖 Setup Android SDK/NDK"
-        uses: android-actions/setup-android@v4
-
-      - name: "📦 Install Android toolchain components"
+      - name: "🔐 Enforce 16KB Page Alignment Contract"
         run: |
-          ./scripts/ci_android_preflight.sh
-
-      - name: "🧬 Prepare Bootstrap Environment"
-        run: |
-          ./scripts/prepare_bootstrap_env.sh --github-env
-
-      - name: "🔐 Security Check - 16KB Page Alignment"
-        run: |
-          echo "=========================================="
-          echo "χ FEEDBACK - Security & Compatibility"
-          echo "=========================================="
-          echo ""
-          
-          echo "Checking 16KB page alignment configuration..."
-          
-          if grep -q "max-page-size=16384" app/build.gradle; then
-            echo "✓ 16KB page alignment configured in app/build.gradle"
-          else
-            echo "⚠ Warning: 16KB page alignment may need review"
-          fi
-          
-          if [ -f "app/src/main/cpp/Android.mk" ]; then
-            if grep -q "max-page-size=16384" app/src/main/cpp/Android.mk 2>/dev/null; then
-              echo "✓ 16KB page alignment configured in Android.mk"
-            fi
-          fi
-          
-          echo ""
-          echo "✅ Security check completed"
+          set -euo pipefail
+          grep -q 'max-page-size=16384' app/build.gradle || {
+            echo '❌ app/build.gradle does not enforce 16KB max page size'
+            exit 1
+          }
+          grep -q 'max-page-size=16384' app/src/main/cpp/Android.mk || {
+            echo '❌ Android.mk does not enforce 16KB max page size'
+            exit 1
+          }
+          grep -Eq '^termux\.abi\.matrix=armeabi-v7a,arm64-v8a$' gradle.properties || {
+            echo '❌ Canonical ABI matrix drifted from armeabi-v7a,arm64-v8a'
+            exit 1
+          }
+          echo '✅ χ invariants passed'
 
   # ===========================================================================
-  # ρ (RHO) - EXPANSION STAGE - ARM64 DEBUG BUILD (PRIORITY)
-  # Build ARM64 debug first (highest priority architecture)
+  # ρ - ARM64 DEBUG FAST LANE
   # ===========================================================================
   rho-expansion-arm64-debug:
-    name: "ρ Build ARM64 Debug (${{ matrix.variant }})"
+    name: "ρ ARM64 Debug (${{ matrix.variant }})"
     needs: [psi-perception, chi-feedback]
     if: |
-      needs.psi-perception.outputs.should_continue == 'true' &&
+      needs.psi-perception.result == 'success' &&
+      needs.chi-feedback.result == 'success' &&
       needs.psi-perception.outputs.build_debug == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         variant: ${{ fromJson(needs.psi-perception.outputs.variants) }}
-
     env:
-      PACKAGE_VARIANT: ${{ matrix.variant }}
+      TERMUX_PACKAGE_VARIANT: ${{ matrix.variant }}
+      TERMUX_BOOTSTRAP_VALIDATION_MODE: upstream-debug-compat
       VERSION_TAG: ${{ needs.psi-perception.outputs.version_tag }}
-
-    outputs:
-      apk_path: ${{ steps.build.outputs.apk_path }}
-      success: ${{ steps.build.outputs.success }}
 
     steps:
       - name: "📥 Checkout Repository"
         uses: actions/checkout@v6
-
-      - name: "☕ Setup Java"
-        uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          persist-credentials: false
+
+      - name: "🧰 Setup Android Build Environment"
+        uses: ./.github/actions/rafaelia-android-setup
+        with:
           java-version: ${{ env.JAVA_VERSION }}
 
-      - name: "🤖 Setup Android SDK/NDK"
-        uses: android-actions/setup-android@v4
-
-      - name: "📦 Install Android toolchain components"
-        run: |
-          ./scripts/ci_android_preflight.sh
-
-      - name: "🧬 Prepare Bootstrap Environment"
-        run: |
-          ./scripts/prepare_bootstrap_env.sh --github-env
-
       - name: "🔨 Build ARM64 Debug APK"
-        id: build
-        shell: bash {0}
         run: |
-          echo "=========================================="
-          echo "ρ EXPANSION - ARM64 Debug Build"
-          echo "=========================================="
-          echo ""
-          echo "Architecture: arm64-v8a"
-          echo "Build Type: debug"
-          echo "Variant: $PACKAGE_VARIANT"
-          echo ""
-          
-          APK_DIR_PATH="./app/build/outputs/apk/debug"
-          APK_VERSION_TAG="${VERSION_TAG}-$PACKAGE_VARIANT-debug"
-          
-          echo "APK_DIR_PATH=$APK_DIR_PATH" >> $GITHUB_ENV
-          echo "APK_VERSION_TAG=$APK_VERSION_TAG" >> $GITHUB_ENV
-          
-          export TERMUX_APP_VERSION_NAME="${VERSION_TAG/v/}"
+          set -euo pipefail
+          APK_DIR_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/debug"
+          APK_VERSION_TAG="${VERSION_TAG}-${TERMUX_PACKAGE_VARIANT}-arm64-debug"
+          echo "APK_DIR_PATH=$APK_DIR_PATH" >> "$GITHUB_ENV"
+          echo "APK_VERSION_TAG=$APK_VERSION_TAG" >> "$GITHUB_ENV"
+          export TERMUX_APP_VERSION_NAME="${VERSION_TAG#v}"
           export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG"
-          export TERMUX_PACKAGE_VARIANT="$PACKAGE_VARIANT"
-          export TERMUX_BOOTSTRAP_VALIDATION_MODE="upstream-debug-compat"
-          
-          # Build with ARM64 priority
-          if ./gradlew assembleDebug \
-              -Pandroid.injected.build.abi=arm64-v8a \
-              --no-daemon \
-              --warning-mode all; then
-            echo "success=true" >> $GITHUB_OUTPUT
-            echo "apk_path=$APK_DIR_PATH" >> $GITHUB_OUTPUT
-            echo ""
-            echo "✅ ARM64 Debug build completed successfully"
-          else
-            echo "success=false" >> $GITHUB_OUTPUT
-            echo ""
-            echo "❌ ARM64 Debug build failed"
-            exit 1
-          fi
+          ./gradlew assembleDebug -Pandroid.injected.build.abi=arm64-v8a --no-daemon --warning-mode all
+          find "$APK_DIR_PATH" -maxdepth 1 -type f -name '*.apk' -print
 
       - name: "📦 Upload ARM64 Debug APK"
         uses: actions/upload-artifact@v7
@@ -384,97 +297,66 @@ jobs:
           path: |
             ${{ env.APK_DIR_PATH }}/*.apk
             ${{ env.APK_DIR_PATH }}/output-metadata.json
+          if-no-files-found: error
           retention-days: 30
 
   # ===========================================================================
-  # ρ (RHO) - EXPANSION STAGE - ARM64 RELEASE BUILD
-  # Build ARM64 release (after debug)
+  # ρ - ARM64 RELEASE; release-only dispatch does not depend on a fake debug pass
   # ===========================================================================
   rho-expansion-arm64-release:
-    name: "ρ Build ARM64 Release (${{ matrix.variant }})"
+    name: "ρ ARM64 Release (${{ matrix.variant }})"
     needs: [psi-perception, chi-feedback, rho-expansion-arm64-debug]
     if: |
       always() &&
-      needs.psi-perception.outputs.should_continue == 'true' &&
+      needs.psi-perception.result == 'success' &&
+      needs.chi-feedback.result == 'success' &&
       needs.psi-perception.outputs.build_release == 'true' &&
-      (needs.rho-expansion-arm64-debug.result == 'success' || needs.rho-expansion-arm64-debug.result == 'skipped')
+      (
+        needs.psi-perception.outputs.build_debug != 'true' ||
+        needs.rho-expansion-arm64-debug.result == 'success'
+      )
     runs-on: ubuntu-latest
+    timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
         variant: ${{ fromJson(needs.psi-perception.outputs.variants) }}
-
     env:
-      PACKAGE_VARIANT: ${{ matrix.variant }}
+      TERMUX_PACKAGE_VARIANT: ${{ matrix.variant }}
+      TERMUX_BOOTSTRAP_VALIDATION_MODE: strict
       VERSION_TAG: ${{ needs.psi-perception.outputs.version_tag }}
 
     steps:
       - name: "📥 Checkout Repository"
         uses: actions/checkout@v6
-
-      - name: "☕ Setup Java"
-        uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          persist-credentials: false
+
+      - name: "🧰 Setup Android Build Environment"
+        uses: ./.github/actions/rafaelia-android-setup
+        with:
           java-version: ${{ env.JAVA_VERSION }}
 
-      - name: "🤖 Setup Android SDK/NDK"
-        uses: android-actions/setup-android@v4
-
-      - name: "📦 Install Android toolchain components"
-        run: |
-          ./scripts/ci_android_preflight.sh
-
-      - name: "🧬 Prepare Bootstrap Environment"
-        run: |
-          ./scripts/prepare_bootstrap_env.sh --github-env
-
-      - name: "🔐 Configure optional release signing"
+      - name: "🔐 Configure Optional Release Signing"
         env:
           INPUT_BUILD_TYPE: release
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          ./scripts/setup_android_signing.sh
+        run: ./scripts/setup_android_signing.sh
 
       - name: "🔨 Build ARM64 Release APK"
-        id: build
-        shell: bash {0}
         run: |
-          echo "=========================================="
-          echo "ρ EXPANSION - ARM64 Release Build"
-          echo "=========================================="
-          echo ""
-          echo "Architecture: arm64-v8a"
-          echo "Build Type: release"
-          echo "Variant: $PACKAGE_VARIANT"
-          echo ""
-          
-          APK_DIR_PATH="./app/build/outputs/apk/release"
-          APK_VERSION_TAG="${VERSION_TAG}-$PACKAGE_VARIANT-release"
-          
-          echo "APK_DIR_PATH=$APK_DIR_PATH" >> $GITHUB_ENV
-          echo "APK_VERSION_TAG=$APK_VERSION_TAG" >> $GITHUB_ENV
-          
-          export TERMUX_APP_VERSION_NAME="${VERSION_TAG/v/}"
+          set -euo pipefail
+          APK_DIR_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/release"
+          APK_VERSION_TAG="${VERSION_TAG}-${TERMUX_PACKAGE_VARIANT}-arm64-release"
+          echo "APK_DIR_PATH=$APK_DIR_PATH" >> "$GITHUB_ENV"
+          echo "APK_VERSION_TAG=$APK_VERSION_TAG" >> "$GITHUB_ENV"
+          export TERMUX_APP_VERSION_NAME="${VERSION_TAG#v}"
           export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG"
-          export TERMUX_PACKAGE_VARIANT="$PACKAGE_VARIANT"
-          export TERMUX_BOOTSTRAP_VALIDATION_MODE="strict"
-          
-          # Build with ARM64 priority
-          if ./gradlew assembleRelease \
-              -Pandroid.injected.build.abi=arm64-v8a \
-              --no-daemon \
-              --warning-mode all; then
-            echo ""
-            echo "✅ ARM64 Release build completed successfully"
-          else
-            echo ""
-            echo "❌ ARM64 Release build failed"
-            exit 1
-          fi
+          ./gradlew assembleRelease -Pandroid.injected.build.abi=arm64-v8a --no-daemon --warning-mode all
+          find "$APK_DIR_PATH" -maxdepth 1 -type f -name '*.apk' -print
 
       - name: "📦 Upload ARM64 Release APK"
         uses: actions/upload-artifact@v7
@@ -483,375 +365,230 @@ jobs:
           path: |
             ${{ env.APK_DIR_PATH }}/*.apk
             ${{ env.APK_DIR_PATH }}/output-metadata.json
+          if-no-files-found: error
           retention-days: 30
 
   # ===========================================================================
-  # ρ (RHO) - EXPANSION STAGE - FULL DEBUG BUILD (ALL ABIs)
-  # Build all architectures debug (after ARM64)
+  # ρ - FULL DEBUG MATRIX; master/push/manual only, canonical ARM ABIs
   # ===========================================================================
   rho-expansion-full-debug:
-    name: "ρ Build Full Debug (${{ matrix.variant }})"
+    name: "ρ Full Debug (${{ matrix.variant }})"
     needs: [psi-perception, chi-feedback, rho-expansion-arm64-debug]
     if: |
-      always() &&
-      needs.psi-perception.outputs.should_continue == 'true' &&
-      needs.psi-perception.outputs.build_debug == 'true' &&
-      (needs.rho-expansion-arm64-debug.result == 'success' || needs.rho-expansion-arm64-debug.result == 'skipped')
+      needs.psi-perception.result == 'success' &&
+      needs.chi-feedback.result == 'success' &&
+      needs.rho-expansion-arm64-debug.result == 'success' &&
+      needs.psi-perception.outputs.build_full_debug == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
         variant: ${{ fromJson(needs.psi-perception.outputs.variants) }}
-
     env:
-      PACKAGE_VARIANT: ${{ matrix.variant }}
+      TERMUX_PACKAGE_VARIANT: ${{ matrix.variant }}
+      TERMUX_BOOTSTRAP_VALIDATION_MODE: upstream-debug-compat
       VERSION_TAG: ${{ needs.psi-perception.outputs.version_tag }}
 
     steps:
       - name: "📥 Checkout Repository"
         uses: actions/checkout@v6
-
-      - name: "☕ Setup Java"
-        uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          persist-credentials: false
+
+      - name: "🧰 Setup Android Build Environment"
+        uses: ./.github/actions/rafaelia-android-setup
+        with:
           java-version: ${{ env.JAVA_VERSION }}
 
-      - name: "🤖 Setup Android SDK/NDK"
-        uses: android-actions/setup-android@v4
-
-      - name: "📦 Install Android toolchain components"
+      - name: "🔨 Build Canonical Debug APK Matrix"
         run: |
-          ./scripts/ci_android_preflight.sh
-
-      - name: "🧬 Prepare Bootstrap Environment"
-        run: |
-          ./scripts/prepare_bootstrap_env.sh --github-env
-
-      - name: "🔨 Build Full Debug APKs (All ABIs)"
-        id: build
-        shell: bash {0}
-        run: |
-          echo "=========================================="
-          echo "ρ EXPANSION - Full Debug Build (All ABIs)"
-          echo "=========================================="
-          echo ""
-          echo "Architectures: universal, arm64-v8a, armeabi-v7a, x86_64, x86 (optional)"
-          echo "Build Type: debug"
-          echo "Variant: $PACKAGE_VARIANT"
-          echo ""
-          
-          APK_DIR_PATH="./app/build/outputs/apk/debug"
-          APK_VERSION_TAG="${VERSION_TAG}-$PACKAGE_VARIANT-github-debug"
-          APK_BASENAME_PREFIX="termux-app_$APK_VERSION_TAG"
-          
-          echo "APK_DIR_PATH=$APK_DIR_PATH" >> $GITHUB_ENV
-          echo "APK_VERSION_TAG=$APK_VERSION_TAG" >> $GITHUB_ENV
-          echo "APK_BASENAME_PREFIX=$APK_BASENAME_PREFIX" >> $GITHUB_ENV
-          
-          export TERMUX_APP_VERSION_NAME="${VERSION_TAG/v/}"
+          set -euo pipefail
+          APK_DIR_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/debug"
+          APK_VERSION_TAG="${VERSION_TAG}-${TERMUX_PACKAGE_VARIANT}-github-debug"
+          APK_BASENAME_PREFIX="termux-app_${APK_VERSION_TAG}"
+          echo "APK_DIR_PATH=$APK_DIR_PATH" >> "$GITHUB_ENV"
+          echo "APK_VERSION_TAG=$APK_VERSION_TAG" >> "$GITHUB_ENV"
+          echo "APK_BASENAME_PREFIX=$APK_BASENAME_PREFIX" >> "$GITHUB_ENV"
+          export TERMUX_APP_VERSION_NAME="${VERSION_TAG#v}"
           export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG"
-          export TERMUX_PACKAGE_VARIANT="$PACKAGE_VARIANT"
-          export TERMUX_BOOTSTRAP_VALIDATION_MODE="upstream-debug-compat"
-          
-          # Build all ABIs
-          if ! ./gradlew assembleDebug --no-daemon; then
-            echo "❌ Build failed"
-            exit 1
-          fi
-          
-          fail_with_output_listing() {
-            local error_message="$1"
-            local files_found
-            files_found="$(ls -1 "$APK_DIR_PATH")"
-            echo "$error_message"$'\n'"Files found:"$'\n'"$files_found"
-            exit 1
-          }
 
-          echo ""
-          echo "Validating APKs based on generated outputs"
-          mapfile -t generated_apks < <(find "$APK_DIR_PATH" -maxdepth 1 -type f -name "${APK_BASENAME_PREFIX}_*.apk" -printf '%f\n' | sort)
-          if [ ${#generated_apks[@]} -eq 0 ]; then
-            fail_with_output_listing "No APKs were generated in '$APK_DIR_PATH'."
-          fi
+          ./gradlew assembleDebug --no-daemon --warning-mode all
 
-          mapfile -t generated_abis < <(
-            for _f in "${generated_apks[@]}"; do
-              _abi="${_f#${APK_BASENAME_PREFIX}_}"
-              echo "${_abi%.apk}"
-            done | sort -u
-          )
-          echo "Generated ABIs: ${generated_abis[*]}"
-
-          declare -A generated_abi_set=()
-          for abi in "${generated_abis[@]}"; do
-            generated_abi_set["$abi"]=1
-          done
-          abi_generated() {
-            local abi="$1"
-            [[ -n "${generated_abi_set[$abi]:-}" ]]
-          }
-
-          mandatory_abis=(arm64-v8a armeabi-v7a)
-          if abi_generated universal; then
-            mandatory_abis+=(universal)
-          fi
-
-          optional_abis=(x86)
-
-          echo "Mandatory ABIs for validation: ${mandatory_abis[*]}"
-          for abi in "${mandatory_abis[@]}"; do
-            if ! abi_generated "$abi"; then
-              fail_with_output_listing "Mandatory ABI '$abi' was not generated."
-            fi
-            echo "✓ Mandatory APK present: ${APK_BASENAME_PREFIX}_$abi.apk"
+          for abi in arm64-v8a armeabi-v7a; do
+            apk="$APK_DIR_PATH/${APK_BASENAME_PREFIX}_${abi}.apk"
+            [[ -s "$apk" ]] || { echo "❌ Missing canonical ABI artifact: $apk"; ls -la "$APK_DIR_PATH"; exit 1; }
+            echo "✓ $apk"
           done
 
-          echo "Optional ABIs for validation: ${optional_abis[*]}"
-          for abi in "${optional_abis[@]}"; do
-            if abi_generated "$abi"; then
-              echo "ℹ Optional ABI '$abi' detected and accepted."
-            else
-              echo "ℹ Optional ABI '$abi' not generated by current toolchain/AGP; continuing."
-            fi
-          done
-          
-          echo ""
-          echo "Generating checksums..."
           cd "$APK_DIR_PATH"
-          if ls *.apk 1>/dev/null 2>&1; then
-            sha256sum *.apk > sha256sums.txt
-            echo "✅ Checksums generated"
-          fi
-          
-          echo ""
-          echo "✅ Full debug build completed"
+          sha256sum *.apk > sha256sums.txt
+          [[ -s sha256sums.txt ]]
 
-      - name: "📦 Upload Universal APK"
+      - name: "📦 Upload Canonical Debug Matrix"
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ env.APK_BASENAME_PREFIX }}_universal
-          if-no-files-found: ignore
-          path: |
-            ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_universal.apk
-            ${{ env.APK_DIR_PATH }}/output-metadata.json
-
-      - name: "📦 Upload ARM64-v8a APK"
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ env.APK_BASENAME_PREFIX }}_arm64-v8a
+          name: ${{ env.APK_BASENAME_PREFIX }}_canonical-matrix
           path: |
             ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_arm64-v8a.apk
-            ${{ env.APK_DIR_PATH }}/output-metadata.json
-
-      - name: "📦 Upload ARMv7a APK"
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ env.APK_BASENAME_PREFIX }}_armeabi-v7a
-          path: |
             ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_armeabi-v7a.apk
+            ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_universal.apk
             ${{ env.APK_DIR_PATH }}/output-metadata.json
-
-      - name: "📦 Upload x86_64 APK"
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ env.APK_BASENAME_PREFIX }}_x86_64
-          path: |
-            ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_x86_64.apk
-            ${{ env.APK_DIR_PATH }}/output-metadata.json
-
-      - name: "📦 Upload x86 APK"
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ env.APK_BASENAME_PREFIX }}_x86
-          if-no-files-found: ignore
-          path: |
-            ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_x86.apk
-            ${{ env.APK_DIR_PATH }}/output-metadata.json
-
-      - name: "📦 Upload Checksums"
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ env.APK_BASENAME_PREFIX }}_sha256sums
-          path: ${{ env.APK_DIR_PATH }}/sha256sums.txt
+            ${{ env.APK_DIR_PATH }}/sha256sums.txt
+          if-no-files-found: error
+          retention-days: 30
 
   # ===========================================================================
-  # Δ (DELTA) - VALIDATION STAGE
-  # Run unit tests
+  # Δ - UNIT TESTS
   # ===========================================================================
   delta-validation:
     name: "Δ Validation - Unit Tests"
     needs: [psi-perception, chi-feedback]
     if: |
-      needs.psi-perception.outputs.should_continue == 'true' &&
-      github.event.inputs.skip_tests != 'true'
+      needs.psi-perception.result == 'success' &&
+      needs.chi-feedback.result == 'success' &&
+      needs.psi-perception.outputs.run_tests == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
       - name: "📥 Checkout Repository"
         uses: actions/checkout@v6
-
-      - name: "☕ Setup Java"
-        uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          persist-credentials: false
+
+      - name: "🧰 Setup Android Build Environment"
+        uses: ./.github/actions/rafaelia-android-setup
+        with:
           java-version: ${{ env.JAVA_VERSION }}
 
-      - name: "🤖 Setup Android SDK/NDK"
-        uses: android-actions/setup-android@v4
-
-      - name: "📦 Install Android toolchain components"
-        run: |
-          ./scripts/ci_android_preflight.sh
-
-      - name: "🧬 Prepare Bootstrap Environment"
-        run: |
-          ./scripts/prepare_bootstrap_env.sh --github-env
-
       - name: "🧪 Run Unit Tests"
-        run: |
-          echo "=========================================="
-          echo "Δ VALIDATION - Unit Tests"
-          echo "=========================================="
-          echo ""
-          
-          ./gradlew test --no-daemon
-          
-          echo ""
-          echo "✅ Unit tests completed"
+        run: ./gradlew test --no-daemon --warning-mode all
 
       - name: "📊 Upload Test Results"
-        uses: actions/upload-artifact@v7
         if: always()
+        uses: actions/upload-artifact@v7
         with:
-          name: test-results
+          name: test-results-${{ github.run_id }}
           path: |
             app/build/reports/tests/
             terminal-emulator/build/reports/tests/
             terminal-view/build/reports/tests/
             termux-shared/build/reports/tests/
+          if-no-files-found: warn
           retention-days: 7
 
   # ===========================================================================
-  # Σ (SIGMA) - EXECUTION STAGE
-  # Android 15 compatibility validation
+  # Σ - COMPATIBILITY: independent after ψχ, so it runs in parallel with ρ/Δ
   # ===========================================================================
   sigma-execution:
-    name: "Σ Execution - Compatibility Check"
-    needs: [psi-perception, rho-expansion-arm64-debug, delta-validation]
+    name: "Σ Execution - Android Compatibility"
+    needs: [psi-perception, chi-feedback]
     if: |
-      always() &&
-      needs.psi-perception.outputs.should_continue == 'true' &&
-      (needs.rho-expansion-arm64-debug.result == 'success' || needs.rho-expansion-arm64-debug.result == 'skipped')
+      needs.psi-perception.result == 'success' &&
+      needs.chi-feedback.result == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: "📥 Checkout Repository"
         uses: actions/checkout@v6
-
-      - name: "☕ Setup Java"
-        uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          persist-credentials: false
+
+      - name: "🧰 Setup Android Build Environment"
+        uses: ./.github/actions/rafaelia-android-setup
+        with:
           java-version: ${{ env.JAVA_VERSION }}
 
-      - name: "🤖 Setup Android SDK/NDK"
-        uses: android-actions/setup-android@v4
-
-      - name: "📦 Install Android toolchain components"
-        run: |
-          ./scripts/ci_android_preflight.sh
-
-      - name: "🧬 Prepare Bootstrap Environment"
-        run: |
-          ./scripts/prepare_bootstrap_env.sh --github-env
-
-      - name: "🔍 Android 15 Compatibility Validation"
-        run: |
-          echo "=========================================="
-          echo "Σ EXECUTION - Compatibility Validation"
-          echo "=========================================="
-          echo ""
-          
-          ./gradlew validateAndroid15Compatibility --no-daemon
-          echo ""
-          echo "✅ All validations passed"
+      - name: "🔍 Validate Android 15/16 Compatibility"
+        run: ./gradlew validateAndroid15Compatibility --no-daemon --warning-mode all
 
   # ===========================================================================
-  # Ω (OMEGA) - ALIGNMENT STAGE
-  # Final quality report and summary
+  # Ω - TERMINAL FAIL-CLOSED GATE
   # ===========================================================================
   omega-alignment:
-    name: "Ω Alignment - Quality Report"
-    needs: [psi-perception, chi-feedback, rho-expansion-arm64-debug, rho-expansion-arm64-release, rho-expansion-full-debug, delta-validation, sigma-execution]
-    if: always()
+    name: "Ω Alignment - Terminal Gate"
+    needs:
+      - psi-perception
+      - chi-feedback
+      - rho-expansion-arm64-debug
+      - rho-expansion-arm64-release
+      - rho-expansion-full-debug
+      - delta-validation
+      - sigma-execution
+    if: always() && github.event_name != 'release'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-      - name: "📥 Checkout Repository"
-        uses: actions/checkout@v6
-
-      - name: "📊 Generate Quality Report"
+      - name: "📊 Evaluate Requested Pipeline Surface"
         run: |
-          echo "=========================================="
-          echo "Ω ALIGNMENT - Final Quality Report"
-          echo "=========================================="
-          echo ""
-          echo "RAFAELIA Pipeline Summary (ψχρΔΣΩ)"
-          echo "-------------------------------------------"
-          echo ""
-          echo "Pipeline Stages:"
-          echo "  ψ Perception:          ${{ needs.psi-perception.result }}"
-          echo "  χ Feedback:            ${{ needs.chi-feedback.result }}"
-          echo "  ρ ARM64 Debug:         ${{ needs.rho-expansion-arm64-debug.result }}"
-          echo "  ρ ARM64 Release:       ${{ needs.rho-expansion-arm64-release.result }}"
-          echo "  ρ Full Debug:          ${{ needs.rho-expansion-full-debug.result }}"
-          echo "  Δ Validation (Tests):  ${{ needs.delta-validation.result }}"
-          echo "  Σ Execution:           ${{ needs.sigma-execution.result }}"
-          echo ""
-          
-          # Determine overall status
-          if [ "${{ needs.rho-expansion-arm64-debug.result }}" == "success" ] || \
-             [ "${{ needs.rho-expansion-full-debug.result }}" == "success" ]; then
-            echo "✅ PIPELINE COMPLETED - APK(s) Generated Successfully"
-            echo ""
-            echo "Quality Metrics:"
-            echo "  - ARM64 Priority Build: ENABLED"
-            echo "  - 16KB Page Alignment: CONFIGURED"
-            echo "  - Android 15 Compatibility: CHECKED"
-          else
-            echo "⚠ PIPELINE COMPLETED WITH ISSUES"
-            echo ""
-            echo "Review the job outputs above for details."
+          set -euo pipefail
+          failures=()
+
+          require_success() {
+            local label="$1"
+            local result="$2"
+            if [[ "$result" != "success" ]]; then
+              failures+=("$label=$result")
+            fi
+          }
+
+          PSI="${{ needs.psi-perception.result }}"
+          CHI="${{ needs.chi-feedback.result }}"
+          ARM64_DEBUG="${{ needs.rho-expansion-arm64-debug.result }}"
+          ARM64_RELEASE="${{ needs.rho-expansion-arm64-release.result }}"
+          FULL_DEBUG="${{ needs.rho-expansion-full-debug.result }}"
+          DELTA="${{ needs.delta-validation.result }}"
+          SIGMA="${{ needs.sigma-execution.result }}"
+
+          require_success ψ "$PSI"
+          require_success χ "$CHI"
+          require_success Σ "$SIGMA"
+
+          if [[ "${{ needs.psi-perception.outputs.build_debug }}" == "true" ]]; then
+            require_success ρ-arm64-debug "$ARM64_DEBUG"
           fi
-          
-          echo ""
-          echo "=========================================="
-          echo "Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          echo "Commit: ${{ github.sha }}"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "=========================================="
-
-      - name: "✅ Verify Authorship (RAFAELIA)"
-        run: |
-          echo ""
-          echo "Authorship Verification:"
-          RAFAEL_COUNT=$(rg --no-messages --glob "*.md" --glob "*.yml" --glob "*.java" --glob "!**/.git/**" --glob "!**/build/**" --glob "!**/.gradle/**" "instituto-Rafael" . | wc -l)
-          RAFAELIA_COUNT=$(rg --no-messages --glob "*.md" --glob "*.yml" --glob "*.java" --glob "!**/.git/**" --glob "!**/build/**" --glob "!**/.gradle/**" "RAFAELIA" . | wc -l)
-          
-          echo "  - instituto-Rafael mentions: $RAFAEL_COUNT"
-          echo "  - RAFAELIA references: $RAFAELIA_COUNT"
-          echo ""
-          
-          if [ -f LICENSE.md ]; then
-            echo "✅ License file present"
-          else
-            echo "⚠ License file not found"
+          if [[ "${{ needs.psi-perception.outputs.build_release }}" == "true" ]]; then
+            require_success ρ-arm64-release "$ARM64_RELEASE"
+          fi
+          if [[ "${{ needs.psi-perception.outputs.build_full_debug }}" == "true" ]]; then
+            require_success ρ-full-debug "$FULL_DEBUG"
+          fi
+          if [[ "${{ needs.psi-perception.outputs.run_tests }}" == "true" ]]; then
+            require_success Δ "$DELTA"
           fi
 
+          {
+            echo '## Ω RAFAELIA Pipeline Receipt'
+            echo
+            echo '| Stage | Result |'
+            echo '|---|---|'
+            echo "| ψ Perception | $PSI |"
+            echo "| χ Feedback | $CHI |"
+            echo "| ρ ARM64 Debug | $ARM64_DEBUG |"
+            echo "| ρ ARM64 Release | $ARM64_RELEASE |"
+            echo "| ρ Full Debug | $FULL_DEBUG |"
+            echo "| Δ Tests | $DELTA |"
+            echo "| Σ Compatibility | $SIGMA |"
+            echo
+            echo "Commit: \`${{ github.sha }}\`"
+            echo "Ref: \`${{ github.ref }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if (( ${#failures[@]} > 0 )); then
+            printf '❌ Ω FAIL-CLOSED: %s\n' "${failures[*]}"
+            printf '\n**Ω verdict:** ❌ FAIL-CLOSED — `%s`\n' "${failures[*]}" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo '✅ Ω PASS: every requested stage succeeded.'
+          echo >> "$GITHUB_STEP_SUMMARY"
+          echo '**Ω verdict:** ✅ PASS — every requested stage succeeded.' >> "$GITHUB_STEP_SUMMARY"
 
   # ===========================================================================
-  # Release Post-Publish Orchestration (reusable workflows)
+  # RELEASE POST-PUBLISH ORCHESTRATION
   # ===========================================================================
   release-attach-debug-apks:
     name: "Release - Attach Debug APKs"
