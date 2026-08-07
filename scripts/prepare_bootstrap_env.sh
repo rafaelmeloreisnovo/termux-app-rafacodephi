@@ -5,16 +5,38 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 MODE="--print-env"
-if [[ ${1:-} == "--github-env" || ${1:-} == "--print-env" ]]; then
-  MODE="$1"
-elif [[ $# -gt 0 ]]; then
-  echo "Usage: $0 [--print-env|--github-env]" >&2
-  exit 1
-fi
+SKIP_ANDROID_PREFLIGHT=false
+
+usage() {
+  echo "Usage: $0 [--print-env|--github-env] [--skip-android-preflight]" >&2
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    --github-env|--print-env)
+      MODE="$arg"
+      ;;
+    --skip-android-preflight)
+      SKIP_ANDROID_PREFLIGHT=true
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+done
 
 log() { printf '[prepare_bootstrap_env] %s\n' "$*" >&2; }
 
-./scripts/ci_android_preflight.sh >&2
+if [[ "$SKIP_ANDROID_PREFLIGHT" == "true" ]]; then
+  log "Android preflight already satisfied by caller; skipping duplicate setup"
+else
+  ./scripts/ci_android_preflight.sh >&2
+fi
 
 BOOTSTRAP_SOURCE="${RAF_BOOTSTRAP_SOURCE:-local}"
 log "Bootstrap source: $BOOTSTRAP_SOURCE"
