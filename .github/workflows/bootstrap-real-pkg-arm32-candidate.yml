@@ -1,0 +1,135 @@
+# ci_track: bootstrap
+# ci_abis: armeabi-v7a
+name: Bootstrap Real-Pkg ARM32 Candidate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'scripts/build_rafaelia_bootstraps.sh'
+      - 'scripts/build_real_arm_bootstrap_core.py'
+      - 'scripts/validate_real_arm_bootstrap_core.py'
+      - 'scripts/build_bootstrap_profile.sh'
+      - 'scripts/prepare_bootstrap_env.sh'
+      - 'scripts/verify_bootstrap_contract.sh'
+      - 'scripts/write_bootstrap_candidate_receipt.py'
+      - 'tools/raf_bootstrap_profile.py'
+      - 'configs/rafcodephi-bootstrap-profile-v1.json'
+      - 'app/src/main/cpp/termux-bootstrap-zip.S'
+      - '.github/workflows/bootstrap-real-pkg-arm32-candidate.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bootstrap-real-pkg-arm32-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-pkg-arm32-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RAF_BOOTSTRAP_SOURCE: local
+      RAF_BOOTSTRAP_PROFILE: real-pkg
+      RAFCODEPHI_REAL_PKG_ARCH: arm
+      RAFCODEPHI_REAL_PKG_VALIDATE: 'true'
+      TERMUX_BOOTSTRAP_PACKAGE_NAME: com.termux.rafacodephi
+      TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS: '1'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Prepare exact embedded real-pkg bootstrap
+        run: |
+          chmod +x ./scripts/prepare_bootstrap_env.sh ./scripts/verify_bootstrap_contract.sh
+          ./scripts/prepare_bootstrap_env.sh --github-env
+
+      - name: Enforce target-aware profile matrix
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('build/reports/bootstrap-profile-matrix.json')
+          d = json.loads(p.read_text())
+          assert d['schema'] == 'rafcodephi-bootstrap-profile-matrix/v2'
+          assert d['structural_state'] == 'PASS'
+          assert d['requested_profile'] == 'real-pkg'
+          assert d['real_pkg_arch_request'] == 'arm'
+          assert d['embedded_profile_by_arch']['arm'] == 'real-pkg'
+          assert d['embedded_profile_by_arch']['aarch64'] == 'bridge'
+          assert d['embedded_profile_by_arch']['i686'] == 'bridge'
+          assert d['embedded_profile_by_arch']['x86_64'] == 'bridge'
+          assert d['device_validation'] == 'TOKEN_VAZIO'
+          assert d['claim_allowed'] is False
+          assert d['release_allowed'] is False
+          print('TARGET_AWARE_BOOTSTRAP_PROFILE_PASS')
+          PY
+
+      - name: Revalidate exact embedded ARM profile
+        run: |
+          python3 tools/raf_bootstrap_profile.py validate \
+            --zip app/src/main/cpp/rewritten-bootstrap-arm.zip \
+            --expected-profile real-pkg \
+            --expected-arch arm \
+            --package-name com.termux.rafacodephi
+
+      - name: Build ARM32-capable debug APK set
+        run: |
+          eval "$(./scripts/prepare_bootstrap_env.sh --print-env --skip-android-preflight)"
+          ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon
+
+      - name: Resolve ARM32 APK and write candidate receipt
+        id: candidate
+        run: |
+          mkdir -p dist/bootstrap-real-pkg-arm32
+          ARM32_APK=$(find app/build/outputs/apk/debug -type f -name 'termux-rafcodephi-debug-armeabi-v7a.apk' | head -n1)
+          test -n "$ARM32_APK" && test -s "$ARM32_APK"
+          cp build/reports/bootstrap-profile-matrix.json dist/bootstrap-real-pkg-arm32/bootstrap-profile-matrix.json
+          python3 scripts/write_bootstrap_candidate_receipt.py \
+            --matrix dist/bootstrap-real-pkg-arm32/bootstrap-profile-matrix.json \
+            --apk "$ARM32_APK" \
+            --embedded-bootstrap app/src/main/cpp/rewritten-bootstrap-arm.zip \
+            --target-arch arm \
+            --out dist/bootstrap-real-pkg-arm32/candidate-receipt.json
+          cp "$ARM32_APK" dist/bootstrap-real-pkg-arm32/
+          sha256sum app/src/main/cpp/rewritten-bootstrap-arm.zip "$ARM32_APK" \
+            > dist/bootstrap-real-pkg-arm32/SHA256SUMS.txt
+          echo "apk=$ARM32_APK" >> "$GITHUB_OUTPUT"
+
+      - name: Publish fail-closed summary
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          d = json.loads(Path('dist/bootstrap-real-pkg-arm32/candidate-receipt.json').read_text())
+          print('## ARM32 real-pkg bootstrap candidate')
+          print()
+          print('| Gate | State |')
+          print('|---|---|')
+          print('| structural candidate | PASS |')
+          print('| exact embedded bootstrap hash | OBSERVED |')
+          print('| APK candidate hash | OBSERVED |')
+          print('| physical device install | TOKEN_VAZIO |')
+          print('| pkg update | NOT_MEASURED |')
+          print('| pkg install nano/python/git | NOT_MEASURED |')
+          print('| DNS/TLS repository | NOT_MEASURED |')
+          print('| release_allowed | false |')
+          print()
+          print('Next natural closure: install this exact hash-bound ARM32 APK on the physical device and execute the real-pkg smoke receipt.')
+          PY
+
+      - name: Upload candidate evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: bootstrap-real-pkg-arm32-candidate-${{ github.sha }}
+          path: dist/bootstrap-real-pkg-arm32/
+          if-no-files-found: error
