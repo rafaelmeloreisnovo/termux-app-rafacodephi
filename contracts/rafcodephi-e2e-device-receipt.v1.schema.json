@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/blob/master/contracts/rafcodephi-e2e-device-receipt.v1.schema.json",
+  "title": "RAFCODEPHI E2E physical-device receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "receipt_id",
+    "generated_at",
+    "provenance",
+    "device",
+    "workload",
+    "stages",
+    "claim_allowed"
+  ],
+  "properties": {
+    "schema": {
+      "const": "rafcodephi.e2e-device-receipt/v1"
+    },
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 20
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "git_commit",
+        "build_receipt_sha256",
+        "apk_sha256",
+        "bootstrap_source_repository",
+        "bootstrap_source_commit",
+        "bootstrap_source_manifest_sha256",
+        "bootstrap_sha256",
+        "bootstrap_profile_sha256"
+      ],
+      "properties": {
+        "repository": {
+          "const": "rafaelmeloreisnovo/termux-app-rafacodephi"
+        },
+        "git_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "build_receipt_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "apk_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "bootstrap_source_repository": {
+          "const": "rafaelmeloreisnovo/termux-packages"
+        },
+        "bootstrap_source_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "bootstrap_source_manifest_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "bootstrap_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "bootstrap_profile_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manufacturer",
+        "model",
+        "android_release",
+        "abi",
+        "package",
+        "prefix",
+        "installed_apk_path",
+        "installed_apk_sha256"
+      ],
+      "properties": {
+        "manufacturer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "android_release": {
+          "type": "string",
+          "minLength": 1
+        },
+        "abi": {
+          "enum": [
+            "armeabi-v7a",
+            "arm64-v8a"
+          ]
+        },
+        "package": {
+          "const": "com.termux.rafacodephi"
+        },
+        "prefix": {
+          "const": "/data/data/com.termux.rafacodephi/files/usr"
+        },
+        "installed_apk_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "installed_apk_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "workload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "exit_code",
+        "stdout_sha256"
+      ],
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "exit_code": {
+          "type": "integer"
+        },
+        "stdout_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "stages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "packages",
+        "bootstrap",
+        "apk",
+        "device",
+        "workload",
+        "receipt",
+        "reproduction"
+      ],
+      "properties": {
+        "packages": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "TOKEN_VAZIO"
+          ]
+        },
+        "bootstrap": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "TOKEN_VAZIO"
+          ]
+        },
+        "apk": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "TOKEN_VAZIO"
+          ]
+        },
+        "device": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "TOKEN_VAZIO"
+          ]
+        },
+        "workload": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "TOKEN_VAZIO"
+          ]
+        },
+        "receipt": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "TOKEN_VAZIO"
+          ]
+        },
+        "reproduction": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "TOKEN_VAZIO"
+          ]
+        }
+      }
+    },
+    "claim_allowed": {
+      "type": "boolean"
+    }
+  }
+}

@@ -1,0 +1,60 @@
+name: "🧪 RAFCODEPHI E2E Product Proof"
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'contracts/rafcodephi-e2e-device-receipt.v1.schema.json'
+      - 'scripts/emit_e2e_build_receipt.py'
+      - 'scripts/collect_e2e_device_receipt.sh'
+      - 'scripts/validate_e2e_receipt.py'
+      - 'docs/RAFCODEPHI_E2E_PRODUCT_PROOF_V1.md'
+      - '.github/workflows/rafaelia_e2e_product_proof.yml'
+      - 'reports/device-e2e/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: "E2E proof contract — fail closed"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Validate Python syntax
+        run: |
+          python3 -m py_compile scripts/emit_e2e_build_receipt.py
+          python3 -m py_compile scripts/validate_e2e_receipt.py
+
+      - name: Validate collector shell syntax
+        run: bash -n scripts/collect_e2e_device_receipt.sh
+
+      - name: Run build-binding self-test
+        run: python3 scripts/emit_e2e_build_receipt.py --self-test
+
+      - name: Run promotion semantics self-test
+        run: python3 scripts/validate_e2e_receipt.py --self-test
+
+      - name: Guard claim boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '"claim_allowed": False' scripts/emit_e2e_build_receipt.py
+          grep -q '"claim_allowed": False' scripts/collect_e2e_device_receipt.sh
+          grep -q '"reproduction": "TOKEN_VAZIO"' scripts/collect_e2e_device_receipt.sh
+          echo "PASS: build/device receipts cannot self-promote"
+
+      - name: Explain evidence boundary
+        run: |
+          cat <<'EOF'
+          CI verifies proof machinery and source→bootstrap→APK binding semantics only.
+          It does NOT prove physical Android installation/runtime.
+          Product promotion requires two independently collected physical-device receipts
+          accepted by scripts/validate_e2e_receipt.py --reference.
+          EOF
