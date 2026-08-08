@@ -12,44 +12,18 @@ import com.termux.shared.file.FileUtils;
 import com.termux.shared.file.PathTreatmentUtils;
 import com.termux.shared.logger.Logger;
 import com.termux.shared.shell.command.ExecutionCommand;
-import com.termux.shared.termux.TermuxConstants;
+import com.termux.shared.termux.TermuxRuntimePaths;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * ISO 8000/9001 compliant quality management utilities for Termux shell service.
- *
- * This class provides:
- * - Comprehensive error handling for 49+ error categories
- * - Quality-assured validation for shell commands
- * - Path treatment validation
- * - Dependency checking
- * - Service state management
- *
- * Error Categories handled (based on ISO 9001 error taxonomy):
- * 1. bug - Internal software bugs
- * 2. erro - General errors
- * 3. fail - Operation failures
- * 4. logic - Logic errors
- * 5. kill - Signal handling (SIGKILL)
- * 6. deny - Permission denials
- * 7. path - Path treatment errors
- * 8. exec - Execution errors
- * 9. data - Data quality errors
- * 10. state - State management errors
- * 11-49. And many more...
- */
+/** Quality-management utilities for the runtime-resolved Termux filesystem. */
 public class TermuxQualityManager {
 
     private static final String LOG_TAG = "TermuxQualityManager";
 
-    /**
-     * Error category enumeration for quality tracking.
-     */
     public enum ErrorCategory {
         BUG("bug", "Internal Bug", ISO9001Errno.ERRNO_BUG_DETECTED),
         ERROR("erro", "General Error", ISO9001Errno.ERRNO_DATA_VALIDATION_FAILED),
@@ -117,23 +91,15 @@ public class TermuxQualityManager {
 
         @Nullable
         public static ErrorCategory fromKey(String key) {
-            for (ErrorCategory category : values()) {
-                if (category.key.equalsIgnoreCase(key)) {
-                    return category;
-                }
-            }
+            for (ErrorCategory category : values()) if (category.key.equalsIgnoreCase(key)) return category;
             return null;
         }
     }
 
-    // Error statistics tracking
     private static final Map<ErrorCategory, Integer> errorCounts = new HashMap<>();
     private static final List<QualityViolation> recentViolations = new ArrayList<>();
     private static final int MAX_RECENT_VIOLATIONS = 100;
 
-    /**
-     * Quality violation record for ISO 9001 audit trail.
-     */
     public static class QualityViolation {
         public final long timestamp;
         public final ErrorCategory category;
@@ -157,64 +123,43 @@ public class TermuxQualityManager {
         }
     }
 
-    /**
-     * Validate an execution command according to ISO 8000/9001 quality standards.
-     *
-     * @param context The Android context
-     * @param executionCommand The command to validate
-     * @return Error if validation fails, null if successful
-     */
     @Nullable
-    public static Error validateExecutionCommand(
-            @NonNull Context context,
-            @NonNull ExecutionCommand executionCommand) {
-
-        // Validate executable path
+    public static Error validateExecutionCommand(@NonNull Context context,
+                                                 @NonNull ExecutionCommand executionCommand) {
+        TermuxRuntimePaths.init(context);
         if (executionCommand.executable != null && !executionCommand.executable.isEmpty()) {
-            PathTreatmentUtils.PathValidationResult execResult =
-                PathTreatmentUtils.validateExecutablePath(executionCommand.executable);
+            PathTreatmentUtils.PathValidationResult execResult = PathTreatmentUtils.validateExecutablePath(executionCommand.executable);
             if (!execResult.isValid()) {
                 recordViolation(ErrorCategory.EXEC, "Executable validation failed",
                     executionCommand.executable, execResult.getError().getCode());
                 return execResult.getError();
             }
-            // Update to canonical path
             executionCommand.executable = execResult.getCanonicalPath();
         }
 
-        // Validate working directory
         if (executionCommand.workingDirectory != null && !executionCommand.workingDirectory.isEmpty()) {
-            PathTreatmentUtils.PathValidationResult wdResult =
-                PathTreatmentUtils.validateWorkingDirectory(
-                    executionCommand.workingDirectory,
-                    TermuxConstants.TERMUX_HOME_DIR_PATH);
+            PathTreatmentUtils.PathValidationResult wdResult = PathTreatmentUtils.validateWorkingDirectory(
+                executionCommand.workingDirectory, TermuxRuntimePaths.homeDirPath());
             if (!wdResult.isValid()) {
                 recordViolation(ErrorCategory.PATH, "Working directory validation failed",
                     executionCommand.workingDirectory, wdResult.getError().getCode());
                 return wdResult.getError();
             }
-            // Update to canonical path
             executionCommand.workingDirectory = wdResult.getCanonicalPath();
         }
 
-        // Validate arguments for path traversal
         if (executionCommand.arguments != null) {
             for (int i = 0; i < executionCommand.arguments.length; i++) {
                 String arg = executionCommand.arguments[i];
-                if (arg != null && PathTreatmentUtils.containsPathTraversal(arg)) {
-                    // Only error if it looks like a path (starts with path-like prefix)
-                    if (looksLikePath(arg)) {
-                        recordViolation(ErrorCategory.TRAVERSAL, "Potential path traversal in argument",
-                            "Arg " + i + ": " + PathTreatmentUtils.sanitizeForLogging(arg),
-                            ISO9001Errno.ERRNO_PATH_TRAVERSAL_DETECTED.getCode());
-                        return ISO9001Errno.ERRNO_PATH_TRAVERSAL_DETECTED.getError(
-                            PathTreatmentUtils.sanitizeForLogging(arg));
-                    }
+                if (arg != null && PathTreatmentUtils.containsPathTraversal(arg) && looksLikePath(arg)) {
+                    recordViolation(ErrorCategory.TRAVERSAL, "Potential path traversal in argument",
+                        "Arg " + i + ": " + PathTreatmentUtils.sanitizeForLogging(arg),
+                        ISO9001Errno.ERRNO_PATH_TRAVERSAL_DETECTED.getCode());
+                    return ISO9001Errno.ERRNO_PATH_TRAVERSAL_DETECTED.getError(PathTreatmentUtils.sanitizeForLogging(arg));
                 }
             }
         }
 
-        // Validate runner
         if (executionCommand.runner != null) {
             ExecutionCommand.Runner runner = ExecutionCommand.Runner.runnerOf(executionCommand.runner);
             if (runner == null) {
@@ -224,259 +169,137 @@ public class TermuxQualityManager {
                     "runner", executionCommand.runner + " is not a valid runner");
             }
         }
-
         return null;
     }
 
-    /**
-     * Check if the Termux bootstrap is complete.
-     *
-     * @return Error if bootstrap is incomplete, null otherwise
-     */
     @Nullable
     public static Error checkBootstrapComplete() {
         List<String> missingFiles = new ArrayList<>();
-
-        // Check critical Termux paths
         String[] criticalPaths = {
-            TermuxConstants.TERMUX_PREFIX_DIR_PATH,
-            TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH,
-            TermuxConstants.TERMUX_HOME_DIR_PATH
+            TermuxRuntimePaths.prefixDirPath(),
+            TermuxRuntimePaths.binDirPath(),
+            TermuxRuntimePaths.homeDirPath()
         };
+        for (String path : criticalPaths) if (!FileUtils.directoryFileExists(path, false)) missingFiles.add(path);
 
-        for (String path : criticalPaths) {
-            if (!FileUtils.directoryFileExists(path, false)) {
-                missingFiles.add(path);
-            }
-        }
-
-        // Check for sh binary
-        String shPath = TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + "/sh";
-        if (!FileUtils.regularFileExists(shPath, true)) {
-            missingFiles.add(shPath);
-        }
+        String shPath = TermuxRuntimePaths.binDirPath() + "/sh";
+        if (!FileUtils.regularFileExists(shPath, true)) missingFiles.add(shPath);
+        String pkgPath = TermuxRuntimePaths.binDirPath() + "/pkg";
+        if (!FileUtils.regularFileExists(pkgPath, true)) missingFiles.add(pkgPath);
 
         if (!missingFiles.isEmpty()) {
-            recordViolation(ErrorCategory.BOOTSTRAP, "Bootstrap incomplete",
-                String.join(", ", missingFiles), ISO9001Errno.ERRNO_BOOTSTRAP_INCOMPLETE.getCode());
-            return ISO9001Errno.ERRNO_BOOTSTRAP_INCOMPLETE.getError(String.join(", ", missingFiles));
+            String joined = join(missingFiles);
+            recordViolation(ErrorCategory.BOOTSTRAP, "Bootstrap incomplete", joined,
+                ISO9001Errno.ERRNO_BOOTSTRAP_INCOMPLETE.getCode());
+            return ISO9001Errno.ERRNO_BOOTSTRAP_INCOMPLETE.getError(joined);
         }
-
         return null;
     }
 
-    /**
-     * Validate dependencies for shell execution.
-     *
-     * @param context The Android context
-     * @param requiredBinaries List of required binary names (e.g., "bash", "python")
-     * @return Error if dependencies missing, null otherwise
-     */
     @Nullable
-    public static Error checkDependencies(
-            @NonNull Context context,
-            @NonNull List<String> requiredBinaries) {
-
+    public static Error checkDependencies(@NonNull Context context,
+                                          @NonNull List<String> requiredBinaries) {
+        TermuxRuntimePaths.init(context);
         List<String> missing = new ArrayList<>();
-        String binDir = TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH;
-
+        String binDir = TermuxRuntimePaths.binDirPath();
         for (String binary : requiredBinaries) {
             String fullPath = binDir + "/" + binary;
-            if (!FileUtils.regularFileExists(fullPath, true)) {
-                missing.add(binary);
-            }
+            if (!FileUtils.regularFileExists(fullPath, true)) missing.add(binary);
         }
-
         if (!missing.isEmpty()) {
-            String missingStr = String.join(", ", missing);
+            String missingStr = join(missing);
             recordViolation(ErrorCategory.DEPENDENCY, "Dependencies not found",
                 missingStr, ISO9001Errno.ERRNO_DEPENDENCY_NOT_FOUND.getCode());
             return ISO9001Errno.ERRNO_DEPENDENCY_NOT_FOUND.getError(missingStr);
         }
-
         return null;
     }
 
-    /**
-     * Record a quality violation for ISO 9001 audit trail.
-     *
-     * @param category The error category
-     * @param message The error message
-     * @param context Additional context
-     * @param errorCode The error code
-     */
-    public static synchronized void recordViolation(
-            @NonNull ErrorCategory category,
-            @NonNull String message,
-            @Nullable String context,
-            int errorCode) {
-
-        // Update error counts using getOrDefault for cleaner code
+    public static synchronized void recordViolation(@NonNull ErrorCategory category,
+                                                    @NonNull String message,
+                                                    @Nullable String context,
+                                                    int errorCode) {
         errorCounts.put(category, errorCounts.getOrDefault(category, 0) + 1);
-
-        // Add to recent violations
         QualityViolation violation = new QualityViolation(category, message, context, errorCode);
         recentViolations.add(violation);
-
-        // Trim if exceeds max
-        while (recentViolations.size() > MAX_RECENT_VIOLATIONS) {
-            recentViolations.remove(0);
-        }
-
-        // Log the violation
+        while (recentViolations.size() > MAX_RECENT_VIOLATIONS) recentViolations.remove(0);
         Logger.logWarn(LOG_TAG, "Quality Violation: " + violation);
-
-        // Check if critical
-        if (ISO9001Errno.isCriticalError(errorCode)) {
-            Logger.logError(LOG_TAG, "CRITICAL: " + category.getDescription() +
-                " - " + message + " (Code: " + errorCode + ")");
-        }
+        if (ISO9001Errno.isCriticalError(errorCode))
+            Logger.logError(LOG_TAG, "CRITICAL: " + category.getDescription() + " - " + message + " (Code: " + errorCode + ")");
     }
 
-    /**
-     * Check if a string looks like a path (starts with common path prefixes).
-     *
-     * @param str The string to check
-     * @return true if it looks like a path
-     */
     private static boolean looksLikePath(@Nullable String str) {
         if (str == null || str.isEmpty()) return false;
         return str.startsWith("/") || str.startsWith("./") || str.startsWith("../");
     }
 
-    /**
-     * Get error statistics for quality reporting.
-     *
-     * @return Map of error category to count
-     */
-    @NonNull
-    public static synchronized Map<ErrorCategory, Integer> getErrorStatistics() {
-        return new HashMap<>(errorCounts);
+    private static String join(List<String> values) {
+        StringBuilder out = new StringBuilder();
+        for (String value : values) {
+            if (out.length() > 0) out.append(", ");
+            out.append(value);
+        }
+        return out.toString();
     }
 
-    /**
-     * Get recent quality violations for audit.
-     *
-     * @return List of recent violations
-     */
     @NonNull
-    public static synchronized List<QualityViolation> getRecentViolations() {
-        return new ArrayList<>(recentViolations);
-    }
+    public static synchronized Map<ErrorCategory, Integer> getErrorStatistics() { return new HashMap<>(errorCounts); }
 
-    /**
-     * Reset error statistics.
-     */
+    @NonNull
+    public static synchronized List<QualityViolation> getRecentViolations() { return new ArrayList<>(recentViolations); }
+
     public static synchronized void resetStatistics() {
         errorCounts.clear();
         recentViolations.clear();
     }
 
-    /**
-     * Generate a quality report summary.
-     *
-     * @return Quality report string
-     */
     @NonNull
     public static String generateQualityReport() {
         StringBuilder report = new StringBuilder();
         report.append("=== Termux Quality Report (ISO 9001) ===\n\n");
-
+        report.append("Runtime layout: ").append(TermuxRuntimePaths.layoutState()).append("\n");
+        report.append("Runtime prefix: ").append(TermuxRuntimePaths.prefixDirPath()).append("\n");
+        report.append("Real-pkg relocation claim allowed: false\n\n");
         report.append("Error Statistics:\n");
         Map<ErrorCategory, Integer> stats = getErrorStatistics();
-        if (stats.isEmpty()) {
-            report.append("  No errors recorded.\n");
-        } else {
-            for (Map.Entry<ErrorCategory, Integer> entry : stats.entrySet()) {
-                report.append(String.format("  %s (%s): %d\n",
-                    entry.getKey().getDescription(),
-                    entry.getKey().getKey(),
-                    entry.getValue()));
-            }
-        }
+        if (stats.isEmpty()) report.append("  No errors recorded.\n");
+        else for (Map.Entry<ErrorCategory, Integer> entry : stats.entrySet())
+            report.append(String.format("  %s (%s): %d\n", entry.getKey().getDescription(), entry.getKey().getKey(), entry.getValue()));
 
         report.append("\nRecent Violations (last ").append(MAX_RECENT_VIOLATIONS).append("):\n");
         List<QualityViolation> violations = getRecentViolations();
-        if (violations.isEmpty()) {
-            report.append("  No recent violations.\n");
-        } else {
-            for (int i = Math.max(0, violations.size() - 10); i < violations.size(); i++) {
+        if (violations.isEmpty()) report.append("  No recent violations.\n");
+        else {
+            for (int i = Math.max(0, violations.size() - 10); i < violations.size(); i++)
                 report.append("  ").append(violations.get(i).toString()).append("\n");
-            }
-            if (violations.size() > 10) {
-                report.append("  ... and ").append(violations.size() - 10).append(" more.\n");
-            }
+            if (violations.size() > 10) report.append("  ... and ").append(violations.size() - 10).append(" more.\n");
         }
-
         return report.toString();
     }
 
-    /**
-     * Create an error for a specific category with context.
-     *
-     * @param category The error category
-     * @param context Additional context
-     * @param details Error details
-     * @return Error object
-     */
     @NonNull
-    public static Error createError(
-            @NonNull ErrorCategory category,
-            @Nullable String context,
-            @Nullable String details) {
-
+    public static Error createError(@NonNull ErrorCategory category,
+                                    @Nullable String context,
+                                    @Nullable String details) {
         Errno errno = category.getDefaultErrno();
         Error error;
-
-        if (context != null && details != null) {
-            error = errno.getError(context, details);
-        } else if (context != null) {
-            error = errno.getError(context);
-        } else {
-            error = errno.getError();
-        }
-
+        if (context != null && details != null) error = errno.getError(context, details);
+        else if (context != null) error = errno.getError(context);
+        else error = errno.getError();
         recordViolation(category, error.getMessage(), context, errno.getCode());
         return error;
     }
 
-    /**
-     * Create and record an error for a process kill signal.
-     * Records the signal as a quality violation and returns an error for reporting.
-     *
-     * @param pid The process ID
-     * @param signal The signal name (e.g., "SIGKILL")
-     * @param processName The process name
-     * @return Error object representing the signal event
-     */
     @NonNull
     public static Error createAndRecordKillSignalError(int pid, @NonNull String signal, @Nullable String processName) {
         ErrorCategory category = signal.equals("SIGKILL") ? ErrorCategory.KILL : ErrorCategory.SIGNAL;
-
-        String message = String.format("Signal %s sent to PID %d (%s)",
-            signal, pid, processName != null ? processName : "unknown");
-
-        Errno errno = signal.equals("SIGKILL") ?
-            ISO9001Errno.ERRNO_SIGKILL_SENT :
-            ISO9001Errno.ERRNO_SIGTERM_SENT;
-
+        String message = String.format("Signal %s sent to PID %d (%s)", signal, pid,
+            processName != null ? processName : "unknown");
+        Errno errno = signal.equals("SIGKILL") ? ISO9001Errno.ERRNO_SIGKILL_SENT : ISO9001Errno.ERRNO_SIGTERM_SENT;
         recordViolation(category, message, "PID: " + pid, errno.getCode());
-
-        return errno.getError(
-            processName != null ? processName : "process",
-            pid,
-            "Service shutdown or user request");
+        return errno.getError(processName != null ? processName : "process", pid, "Service shutdown or user request");
     }
 
-    /**
-     * Get recommended action for an error.
-     *
-     * @param errorCode The error code
-     * @return Recommended action string, or null if none available
-     */
     @Nullable
-    public static String getRecommendedAction(int errorCode) {
-        return ISO9001Errno.getRecommendedAction(errorCode);
-    }
-
+    public static String getRecommendedAction(int errorCode) { return ISO9001Errno.getRecommendedAction(errorCode); }
 }
