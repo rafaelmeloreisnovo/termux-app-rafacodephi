@@ -72,18 +72,15 @@ def validate() -> list[str]:
     session = read(SESSION, errors)
     profile_tool = read(PROFILE_TOOL, errors)
 
-    # Build/source provenance: rewritten archives are native-incbin inputs and
-    # CI/local preflight is the materializer. Do not require obsolete Gradle task names.
     for zip_name in REWRITTEN_ZIPS:
         require(asm, f'.incbin "{zip_name}"', "native incbin", errors)
         require(build_gradle, zip_name, "gradle bootstrap input declaration", errors)
         require(build_script, zip_name, "bootstrap generation script", errors)
     for token in ("verifyBootstrapZipsPresent", "externalNativeBuild", "validateSideBySideContract"):
         require(build_gradle, token, "gradle bootstrap contract", errors)
-    for token in ("prepare_bootstrap_env", "Bootstrap source:", "BOOTSTRAP_PROFILE_BUILD_PASS"):
+    for token in ("Bootstrap source:", "bash scripts/build_bootstrap_profile.sh", "Verifying bootstrap contract"):
         require(prepare, token, "bootstrap preflight materializer", errors)
 
-    # Package payload and wrappers remain explicit.
     for token in (
         "bin/sh", "bin/pkg", "bin/busybox", "bin/proot", "bin/apkmanager",
         "bin/shellbash", "bin/busybox-safe", "bin/proot-safe", "SYMLINKS.txt",
@@ -94,15 +91,12 @@ def validate() -> list[str]:
     for applet in COMMAND_WRAPPER_APPLETS:
         require(build_script + "\n" + builder, applet, "busybox wrapper applet", errors)
 
-    # Runtime path source of truth must derive from Context.getFilesDir().
     for token in (
         "context.getFilesDir()", "prefixDirPath()", "stagingPrefixDirPath()",
         "RELOCATED_ANDROID_ASSIGNED", "realPkgRelocationClaimAllowed()", "return false;",
     ):
         require(runtime_paths, token, "runtime path resolver", errors)
 
-    # Installer must probe the real assigned path, stage atomically, and never
-    # assume that real apt/dpkg ELFs became relocatable.
     for token in (
         "TermuxRuntimePaths.init(activity)", "verifyRuntimeFilesDirectoryWritable(activity)",
         "BootstrapWizardSource.loadAcceptedBytes(context)", "verifyBootstrapZipIntegrity(zipBytes)",
@@ -117,7 +111,6 @@ def validate() -> list[str]:
     ):
         require(installer, token, "runtime installer", errors)
 
-    # Wizard document picker is a real source route, not decorative UI.
     for token in (
         "Intent.ACTION_OPEN_DOCUMENT", "Select bootstrap.zip", "BootstrapWizardSource.accept(this, uri)",
         "TermuxRuntimePaths.filesDirPath()", "TermuxRuntimePaths.prefixDirPath()",
@@ -125,7 +118,6 @@ def validate() -> list[str]:
     ):
         require(wizard, token, "wizard filesystem route", errors)
 
-    # Selected file must be accepted with provenance and fail-closed on relocated layouts.
     for token in (
         "HOST_ACCEPTED_CANONICAL_BOOTSTRAP", "expectedHashForCurrentAbi()", "blake3Hex",
         "BOOTSTRAP_PROFILE.json", "SYMLINKS.txt", "bin/sh", "bin/pkg", "bin/busybox", "bin/proot",
@@ -134,11 +126,9 @@ def validate() -> list[str]:
     ):
         require(wizard_source, token, "wizard bootstrap source", errors)
 
-    # Profile materializer must actually place the manifest in the ZIP.
     for token in ("PROFILE_FILE = \"BOOTSTRAP_PROFILE.json\"", "out.writestr(zi, profile_data)", "claim_allowed"):
         require(profile_tool, token, "bootstrap profile manifest", errors)
 
-    # Startup and shell environment must consume the same runtime path graph.
     for token in (
         "TermuxRuntimePaths.init(context)", "runtimeFilesDirectoryAccessible()",
         "new File(TermuxRuntimePaths.binDirPath(), \"sh\")",
