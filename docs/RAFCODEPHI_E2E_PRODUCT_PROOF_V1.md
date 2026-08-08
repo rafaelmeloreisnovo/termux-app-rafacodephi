@@ -4,54 +4,87 @@
 
 Turn the RAFCODEPHI Android/Termux stack into one falsifiable product path:
 
-`packages → bootstrap → APK → physical device → workload → receipt → reproduction`
+`termux-packages source → bootstrap ZIP → APK build → physical device → workload → receipt → reproduction`
 
-This contract does **not** convert CI success into a physical-device claim. Cloud CI validates only the proof machinery. A product claim is allowed only after two independent physical receipts reproduce the same source/artifact/workload observation.
+The chain is split into three evidence envelopes so no layer can silently promote the next one.
 
-## Invariant
+## Gate model
 
-`claim_allowed=false` is the default.
+1. **Bootstrap source manifest — `termux-packages`**
+   - validates a `real-pkg` bootstrap profile;
+   - records `termux-packages` commit, ABI, package/prefix and bootstrap SHA-256;
+   - keeps `device_runtime=TOKEN_VAZIO` and `claim_allowed=false`.
 
-A single device run always records:
+2. **Build receipt — `termux-app-rafacodephi`**
+   - verifies the local bootstrap ZIP SHA-256 equals the source manifest;
+   - hashes the built APK;
+   - records both repositories/commits in one build envelope;
+   - keeps physical runtime `TOKEN_VAZIO`.
 
-- `packages=PASS` only when `pkg` and `apt` are present and `apt --version` executes;
-- `bootstrap=PASS` only when the canonical RAFCODEPHI prefix contains the required shell/package/proot surface;
-- `apk=PASS` only when Android resolves the installed package and the installed `base.apk` SHA-256 equals the expected build SHA-256;
-- `device=PASS` only on a supported canonical ABI and the RAFCODEPHI prefix;
-- `workload=PASS` only when the workload exits zero and its stdout is hashed;
-- `receipt=PASS` only after a canonical JSON receipt is emitted;
-- `reproduction=TOKEN_VAZIO` because one observation cannot prove its own reproducibility.
+3. **Physical-device receipt**
+   - consumes the build receipt;
+   - verifies the installed `base.apk` SHA-256 equals the build receipt;
+   - checks the canonical RAFCODEPHI prefix and required `sh/bash/pkg/apt/dpkg/proot` surface;
+   - executes and hashes a workload;
+   - leaves `reproduction=TOKEN_VAZIO`.
 
-The validator derives promotion. It never trusts a receipt that sets `claim_allowed=true`.
+A fourth step compares two independent physical receipts. Only that validator may return `claim_allowed=true`.
 
-## Collect receipt A on the physical Android device
+## 1. Produce bootstrap source manifest
 
-From the installed `com.termux.rafacodephi` shell:
+On `rafaelmeloreisnovo/termux-packages` after producing a canonical `real-pkg` bootstrap ZIP:
+
+```bash
+python3 scripts/emit_rafcodephi_bootstrap_source_manifest.py \
+  --artifact <bootstrap.zip> \
+  --arch aarch64 \
+  --out reports/bootstrap-source-arm64.json
+```
+
+Use `--arch arm` for the 32-bit ARM artifact.
+
+This step proves artifact identity and profile compatibility only. It does not prove DEB repository reachability, Android installation, runtime, or performance.
+
+## 2. Bind bootstrap to APK build
+
+In `rafaelmeloreisnovo/termux-app-rafacodephi`, with the exact source manifest and bootstrap ZIP used by the build:
+
+```bash
+python3 scripts/emit_e2e_build_receipt.py \
+  --bootstrap-source-manifest reports/bootstrap-source-arm64.json \
+  --bootstrap-zip <exact-bootstrap-used-by-build.zip> \
+  --apk <built.apk> \
+  --out reports/e2e-build-arm64.json
+```
+
+The command fails closed if the bootstrap ZIP hash differs from the `termux-packages` source manifest.
+
+## 3. Collect receipt A on physical Android
+
+Copy `reports/e2e-build-arm64.json` onto the installed `com.termux.rafacodephi` environment and run:
 
 ```bash
 bash scripts/collect_e2e_device_receipt.sh \
-  --git-commit <40-hex-commit-used-to-build> \
-  --apk-sha256 <sha256-of-built-apk> \
-  --bootstrap-sha256 <sha256-of-embedded-bootstrap> \
+  --build-receipt reports/e2e-build-arm64.json \
   --out reports/device-e2e/device-a.json
 ```
 
-For a real workload, replace the default deterministic smoke workload:
+For a deterministic application workload:
 
 ```bash
 bash scripts/collect_e2e_device_receipt.sh \
-  --git-commit <40hex> \
-  --apk-sha256 <64hex> \
-  --bootstrap-sha256 <64hex> \
+  --build-receipt reports/e2e-build-arm64.json \
   --workload 'your deterministic command here' \
   --out reports/device-e2e/device-a.json
 ```
 
-## Collect receipt B
+The collector requires the installed APK hash to match the build receipt. A mismatch is `BLOCKED`.
 
-Reinstall/restart from the same build inputs and collect a second independent run as `device-b.json`. A different device is stronger evidence; a fresh independent run on the same device is still useful but should be described honestly.
+## 4. Collect receipt B
 
-## Evaluate promotion
+Perform an independent rerun from the same build provenance and save it as `device-b.json`. A different device is stronger evidence; a fresh independent run on the same device is still useful but must not be described as independent hardware replication.
+
+## 5. Evaluate reproduction
 
 ```bash
 python3 scripts/validate_e2e_receipt.py \
@@ -59,30 +92,44 @@ python3 scripts/validate_e2e_receipt.py \
   --reference reports/device-e2e/device-a.json
 ```
 
-Promotion is `PASS` only if:
+Promotion is `PASS` only when both receipts have the first six stages `PASS` and match on:
 
-1. both receipts are structurally valid;
-2. their first six stages are `PASS`;
-3. installed APK hash equals build provenance;
-4. Git commit, APK hash and bootstrap hash match;
-5. workload command and stdout hash match;
-6. receipt IDs differ.
+- app repository + commit;
+- build receipt SHA-256;
+- APK SHA-256;
+- `termux-packages` repository + commit;
+- bootstrap source-manifest SHA-256;
+- bootstrap artifact SHA-256;
+- bootstrap profile SHA-256;
+- workload command;
+- workload stdout SHA-256.
 
-Any mismatch produces `BLOCKED`, not an inferred success.
+Receipt IDs must differ.
+
+## Invariants
+
+`claim_allowed=false` is the default.
+
+Cloud CI verifies only proof machinery and synthetic adverse cases. CI green is not a physical-device receipt.
+
+`TOKEN_VAZIO` is preserved whenever required evidence is absent. It is never converted to `PASS` by inference.
 
 ## What this closes
 
-This adds the missing product-level evidence bridge between build CI and actual Android execution. It makes the proof boundary machine-checkable and turns `TOKEN_VAZIO` for physical reproduction into a concrete, fillable artifact.
+The implementation supplies a machine-checkable custody chain:
+
+`termux-packages commit → source manifest → bootstrap hash → app commit → APK hash → installed APK hash → workload hash → independent reproduction`
 
 ## What remains outside the claim
 
-This v1 does not by itself prove:
+This v1 still does not prove:
 
+- DEB repository/network availability end-to-end;
+- package installation of arbitrary packages from a production repository;
 - performance superiority;
-- security certification;
 - long-duration stability;
-- package repository/network availability;
-- third-party device coverage;
+- security certification;
+- broad third-party device coverage;
 - market adoption or commercial readiness.
 
-Those require separate receipts and gates.
+Those remain separate evidence gates.
