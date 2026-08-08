@@ -56,8 +56,8 @@ def classify_legacy_prefix(entry: str, data: bytes) -> list[dict]:
                 entry=entry,
                 legacy_prefix=legacy,
                 detail=(
-                    "Binary/non-UTF8 payload contains the upstream com.termux prefix. "
-                    "In-place byte replacement is forbidden because prefix lengths differ and may corrupt ELF/data."
+                    "recommendation=rebuild package with RAFCODEΦ prefix or use a safe compatibility strategy; "
+                    "no binary replacement was performed"
                 ),
             ))
         else:
@@ -65,7 +65,7 @@ def classify_legacy_prefix(entry: str, data: bytes) -> list[dict]:
                 TEXT_RISK,
                 entry=entry,
                 legacy_prefix=legacy,
-                detail="Text payload still contains the upstream com.termux prefix.",
+                detail="text payload still contains the upstream com.termux prefix",
             ))
     return results
 
@@ -100,7 +100,7 @@ def check(path: Path) -> list[dict]:
 
         for name in names:
             if name.startswith("/") or ".." in name.split("/"):
-                findings.append(finding("UNSAFE_ZIP_ENTRY", entry=name, detail="absolute/traversal path forbidden"))
+                findings.append(finding("UNSAFE_ZIP_ENTRY", entry=name, detail="unsafe zip entry: absolute/traversal path forbidden"))
 
         for name in sorted(names):
             if name.endswith("/"):
@@ -188,6 +188,27 @@ def audit(path: Path) -> dict:
     }
 
 
+def human_diagnostic(report: dict) -> list[str]:
+    path = report.get("zip", "bootstrap.zip")
+    lines: list[str] = []
+    for item in report.get("findings", []):
+        kind = item.get("kind", "UNKNOWN")
+        entry = item.get("entry", "")
+        legacy = item.get("legacy_prefix", "")
+        detail = item.get("detail", "")
+        if kind == BINARY_RISK:
+            lines.append(f"{path}: {kind}: entry={entry} legacy_prefix={legacy} {detail}")
+        elif kind == TEXT_RISK:
+            lines.append(f"{path}: legacy prefix in text entry={entry} legacy_prefix={legacy}")
+        elif kind == "UNSAFE_ZIP_ENTRY":
+            lines.append(f"{path}: unsafe zip entry {entry}")
+        elif entry:
+            lines.append(f"{path}: {kind}: entry={entry} {detail}".rstrip())
+        else:
+            lines.append(f"{path}: {kind}: {detail}".rstrip())
+    return lines
+
+
 def write_report(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
@@ -252,8 +273,14 @@ def main(argv: list[str]) -> int:
         write_report(args.json_path, payload)
     print(json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2))
 
+    for report in reports:
+        if report.get("state") != "PASS":
+            for line in human_diagnostic(report):
+                print(line, file=sys.stderr)
+
     states = {report["state"] for report in reports}
     if states == {"PASS"}:
+        print("real_arm_bootstrap_core=PASS")
         return 0
     # BLOCKED and FAIL both stop promotion. The JSON reason distinguishes them.
     return 1
