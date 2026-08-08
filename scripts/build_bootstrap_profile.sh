@@ -8,29 +8,66 @@ PROFILE="${RAF_BOOTSTRAP_PROFILE:-bridge}"
 PACKAGE_NAME="${TERMUX_BOOTSTRAP_PACKAGE_NAME:-com.termux.rafacodephi}"
 SOURCE_REPO="${RAFCODEPHI_REAL_PKG_REPO:-https://packages.termux.dev/apt/termux-main}"
 REAL_PKG_ARCH="${RAFCODEPHI_REAL_PKG_ARCH:-all}"
+SKIP_BUILD="${RAF_BOOTSTRAP_SKIP_BUILD:-false}"
 
 case "$PROFILE" in
-  bridge)
-    RAFCODEPHI_REAL_PKG_BOOTSTRAP=false \
-      bash scripts/build_rafaelia_bootstraps.sh
-    ;;
-  real-pkg)
-    case "$REAL_PKG_ARCH" in
-      all|aarch64|arm) ;;
-      *)
-        echo "Unsupported RAFCODEPHI_REAL_PKG_ARCH=$REAL_PKG_ARCH (allowed: all, aarch64, arm)" >&2
-        exit 2
-        ;;
-    esac
-    RAFCODEPHI_REAL_PKG_BOOTSTRAP=true \
-      RAFCODEPHI_REAL_PKG_ARCH="$REAL_PKG_ARCH" \
-      bash scripts/build_rafaelia_bootstraps.sh
-    ;;
+  bridge|real-pkg) ;;
   *)
     echo "Unsupported RAF_BOOTSTRAP_PROFILE=$PROFILE (allowed: bridge, real-pkg)" >&2
     exit 2
     ;;
 esac
+case "$REAL_PKG_ARCH" in
+  all|aarch64|arm) ;;
+  *)
+    echo "Unsupported RAFCODEPHI_REAL_PKG_ARCH=$REAL_PKG_ARCH (allowed: all, aarch64, arm)" >&2
+    exit 2
+    ;;
+esac
+case "$SKIP_BUILD" in
+  true|1|yes|on)
+    SKIP_BUILD=true
+    ;;
+  false|0|no|off)
+    SKIP_BUILD=false
+    ;;
+  *)
+    echo "Unsupported RAF_BOOTSTRAP_SKIP_BUILD=$SKIP_BUILD (allowed: true/false)" >&2
+    exit 2
+    ;;
+esac
+
+embedded_archives=(
+  app/src/main/cpp/rewritten-bootstrap-aarch64.zip
+  app/src/main/cpp/rewritten-bootstrap-arm.zip
+  app/src/main/cpp/rewritten-bootstrap-i686.zip
+  app/src/main/cpp/rewritten-bootstrap-x86_64.zip
+)
+
+if [[ "$SKIP_BUILD" == "false" ]]; then
+  case "$PROFILE" in
+    bridge)
+      RAFCODEPHI_REAL_PKG_BOOTSTRAP=false \
+        bash scripts/build_rafaelia_bootstraps.sh
+      ;;
+    real-pkg)
+      RAFCODEPHI_REAL_PKG_BOOTSTRAP=true \
+        RAFCODEPHI_REAL_PKG_ARCH="$REAL_PKG_ARCH" \
+        bash scripts/build_rafaelia_bootstraps.sh
+      ;;
+  esac
+else
+  # Same-observation path: a promotion gate may have already built and audited
+  # these exact raw archives. Do not download/rebuild them again before adding
+  # BOOTSTRAP_PROFILE.json; doing so would sever the audit -> candidate lineage.
+  for archive in "${embedded_archives[@]}"; do
+    [[ -s "$archive" ]] || {
+      echo "RAF_BOOTSTRAP_SKIP_BUILD=true but audited embedded archive is missing/empty: $archive" >&2
+      exit 1
+    }
+  done
+  echo "BOOTSTRAP_PROFILE_REUSE_AUDITED_BYTES=true profile=$PROFILE real_pkg_arch=$REAL_PKG_ARCH"
+fi
 
 profile_for_arch() {
   local arch="$1"
@@ -67,6 +104,7 @@ materialize_one app/src/main/cpp/rewritten-bootstrap-x86_64.zip x86_64 bridge
 mkdir -p build/reports
 export RAF_BOOTSTRAP_PROFILE_MATRIX_REQUESTED_PROFILE="$PROFILE"
 export RAF_BOOTSTRAP_PROFILE_MATRIX_REAL_PKG_ARCH="$REAL_PKG_ARCH"
+export RAF_BOOTSTRAP_PROFILE_MATRIX_REUSED_AUDITED_BYTES="$SKIP_BUILD"
 python3 - <<'PY'
 from __future__ import annotations
 import json
@@ -100,6 +138,7 @@ payload = {
     "schema": "rafcodephi-bootstrap-profile-matrix/v2",
     "requested_profile": os.environ.get("RAF_BOOTSTRAP_PROFILE_MATRIX_REQUESTED_PROFILE", "bridge"),
     "real_pkg_arch_request": os.environ.get("RAF_BOOTSTRAP_PROFILE_MATRIX_REAL_PKG_ARCH", "all"),
+    "reused_audited_bytes": os.environ.get("RAF_BOOTSTRAP_PROFILE_MATRIX_REUSED_AUDITED_BYTES", "false") == "true",
     "embedded_profile_by_arch": profile_by_arch,
     "structural_state": "PASS",
     "device_validation": "TOKEN_VAZIO",
@@ -151,4 +190,4 @@ Path("build/reports/bootstrap-profile-matrix.json").write_text(
 print(json.dumps(payload, sort_keys=True, indent=2))
 PY
 
-echo "BOOTSTRAP_PROFILE_BUILD_PASS profile=$PROFILE real_pkg_arch=$REAL_PKG_ARCH package=$PACKAGE_NAME"
+echo "BOOTSTRAP_PROFILE_BUILD_PASS profile=$PROFILE real_pkg_arch=$REAL_PKG_ARCH reused_audited_bytes=$SKIP_BUILD package=$PACKAGE_NAME"
