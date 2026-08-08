@@ -19,6 +19,7 @@ on:
       - 'tools/raf_bootstrap_profile.py'
       - 'configs/rafcodephi-bootstrap-profile-v1.json'
       - 'tests/test_bootstrap_evidence_contract.py'
+      - 'tests/test_real_arm_bootstrap_validator_runtime.py'
       - 'app/src/main/cpp/termux-bootstrap-zip.S'
       - '.github/workflows/bootstrap-real-pkg-arm32-candidate.yml'
 
@@ -51,7 +52,9 @@ jobs:
       - name: Validate YAML and bootstrap evidence source contracts
         run: |
           python3 -m pip install --disable-pip-version-check pytest
-          python3 -m pytest -q tests/test_bootstrap_evidence_contract.py
+          python3 -m pytest -q \
+            tests/test_bootstrap_evidence_contract.py \
+            tests/test_real_arm_bootstrap_validator_runtime.py
           python3 scripts/audit_github_actions_refs.py --strict --json /tmp/action-reference-audit.json
 
       - name: Build raw ARM32 real-pkg payload without unsafe promotion
