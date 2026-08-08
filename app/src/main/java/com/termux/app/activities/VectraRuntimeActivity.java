@@ -16,6 +16,7 @@ import androidx.cardview.widget.CardView;
 
 import com.termux.app.api.sensor.RafSensorAndroid;
 import com.termux.app.api.sensor.RafSensorContract;
+import com.termux.app.benchmark.BenchmarkMenuActivity;
 import com.termux.app.benchmark.IndustrialBenchmarkMethodology;
 import com.termux.app.benchmark.PaBenchmarkReceipt;
 import com.termux.lowlevel.BareMetal;
@@ -75,13 +76,32 @@ public class VectraRuntimeActivity extends AppCompatActivity {
         return true;
     }
 
-    private void renderRuntimeReport() {
-        addCard("Typed Sensor API", buildApiContractSummary());
-        addCard("Vectra Sampling Presets", buildSamplingPresetSummary());
-        addCard("Bare-metal Hardware Profile", buildHardwareProfileSummary());
-        addCard("Supported Sensor Inventory", buildSensorInventorySummary());
-        addCard("Deterministic Runtime Benchmark", buildBenchmarkSummary());
-        addIndustrialMethodologyCard();
+    private void initializeApiLowLevelLibrary() {
+        try {
+            System.loadLibrary("api_lowlevel");
+            apiLowLevelLibraryLoaded = true;
+            apiLowLevelLibraryError = "";
+        } catch (Throwable error) {
+            apiLowLevelLibraryLoaded = false;
+            apiLowLevelLibraryError = error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage());
+        }
+    }
+
+    private void refreshRuntimeReport() {
+        int epoch = renderEpoch.incrementAndGet();
+        contentLayout.removeAllViews();
+        new Thread(() -> renderRuntimeReport(epoch), "vectra-runtime-report-" + epoch).start();
+    }
+
+    private void renderRuntimeReport(int epoch) {
+        addCard(epoch, "Scope / Deployment Truth", buildScopeSummary());
+        addCard(epoch, "Typed Sensor API", safeBuild("sensor API contract", this::buildApiContractSummary));
+        addCard(epoch, "Vectra Sampling Presets", safeBuild("sampling presets", this::buildSamplingPresetSummary));
+        addCard(epoch, "Bare-metal Hardware Profile", safeBuild("hardware profile", this::buildHardwareProfileSummary));
+        addCard(epoch, "Supported Sensor Inventory", safeBuild("sensor inventory", this::buildSensorInventorySummary));
+        addCard(epoch, "Deterministic Runtime Benchmark", safeBuild("runtime benchmark receipt", this::buildBenchmarkSummary));
+        addCard(epoch, "Evidence Gaps / TOKEN_VAZIO", safeBuild("evidence gap ledger", this::buildGapSummary));
+        addRuntimeActionsCard(epoch);
     }
 
     private String safeBuild(String section, SectionBuilder builder) {
@@ -144,8 +164,10 @@ public class VectraRuntimeActivity extends AppCompatActivity {
         });
     }
 
-    private void addIndustrialMethodologyCard() {
+    private void addRuntimeActionsCard(int epoch) {
         runOnUiThread(() -> {
+            if (epoch != renderEpoch.get() || isFinishing() || isDestroyed()) return;
+
             CardView card = new CardView(this);
             LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -161,18 +183,23 @@ public class VectraRuntimeActivity extends AppCompatActivity {
             body.setPadding(24, 24, 24, 24);
 
             TextView title = new TextView(this);
-            title.setText("Industrial Benchmark Methodology");
+            title.setText("Internal Benchmark Actions");
             title.setTextSize(18);
             title.setTextColor(getResources().getColor(R.color.termux_text_color_primary, getTheme()));
             body.addView(title);
 
             TextView description = new TextView(this);
             description.setText(
-                "Generate an auditable methods file covering workload invariants, silicon-observation boundaries, " +
-                "seven production domains, statistical rules, provenance, interference gates and release criteria.");
+                "These actions operate only inside Termux RAFCODEΦ. Run the packaged PA ELF to fill runtime evidence, " +
+                "then generate the industrial methods/gap file from the same installed APK.");
             description.setTextSize(14);
             description.setPadding(0, 12, 0, 16);
             body.addView(description);
+
+            Button execute = new Button(this);
+            execute.setText("RUN PA ELF BENCHMARK");
+            execute.setOnClickListener(view -> startActivity(new Intent(this, BenchmarkMenuActivity.class)));
+            body.addView(execute);
 
             Button generate = new Button(this);
             generate.setText("GENERATE INDUSTRIAL METHODS FILE");
@@ -198,6 +225,11 @@ public class VectraRuntimeActivity extends AppCompatActivity {
                 }, "industrial-method-export").start();
             });
             body.addView(generate);
+
+            Button refresh = new Button(this);
+            refresh.setText("REFRESH RUNTIME EVIDENCE");
+            refresh.setOnClickListener(view -> refreshRuntimeReport());
+            body.addView(refresh);
 
             card.addView(body);
             contentLayout.addView(card);
@@ -257,15 +289,19 @@ public class VectraRuntimeActivity extends AppCompatActivity {
         sb.append("• Effective capabilities: 0x").append(Integer.toHexString(caps.effective)).append("\n");
         sb.append("• Runtime capabilities directly valid: ").append(caps.runtimeValid).append("\n");
         sb.append("• Access flags: 0x").append(Integer.toHexString(profile.accessFlags)).append("\n");
-        sb.append("• CPUs online: ").append(profile.cpusOnline).append("\n");
-        sb.append("• Page size: ").append(profile.pageSize).append(" bytes\n");
-        if (profile.cacheLine > 0) {
-            sb.append("• Cache line: ").append(profile.cacheLine).append(" bytes\n");
+        if (profile.cpusOnline > 0) sb.append("• CPUs online: ").append(profile.cpusOnline).append("\n");
+        else sb.append("• CPUs online: UNAVAILABLE\n");
+        if (profile.pageSize > 0) sb.append("• Page size: ").append(profile.pageSize).append(" bytes\n");
+        else sb.append("• Page size: UNAVAILABLE\n");
+        if (profile.cacheLine > 0) sb.append("• Cache line: ").append(profile.cacheLine).append(" bytes\n");
+        else sb.append("• Cache line: UNAVAILABLE (detector returned non-positive value)\n");
+        String clusters = profile.cpuClusters == null ? "" : profile.cpuClusters.trim();
+        if (!clusters.isEmpty() && !"n/a".equalsIgnoreCase(clusters) && !"unknown".equalsIgnoreCase(clusters)) {
+            sb.append("• CPU clusters: ").append(clusters).append("\n");
         } else {
-            sb.append("• Cache line: UNAVAILABLE (runtime detector returned 0; zero is not treated as a physical cache-line size)\n");
+            sb.append("• CPU clusters: UNAVAILABLE\n");
         }
-        sb.append("• CPU clusters: ").append(profile.cpuClusters).append("\n");
-        sb.append("• Device ABI list: ").append(String.join(", ", Build.SUPPORTED_ABIS));
+        sb.append("• Device ABI list: ").append(joinStrings(Build.SUPPORTED_ABIS));
         return sb.toString();
     }
 
@@ -295,36 +331,57 @@ public class VectraRuntimeActivity extends AppCompatActivity {
             }
         }
         List<Sensor> allSensors = manager.getSensorList(Sensor.TYPE_ALL);
-        sb.append("\n• Total sensors reported by framework: ").append(allSensors.size());
-        sb.append("\n• Evidence boundary: inventory is observed; sampling latency/callback reproducibility requires a sampling receipt.");
+        sb.append("\n• Total sensors reported by framework: ").append(allSensors == null ? "UNAVAILABLE" : String.valueOf(allSensors.size()));
+        sb.append("\n• Evidence boundary: inventory is observed; framework power metadata is not measured energy; callback timing requires a sampling receipt.");
         return sb.toString();
     }
 
     private String buildBenchmarkSummary() {
         StringBuilder sb = new StringBuilder();
+        String readState = PaBenchmarkReceipt.getReadState(this);
         JSONObject receipt = PaBenchmarkReceipt.read(this);
-        if (receipt == null) {
-            sb.append("• Runtime evidence: NOT_MEASURED — no persisted PA device receipt\n");
-            sb.append("• Proof route: BenchmarkMenuActivity → Android linker → packaged freestanding ELF\n");
-            sb.append("• Next proof: execute the ELF benchmark once; the launcher now persists artifact hash, stdout markers and exit code atomically\n");
+        if ("NOT_MEASURED".equals(readState)) {
+            sb.append("• Runtime evidence: NOT_MEASURED — no PA receipt from this build/install\n");
+            sb.append("• Proof route: internal Vectra screen → BenchmarkMenuActivity → Android linker → packaged freestanding ELF\n");
+            sb.append("• External Vectras app/CI: NOT_REQUIRED\n");
+            sb.append("• Next proof: tap RUN PA ELF BENCHMARK below");
+        } else if (receipt == null) {
+            sb.append("• Runtime evidence: INVALIDATED\n");
+            sb.append("• Reason: latest PA receipt exists but cannot be parsed within the receipt contract\n");
+            sb.append("• Claim promotion: false\n");
+            sb.append("• Recovery: run PA ELF again; history directory is not deleted");
         } else {
-            boolean pass = receipt.optBoolean("runtime_exec_pass", false);
-            sb.append("• Runtime evidence: ").append(pass ? "PASS" : "FAIL/BLOCKED").append("\n");
+            String state = receipt.optString("evidence_state", "INVALIDATED");
+            sb.append("• Runtime evidence: ").append(state).append("\n");
+            sb.append("• Reason: ").append(receipt.optString("evidence_reason", "UNKNOWN")).append("\n");
             sb.append("• Receipt: ").append(PaBenchmarkReceipt.getReceiptFile(this).getAbsolutePath()).append("\n");
+            sb.append("• History: ").append(PaBenchmarkReceipt.getHistoryDirectory(this).getAbsolutePath()).append("\n");
             sb.append("• Timestamp: ").append(receipt.optString("generated_at_utc", "UNAVAILABLE")).append("\n");
-            sb.append("• Linker: ").append(receipt.optString("linker", "UNAVAILABLE")).append("\n");
+            sb.append("• Linker: ").append(emptyToUnavailable(receipt.optString("linker", ""))).append("\n");
             sb.append("• Exit code: ").append(receipt.optInt("exit_code", -1)).append("\n");
-            sb.append("• ELF SHA-256: ").append(receipt.optString("elf_sha256", "UNAVAILABLE")).append("\n");
-            sb.append("• Stdout SHA-256: ").append(receipt.optString("stdout_sha256", "UNAVAILABLE")).append("\n");
+            sb.append("• Timed out: ").append(receipt.optBoolean("timed_out", false)).append("\n");
+            sb.append("• Wall time: ").append(receipt.optLong("wall_time_ms", -1L)).append(" ms\n");
+            sb.append("• Stdout truncated: ").append(receipt.optBoolean("stdout_truncated", false)).append("\n");
+            sb.append("• ELF SHA-256: ").append(emptyToUnavailable(receipt.optString("elf_sha256", ""))).append("\n");
+            sb.append("• Stdout SHA-256: ").append(emptyToUnavailable(receipt.optString("stdout_sha256", ""))).append("\n");
             JSONObject markers = receipt.optJSONObject("markers");
             if (markers != null) {
                 int markerPass = 0;
                 String[] names = {"header", "mode_contract_marker", "r0", "r1", "r2", "r3", "r4", "r5", "end"};
                 for (String name : names) if (markers.optBoolean(name, false)) markerPass++;
                 sb.append("• Required stdout markers: ").append(markerPass).append("/").append(names.length).append("\n");
+            } else {
+                sb.append("• Required stdout markers: INVALIDATED — marker object absent\n");
             }
-            sb.append("• Evidence scope: ").append(receipt.optString("evidence_scope", "UNAVAILABLE")).append("\n");
-            sb.append("• Claim boundary: runtime execution proof is not promoted to isolated-silicon or reproducibility proof\n");
+            sb.append("• Runtime execution claim allowed: ")
+                .append(receipt.optBoolean("claim_allowed_runtime_execution", false)).append("\n");
+            sb.append("• Isolated-silicon claim allowed: false\n");
+            sb.append("• Reproducibility claim allowed: false until homogeneous repeated trials exist\n");
+        }
+
+        if (!apiLowLevelLibraryLoaded) {
+            sb.append("\n• api_lowlevel state query: BLOCKED (").append(apiLowLevelLibraryError).append(")");
+            return sb.toString();
         }
 
         try {
@@ -336,12 +393,11 @@ public class VectraRuntimeActivity extends AppCompatActivity {
             int stateEntropy = hiWord & 0xFF;
             int stateEvents = (int)(state & 0xFFFFFFFFL);
             sb.append(String.format(Locale.US,
-                "• Low-level state: phase=%d att=%d flags=0x%02x entropy=0x%02x events=%d",
+                "\n• api_lowlevel state: phase=%d att=%d flags=0x%02x entropy=0x%02x events=%d",
                 statePhase, stateAtt, stateFlags, stateEntropy, stateEvents));
         } catch (Throwable error) {
-            sb.append("• Low-level state: UNAVAILABLE (")
-                .append(error.getClass().getSimpleName())
-                .append(")");
+            sb.append("\n• api_lowlevel state: UNAVAILABLE (")
+                .append(error.getClass().getSimpleName()).append(")");
         }
         return sb.toString();
     }

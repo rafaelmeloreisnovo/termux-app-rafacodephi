@@ -23,9 +23,10 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * DEX edge for the freestanding PA benchmark inside Termux RAFCODEΦ.
  *
- * This class does not load a library and declares no Java native method.
- * It only asks Android's linker to execute the packaged ELF, captures stdout,
- * and persists an atomic evidence receipt for the runtime/industrial views.
+ * This is not the external Vectras application and does not depend on any
+ * Vectras package or CI. The activity asks Android's linker to execute the
+ * packaged ELF, drains stdout with a bounded capture buffer, enforces a timeout
+ * and persists fail-closed evidence for the internal Vectra runtime screen.
  */
 public final class BenchmarkMenuActivity extends Activity {
 
@@ -56,7 +57,11 @@ public final class BenchmarkMenuActivity extends Activity {
         root.addView(title);
 
         TextView contract = new TextView(this);
-        contract.setText("DEX launcher → Android linker → ELF _start → C/ASM/syscalls\nNo JNI · No libc · No malloc · No ZIP\nEvidence: artifact hash + exit code + stdout markers + atomic receipt");
+        contract.setText(
+            "Internal Termux RAFCODEΦ path — no external Vectras app required\n" +
+            "DEX launcher → Android linker → ELF _start → C/ASM/syscalls\n" +
+            "No JNI · No libc · No malloc · No ZIP\n" +
+            "Evidence: artifact hash + exit code + timeout + stdout markers + append history");
         contract.setPadding(0, 12, 0, 16);
         root.addView(contract);
 
@@ -67,7 +72,17 @@ public final class BenchmarkMenuActivity extends Activity {
 
         output = new TextView(this);
         output.setTextIsSelectable(true);
-        output.setText("ELF not executed. No device receipt exists until an execution is attempted.");
+        String readState = PaBenchmarkReceipt.getReadState(this);
+        if ("AVAILABLE".equals(readState)) {
+            JSONObject existing = PaBenchmarkReceipt.read(this);
+            output.setText("Latest device receipt: "
+                + (existing == null ? "INVALIDATED" : existing.optString("evidence_state", "UNKNOWN"))
+                + "\nRun again to append a new observation.");
+        } else if ("INVALIDATED".equals(readState)) {
+            output.setText("Latest receipt exists but is unreadable: INVALIDATED. Run again to create new evidence; history is preserved.");
+        } else {
+            output.setText("ELF not executed by this build. Runtime evidence: NOT_MEASURED.");
+        }
         output.setPadding(0, 16, 0, 0);
         root.addView(output, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -88,13 +103,27 @@ public final class BenchmarkMenuActivity extends Activity {
             int exit = -1;
             String result;
             Throwable executionError = null;
+            boolean timedOut = false;
+            boolean stdoutTruncated = false;
+            long stdoutObservedBytes = 0L;
+            long startMs = SystemClock.elapsedRealtime();
+
+            Process process = null;
+            InputStream processOutput = null;
+            Thread reader = null;
+            ByteArrayOutputStream captured = new ByteArrayOutputStream(4096);
+            AtomicLong observed = new AtomicLong(0L);
+            AtomicBoolean truncated = new AtomicBoolean(false);
+            AtomicReference<Throwable> readerError = new AtomicReference<>(null);
 
             try {
                 elf = new File(getApplicationInfo().nativeLibraryDir, "libraf_pa_core.so");
                 if (!elf.isFile()) throw new IllegalStateException("ELF missing: " + elf);
 
                 linker = selectLinker();
-                Process process = new ProcessBuilder(linker, elf.getAbsolutePath())
+                if (linker == null) throw new IllegalStateException("Android linker unavailable");
+
+                process = new ProcessBuilder(linker, elf.getAbsolutePath())
                     .redirectErrorStream(true)
                     .start();
 
@@ -143,23 +172,67 @@ public final class BenchmarkMenuActivity extends Activity {
                     }
                 }
 
-                exit = process.waitFor();
-                stdout = new String(bytes.toByteArray(), StandardCharsets.US_ASCII);
-                result = "linker=" + linker + "\nelf=" + elf + "\nexit=" + exit + "\n\n" + stdout;
+                if (reader != null) {
+                    reader.join(READER_JOIN_MS);
+                    if (reader.isAlive()) {
+                        truncated.set(true);
+                        reader.interrupt();
+                    }
+                }
+
+                Throwable streamFailure = readerError.get();
+                if (streamFailure != null && !timedOut) {
+                    executionError = new IllegalStateException("stdout capture failed", streamFailure);
+                }
+
+                synchronized (captured) {
+                    stdout = new String(captured.toByteArray(), StandardCharsets.US_ASCII);
+                }
+                stdoutObservedBytes = observed.get();
+                stdoutTruncated = truncated.get();
+
+                result = "scope=INTERNAL_TERMUX_RAFCODEPHI\n"
+                    + "external_vectras_required=false\n"
+                    + "linker=" + linker + "\n"
+                    + "elf=" + elf + "\n"
+                    + "exit=" + exit + "\n"
+                    + "timed_out=" + timedOut + "\n"
+                    + "stdout_observed_bytes=" + stdoutObservedBytes + "\n"
+                    + "stdout_truncated=" + stdoutTruncated + "\n\n"
+                    + stdout;
             } catch (Throwable error) {
                 executionError = error;
+                try {
+                    if (process != null) process.destroy();
+                } catch (Throwable ignored) {
+                }
                 result = "FAIL_CLOSED\n" + error.getClass().getSimpleName() + ": " + error.getMessage();
             }
 
+            long wallTimeMs = Math.max(0L, SystemClock.elapsedRealtime() - startMs);
+
             try {
                 File receipt = PaBenchmarkReceipt.recordExecution(
-                    this, elf, linker, exit, stdout, executionError);
+                    this, elf, linker, exit, stdout, executionError, timedOut,
+                    stdoutTruncated, stdoutObservedBytes, wallTimeMs);
+                JSONObject persisted = PaBenchmarkReceipt.read(this);
+                String evidenceState = persisted == null
+                    ? "INVALIDATED"
+                    : persisted.optString("evidence_state", "INVALIDATED");
+                String evidenceReason = persisted == null
+                    ? "RECEIPT_UNREADABLE_AFTER_WRITE"
+                    : persisted.optString("evidence_reason", "UNKNOWN");
                 result += "\n\nreceipt=" + receipt.getAbsolutePath();
-                result += "\nevidence_state=" + (executionError == null && exit == 0
-                    ? "OBSERVED_CHECK_RECEIPT_MARKERS" : "FAIL_OR_BLOCKED");
+                result += "\nhistory=" + PaBenchmarkReceipt.getHistoryDirectory(this).getAbsolutePath();
+                result += "\nevidence_state=" + evidenceState;
+                result += "\nevidence_reason=" + evidenceReason;
+                result += "\nclaim_allowed_runtime_execution="
+                    + (persisted != null && persisted.optBoolean("claim_allowed_runtime_execution", false));
             } catch (Throwable receiptError) {
                 result += "\n\nRECEIPT_WRITE_FAIL_CLOSED="
                     + receiptError.getClass().getSimpleName() + ": " + receiptError.getMessage();
+                result += "\nevidence_state=INVALIDATED";
+                result += "\nclaim_allowed_runtime_execution=false";
             }
 
             final String rendered = result;
