@@ -91,16 +91,28 @@ def test_central_runner_binds_pre_post_environment_and_series_metadata() -> None
     assert "STDOUT_CAPTURE_LIMIT = 64 * 1024" in src
 
 
-def test_activity_exposes_governed_30_trial_series_without_silent_warmup_or_outlier_deletion() -> None:
-    src = read("app/src/main/java/com/termux/app/benchmark/BenchmarkMenuActivity.java")
-    assert "Run Governed 30-Trial Series" in src
-    assert "PaBenchmarkSeriesAnalyzer.MIN_DISTRIBUTION_N" in src
-    assert "NO_SILENT_WARMUP_NO_OUTLIER_DELETION" in src
-    assert "Cancel Series After Current Trial" in src
-    assert "PaBenchmarkRunner.runOnce(this, seriesId, index, target)" in src
-    assert "PaBenchmarkSeriesAnalyzer.analyzeAndWrite(this)" in src
-    assert "claim_allowed_reproducibility=false" in src
-    assert "claim_allowed_cross_device_comparison=false" in src
+def test_unified_activity_exposes_governed_30_trial_series_without_silent_deletion() -> None:
+    entry = read("app/src/main/java/com/termux/app/benchmark/BenchmarkMenuActivity.java")
+    ui = read("app/src/main/java/com/termux/app/activities/BetaOrchestratorActivity.java")
+    engine = read("app/src/main/java/com/termux/app/orchestration/BetaEvidenceOrchestrator.java")
+
+    # Existing manifest/settings/Vectra callers retain the historical entry point.
+    assert "extends BetaOrchestratorActivity" in entry
+
+    # Human-facing contract remains explicit after the refactor.
+    assert "Run governed 30-trial series" in ui
+    assert "STOP AFTER CURRENT ATOMIC STAGE" in ui
+    assert "Certification/release/cross-device claims remain blocked" in ui
+
+    # Execution responsibility moved into a reusable fail-closed orchestration layer.
+    assert "PaBenchmarkSeriesAnalyzer.MIN_DISTRIBUTION_N" in engine
+    assert "no_silent_warmup_deletion" in engine
+    assert "no_silent_outlier_deletion" in engine
+    assert "cancelAfterCurrentAtomicStage" in engine
+    assert "PaBenchmarkRunner.runOnce(context, seriesId, index, target)" in engine
+    assert "PaBenchmarkSeriesAnalyzer.analyzeAndWrite(context)" in engine
+    assert 'details.put("claim_allowed_reproducibility", false)' in engine
+    assert 'details.put("claim_allowed_cross_device_comparison", false)' in engine
 
 
 def test_claim_matrix_keeps_seven_gates_independent_and_broad_claims_closed() -> None:
