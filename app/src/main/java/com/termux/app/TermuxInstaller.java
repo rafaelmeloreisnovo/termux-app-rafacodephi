@@ -29,6 +29,7 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -48,6 +49,7 @@ public final class TermuxInstaller {
 
     private static final String LOG_TAG = "TermuxInstaller";
     private static final int COPY_BUFFER = 16 * 1024;
+    private static final int PROFILE_READ_LIMIT = 64 * 1024;
 
     private TermuxInstaller() {}
 
@@ -190,6 +192,11 @@ public final class TermuxInstaller {
             Os.symlink(link.first, link.second);
         }
 
+        // The archive profile records the canonical build prefix. The installed
+        // profile must record the actual Android-assigned runtime prefix so the
+        // post-install guard validates the observation that really exists.
+        materializeRuntimeBootstrapProfile(staging, prefix.getAbsolutePath());
+
         verifyRuntimeBinary(new File(staging, "bin/sh"), "sh", true);
         verifyRuntimeBinary(new File(staging, "bin/pkg"), "pkg", true);
         verifyRuntimeBinary(new File(staging, "bin/busybox"), "busybox", true);
@@ -216,6 +223,78 @@ public final class TermuxInstaller {
             + " bytes=" + bytes + " prefix=" + prefix
             + " source=" + BootstrapWizardSource.status(activity)
             + " layout=" + TermuxRuntimePaths.layoutState());
+    }
+
+    /**
+     * Convert archive provenance into installed-runtime provenance without
+     * changing the source archive. The source prefix is preserved explicitly.
+     */
+    private static void materializeRuntimeBootstrapProfile(File staging, String runtimePrefix) throws Exception {
+        File profileFile = new File(staging, "BOOTSTRAP_PROFILE.json");
+        if (!profileFile.isFile()) throw new IllegalStateException("BOOTSTRAP_PROFILE_MISSING_AFTER_EXTRACTION");
+
+        byte[] raw = readBoundedFile(profileFile, PROFILE_READ_LIMIT);
+        JSONObject profile = new JSONObject(new String(raw, StandardCharsets.UTF_8));
+        String sourcePrefix = profile.optString("prefix", "");
+        String profileName = profile.optString("profile", "UNKNOWN");
+        String packageLayer = profile.optString("package_layer", "UNKNOWN");
+
+        if (TermuxRuntimePaths.isRelocatedLayout()) {
+            boolean safeBridge = "bridge".equalsIgnoreCase(profileName)
+                && "bridge".equalsIgnoreCase(packageLayer)
+                && !profile.optBoolean("claim_allowed", true)
+                && !profile.optBoolean("release_allowed", true);
+            if (!safeBridge) {
+                throw new IllegalStateException("RUNTIME_PROFILE_RELOCATION_BLOCKED profile="
+                    + profileName + " package_layer=" + packageLayer);
+            }
+        }
+
+        profile.put("source_prefix", sourcePrefix);
+        profile.put("prefix", runtimePrefix);
+        profile.put("runtime_prefix", runtimePrefix);
+        profile.put("runtime_files_dir", TermuxRuntimePaths.filesDirPath());
+        profile.put("runtime_layout", TermuxRuntimePaths.layoutState());
+        profile.put("runtime_materialized", true);
+        profile.put("real_pkg_relocation_claim_allowed", false);
+        profile.put("claim_allowed", false);
+        profile.put("release_allowed", false);
+
+        File tmp = new File(staging, "BOOTSTRAP_PROFILE.json.tmp");
+        try (FileOutputStream output = new FileOutputStream(tmp)) {
+            output.write(profile.toString(2).getBytes(StandardCharsets.UTF_8));
+            output.write('\n');
+            output.flush();
+            output.getFD().sync();
+        }
+        if (!profileFile.delete()) {
+            tmp.delete();
+            throw new IllegalStateException("RUNTIME_PROFILE_REPLACE_DELETE_FAILED");
+        }
+        if (!tmp.renameTo(profileFile)) {
+            tmp.delete();
+            throw new IllegalStateException("RUNTIME_PROFILE_ATOMIC_RENAME_FAILED");
+        }
+        Os.chmod(profileFile.getAbsolutePath(), 0600);
+        Logger.logInfo(LOG_TAG, "Runtime bootstrap profile materialized source_prefix=" + sourcePrefix
+            + " runtime_prefix=" + runtimePrefix
+            + " layout=" + TermuxRuntimePaths.layoutState()
+            + " real_pkg_relocation_claim_allowed=false");
+    }
+
+    private static byte[] readBoundedFile(File file, int limit) throws Exception {
+        try (FileInputStream input = new FileInputStream(file);
+             ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[4096];
+            int total = 0;
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                total += read;
+                if (total > limit) throw new IllegalArgumentException("FILE_TOO_LARGE: " + file);
+                output.write(buffer, 0, read);
+            }
+            return output.toByteArray();
+        }
     }
 
     private static void verifyRuntimeFilesDirectoryWritable(Context context) throws Exception {
@@ -311,7 +390,8 @@ public final class TermuxInstaller {
         if (profile == null) throw new IllegalStateException("RELOCATED_RUNTIME_REQUIRES_BOOTSTRAP_PROFILE");
         boolean bridge = "bridge".equalsIgnoreCase(profile.optString("profile"))
             && "bridge".equalsIgnoreCase(profile.optString("package_layer"))
-            && !profile.optBoolean("claim_allowed", true);
+            && !profile.optBoolean("claim_allowed", true)
+            && !profile.optBoolean("release_allowed", true);
         if (!bridge) {
             throw new IllegalStateException("RELOCATED_RUNTIME_BLOCKED_FOR_REAL_OR_UNPROVEN_PACKAGE_LAYER profile="
                 + profile.optString("profile", "UNKNOWN") + " package_layer="
