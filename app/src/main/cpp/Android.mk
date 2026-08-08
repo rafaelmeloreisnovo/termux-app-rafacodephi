@@ -119,6 +119,11 @@ ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
 endif
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
     LOCAL_SRC_FILES += freestanding/raf_pa_entry_arm32.S
+    # Linux EABI syscalls place the syscall number in r7. In Thumb mode
+    # modern Clang reserves r7 as the frame pointer, so compile only this
+    # freestanding PA module in ARM mode. Other app/native modules stay
+    # untouched and retain their existing instruction-mode policy.
+    LOCAL_ARM_MODE := arm
     LOCAL_CFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon-vfpv4
 endif
 LOCAL_CFLAGS += -std=c11 -O3 -fPIC -ffreestanding -fno-builtin
