@@ -6,7 +6,8 @@ cd "$ROOT_DIR"
 
 MIN_FREE_MB="${MIN_FREE_MB:-1024}"
 BOOTSTRAP_DIR="app/src/main/cpp"
-BOOTSTRAPS=(bootstrap-aarch64.zip bootstrap-arm.zip bootstrap-i686.zip bootstrap-x86_64.zip)
+SOURCE_BOOTSTRAPS=(bootstrap-aarch64.zip bootstrap-arm.zip bootstrap-i686.zip bootstrap-x86_64.zip)
+EMBEDDED_BOOTSTRAPS=(rewritten-bootstrap-aarch64.zip rewritten-bootstrap-arm.zip rewritten-bootstrap-i686.zip rewritten-bootstrap-x86_64.zip)
 
 log(){ printf '[bootstrap-contract] %s\n' "$*"; }
 fail(){ printf '[bootstrap-contract] ERROR: %s\n' "$*" >&2; exit 1; }
@@ -27,33 +28,32 @@ check_zip_valid_lowlevel(){
   /tmp/bootstrap_zip_contract_check "$f" >/dev/null 2>&1 || fail "Invalid ZIP structure in $f"
 }
 
-emit_hashes_lowlevel(){
+emit_embedded_hashes(){
   need sha256sum
   local has_b3=0
   command -v b3sum >/dev/null 2>&1 && has_b3=1
   local z p sha b3
-  for z in "${BOOTSTRAPS[@]}"; do
+  for z in "${EMBEDDED_BOOTSTRAPS[@]}"; do
     p="$BOOTSTRAP_DIR/$z"
     sha="$(sha256sum "$p" | awk '{print $1}')"
     [[ "$sha" =~ ^[0-9a-f]{64}$ ]] || fail "Invalid SHA256 for $p"
-    printf 'SHA256 %s %s\n' "$z" "$sha"
+    printf 'EMBEDDED_SHA256 %s %s\n' "$z" "$sha"
     if (( has_b3 == 1 )); then
       b3="$(b3sum "$p" | awk '{print $1}')"
       [[ "$b3" =~ ^[0-9a-f]{64}$ ]] || fail "Invalid BLAKE3 for $p"
-      printf 'BLAKE3 %s %s\n' "$z" "$b3"
+      printf 'EMBEDDED_BLAKE3 %s %s\n' "$z" "$b3"
     fi
   done
-  (( has_b3 == 1 )) || log "b3sum unavailable; BLAKE3 skipped (SHA256 emitted)."
+  (( has_b3 == 1 )) || log "b3sum unavailable; BLAKE3 skipped (embedded SHA256 emitted)."
 }
 
-
-check_bootstrap_metadata(){
+check_source_bootstrap_metadata(){
   python3 - <<'PY'
 from pathlib import Path
 from zipfile import ZipFile
+import os
 
 base = Path('app/src/main/cpp')
-import os
 expected_package = os.environ.get('TERMUX_PACKAGE_NAME', 'com.termux.rafacodephi')
 expected_page = os.environ.get('TERMUX_PAGE_SIZE', '16384')
 validation_mode = os.environ.get('TERMUX_BOOTSTRAP_VALIDATION_MODE', '').strip()
@@ -100,8 +100,41 @@ for name, (arch, min_api) in archives.items():
         actual = metadata.get(key)
         if actual != value:
             raise SystemExit(f'{path}: {key} expected {value!r}, got {actual!r}')
-print('metadata OK for RAFCODEPHI local bootstraps')
+print('source metadata OK for RAFCODEPHI local bootstraps')
 PY
+}
+
+check_embedded_profiles(){
+  local requirement="${RAF_BOOTSTRAP_REQUIRE_PROFILE:-auto}"
+  local package="${TERMUX_BOOTSTRAP_PACKAGE_NAME:-com.termux.rafacodephi}"
+  local z p arch has_profile
+  for z in "${EMBEDDED_BOOTSTRAPS[@]}"; do
+    p="$BOOTSTRAP_DIR/$z"
+    case "$z" in
+      *aarch64*) arch=aarch64 ;;
+      *-arm.zip) arch=arm ;;
+      *i686*) arch=i686 ;;
+      *x86_64*) arch=x86_64 ;;
+      *) fail "Cannot resolve architecture for embedded archive: $z" ;;
+    esac
+    has_profile="$(python3 - "$p" <<'PY'
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as zf:
+    print('1' if 'BOOTSTRAP_PROFILE.json' in zf.namelist() else '0')
+PY
+)"
+    if [[ "$has_profile" == "1" ]]; then
+      python3 tools/raf_bootstrap_profile.py validate \
+        --zip "$p" \
+        --expected-arch "$arch" \
+        --package-name "$package" >/dev/null
+      log "Embedded profile PASS: $p arch=$arch"
+    elif [[ "$requirement" == "1" || "$requirement" == "true" || "$requirement" == "required" ]]; then
+      fail "Embedded bootstrap lacks BOOTSTRAP_PROFILE.json: $p"
+    else
+      log "Embedded profile NOT_MEASURED: $p has no BOOTSTRAP_PROFILE.json (legacy/direct validation mode)"
+    fi
+  done
 }
 
 check_runtime_prefix(){
@@ -133,16 +166,25 @@ check_runtime_prefix(){
 
 check_bootstraps(){
   need cc
+  need python3
   cc -O2 -std=c11 -Wall -Wextra -Werror scripts/bootstrap_zip_contract_check.c -o /tmp/bootstrap_zip_contract_check
   check_free_space
   local z
-  for z in "${BOOTSTRAPS[@]}"; do
+  for z in "${SOURCE_BOOTSTRAPS[@]}"; do
     check_zip_valid_lowlevel "$BOOTSTRAP_DIR/$z"
-    log "Zip validation OK: $BOOTSTRAP_DIR/$z"
+    log "Source zip validation OK: $BOOTSTRAP_DIR/$z"
   done
-  check_bootstrap_metadata
-  log "BOOTSTRAP_INFO metadata OK"
-  emit_hashes_lowlevel
+  check_source_bootstrap_metadata
+  log "Source BOOTSTRAP_INFO metadata OK"
+
+  # Same-observation invariant: the app embeds rewritten-bootstrap-*.zip, so
+  # those exact bytes must pass structural/profile validation too.
+  for z in "${EMBEDDED_BOOTSTRAPS[@]}"; do
+    check_zip_valid_lowlevel "$BOOTSTRAP_DIR/$z"
+    log "Embedded zip validation OK: $BOOTSTRAP_DIR/$z"
+  done
+  check_embedded_profiles
+  emit_embedded_hashes
 }
 
 case "${1:-}" in

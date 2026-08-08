@@ -65,8 +65,9 @@ def test_real_arm_core_validator_blocks_missing_runtime_contract():
 def test_real_arm_core_validator_audits_binary_legacy_prefix_risk():
     text = VALIDATOR.read_text(encoding='utf-8')
     assert 'LEGACY_PREFIX_BINARY_RISK' in text
-    assert "b'/data/data/com.termux/files/usr'" in text
-    assert "b'/data/data/com.termux/'" in text
+    # Test the contract strings, not Python quote style.
+    assert '/data/data/com.termux/files/usr' in text
+    assert '/data/data/com.termux/' in text
     assert 'prefix in data' in text
     assert "replace(" not in text
     assert 'no binary replacement was performed' in text
