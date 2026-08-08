@@ -1,7 +1,9 @@
 package com.termux.app.activities;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.ParcelFileDescriptor;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -10,6 +12,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.termux.app.BootstrapReadinessGate;
@@ -20,12 +23,16 @@ import com.termux.shared.theme.NightMode;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Unified operator surface for first-beta bootstrap readiness + PA evidence work.
  * Expert screens remain available, but normal operation starts here.
  */
 public class BetaOrchestratorActivity extends AppCompatActivity {
+
+    private static final int REQUEST_EXPORT_LATEST_RECEIPT = 4301;
 
     private final BetaEvidenceOrchestrator orchestrator = new BetaEvidenceOrchestrator();
 
@@ -42,6 +49,7 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
     private Button openWizard;
     private Button openVectra;
     private Button refresh;
+    private Button exportLatest;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,7 +81,7 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
             "Single-flight: only one evidence pipeline may run in the Android app process.\n" +
             "Rollback boundary: measurements are non-destructive and receipt publication is atomic.\n" +
             "Watchdog: each PA trial retains the runner's bounded 60 s process timeout.\n" +
-            "Results: canonical private receipt + best-effort app-specific external mirror.\n" +
+            "Results: canonical private receipt + app-specific mirror + optional user-selected SAF copy.\n" +
             "Local execution PASS is reported separately from evidence state; publication stays BLOCKED.\n" +
             "Certification/release/cross-device claims remain blocked until their own evidence exists.");
         contract.setPadding(0, dp(10), 0, dp(14));
@@ -86,7 +94,7 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
 
         bootstrapGate = addCheck(root,
             "1 · Require Bootstrap/Wizard readiness gate",
-            "Mandatory. Checks runtime-resolved prefix, shell/package tools, safe utility shims and $HOME/storage.",
+            "Mandatory. Checks runtime-resolved prefix, shell/package tools, safe utility shims, profile contract and $HOME/storage.",
             true);
         bootstrapGate.setEnabled(false);
 
@@ -124,6 +132,7 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
             startActivity(new Intent(this, VectraRuntimeActivity.class)));
         refresh = addButton(root, "REFRESH READINESS + PROCESS STATE + LATEST RECEIPT", v ->
             refreshOperatorState(false));
+        exportLatest = addButton(root, "EXPORT LATEST RECEIPT…", v -> requestUserSelectedReceiptExport());
 
         TextView resultTitle = new TextView(this);
         resultTitle.setText("Execution / Receipt Log");
@@ -220,6 +229,56 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
         }
     }
 
+    private void requestUserSelectedReceiptExport() {
+        if (orchestrator.isRunning()) {
+            append("USER_SELECTED_EXPORT=BLOCKED reason=PIPELINE_RUNNING\n");
+            return;
+        }
+        JSONObject latest = BetaEvidenceOrchestrator.readLatest(this);
+        if (latest == null) {
+            append("USER_SELECTED_EXPORT=NOT_MEASURED reason=NO_CANONICAL_LATEST_RECEIPT\n");
+            return;
+        }
+        String runId = latest.optString("run_id", "unknown").replaceAll("[^A-Za-z0-9._-]", "_");
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TITLE, "rafcodephi-beta-evidence-" + runId + ".json");
+        startActivityForResult(intent, REQUEST_EXPORT_LATEST_RECEIPT);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_EXPORT_LATEST_RECEIPT) return;
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+            append("USER_SELECTED_EXPORT=BLOCKED reason=USER_CANCELLED_OR_NO_DESTINATION\n");
+            return;
+        }
+
+        JSONObject latest = BetaEvidenceOrchestrator.readLatest(this);
+        if (latest == null) {
+            append("USER_SELECTED_EXPORT=FAIL reason=CANONICAL_RECEIPT_BECAME_UNAVAILABLE\n");
+            return;
+        }
+
+        Uri target = data.getData();
+        byte[] payload = (latest.toString() + "\n").getBytes(StandardCharsets.UTF_8);
+        try (ParcelFileDescriptor descriptor = getContentResolver().openFileDescriptor(target, "rwt")) {
+            if (descriptor == null) throw new IllegalStateException("destination_file_descriptor_unavailable");
+            try (FileOutputStream stream = new FileOutputStream(descriptor.getFileDescriptor())) {
+                stream.write(payload);
+                stream.flush();
+                stream.getFD().sync();
+            }
+            append("USER_SELECTED_EXPORT=PASS bytes=" + payload.length + " destination=" + target + "\n");
+            append("USER_SELECTED_EXPORT_AUTHORITY=copy_only canonical_receipt_remains_authoritative\n");
+        } catch (Throwable error) {
+            append("USER_SELECTED_EXPORT=FAIL reason=" + error.getClass().getSimpleName()
+                + ":" + String.valueOf(error.getMessage()) + "\n");
+        }
+    }
+
     private void refreshOperatorState(boolean initial) {
         refreshBootstrapStatus();
         boolean running = orchestrator.isRunning();
@@ -275,6 +334,7 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
         runFull.setEnabled(!running);
         openWizard.setEnabled(!running);
         openVectra.setEnabled(!running);
+        exportLatest.setEnabled(!running);
         // Refresh remains enabled so a recreated Activity can recover a process-wide run.
         refresh.setEnabled(true);
         cancel.setEnabled(running);
