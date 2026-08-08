@@ -25,22 +25,20 @@ import java.util.TimeZone;
 /**
  * Fail-closed evidence boundary for the PA freestanding ELF device execution.
  *
- * The latest receipt is an atomic convenience pointer. Every attempted run is
- * also written to an immutable-by-convention history file before latest is
- * replaced, so a later failed run does not erase prior evidence.
- *
- * The receipt proves only what the launcher directly observes: artifact
- * identity, linker route, exit code, captured stdout markers, timeout state and
- * capture completeness. It does not promote those observations into claims
- * about isolated silicon behavior, timer accuracy, thermal stability or
- * statistical reproducibility.
+ * v3 preserves the legacy physical execution proof while distinguishing it from
+ * calibrated PA protocol-v2 measurement. A legacy protocol can prove that a
+ * specific ELF process executed successfully, but cannot promote timing or
+ * comparability claims that depend on CLOCK_MONOTONIC nanoseconds and a
+ * deterministic workload identity independent of elapsed time.
  */
 public final class PaBenchmarkReceipt {
 
-    public static final String SCHEMA = "rafcodephi.pa-elf-runtime-receipt/v2";
+    public static final String SCHEMA = "rafcodephi.pa-elf-runtime-receipt/v3";
+    public static final String LEGACY_SCHEMA = "rafcodephi.pa-elf-runtime-receipt/v2";
     public static final String DIRECTORY = "rafaelia/receipts";
     public static final String HISTORY_DIRECTORY = DIRECTORY + "/pa-history";
-    public static final String FILE_NAME = "pa_freestanding_elf_runtime_v2.json";
+    public static final String FILE_NAME = "pa_freestanding_elf_runtime_v3.json";
+    public static final String LEGACY_FILE_NAME = "pa_freestanding_elf_runtime_v2.json";
 
     public static final String STATE_PASS = "PASS";
     public static final String STATE_FAIL = "FAIL";
@@ -48,8 +46,11 @@ public final class PaBenchmarkReceipt {
     public static final String STATE_INVALIDATED = "INVALIDATED";
 
     private static final int MAX_RECEIPT_BYTES = 256 * 1024;
-    private static final String HEADER = "RAFCODEPHI-PA-ELF 00000001";
+    private static final String HEADER_V1 = "RAFCODEPHI-PA-ELF 00000001";
+    private static final String HEADER_V2 = "RAFCODEPHI-PA-ELF 00000002";
     private static final String MODE = "MODE FREESTANDING NO_LIBC NO_MALLOC NO_JNI DIRECT_SYSCALL";
+    private static final String TIMER_V2_PREFIX = "TIMER CLOCK_MONOTONIC_NS OVERHEAD_MIN ";
+    private static final String SCORE_V2 = "SCORE DETERMINISTIC_WORKLOAD_ID TIMING_EXCLUDED";
     private static final String END = "END 00000000";
 
     private PaBenchmarkReceipt() {}
@@ -59,13 +60,19 @@ public final class PaBenchmarkReceipt {
         return new File(directory, FILE_NAME);
     }
 
+    public static File getLegacyReceiptFile(Context context) {
+        File directory = new File(context.getFilesDir(), DIRECTORY);
+        return new File(directory, LEGACY_FILE_NAME);
+    }
+
     public static File getHistoryDirectory(Context context) {
         return new File(context.getFilesDir(), HISTORY_DIRECTORY);
     }
 
     public static String getReadState(Context context) {
-        File file = getReceiptFile(context);
-        if (!file.isFile()) return "NOT_MEASURED";
+        File current = getReceiptFile(context);
+        File legacy = getLegacyReceiptFile(context);
+        if (!current.isFile() && !legacy.isFile()) return "NOT_MEASURED";
         return read(context) == null ? "INVALIDATED" : "AVAILABLE";
     }
 
@@ -93,6 +100,7 @@ public final class PaBenchmarkReceipt {
         return "ALL_RUNTIME_PREDICATES_SATISFIED";
     }
 
+    /** Backward-compatible ad-hoc recording route. */
     public static File recordExecution(Context context,
                                        File elf,
                                        String linker,
@@ -103,6 +111,30 @@ public final class PaBenchmarkReceipt {
                                        boolean stdoutTruncated,
                                        long stdoutObservedBytes,
                                        long wallTimeMs) throws Exception {
+        return recordExecution(context, elf, linker, exitCode, stdout, executionError,
+            timedOut, stdoutTruncated, stdoutObservedBytes, wallTimeMs,
+            null, null, "", -1, 0);
+    }
+
+    /**
+     * Governed recording route used by repeated series. Environment snapshots are
+     * observations, not automatic proof of thermal/DVFS stability.
+     */
+    public static File recordExecution(Context context,
+                                       File elf,
+                                       String linker,
+                                       int exitCode,
+                                       String stdout,
+                                       Throwable executionError,
+                                       boolean timedOut,
+                                       boolean stdoutTruncated,
+                                       long stdoutObservedBytes,
+                                       long wallTimeMs,
+                                       JSONObject environmentBefore,
+                                       JSONObject environmentAfter,
+                                       String seriesId,
+                                       int seriesIndex,
+                                       int seriesTargetN) throws Exception {
         JSONObject receipt = new JSONObject();
         String generatedAt = utcNow();
 
@@ -133,6 +165,32 @@ public final class PaBenchmarkReceipt {
         receipt.put("timed_out", timedOut);
         receipt.put("wall_time_ms", Math.max(0L, wallTimeMs));
 
+        String governedSeriesId = seriesId == null ? "" : seriesId.trim();
+        boolean governedSeries = !governedSeriesId.isEmpty()
+            && seriesIndex >= 0
+            && seriesTargetN >= PaBenchmarkSeriesAnalyzer.MIN_DISTRIBUTION_N
+            && seriesIndex < seriesTargetN;
+        receipt.put("series_id", governedSeriesId);
+        receipt.put("series_index", seriesIndex);
+        receipt.put("series_target_n", Math.max(0, seriesTargetN));
+        receipt.put("series_governed", governedSeries);
+        receipt.put("series_policy", governedSeries
+            ? "NO_SILENT_WARMUP_NO_OUTLIER_DELETION_RAW_RECEIPT_PER_TRIAL"
+            : "AD_HOC_SINGLE_RUN");
+
+        if (environmentBefore != null) receipt.put("environment_before", environmentBefore);
+        if (environmentAfter != null) receipt.put("environment_after", environmentAfter);
+        boolean environmentComplete = environmentBefore != null && environmentAfter != null;
+        boolean thermalInterference = environmentComplete
+            && (BenchmarkEnvironmentSnapshot.hasSevereThermalInterference(environmentBefore)
+            || BenchmarkEnvironmentSnapshot.hasSevereThermalInterference(environmentAfter));
+        receipt.put("environment_snapshot_complete", environmentComplete);
+        receipt.put("thermal_interference_observed", thermalInterference);
+        receipt.put("environment_state", !environmentComplete
+            ? "NOT_MEASURED"
+            : thermalInterference ? "OBSERVED_INTERFERENCE" : "OBSERVED_LIMITED");
+        receipt.put("claim_allowed_environment_stability", false);
+
         String captured = stdout == null ? "" : stdout;
         byte[] capturedBytes = captured.getBytes(StandardCharsets.US_ASCII);
         String stdoutSha = sha256Bytes(capturedBytes);
@@ -142,9 +200,17 @@ public final class PaBenchmarkReceipt {
         receipt.put("stdout_truncated", stdoutTruncated);
         receipt.put("stdout", captured);
 
+        int protocolVersion = detectProtocolVersion(captured);
+        receipt.put("pa_protocol_version", protocolVersion);
+        receipt.put("pa_protocol_state", protocolVersion >= 2
+            ? "CALIBRATED_V2" : protocolVersion == 1 ? "LEGACY_V1_EXECUTION_ONLY" : "UNKNOWN");
+
         JSONObject markers = new JSONObject();
-        markers.put("header", captured.contains(HEADER));
+        markers.put("header_v1", captured.contains(HEADER_V1));
+        markers.put("header_v2", captured.contains(HEADER_V2));
         markers.put("mode_contract_marker", captured.contains(MODE));
+        markers.put("timer_v2", captured.contains(TIMER_V2_PREFIX));
+        markers.put("score_v2", captured.contains(SCORE_V2));
         boolean allRuns = true;
         for (int i = 0; i < 6; i++) {
             boolean present = captured.contains("R" + i + " ");
@@ -154,10 +220,27 @@ public final class PaBenchmarkReceipt {
         markers.put("end", captured.contains(END));
         receipt.put("markers", markers);
 
-        boolean markerComplete = markers.getBoolean("header")
+        boolean headerKnown = protocolVersion == 1 || protocolVersion == 2;
+        boolean markerComplete = headerKnown
             && markers.getBoolean("mode_contract_marker")
             && allRuns
             && markers.getBoolean("end");
+
+        JSONArray workloads = parseWorkloads(captured, protocolVersion);
+        receipt.put("workloads", workloads);
+        boolean workloadsComplete = workloads.length() == 6;
+
+        long timerOverheadNs = parseTimerOverheadNs(captured);
+        boolean timingContractComplete = protocolVersion >= 2
+            && markers.getBoolean("timer_v2")
+            && markers.getBoolean("score_v2")
+            && timerOverheadNs >= 0L
+            && workloadsComplete
+            && allElapsedPositive(workloads);
+        receipt.put("timer_clock", protocolVersion >= 2 ? "CLOCK_MONOTONIC" : "LEGACY_UNCALIBRATED");
+        receipt.put("timer_unit", protocolVersion >= 2 ? "ns" : "LEGACY_UNSPECIFIED");
+        receipt.put("timer_overhead_min_ns", protocolVersion >= 2 ? timerOverheadNs : JSONObject.NULL);
+        receipt.put("timing_contract_complete", timingContractComplete);
 
         boolean hasExecutionError = executionError != null;
         String evidenceState = classifyEvidenceState(
@@ -165,17 +248,25 @@ public final class PaBenchmarkReceipt {
         String evidenceReason = classifyEvidenceReason(
             timedOut, hasExecutionError, exitCode, stdoutTruncated, markerComplete);
         boolean runtimePass = STATE_PASS.equals(evidenceState);
+        boolean timingPass = runtimePass && timingContractComplete;
 
         receipt.put("evidence_state", evidenceState);
         receipt.put("evidence_reason", evidenceReason);
         receipt.put("runtime_exec_pass", runtimePass);
         receipt.put("claim_allowed_runtime_execution", runtimePass);
+        receipt.put("claim_allowed_timing_measurement", timingPass);
+        receipt.put("claim_allowed_workload_identity", timingPass && markers.getBoolean("score_v2"));
+        receipt.put("claim_allowed_series_membership", timingPass && governedSeries);
         receipt.put("claim_allowed_isolated_silicon", false);
         receipt.put("claim_allowed_reproducibility", false);
+        receipt.put("claim_allowed_cross_device_comparison", false);
         receipt.put("evidence_scope", "physical_process_execution_observation");
+        receipt.put("measurement_scope", timingPass
+            ? "calibrated_monotonic_ns_micro_observation"
+            : "execution_only_or_uncalibrated_measurement");
         receipt.put("claim_boundary",
-            "Does not by itself prove isolated silicon performance, timer accuracy, thermal stability, " +
-            "cross-device comparability, statistical reproducibility, or standards certification.");
+            "Does not by itself prove isolated silicon performance, thermal/DVFS stability, PMU availability, " +
+            "cross-device comparability, statistical reproducibility, energy efficiency, or standards certification.");
 
         if (executionError != null) {
             JSONObject error = new JSONObject();
@@ -191,8 +282,9 @@ public final class PaBenchmarkReceipt {
 
         String identityHash = !stdoutSha.isEmpty() ? stdoutSha : (!elfSha.isEmpty() ? elfSha : "nohash");
         String shortHash = identityHash.length() >= 12 ? identityHash.substring(0, 12) : identityHash;
+        String seriesPart = governedSeries ? "_s" + sanitize(governedSeriesId) + "_i" + seriesIndex : "_adhoc";
         File historyFile = new File(historyDirectory,
-            "pa_" + utcFileStamp() + "_" + evidenceState.toLowerCase(Locale.US) + "_" + shortHash + ".json");
+            "pa_v3_" + utcFileStamp() + seriesPart + "_" + evidenceState.toLowerCase(Locale.US) + "_" + shortHash + ".json");
         receipt.put("history_file", historyFile.getAbsolutePath());
         receipt.put("latest_file", getReceiptFile(context).getAbsolutePath());
 
@@ -202,7 +294,82 @@ public final class PaBenchmarkReceipt {
     }
 
     public static JSONObject read(Context context) {
-        return readFile(getReceiptFile(context));
+        JSONObject current = readFile(getReceiptFile(context));
+        if (current != null) return current;
+        return readFile(getLegacyReceiptFile(context));
+    }
+
+    static JSONObject readHistoryFile(File file) {
+        return readFile(file);
+    }
+
+    private static int detectProtocolVersion(String captured) {
+        if (captured.contains(HEADER_V2)) return 2;
+        if (captured.contains(HEADER_V1)) return 1;
+        return 0;
+    }
+
+    private static long parseTimerOverheadNs(String captured) {
+        for (String line : captured.split("\\n")) {
+            if (!line.startsWith(TIMER_V2_PREFIX)) continue;
+            String token = line.substring(TIMER_V2_PREFIX.length()).trim();
+            try {
+                return Long.parseUnsignedLong(token, 16);
+            } catch (Throwable ignored) {
+                return -1L;
+            }
+        }
+        return -1L;
+    }
+
+    private static JSONArray parseWorkloads(String captured, int protocolVersion) {
+        JSONArray out = new JSONArray();
+        for (String line : captured.split("\\n")) {
+            if (line.length() < 3 || line.charAt(0) != 'R' || line.charAt(2) != ' ') continue;
+            int id = line.charAt(1) - '0';
+            if (id < 0 || id > 5) continue;
+            String[] fields = line.trim().split("\\s+");
+            if (fields.length != 6) continue;
+            try {
+                JSONObject row = new JSONObject();
+                row.put("id", "R" + id);
+                row.put("deterministic_score_hex", fields[1]);
+                long elapsed = Long.parseUnsignedLong(fields[2], 16);
+                row.put("elapsed_raw", fields[2]);
+                row.put("elapsed_ns", protocolVersion >= 2 ? elapsed : JSONObject.NULL);
+                row.put("legacy_elapsed_raw", protocolVersion == 1 ? fields[2] : JSONObject.NULL);
+                row.put("checksum_hex", fields[3]);
+                row.put("operations_hex", fields[4]);
+                row.put("operations", Long.parseUnsignedLong(fields[4], 16));
+                row.put("flags_hex", fields[5]);
+                out.put(row);
+            } catch (Throwable ignored) {
+                // A malformed row is omitted; workloadsComplete then fails closed.
+            }
+        }
+        return out;
+    }
+
+    private static boolean allElapsedPositive(JSONArray workloads) {
+        if (workloads.length() != 6) return false;
+        try {
+            for (int i = 0; i < workloads.length(); i++) {
+                JSONObject row = workloads.getJSONObject(i);
+                if (!row.has("elapsed_ns") || row.isNull("elapsed_ns") || row.getLong("elapsed_ns") <= 0L) return false;
+            }
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static String sanitize(String value) {
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < value.length() && out.length() < 24; i++) {
+            char c = value.charAt(i);
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') out.append(c);
+        }
+        return out.length() == 0 ? "series" : out.toString();
     }
 
     private static JSONObject readFile(File file) {

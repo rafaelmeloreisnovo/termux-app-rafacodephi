@@ -18,7 +18,7 @@ import java.util.TimeZone;
 /** Generates a device-local, auditable benchmark methodology and gap document. */
 public final class IndustrialBenchmarkMethodology {
 
-    public static final String FILE_NAME = "RAFCODEPHI_INTERNAL_VECTRA_BENCHMARK_METHODS_V2.md";
+    public static final String FILE_NAME = "RAFCODEPHI_INTERNAL_VECTRA_BENCHMARK_METHODS_V3.md";
 
     private IndustrialBenchmarkMethodology() {}
 
@@ -46,8 +46,8 @@ public final class IndustrialBenchmarkMethodology {
     }
 
     public static String buildMarkdown(Context context) {
-        StringBuilder sb = new StringBuilder(18_432);
-        sb.append("# Termux RAFCODEΦ · Internal Vectra Benchmark Methods V2\n\n");
+        StringBuilder sb = new StringBuilder(24_576);
+        sb.append("# Termux RAFCODEΦ · Internal Vectra Benchmark Methods V3\n\n");
         sb.append("Generated: ").append(utcNow()).append("\n\n");
 
         sb.append("## 0. Deployment truth\n\n");
@@ -55,160 +55,126 @@ public final class IndustrialBenchmarkMethodology {
         sb.append("- Android package: `").append(context.getPackageName()).append("`.\n");
         sb.append("- Separate Vectras/Vectras-VM-Android app required: **NO**.\n");
         sb.append("- Separate Vectras repository or CI required for this screen: **NO**.\n");
-        sb.append("- The name Vectra here refers only to the diagnostics/runtime screen bundled inside this installed Termux RAFCODEΦ APK.\n\n");
+        sb.append("- Vectra here is the diagnostics/benchmark surface bundled inside this Termux RAFCODEΦ APK.\n\n");
 
-        sb.append("## 1. Scope and invariant\n\n");
-        sb.append("This document defines a measurement procedure and evidence ledger, not a certification. ")
-            .append("A claim is permitted only when workload, input, unit, execution route, artifact identity and environmental evidence are bound to the same observation. ")
-            .append("Different workloads are never pooled into a single reproducibility statistic merely because they share a timer unit.\n\n");
-        sb.append("User-space benchmarking observes the combined behavior of silicon, firmware, kernel, scheduler, Android runtime, linker, compiler output and thermal/power policy. ")
-            .append("It does not isolate silicon performance unless the necessary hardware counters and controls are directly available and recorded.\n\n");
+        sb.append("## 1. Measurement architecture\n\n");
+        sb.append("A benchmark number is not independently promotable. V3 evaluates seven gates: ")
+            .append("`EXECUTION_PROOF`, `MEASUREMENT_VALIDITY`, `SERIES_VALIDITY`, `ENVIRONMENT_VALIDITY`, ")
+            .append("`COMPARABILITY_VALIDITY`, `ENERGY_VALIDITY`, and `PUBLICATION_VALIDITY`. ")
+            .append("No gate inherits PASS from another gate.\n\n");
+        sb.append("User-space timing observes a combined system: silicon + firmware + kernel + scheduler + Android policy + linker + compiler artifact + memory/thermal/power state. ")
+            .append("The PA payload removes JNI/libc/malloc from its measured native core, but this does not isolate silicon.\n\n");
 
-        sb.append("## 2. Device under test (DUT)\n\n");
+        sb.append("## 2. Device under test\n\n");
         sb.append("- Manufacturer: ").append(Build.MANUFACTURER).append("\n");
         sb.append("- Model: ").append(Build.MODEL).append("\n");
         sb.append("- Android: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")\n");
         sb.append("- ABI set: ").append(Build.SUPPORTED_ABIS == null ? "UNAVAILABLE" : join(Build.SUPPORTED_ABIS)).append("\n");
-        sb.append("- CPU cores visible to app: ").append(Runtime.getRuntime().availableProcessors()).append("\n\n");
+        sb.append("- CPUs visible to app: ").append(Runtime.getRuntime().availableProcessors()).append("\n\n");
 
         JSONObject receipt = PaBenchmarkReceipt.read(context);
         String readState = PaBenchmarkReceipt.getReadState(context);
-        sb.append("## 3. Current PA execution evidence\n\n");
+        sb.append("## 3. Current PA execution / measurement evidence\n\n");
         if ("NOT_MEASURED".equals(readState)) {
             sb.append("- State: `NOT_MEASURED`.\n");
-            sb.append("- TOKEN_VAZIO: physical PA receipt has not yet been produced by this build/install.\n");
-            sb.append("- Next action: open the internal Vectra screen and tap `RUN PA ELF BENCHMARK`.\n\n");
+            sb.append("- TOKEN_VAZIO: this build/install has not produced a PA receipt.\n");
+            sb.append("- Next action: run one PA observation or a governed n=30 series.\n\n");
         } else if (receipt == null) {
             sb.append("- State: `INVALIDATED`.\n");
-            sb.append("- Reason: latest receipt file exists but is unreadable under the receipt contract.\n");
-            sb.append("- Claim allowed: false.\n");
-            sb.append("- Next action: run PA ELF again; historical receipt files are preserved separately.\n\n");
+            sb.append("- Reason: latest receipt exists but is unreadable under the receipt contract.\n");
+            sb.append("- Claim promotion: false.\n\n");
         } else {
-            sb.append("- Evidence state: ").append(receipt.optString("evidence_state", "INVALIDATED")).append("\n");
-            sb.append("- Evidence reason: ").append(receipt.optString("evidence_reason", "UNKNOWN")).append("\n");
-            sb.append("- Runtime execution claim allowed: ").append(receipt.optBoolean("claim_allowed_runtime_execution", false)).append("\n");
-            sb.append("- Receipt timestamp: ").append(receipt.optString("generated_at_utc", "UNAVAILABLE")).append("\n");
-            sb.append("- Linker: ").append(emptyToUnavailable(receipt.optString("linker", ""))).append("\n");
-            sb.append("- ELF SHA-256: ").append(emptyToUnavailable(receipt.optString("elf_sha256", ""))).append("\n");
-            sb.append("- Exit code: ").append(receipt.optInt("exit_code", -1)).append("\n");
-            sb.append("- Timed out: ").append(receipt.optBoolean("timed_out", false)).append("\n");
-            sb.append("- Stdout truncated: ").append(receipt.optBoolean("stdout_truncated", false)).append("\n");
-            sb.append("- Evidence scope: ").append(receipt.optString("evidence_scope", "UNAVAILABLE")).append("\n");
-            sb.append("- Isolated-silicon claim allowed: false.\n");
-            sb.append("- Reproducibility claim allowed: false until homogeneous repeated trials exist.\n\n");
+            sb.append("- Evidence state: `").append(receipt.optString("evidence_state", "INVALIDATED")).append("`.\n");
+            sb.append("- Reason: `").append(receipt.optString("evidence_reason", "UNKNOWN")).append("`.\n");
+            sb.append("- PA protocol: ").append(receipt.optInt("pa_protocol_version", 0)).append(" / ")
+                .append(receipt.optString("pa_protocol_state", "UNKNOWN")).append(".\n");
+            sb.append("- Runtime execution claim: ").append(receipt.optBoolean("claim_allowed_runtime_execution", false)).append(".\n");
+            sb.append("- Timing measurement claim: ").append(receipt.optBoolean("claim_allowed_timing_measurement", false)).append(".\n");
+            sb.append("- Timer: ").append(receipt.optString("timer_clock", "UNAVAILABLE")).append(" / ")
+                .append(receipt.optString("timer_unit", "UNAVAILABLE")).append(".\n");
+            sb.append("- ELF SHA-256: ").append(emptyToUnavailable(receipt.optString("elf_sha256", ""))).append(".\n");
+            sb.append("- Linker: ").append(emptyToUnavailable(receipt.optString("linker", ""))).append(".\n");
+            sb.append("- Exit code: ").append(receipt.optInt("exit_code", -1)).append(".\n");
+            sb.append("- Stdout truncated: ").append(receipt.optBoolean("stdout_truncated", false)).append(".\n");
+            sb.append("- Environment: ").append(receipt.optString("environment_state", "NOT_MEASURED")).append(".\n");
+            sb.append("- Severe thermal interference observed: ").append(receipt.optBoolean("thermal_interference_observed", false)).append(".\n");
+            sb.append("- Series id: ").append(emptyToUnavailable(receipt.optString("series_id", ""))).append(".\n");
+            sb.append("- Isolated silicon / reproducibility / cross-device / energy claims: **false**.\n\n");
         }
 
-        sb.append("## 4. Evidence gap ledger\n\n");
-        sb.append("| Evidence item | Current contract state | Closure method |\n");
+        sb.append("## 4. Governed series state\n\n");
+        try {
+            JSONObject series = PaBenchmarkSeriesAnalyzer.analyze(context);
+            sb.append("- Analysis schema: ").append(series.optString("schema", "UNKNOWN")).append(".\n");
+            sb.append("- State: `").append(series.optString("state", "INVALIDATED")).append("`.\n");
+            sb.append("- Reason: `").append(series.optString("reason", "UNKNOWN")).append("`.\n");
+            sb.append("- Eligible governed receipts: ").append(series.optInt("eligible_governed_receipts", 0)).append(".\n");
+            sb.append("- Ad-hoc timing receipts not promoted: ").append(series.optInt("ad_hoc_timing_receipts_not_promoted", 0)).append(".\n");
+            sb.append("- Series count: ").append(series.optInt("series_count", 0)).append(".\n");
+            sb.append("- Minimum governed distribution target: n>=").append(PaBenchmarkSeriesAnalyzer.MIN_DISTRIBUTION_N).append(".\n");
+            sb.append("- Heterogeneous workload pooling: forbidden.\n");
+            sb.append("- Cross-series pooling: forbidden.\n\n");
+        } catch (Throwable error) {
+            sb.append("- State: `INVALIDATED`.\n");
+            sb.append("- Series analyzer error: ").append(error.getClass().getSimpleName()).append(".\n\n");
+        }
+
+        sb.append("## 5. Evidence gap ledger\n\n");
+        sb.append("| Evidence | State unless directly observed | Closure |\n");
         sb.append("|---|---|---|\n");
-        sb.append("| External Vectras installation | NOT_REQUIRED | Closed by deployment scope |\n");
-        sb.append("| External Vectras CI | NOT_REQUIRED | Closed by deployment scope |\n");
-        sb.append("| PA ELF process execution | ").append(receipt == null ? "TOKEN_VAZIO / NOT_MEASURED_OR_INVALIDATED" : receipt.optString("evidence_state", "INVALIDATED")).append(" | Execute packaged PA ELF and persist receipt |\n");
-        sb.append("| Repeated homogeneous PA series n>1 | TOKEN_VAZIO | Repeat same workload/input and retain all raw samples |\n");
-        sb.append("| Timer overhead/calibration | TOKEN_VAZIO | Measure timer read overhead and clock source before series |\n");
-        sb.append("| CPU frequency / DVFS pre/post | TOKEN_VAZIO | Probe exposed cpufreq/sysfs/API fields and receipt exact availability |\n");
-        sb.append("| Thermal pre/post | TOKEN_VAZIO | Probe Android thermal service/sysfs when accessible; otherwise UNAVAILABLE |\n");
-        sb.append("| PMU cycles/instructions/cache/branch | TOKEN_VAZIO or UNAVAILABLE | Capability probe first; never substitute zero |\n");
-        sb.append("| Sensor callback timing series | TOKEN_VAZIO | Persist callback timestamps and request parameters |\n");
-        sb.append("| Composite industrial score | BLOCKED_BY_DESIGN | Requires versioned normalization, weights and uncertainty model |\n\n");
+        sb.append("| PA physical execution | receipt-governed | execute packaged ELF and retain receipt |\n");
+        sb.append("| PA protocol-v2 timer semantics | source-fixed / physical proof required | execute V2 payload and observe timer markers |\n");
+        sb.append("| Explicit governed n>=30 series | TOKEN_VAZIO until completed | use `Run Governed 30-Trial Series` |\n");
+        sb.append("| Timer read overhead | per V2 receipt | observe `TIMER CLOCK_MONOTONIC_NS OVERHEAD_MIN` |\n");
+        sb.append("| DVFS pre/post | AVAILABLE/PARTIAL/UNAVAILABLE | capture per-trial sysfs visibility |\n");
+        sb.append("| Thermal pre/post | OBSERVED_LIMITED/UNAVAILABLE | Android thermal status snapshots |\n");
+        sb.append("| PMU cycles/instructions/cache/branch | TOKEN_VAZIO or UNAVAILABLE | capability probe + Simpleperf/perf route if permitted |\n");
+        sb.append("| Sensor callback timing | TOKEN_VAZIO | callback timestamp receipt, not inventory metadata |\n");
+        sb.append("| Calibrated energy | BLOCKED | calibrated instrument/API with accuracy contract |\n");
+        sb.append("| Cross-device baseline | BLOCKED | same workload/version/input + baseline + uncertainty |\n");
+        sb.append("| Composite score | BLOCKED_BY_DESIGN | versioned normalization + weights + uncertainty |\n\n");
 
-        sb.append("## 5. Seven production domains × seven controls\n\n");
-        appendDomain(sb, "A. CPU / instruction execution",
-            "Integer and fixed-width ALU throughput with declared operation count",
-            "FP32/FP64 throughput with compiler flags and operation definition",
-            "SIMD/NEON path versus scalar path using identical data",
-            "Branch/control-flow workload with fixed branch distribution",
-            "Single-thread versus multi-thread scaling",
-            "Syscall transition cost separated from user-space compute",
-            "Instruction-path artifact hash and ABI proof");
-        appendDomain(sb, "B. Memory hierarchy",
-            "Sequential read/write bandwidth by declared bytes touched",
-            "Random access latency with fixed index sequence",
-            "Copy/fill route identity declared for every path (native/JNI/scalar/NEON/fallback as applicable)",
-            "Working-set sweep across multiple footprints",
-            "Stride sweep to expose locality sensitivity",
-            "Warm versus first-touch state reported separately",
-            "Cache-line size recorded only when detector returns a positive value");
-        appendDomain(sb, "C. Storage and durability",
-            "Sequential read/write with exact fixture size and filesystem path",
-            "Random 4 KiB I/O with operation count and seed",
-            "Buffered versus explicitly synchronized write separated",
-            "fsync/sync latency measured as its own metric",
-            "Warm-cache and cache-unknown results labelled; no false cold-cache claim",
-            "Free-space and storage-pressure preflight",
-            "Fixture hash/size and cleanup outcome preserved");
-        appendDomain(sb, "D. Kernel / scheduler / concurrency",
-            "Clock-source identity and timer overhead calibration",
-            "Scheduler interference snapshot before and after run",
-            "Thread count, affinity availability and priority recorded",
-            "Context-switch and synchronization workloads isolated",
-            "GC/runtime interference recorded for Java-mediated tests",
-            "Background-process or load warnings invalidate comparison when severe",
-            "Execution-governance limits and queue pressure preserved");
-        appendDomain(sb, "E. Android execution boundary",
-            "Packaged ELF route separated from Java/native bridge routes",
-            "ABI and linker path explicitly recorded",
-            "Syscall transition cost isolated when measured",
-            "Memory-map/copy overhead isolated",
-            "Timer precision and event-dispatch behavior measured separately",
-            "State serialization workload defined by bytes/operations",
-            "APK/ELF/configuration hashes bound to result");
-        appendDomain(sb, "F. Sensors / timing / edge runtime",
-            "Sensor inventory distinguished from actual sample acquisition",
-            "Sampling period requested versus timestamps observed",
-            "Latency distribution measured from callbacks rather than declared preset",
-            "Cancellation and timeout paths tested",
-            "Unavailable hardware remains UNAVAILABLE, not zero",
-            "Power metadata is framework-reported metadata, not measured energy",
-            "Clock domain and timestamp provenance recorded");
-        appendDomain(sb, "G. Integrity / build / provenance",
-            "ELF/APK SHA-256 before result promotion",
-            "Compiler, optimization flags and source commit recorded",
-            "CRC/hash throughput measured with declared byte count",
-            "Expected digest/result checked to prevent dead-code elimination",
-            "Linker route and dynamic dependency contract inspected",
-            "Latest receipt is atomic and each run is preserved in history",
-            "Claim state remains narrower than the strongest direct evidence");
-
-        sb.append("## 6. Experimental procedure\n\n");
-        sb.append("1. Define one falsifiable metric claim and its unit.\n");
-        sb.append("2. Freeze the DUT identity, source commit, build flags and artifact hashes.\n");
-        sb.append("3. Run preflight: ABI, page size, free storage, battery/thermal state when accessible, available memory, timer availability and execution path.\n");
-        sb.append("4. Perform declared warm-up; do not silently mix warm-up samples with measured trials.\n");
-        sb.append("5. Repeat the same workload with the same input. Preserve every raw sample before summarization.\n");
-        sb.append("6. Capture post-run environment and invalidate a series when a declared interference gate is exceeded.\n");
-        sb.append("7. Generate a receipt binding samples, artifact hashes, environment, exit status and interpretation boundary.\n\n");
+        sb.append("## 6. Seven antiderivative directions\n\n");
+        appendDirection(sb, "D1 Metrology", "clock source → unit → overhead → monotonicity → uncertainty");
+        appendDirection(sb, "D2 Statistics", "raw trials → homogeneous series → robust/classical dispersion → interval → drift");
+        appendDirection(sb, "D3 Environment", "duration → thermal/DVFS/battery/memory/scheduler context");
+        appendDirection(sb, "D4 Provenance", "source/build → ELF hash → linker → process → stdout hash → receipt → claim");
+        appendDirection(sb, "D5 Workload realism", "microkernel → subsystem stress → representative application workload");
+        appendDirection(sb, "D6 Comparability", "same version/input/route/environment disclosure → baseline → uncertainty-aware comparison");
+        appendDirection(sb, "D7 Publication", "schema + raw receipts + CI + physical proof + review + release artifact");
 
         sb.append("## 7. Statistical contract\n\n");
-        sb.append("- Statistics are computed per homogeneous metric/workload only.\n");
-        sb.append("- Report n, median, mean, sample standard deviation (N-1 when n>1), MAD and IQR where useful.\n");
-        sb.append("- A single observation cannot establish reproducibility.\n");
-        sb.append("- Use Student-t confidence intervals for a small approximately normal repeated series; use a declared bootstrap procedure when distributional assumptions are not justified.\n");
-        sb.append("- Coefficient of variation is allowed only for the same positive ratio-scale metric; never across unrelated workloads.\n");
-        sb.append("- Outlier policy must be declared before interpretation; robust summaries are preferred to arbitrary deletion.\n");
-        sb.append("- Cross-device comparison requires identical workload definition, software route and normalization contract.\n");
-        sb.append("- A dimensionless composite score is forbidden unless its baseline, weights, uncertainty and aggregation rule are explicitly versioned.\n\n");
+        sb.append("- Each R0…R5 workload is a separate metric family.\n");
+        sb.append("- A governed series requires explicit `series_id`, `series_index` and declared target n>=30.\n");
+        sb.append("- Ad-hoc history cannot become a governed n=30 series by accumulation.\n");
+        sb.append("- Preserve all raw receipts; no silent warm-up deletion and no arbitrary outlier deletion.\n");
+        sb.append("- Report n, mean, median, sample SD, CV, MAD, Q1, Q3, IQR, min/max and a declared mean interval.\n");
+        sb.append("- Deterministic score/checksum drift invalidates series identity.\n");
+        sb.append("- n>=30 enables only a distribution summary; it does not prove reproducibility, environmental stability or cross-device comparability.\n");
+        sb.append("- Composite scores remain forbidden until baseline, normalization, weights and uncertainty are versioned.\n\n");
 
-        sb.append("## 8. Evidence states\n\n");
-        sb.append("- PASS: required observation and acceptance predicate both satisfied.\n");
-        sb.append("- FAIL: observation exists and violates the predicate.\n");
-        sb.append("- NOT_MEASURED: procedure has not run or no receipt exists.\n");
-        sb.append("- UNAVAILABLE: platform does not expose the required capability.\n");
-        sb.append("- BLOCKED: prerequisite prevents execution.\n");
-        sb.append("- INVALIDATED: run occurred but capture/provenance makes interpretation unsafe.\n");
-        sb.append("- OBSERVED_LIMITED: direct observation exists but supports only a narrower claim.\n");
-        sb.append("- TOKEN_VAZIO: auditable placeholder only when evidence has not yet been produced or capability status is unresolved; never silently converted to zero or PASS.\n\n");
+        sb.append("## 8. Environment contract\n\n");
+        sb.append("- Thermal status is Android/framework evidence when available.\n");
+        sb.append("- Battery temperature is explicitly `BATTERY_NOT_CPU_SOC`.\n");
+        sb.append("- CPU frequency values are best-effort sysfs observations, not frequency locks.\n");
+        sb.append("- Missing cpufreq/thermal fields remain UNAVAILABLE, never zero.\n");
+        sb.append("- Severe thermal state is retained as interference evidence; samples are not silently deleted.\n");
+        sb.append("- Framework sensor power values and battery metadata are not measured energy.\n\n");
 
-        sb.append("## 9. Industrial release gate\n\n");
-        sb.append("A benchmark result is eligible for an industrial-quality report only when: artifact provenance is complete; the execution route is observed; the metric definition is dimensionally coherent; repeated samples are homogeneous; environmental interference is bounded or disclosed; statistics match the data-generating process; raw evidence is retained; and every conclusion stays inside the documented claim boundary.\n\n");
-        sb.append("References such as ISO/IEC 25010, IEEE verification/test documentation practices, SPEC-style workload disclosure, NIST measurement principles and MLPerf-style reproducibility can guide procedure design, but this file does not claim certification or conformance to any external program.\n");
+        sb.append("## 9. Evidence states\n\n");
+        sb.append("`PASS`, `FAIL`, `NOT_MEASURED`, `UNAVAILABLE`, `BLOCKED`, `INVALIDATED`, `OBSERVED_LIMITED`, `TOKEN_VAZIO`. ")
+            .append("TOKEN_VAZIO is an auditable missing-evidence marker and is never converted to zero or PASS.\n\n");
+
+        sb.append("## 10. Industrial release boundary\n\n");
+        sb.append("A numerical result is eligible for an industrial-quality report only when artifact provenance, execution route, unit semantics, homogeneous repeated trials, environmental disclosure, raw receipts, uncertainty and the interpretation boundary are all present. ")
+            .append("This V3 method borrows good-practice patterns from SPEC-style run rules, Android Micro/Macrobenchmark, Perfetto/Simpleperf, Google Benchmark, EEMBC/MLPerf-style workload disclosure and metrology/verification practice, but it does not claim certification or conformance to those programs.\n");
         return sb.toString();
     }
 
-    private static void appendDomain(StringBuilder sb, String title, String... controls) {
+    private static void appendDirection(StringBuilder sb, String title, String chain) {
         sb.append("### ").append(title).append("\n\n");
-        for (int i = 0; i < controls.length; i++) sb.append(i + 1).append(". ").append(controls[i]).append(".\n");
-        sb.append("\n");
+        sb.append("- Reconstruction chain: `").append(chain).append("`.\n");
+        sb.append("- Rule: missing evidence blocks only the claim that depends on it; it does not erase narrower direct evidence.\n\n");
     }
 
     private static String join(String[] values) {

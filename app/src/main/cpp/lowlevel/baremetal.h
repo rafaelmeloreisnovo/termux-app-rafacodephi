@@ -46,6 +46,23 @@
     #define ARCH_NAME "generic"
 #endif
 
+/*
+ * Linux HWCAP namespaces are architecture-specific. In particular, numeric
+ * ARM32 HWCAP/HWCAP2 bits must never be decoded using AArch64 SVE/SVE2 bit
+ * definitions. baremetal.c provides fallback HWCAP_SVE/HWCAP2_SVE2 defines
+ * when the platform headers do not, so predefine them as zero for ARM32. This
+ * makes the existing decoder fail closed rather than turning unrelated ARM32
+ * bits (for example hwcap2 bit 1) into a false CAP_SVE2 signal.
+ */
+#if defined(ARCH_ARM32)
+    #ifndef HWCAP_SVE
+        #define HWCAP_SVE 0UL
+    #endif
+    #ifndef HWCAP2_SVE2
+        #define HWCAP2_SVE2 0UL
+    #endif
+#endif
+
 /* SIMD capability detection */
 #if defined(__ARM_NEON) || defined(__ARM_NEON__)
     #define HAS_NEON 1
@@ -88,7 +105,6 @@ extern float bm_dot_neon(const float* a, const float* b, uint32_t n);
 extern void bm_vadd_neon(const float* a, const float* b, float* r, uint32_t n);
 extern void* bm_memcpy_neon(void* d, const void* s, size_t n);
 #endif
-
 
 
 typedef struct {

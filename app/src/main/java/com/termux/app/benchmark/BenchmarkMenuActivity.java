@@ -1,9 +1,8 @@
 package com.termux.app.benchmark;
 
 import android.app.Activity;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.SystemClock;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -12,47 +11,44 @@ import android.widget.TextView;
 
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * DEX edge for the freestanding PA benchmark inside Termux RAFCODEΦ.
  *
- * This is not the external Vectras application and does not depend on any
- * Vectras package or CI. The activity asks Android's linker to execute the
- * packaged ELF, drains stdout with a bounded capture buffer, enforces a timeout
- * and persists fail-closed evidence for the internal Vectra runtime screen.
+ * This is not the external Vectras application. Single observations and
+ * governed n=30 series both execute the packaged ELF through Android's linker.
+ * Every governed trial receives an explicit series id/index/target and pre/post
+ * environment observations. No warm-up or outlier is silently discarded.
  */
 public final class BenchmarkMenuActivity extends Activity {
 
-    private static final int STDOUT_CAPTURE_LIMIT = 64 * 1024;
-    private static final long PROCESS_TIMEOUT_MS = 60_000L;
-    private static final long PROCESS_POLL_MS = 25L;
-    private static final long READER_JOIN_MS = 2_000L;
-
     private TextView output;
     private Button run;
+    private Button runSeries;
+    private Button cancelSeries;
+    private Button analyze;
+    private final AtomicBoolean seriesCancelled = new AtomicBoolean(false);
+    private volatile boolean workRunning;
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
-        setTitle("PA Silicon · Freestanding ELF");
+        setTitle("PA Silicon · Evidence Benchmark");
         setContentView(layout());
     }
 
-    private android.view.View layout() {
+    private View layout() {
         ScrollView scroll = new ScrollView(this);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(24, 24, 24, 24);
 
         TextView title = new TextView(this);
-        title.setText("RAFCODEΦ · PA Silicon Core");
+        title.setText("RAFCODEΦ · PA Evidence Core V3");
         title.setTextSize(18f);
         root.addView(title);
 
@@ -60,30 +56,43 @@ public final class BenchmarkMenuActivity extends Activity {
         contract.setText(
             "Internal Termux RAFCODEΦ path — no external Vectras app required\n" +
             "DEX launcher → Android linker → ELF _start → C/ASM/syscalls\n" +
-            "No JNI · No libc · No malloc · No ZIP\n" +
-            "Evidence: artifact hash + exit code + timeout + stdout markers + append history");
+            "PA payload: no JNI · no libc · no malloc\n" +
+            "Protocol V2: CLOCK_MONOTONIC ns + timer overhead + timing-independent workload identity\n" +
+            "Series invariant: explicit n=30; R0…R5 never pooled; every trial preserved\n" +
+            "Environment: pre/post thermal, DVFS visibility, battery and memory observations\n" +
+            "Cross-device / isolated-silicon / energy claims remain blocked by design.");
         contract.setPadding(0, 12, 0, 16);
         root.addView(contract);
 
         run = new Button(this);
-        run.setText("Execute ELF Benchmark");
-        run.setOnClickListener(view -> execute());
+        run.setText("Execute One PA Observation");
+        run.setOnClickListener(view -> executeSingle());
         root.addView(run);
+
+        runSeries = new Button(this);
+        runSeries.setText("Run Governed 30-Trial Series");
+        runSeries.setOnClickListener(view -> executeSeries());
+        root.addView(runSeries);
+
+        cancelSeries = new Button(this);
+        cancelSeries.setText("Cancel Series After Current Trial");
+        cancelSeries.setEnabled(false);
+        cancelSeries.setOnClickListener(view -> {
+            seriesCancelled.set(true);
+            cancelSeries.setEnabled(false);
+            appendUi("\nCancellation requested. Current trial evidence will be retained; no fake n=30 completion will be generated.\n");
+        });
+        root.addView(cancelSeries);
+
+        analyze = new Button(this);
+        analyze.setText("Analyze Governed Series History");
+        analyze.setOnClickListener(view -> analyzeHistory());
+        root.addView(analyze);
 
         output = new TextView(this);
         output.setTextIsSelectable(true);
-        String readState = PaBenchmarkReceipt.getReadState(this);
-        if ("AVAILABLE".equals(readState)) {
-            JSONObject existing = PaBenchmarkReceipt.read(this);
-            output.setText("Latest device receipt: "
-                + (existing == null ? "INVALIDATED" : existing.optString("evidence_state", "UNKNOWN"))
-                + "\nRun again to append a new observation.");
-        } else if ("INVALIDATED".equals(readState)) {
-            output.setText("Latest receipt exists but is unreadable: INVALIDATED. Run again to create new evidence; history is preserved.");
-        } else {
-            output.setText("ELF not executed by this build. Runtime evidence: NOT_MEASURED.");
-        }
         output.setPadding(0, 16, 0, 0);
+        renderInitialState();
         root.addView(output, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -92,166 +101,172 @@ public final class BenchmarkMenuActivity extends Activity {
         return scroll;
     }
 
-    private void execute() {
-        run.setEnabled(false);
-        output.setText("Executing direct ELF entry and binding evidence…");
-
-        new Thread(() -> {
-            File elf = null;
-            String linker = null;
-            String stdout = "";
-            int exit = -1;
-            String result;
-            Throwable executionError = null;
-            boolean timedOut = false;
-            boolean stdoutTruncated = false;
-            long stdoutObservedBytes = 0L;
-            long startMs = SystemClock.elapsedRealtime();
-
-            Process process = null;
-            InputStream processOutput = null;
-            Thread reader = null;
-            ByteArrayOutputStream captured = new ByteArrayOutputStream(4096);
-            AtomicLong observed = new AtomicLong(0L);
-            AtomicBoolean truncated = new AtomicBoolean(false);
-            AtomicReference<Throwable> readerError = new AtomicReference<>(null);
-
-            try {
-                elf = new File(getApplicationInfo().nativeLibraryDir, "libraf_pa_core.so");
-                if (!elf.isFile()) throw new IllegalStateException("ELF missing: " + elf);
-
-                linker = selectLinker();
-                if (linker == null) throw new IllegalStateException("Android linker unavailable");
-
-                process = new ProcessBuilder(linker, elf.getAbsolutePath())
-                    .redirectErrorStream(true)
-                    .start();
-
-                processOutput = process.getInputStream();
-                final InputStream readerStream = processOutput;
-                reader = new Thread(() -> {
-                    try (InputStream stream = readerStream) {
-                        byte[] buffer = new byte[1024];
-                        int read;
-                        while ((read = stream.read(buffer)) >= 0) {
-                            if (read == 0) continue;
-                            long previous = observed.getAndAdd(read);
-                            int remaining = (int) Math.max(0L, STDOUT_CAPTURE_LIMIT - previous);
-                            int accepted = Math.min(read, remaining);
-                            if (accepted > 0) {
-                                synchronized (captured) {
-                                    captured.write(buffer, 0, accepted);
-                                }
-                            }
-                            if (accepted < read || previous + read > STDOUT_CAPTURE_LIMIT) truncated.set(true);
-                        }
-                    } catch (Throwable error) {
-                        readerError.compareAndSet(null, error);
-                    }
-                }, "pa-elf-stdout");
-                reader.start();
-
-                long deadline = startMs + PROCESS_TIMEOUT_MS;
-                boolean finished = false;
-                while (SystemClock.elapsedRealtime() < deadline) {
-                    try {
-                        exit = process.exitValue();
-                        finished = true;
-                        break;
-                    } catch (IllegalThreadStateException stillRunning) {
-                        Thread.sleep(PROCESS_POLL_MS);
-                    }
-                }
-
-                if (!finished) {
-                    timedOut = true;
-                    process.destroy();
-                    try {
-                        if (processOutput != null) processOutput.close();
-                    } catch (Throwable ignored) {
-                    }
-                }
-
-                if (reader != null) {
-                    reader.join(READER_JOIN_MS);
-                    if (reader.isAlive()) {
-                        truncated.set(true);
-                        reader.interrupt();
-                    }
-                }
-
-                Throwable streamFailure = readerError.get();
-                if (streamFailure != null && !timedOut) {
-                    executionError = new IllegalStateException("stdout capture failed", streamFailure);
-                }
-
-                synchronized (captured) {
-                    stdout = new String(captured.toByteArray(), StandardCharsets.US_ASCII);
-                }
-                stdoutObservedBytes = observed.get();
-                stdoutTruncated = truncated.get();
-
-                result = "scope=INTERNAL_TERMUX_RAFCODEPHI\n"
-                    + "external_vectras_required=false\n"
-                    + "linker=" + linker + "\n"
-                    + "elf=" + elf + "\n"
-                    + "exit=" + exit + "\n"
-                    + "timed_out=" + timedOut + "\n"
-                    + "stdout_observed_bytes=" + stdoutObservedBytes + "\n"
-                    + "stdout_truncated=" + stdoutTruncated + "\n\n"
-                    + stdout;
-            } catch (Throwable error) {
-                executionError = error;
-                try {
-                    if (process != null) process.destroy();
-                } catch (Throwable ignored) {
-                }
-                result = "FAIL_CLOSED\n" + error.getClass().getSimpleName() + ": " + error.getMessage();
+    private void renderInitialState() {
+        String readState = PaBenchmarkReceipt.getReadState(this);
+        if ("AVAILABLE".equals(readState)) {
+            JSONObject existing = PaBenchmarkReceipt.read(this);
+            if (existing == null) {
+                output.setText("Latest device receipt: INVALIDATED");
+                return;
             }
-
-            long wallTimeMs = Math.max(0L, SystemClock.elapsedRealtime() - startMs);
-
-            try {
-                File receipt = PaBenchmarkReceipt.recordExecution(
-                    this, elf, linker, exit, stdout, executionError, timedOut,
-                    stdoutTruncated, stdoutObservedBytes, wallTimeMs);
-                JSONObject persisted = PaBenchmarkReceipt.read(this);
-                String evidenceState = persisted == null
-                    ? "INVALIDATED"
-                    : persisted.optString("evidence_state", "INVALIDATED");
-                String evidenceReason = persisted == null
-                    ? "RECEIPT_UNREADABLE_AFTER_WRITE"
-                    : persisted.optString("evidence_reason", "UNKNOWN");
-                result += "\n\nreceipt=" + receipt.getAbsolutePath();
-                result += "\nhistory=" + PaBenchmarkReceipt.getHistoryDirectory(this).getAbsolutePath();
-                result += "\nevidence_state=" + evidenceState;
-                result += "\nevidence_reason=" + evidenceReason;
-                result += "\nclaim_allowed_runtime_execution="
-                    + (persisted != null && persisted.optBoolean("claim_allowed_runtime_execution", false));
-            } catch (Throwable receiptError) {
-                result += "\n\nRECEIPT_WRITE_FAIL_CLOSED="
-                    + receiptError.getClass().getSimpleName() + ": " + receiptError.getMessage();
-                result += "\nevidence_state=INVALIDATED";
-                result += "\nclaim_allowed_runtime_execution=false";
-            }
-
-            final String rendered = result;
-            runOnUiThread(() -> {
-                output.setText(rendered);
-                run.setEnabled(true);
-            });
-        }, "pa-elf-launch").start();
+            output.setText("Latest device receipt: "
+                + existing.optString("evidence_state", "UNKNOWN")
+                + "\nPA protocol: " + existing.optInt("pa_protocol_version", 0)
+                + "\nRuntime claim: " + existing.optBoolean("claim_allowed_runtime_execution", false)
+                + "\nTiming claim: " + existing.optBoolean("claim_allowed_timing_measurement", false)
+                + "\nSeries: " + existing.optString("series_id", "AD_HOC")
+                + "\nRun again to append a new immutable history observation.");
+        } else if ("INVALIDATED".equals(readState)) {
+            output.setText("Latest receipt exists but is unreadable: INVALIDATED. History is not promoted.");
+        } else {
+            output.setText("No current V3 PA receipt. Runtime/measurement evidence for this build: NOT_MEASURED.");
+        }
     }
 
-    private String selectLinker() {
-        boolean process64 = Build.VERSION.SDK_INT >= 23 && android.os.Process.is64Bit();
-        String apex = process64
-            ? "/apex/com.android.runtime/bin/linker64"
-            : "/apex/com.android.runtime/bin/linker";
-        if (new File(apex).isFile()) return apex;
+    private void executeSingle() {
+        if (!beginWork(false)) return;
+        output.setText("Executing one direct PA ELF observation with pre/post environment evidence…");
+        new Thread(() -> {
+            PaBenchmarkRunner.Result result = PaBenchmarkRunner.runOnce(this);
+            runOnUiThread(() -> {
+                output.setText(result.render());
+                endWork();
+            });
+        }, "pa-single-observation").start();
+    }
 
-        String system = process64 ? "/system/bin/linker64" : "/system/bin/linker";
-        if (new File(system).isFile()) return system;
-        return null;
+    private void executeSeries() {
+        if (!beginWork(true)) return;
+        seriesCancelled.set(false);
+        final int target = PaBenchmarkSeriesAnalyzer.MIN_DISTRIBUTION_N;
+        final String seriesId = "pa30-" + System.currentTimeMillis() + "-"
+            + UUID.randomUUID().toString().substring(0, 8).toLowerCase(Locale.US);
+        output.setText("Starting governed series\nseries_id=" + seriesId
+            + "\ntarget_n=" + target
+            + "\npolicy=NO_SILENT_WARMUP_NO_OUTLIER_DELETION\n");
+
+        new Thread(() -> {
+            int attempted = 0;
+            int runtimePass = 0;
+            int timingPass = 0;
+            String stopReason = "TARGET_REACHED";
+
+            for (int index = 0; index < target; index++) {
+                if (seriesCancelled.get()) {
+                    stopReason = "USER_CANCELLED";
+                    break;
+                }
+                final int displayIndex = index + 1;
+                runOnUiThread(() -> appendUi("\n[" + displayIndex + "/" + target + "] executing…"));
+                PaBenchmarkRunner.Result result = PaBenchmarkRunner.runOnce(this, seriesId, index, target);
+                attempted++;
+                if (result.runtimePass()) runtimePass++;
+                if (result.timingPass()) timingPass++;
+
+                final String state = result.evidenceState();
+                final boolean tpass = result.timingPass();
+                final boolean thermal = result.receipt != null
+                    && result.receipt.optBoolean("thermal_interference_observed", false);
+                runOnUiThread(() -> appendUi(" state=" + state
+                    + " timing=" + tpass
+                    + " thermal_interference=" + thermal));
+
+                if (!result.runtimePass() || !result.timingPass()) {
+                    stopReason = "FAIL_CLOSED_TRIAL_" + displayIndex;
+                    break;
+                }
+            }
+
+            File analysisFile = null;
+            JSONObject analysis = null;
+            Throwable analysisError = null;
+            try {
+                analysisFile = PaBenchmarkSeriesAnalyzer.analyzeAndWrite(this);
+                analysis = PaBenchmarkSeriesAnalyzer.analyze(this);
+            } catch (Throwable error) {
+                analysisError = error;
+            }
+
+            final int fAttempted = attempted;
+            final int fRuntimePass = runtimePass;
+            final int fTimingPass = timingPass;
+            final String fStopReason = stopReason;
+            final File fAnalysisFile = analysisFile;
+            final JSONObject fAnalysis = analysis;
+            final Throwable fAnalysisError = analysisError;
+            runOnUiThread(() -> {
+                StringBuilder text = new StringBuilder();
+                text.append(output.getText()).append("\n\n=== SERIES END ===\n");
+                text.append("series_id=").append(seriesId).append("\n");
+                text.append("attempted=").append(fAttempted).append("/").append(target).append("\n");
+                text.append("runtime_pass=").append(fRuntimePass).append("\n");
+                text.append("timing_pass=").append(fTimingPass).append("\n");
+                text.append("stop_reason=").append(fStopReason).append("\n");
+                if (fAnalysis != null) {
+                    text.append("analysis_state=").append(fAnalysis.optString("state", "INVALIDATED")).append("\n");
+                    text.append("analysis_reason=").append(fAnalysis.optString("reason", "UNKNOWN")).append("\n");
+                    text.append("analysis_file=").append(fAnalysisFile == null ? "UNAVAILABLE" : fAnalysisFile.getAbsolutePath()).append("\n");
+                    text.append("claim_allowed_reproducibility=false\n");
+                    text.append("claim_allowed_cross_device_comparison=false\n");
+                } else if (fAnalysisError != null) {
+                    text.append("analysis_state=INVALIDATED\nanalysis_error=")
+                        .append(fAnalysisError.getClass().getSimpleName()).append(": ")
+                        .append(String.valueOf(fAnalysisError.getMessage())).append("\n");
+                }
+                output.setText(text.toString());
+                endWork();
+            });
+        }, "pa-governed-series-30").start();
+    }
+
+    private void analyzeHistory() {
+        if (!beginWork(false)) return;
+        output.setText("Analyzing governed PA series history…");
+        new Thread(() -> {
+            try {
+                File file = PaBenchmarkSeriesAnalyzer.analyzeAndWrite(this);
+                JSONObject report = PaBenchmarkSeriesAnalyzer.analyze(this);
+                runOnUiThread(() -> {
+                    output.setText("analysis_state=" + report.optString("state", "INVALIDATED")
+                        + "\nanalysis_reason=" + report.optString("reason", "UNKNOWN")
+                        + "\neligible_governed_receipts=" + report.optInt("eligible_governed_receipts", 0)
+                        + "\nad_hoc_timing_receipts_not_promoted=" + report.optInt("ad_hoc_timing_receipts_not_promoted", 0)
+                        + "\nseries_count=" + report.optInt("series_count", 0)
+                        + "\nclaim_allowed_reproducibility=false"
+                        + "\nclaim_allowed_cross_device_comparison=false"
+                        + "\nanalysis_file=" + file.getAbsolutePath());
+                    endWork();
+                });
+            } catch (Throwable error) {
+                runOnUiThread(() -> {
+                    output.setText("analysis_state=INVALIDATED\n"
+                        + error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage()));
+                    endWork();
+                });
+            }
+        }, "pa-series-analysis").start();
+    }
+
+    private boolean beginWork(boolean series) {
+        if (workRunning) return false;
+        workRunning = true;
+        run.setEnabled(false);
+        runSeries.setEnabled(false);
+        analyze.setEnabled(false);
+        cancelSeries.setEnabled(series);
+        return true;
+    }
+
+    private void endWork() {
+        workRunning = false;
+        run.setEnabled(true);
+        runSeries.setEnabled(true);
+        analyze.setEnabled(true);
+        cancelSeries.setEnabled(false);
+        seriesCancelled.set(false);
+    }
+
+    private void appendUi(String text) {
+        output.append(text);
     }
 }
