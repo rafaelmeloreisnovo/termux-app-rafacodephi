@@ -91,16 +91,17 @@ def test_truth_table_keeps_real_package_stack_unproved():
             continue
         rows[columns[0]] = columns[1]
 
+    payload_only = 'PROVADO ESTRUTURAL NO PAYLOAD, TOKEN_VAZIO NO DEVICE'
     expected_states = {
-        '`pkg` real': 'TOKEN_VAZIO',
-        '`apt`': 'TOKEN_VAZIO',
-        '`apt-get`': 'TOKEN_VAZIO',
-        '`dpkg`': 'TOKEN_VAZIO',
+        '`pkg` real': payload_only,
+        '`apt`': payload_only,
+        '`apt-get`': payload_only,
+        '`dpkg`': payload_only,
         '`libapt`': 'TOKEN_VAZIO',
-        '`proot`': 'TOKEN_VAZIO',
-        'certificados': 'TOKEN_VAZIO',
+        '`proot`': payload_only,
+        'certificados': payload_only,
         'DNS/network básico': 'TOKEN_VAZIO',
-        'repositório configurado': 'TOKEN_VAZIO',
+        'repositório binário custom': 'BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED',
     }
     for resource, expected_state in expected_states.items():
         assert rows.get(resource) == expected_state

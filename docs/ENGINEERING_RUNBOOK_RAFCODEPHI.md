@@ -63,7 +63,7 @@ DEVICE_MINIMAL_PKG_LAYER_VALIDATED
 
 Esse estado prova apenas que `pkg help` não quebra por ausência de comandos básicos. Ele **não** prova `pkg update` nem `pkg install`.
 
-## Payload core ARM real
+## Candidato upstream legado (bloqueado)
 
 O build padrão é fail-closed e gera payload bridge:
 
@@ -96,6 +96,35 @@ python3 scripts/validate_real_arm_bootstrap_core.py \
 ```
 
 Falha `LEGACY_PREFIX_BINARY_RISK` bloqueia promoção. A correção válida é recompilar o fechamento de dependências com o prefixo `/data/data/com.termux.rafacodephi/files/usr`, ou demonstrar estratégia compatível que não altere ELFs em-place.
+
+## Payload source-built RAFCODEPHI ARM/ARM64
+
+No checkout irmão de `termux-packages`, gere o par no prefixo correto:
+
+```bash
+./scripts/build-rafcodephi-real-bootstrap.sh --architectures arm,aarch64
+```
+
+Depois importe o par antes do Gradle:
+
+```bash
+export RAF_BOOTSTRAP_SOURCE=source-built-real
+export RAF_REAL_BOOTSTRAP_ZIP_ARM=../termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
+export RAF_REAL_BOOTSTRAP_ZIP_AARCH64=../termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
+export RAF_REAL_BOOTSTRAP_MANIFEST=../termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+./scripts/prepare_bootstrap_env.sh --print-env
+```
+
+O importador exige `bash`, `pkg`, `apt`, `dpkg`, `proot` e o cliente nativo
+`termux-api` nas duas arquiteturas. A rota do cliente precisa ser exatamente
+`com.termux.rafacodephi.api/com.termux.api.TermuxApiReceiver`.
+
+Esse passo torna os comandos embutidos utilizáveis sem depender do stub bridge,
+mas não libera `pkg update`/`pkg install`: o repositório binário custom ainda
+precisa ser publicado e assinado. Até lá, preserve
+`package_repo_runtime_state=BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED`. O
+`termux.sources` fica desabilitado e `apt update` falha explicitamente com esse
+mesmo bloqueio, em vez de consumir pacotes upstream incompatíveis.
 
 Depois de obter payload prefix-safe:
 

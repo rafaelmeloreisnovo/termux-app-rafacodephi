@@ -41,7 +41,7 @@ fi
 
 BOOTSTRAP_SOURCE="${RAF_BOOTSTRAP_SOURCE:-local}"
 PROFILE_REQUIREMENT="auto"
-SOURCE_BUILT_RECEIPT=""
+SOURCE_BUILT_RECEIPT_MATRIX=""
 log "Bootstrap source: $BOOTSTRAP_SOURCE"
 case "$BOOTSTRAP_SOURCE" in
   local)
@@ -54,17 +54,86 @@ case "$BOOTSTRAP_SOURCE" in
     ;;
   source-built-real)
     : "${RAF_REAL_BOOTSTRAP_ZIP_ARM:?RAF_REAL_BOOTSTRAP_ZIP_ARM is required for source-built-real}"
+    : "${RAF_REAL_BOOTSTRAP_ZIP_AARCH64:?RAF_REAL_BOOTSTRAP_ZIP_AARCH64 is required for source-built-real}"
     : "${RAF_REAL_BOOTSTRAP_MANIFEST:?RAF_REAL_BOOTSTRAP_MANIFEST is required for source-built-real}"
     [[ -f "$RAF_REAL_BOOTSTRAP_ZIP_ARM" ]] || { log "ERROR: Missing source-built ARM bootstrap: $RAF_REAL_BOOTSTRAP_ZIP_ARM"; exit 1; }
+    [[ -f "$RAF_REAL_BOOTSTRAP_ZIP_AARCH64" ]] || { log "ERROR: Missing source-built AArch64 bootstrap: $RAF_REAL_BOOTSTRAP_ZIP_AARCH64"; exit 1; }
     [[ -f "$RAF_REAL_BOOTSTRAP_MANIFEST" ]] || { log "ERROR: Missing source-built bootstrap manifest: $RAF_REAL_BOOTSTRAP_MANIFEST"; exit 1; }
-    SOURCE_BUILT_RECEIPT="build/reports/rafcodephi-real-bootstrap-import-arm.json"
+
+    # Validate the complete pair before changing any embedded archive.
     python3 scripts/import_rafcodephi_real_bootstrap.py \
+      --arch arm \
+      --zip "$RAF_REAL_BOOTSTRAP_ZIP_ARM" \
+      --manifest "$RAF_REAL_BOOTSTRAP_MANIFEST" \
+      --validate-only >&2
+    python3 scripts/import_rafcodephi_real_bootstrap.py \
+      --arch aarch64 \
+      --zip "$RAF_REAL_BOOTSTRAP_ZIP_AARCH64" \
+      --manifest "$RAF_REAL_BOOTSTRAP_MANIFEST" \
+      --validate-only >&2
+
+    # A clean checkout has no generated rewritten archives. After both source
+    # inputs pass, materialize the compatibility matrix, then atomically replace
+    # the two ARM slots with the validated source-built pair.
+    bash scripts/build_bootstrap_profile.sh >&2
+
+    python3 scripts/import_rafcodephi_real_bootstrap.py \
+      --arch arm \
       --zip "$RAF_REAL_BOOTSTRAP_ZIP_ARM" \
       --manifest "$RAF_REAL_BOOTSTRAP_MANIFEST" \
       --dest app/src/main/cpp/rewritten-bootstrap-arm.zip \
-      --receipt "$SOURCE_BUILT_RECEIPT" >&2
+      --receipt build/reports/rafcodephi-real-bootstrap-import-arm.json >&2
+    python3 scripts/import_rafcodephi_real_bootstrap.py \
+      --arch aarch64 \
+      --zip "$RAF_REAL_BOOTSTRAP_ZIP_AARCH64" \
+      --manifest "$RAF_REAL_BOOTSTRAP_MANIFEST" \
+      --dest app/src/main/cpp/rewritten-bootstrap-aarch64.zip \
+      --receipt build/reports/rafcodephi-real-bootstrap-import-aarch64.json >&2
+
+    SOURCE_BUILT_RECEIPT_MATRIX="build/reports/rafcodephi-real-bootstrap-import-matrix.json"
+    python3 - "$RAF_REAL_BOOTSTRAP_MANIFEST" "$SOURCE_BUILT_RECEIPT_MATRIX" <<'PY'
+from __future__ import annotations
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+matrix_path = Path(sys.argv[2])
+receipts = {}
+for arch in ("arm", "aarch64"):
+    path = Path(f"build/reports/rafcodephi-real-bootstrap-import-{arch}.json")
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if doc.get("arch") != arch or doc.get("device_runtime_proof") != "TOKEN_VAZIO":
+        raise SystemExit(f"invalid source-built receipt boundary for {arch}")
+    receipts[arch] = {
+        "path": str(path),
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "bootstrap_sha256": doc.get("sha256"),
+        "package_repo_runtime_state": doc.get("package_repo_runtime_state"),
+        "apt_update_guard": doc.get("apt_update_guard"),
+    }
+matrix = {
+    "schema": "rafcodephi.real-bootstrap-import-matrix/v1",
+    "structural_state": "PASS",
+    "package_name": "com.termux.rafacodephi",
+    "api_package": "com.termux.rafacodephi.api",
+    "api_receiver_component": "com.termux.rafacodephi.api/com.termux.api.TermuxApiReceiver",
+    "api_access_control": "SIGNATURE_PERMISSION_NO_SHARED_UID",
+    "package_repo_runtime_state": "BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED",
+    "apt_update_guard": "RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED",
+    "architectures": receipts,
+    "source_manifest": str(manifest_path),
+    "source_manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+    "paired_architectures_complete": True,
+    "claim_allowed_device_runtime": False,
+    "device_runtime_proof": "TOKEN_VAZIO",
+}
+matrix_path.parent.mkdir(parents=True, exist_ok=True)
+matrix_path.write_text(json.dumps(matrix, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
     PROFILE_REQUIREMENT="required"
-    log "Source-built real ARM bootstrap imported fail-closed"
+    log "Source-built real ARM/AArch64 bootstrap pair imported fail-closed"
     ;;
   *)
     echo "Unsupported RAF_BOOTSTRAP_SOURCE=$BOOTSTRAP_SOURCE (allowed: local, upstream, source-built-real)" >&2
@@ -88,18 +157,28 @@ if [[ "$BOOTSTRAP_SOURCE" == "local" ]]; then
   [[ "$MATRIX_SHA256" =~ ^[0-9a-f]{64}$ ]] || { log "ERROR: Invalid bootstrap profile matrix SHA256"; exit 1; }
   log "Bootstrap profile matrix SHA256: $MATRIX_SHA256"
 elif [[ "$BOOTSTRAP_SOURCE" == "source-built-real" ]]; then
-  [[ -n "$SOURCE_BUILT_RECEIPT" && -s "$SOURCE_BUILT_RECEIPT" ]] || {
-    log "ERROR: source-built-real import receipt missing"
+  [[ -n "$SOURCE_BUILT_RECEIPT_MATRIX" && -s "$SOURCE_BUILT_RECEIPT_MATRIX" ]] || {
+    log "ERROR: source-built-real import receipt matrix missing"
     exit 1
   }
-  IMPORT_SHA256="$(sha256sum "$SOURCE_BUILT_RECEIPT" | awk '{print $1}')"
-  [[ "$IMPORT_SHA256" =~ ^[0-9a-f]{64}$ ]] || { log "ERROR: Invalid source-built import receipt SHA256"; exit 1; }
-  log "Source-built import receipt SHA256: $IMPORT_SHA256"
+  IMPORT_SHA256="$(sha256sum "$SOURCE_BUILT_RECEIPT_MATRIX" | awk '{print $1}')"
+  [[ "$IMPORT_SHA256" =~ ^[0-9a-f]{64}$ ]] || { log "ERROR: Invalid source-built import receipt matrix SHA256"; exit 1; }
+  log "Source-built import receipt matrix SHA256: $IMPORT_SHA256"
 fi
 
+BLAKE3_TARGET="$ROOT_DIR/build/python-deps"
+if [[ -d "$BLAKE3_TARGET/blake3" ]]; then
+  export PYTHONPATH="$BLAKE3_TARGET${PYTHONPATH:+:$PYTHONPATH}"
+fi
 if ! python3 -c 'import blake3' >/dev/null 2>&1; then
-  log "Installing blake3..."
-  python3 -m pip install --user blake3 >&2
+  log "Installing blake3 into writable build target: $BLAKE3_TARGET"
+  mkdir -p "$BLAKE3_TARGET"
+  python3 -m pip install --disable-pip-version-check --upgrade --target "$BLAKE3_TARGET" blake3 >&2
+  export PYTHONPATH="$BLAKE3_TARGET${PYTHONPATH:+:$PYTHONPATH}"
+  python3 -c 'import blake3' >/dev/null 2>&1 || {
+    log "ERROR: blake3 remains unavailable after isolated install"
+    exit 1
+  }
 fi
 
 if HASH_OUTPUT="$(python3 - <<'PY'

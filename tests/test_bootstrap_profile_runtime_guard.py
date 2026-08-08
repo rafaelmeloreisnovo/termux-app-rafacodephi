@@ -24,7 +24,10 @@ class BootstrapProfileRuntimeGuardTests(unittest.TestCase):
             'verifyElf(new File(prefixDir, "bin/apt-get"), "apt-get")',
             'verifyElf(new File(prefixDir, "bin/dpkg"), "dpkg")',
             "verifyLibApt(prefixDir)",
+            "verifyAptRepository(prefixDir, profile)",
             "verifySourcesList",
+            "RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED",
+            "Enabled: no",
             "rejectBridgeMarker",
             "LEGACY_PREFIX",
         ):

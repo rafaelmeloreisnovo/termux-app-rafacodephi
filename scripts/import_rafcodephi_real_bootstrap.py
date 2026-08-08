@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import a source-built RAFCODEPHI bootstrap into the exact embedded ARM slot.
+"""Import a source-built RAFCODEPHI bootstrap into an exact embedded ARM slot.
 
 This importer is intentionally stricter than a normal ZIP copy. It refuses bridge
 payloads, wrong package/prefix/ABI, malformed provenance, non-ELF package-manager
@@ -20,6 +20,8 @@ from pathlib import Path
 
 PACKAGE = "com.termux.rafacodephi"
 PREFIX = f"/data/data/{PACKAGE}/files/usr"
+API_RECEIVER_COMPONENT = f"{PACKAGE}.api/com.termux.api.TermuxApiReceiver"
+APT_UPDATE_GUARD = "RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED"
 LEGACY_PREFIX = b"/data/data/com.termux/files/usr"
 PROFILE_SCHEMA = "rafcodephi-bootstrap-profile/v1"
 MANIFEST_SCHEMA = "rafcodephi.real-bootstrap-sourcebuild/v1"
@@ -30,6 +32,7 @@ BRIDGE_MARKERS = (
     b"real proot native binary is not installed yet",
 )
 REQUIRED = (
+    "BOOTSTRAP_INFO",
     "SYMLINKS.txt",
     "BOOTSTRAP_PROFILE.json",
     "bin/sh",
@@ -40,9 +43,27 @@ REQUIRED = (
     "bin/bash",
     "bin/busybox",
     "bin/proot",
-    "etc/apt/sources.list",
+    "bin/termux-battery-status",
+    "bin/termux-sensor",
+    "libexec/termux-api",
+    "libexec/termux-api-broadcast",
+    "etc/apt/sources.list.d/termux.sources",
+    "etc/apt/apt.conf.d/00rafcodephi-repository-block",
+    "var/lib/dpkg/status",
 )
-ELF_REQUIRED = ("bin/apt", "bin/apt-get", "bin/dpkg", "bin/bash", "bin/busybox", "bin/proot")
+ELF_REQUIRED = (
+    "bin/apt",
+    "bin/apt-get",
+    "bin/dpkg",
+    "bin/bash",
+    "bin/busybox",
+    "bin/proot",
+    "libexec/termux-api-broadcast",
+)
+ARCH_SPECS = {
+    "arm": {"elf_class": 1, "machine": 40, "machine_name": "EM_ARM"},
+    "aarch64": {"elf_class": 2, "machine": 183, "machine_name": "EM_AARCH64"},
+}
 
 
 def parse_manifest(path: Path) -> dict[str, str]:
@@ -56,6 +77,27 @@ def parse_manifest(path: Path) -> dict[str, str]:
         key, value = line.split("=", 1)
         if not key or key in out:
             raise SystemExit(f"manifest key invalid or duplicated: {key!r}")
+        out[key] = value
+    return out
+
+
+def parse_key_value_payload(payload: bytes, label: str) -> dict[str, str]:
+    if len(payload) > 64 * 1024:
+        raise SystemExit(f"{label} exceeds 64 KiB")
+    try:
+        text = payload.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise SystemExit(f"{label} is not UTF-8: {exc}") from exc
+    out: dict[str, str] = {}
+    for number, raw in enumerate(text.splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            raise SystemExit(f"{label} line {number} is not key=value")
+        key, value = line.split("=", 1)
+        if not key or key in out:
+            raise SystemExit(f"{label} key invalid or duplicated: {key!r}")
         out[key] = value
     return out
 
@@ -107,28 +149,39 @@ def parse_symlink_destinations(zf: zipfile.ZipFile, names: set[str]) -> set[str]
     return destinations
 
 
-def require_arm_elf(payload: bytes, label: str) -> None:
+def require_elf(payload: bytes, label: str, arch: str) -> None:
+    spec = ARCH_SPECS[arch]
     if len(payload) < 20 or payload[:4] != b"\x7fELF":
         raise SystemExit(f"{label} is not ELF")
-    if payload[4] != 1:
-        raise SystemExit(f"{label} is not ELF32 (class={payload[4]})")
+    if payload[4] != spec["elf_class"]:
+        raise SystemExit(
+            f"{label} has ELF class={payload[4]}, expected {spec['elf_class']} for {arch}"
+        )
     if payload[5] != 1:
         raise SystemExit(f"{label} is not little-endian ELF")
     machine = struct.unpack_from("<H", payload, 18)[0]
-    if machine != 40:
-        raise SystemExit(f"{label} e_machine={machine}, expected EM_ARM=40")
+    if machine != spec["machine"]:
+        raise SystemExit(
+            f"{label} e_machine={machine}, expected {spec['machine_name']}={spec['machine']}"
+        )
     if LEGACY_PREFIX in payload:
         raise SystemExit(f"{label} embeds forbidden legacy prefix")
 
 
-def validate(zip_path: Path, manifest_path: Path) -> dict[str, object]:
+def validate(zip_path: Path, manifest_path: Path, arch: str) -> dict[str, object]:
     manifest = parse_manifest(manifest_path)
     expected_manifest = {
         "schema": MANIFEST_SCHEMA,
         "package_name": PACKAGE,
         "prefix": PREFIX,
+        "api_package": f"{PACKAGE}.api",
+        "api_receiver_component": API_RECEIVER_COMPONENT,
+        "api_access_control": "SIGNATURE_PERMISSION_NO_SHARED_UID",
         "bridge_allowed": "false",
         "legacy_prefix_allowed": "false",
+        "termux_api_cli": "EMBEDDED",
+        "package_repo_runtime_state": "BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED",
+        "apt_update_guard": APT_UPDATE_GUARD,
         "claim_allowed_device_runtime": "false",
         "device_runtime_proof": "TOKEN_VAZIO",
     }
@@ -136,7 +189,7 @@ def validate(zip_path: Path, manifest_path: Path) -> dict[str, object]:
         if manifest.get(key) != expected:
             raise SystemExit(f"manifest contract mismatch {key}: {manifest.get(key)!r} != {expected!r}")
 
-    declared = manifest.get("sha256_arm", "")
+    declared = manifest.get(f"sha256_{arch}", "")
     actual = sha256(zip_path)
     if len(declared) != 64 or declared.lower() != actual:
         raise SystemExit(f"bootstrap SHA256 mismatch declared={declared!r} actual={actual}")
@@ -161,15 +214,44 @@ def validate(zip_path: Path, manifest_path: Path) -> dict[str, object]:
             "package_layer": "real-pkg",
             "package_name": PACKAGE,
             "prefix": PREFIX,
-            "arch": "arm",
+            "arch": arch,
+            "api_package": f"{PACKAGE}.api",
+            "api_receiver_component": API_RECEIVER_COMPONENT,
+            "api_access_control": "SIGNATURE_PERMISSION_NO_SHARED_UID",
             "claim_allowed": False,
             "release_allowed": False,
             "device_validation": "TOKEN_VAZIO",
             "real_pkg_relocation_claim_allowed": False,
+            "apt_update_guard": APT_UPDATE_GUARD,
         }
         for key, expected in expected_profile.items():
             if profile.get(key) != expected:
                 raise SystemExit(f"profile contract mismatch {key}: {profile.get(key)!r} != {expected!r}")
+
+        bootstrap_info = parse_key_value_payload(zf.read("BOOTSTRAP_INFO"), "BOOTSTRAP_INFO")
+        expected_info = {
+            "TERMUX_PACKAGE_NAME": PACKAGE,
+            "TERMUX_ARCH": arch,
+            "RAFCODEPHI_BOOTSTRAP_PROFILE": "real-pkg",
+            "RAFCODEPHI_PACKAGE_LAYER": "real-pkg",
+            "RAFCODEPHI_DEVICE_VALIDATION": "TOKEN_VAZIO",
+            "RAFCODEPHI_CLAIM_ALLOWED": "0",
+            "BOOTSTRAP_FULLENGINE_READY": "0",
+            "BOOTSTRAP_PKG_REAL": "1",
+            "BOOTSTRAP_APT_REAL": "1",
+            "BOOTSTRAP_DPKG_REAL": "1",
+            "BOOTSTRAP_TERMUX_API_CLI": "1",
+            "RAFCODEPHI_API_PACKAGE": f"{PACKAGE}.api",
+            "RAFCODEPHI_API_RECEIVER_COMPONENT": API_RECEIVER_COMPONENT,
+            "RAFCODEPHI_API_ACCESS_CONTROL": "SIGNATURE_PERMISSION_NO_SHARED_UID",
+            "RAFCODEPHI_APT_UPDATE_GUARD": APT_UPDATE_GUARD,
+        }
+        for key, expected in expected_info.items():
+            if bootstrap_info.get(key) != expected:
+                raise SystemExit(
+                    f"BOOTSTRAP_INFO contract mismatch {key}: "
+                    f"{bootstrap_info.get(key)!r} != {expected!r}"
+                )
         required_profile = profile.get("required_entries")
         if not isinstance(required_profile, list) or not required_profile:
             raise SystemExit("profile required_entries missing/empty")
@@ -177,10 +259,43 @@ def validate(zip_path: Path, manifest_path: Path) -> dict[str, object]:
             if not isinstance(name, str) or name not in available:
                 raise SystemExit(f"profile required installed entry unresolved: {name!r}")
 
+        elf_names: set[str] = set()
+        for entry in zf.infolist():
+            name = entry.filename
+            if entry.is_dir():
+                continue
+            with zf.open(entry, "r") as stream:
+                prefix = stream.read(4)
+                if prefix == b"\x7fELF":
+                    payload = prefix + stream.read()
+                    require_elf(payload, name, arch)
+                    elf_names.add(name)
+                elif name.startswith(("bin/", "libexec/", "etc/apt/")):
+                    payload = prefix + stream.read()
+                    if LEGACY_PREFIX in payload:
+                        raise SystemExit(f"{name} embeds forbidden legacy prefix")
         for name in ELF_REQUIRED:
-            if name not in names:
-                raise SystemExit(f"required ELF archive entry missing: {name}")
-            require_arm_elf(zf.read(name), name)
+            if name not in elf_names:
+                raise SystemExit(f"required architecture-matched ELF archive entry missing: {name}")
+
+        status = zf.read("var/lib/dpkg/status")
+        if b"\nPackage: termux-api\n" not in b"\n" + status:
+            raise SystemExit("dpkg status does not contain the embedded termux-api package")
+
+        symlinks = zf.read("SYMLINKS.txt")
+        if b"termux-api-broadcast\xe2\x86\x90libexec/termux-api" not in symlinks:
+            raise SystemExit("termux-api compatibility symlink is missing")
+
+        api_client = zf.read("libexec/termux-api-broadcast")
+        receiver = API_RECEIVER_COMPONENT.encode()
+        if receiver not in api_client:
+            raise SystemExit("termux-api client does not target the RAFCODEPHI API receiver")
+        for stub in (
+            b"com.termux/com.termux.app.TermuxService",
+            b"com.termux.service_api",
+        ):
+            if stub in api_client:
+                raise SystemExit("termux-api client contains the removed service stub route")
 
         if "bin/pkg" not in names:
             raise SystemExit("bin/pkg must be a real archive script entry")
@@ -195,9 +310,21 @@ def validate(zip_path: Path, manifest_path: Path) -> dict[str, object]:
             if optional in names and LEGACY_PREFIX in zf.read(optional):
                 raise SystemExit(f"{optional} embeds forbidden legacy prefix")
 
-        sources = zf.read("etc/apt/sources.list")
-        if b"deb " not in sources or b"https://" not in sources:
-            raise SystemExit("sources.list has no HTTPS deb repository declaration")
+        sources = zf.read("etc/apt/sources.list.d/termux.sources")
+        if (
+            b"# RAFCODEPHI_PACKAGE_REPOSITORY=BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED" not in sources
+            or b"Enabled: no" not in sources
+            or b"https://packages.rafcodephi.invalid/termux" not in sources
+            or b"termux.net" in sources
+        ):
+            raise SystemExit("custom-prefix apt repository is not deterministically disabled")
+        apt_block = zf.read("etc/apt/apt.conf.d/00rafcodephi-repository-block")
+        if (
+            b"APT::Update::Pre-Invoke" not in apt_block
+            or b"RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED" not in apt_block
+            or b"exit 100" not in apt_block
+        ):
+            raise SystemExit("apt update fail-closed hook is missing or invalid")
 
     return {
         "schema": "rafcodephi.real-bootstrap-import-receipt/v1",
@@ -205,13 +332,18 @@ def validate(zip_path: Path, manifest_path: Path) -> dict[str, object]:
         "source_manifest": str(manifest_path.resolve()),
         "sha256": actual,
         "bytes": zip_path.stat().st_size,
-        "arch": "arm",
+        "arch": arch,
+        "api_package": f"{PACKAGE}.api",
+        "api_receiver_component": API_RECEIVER_COMPONENT,
+        "api_access_control": "SIGNATURE_PERMISSION_NO_SHARED_UID",
+        "termux_api_cli": "EMBEDDED",
         "package_name": PACKAGE,
         "prefix": PREFIX,
         "profile": "real-pkg",
         "bridge_allowed": False,
         "legacy_prefix_allowed": False,
         "package_repo_runtime_state": manifest.get("package_repo_runtime_state", "NOT_MEASURED"),
+        "apt_update_guard": APT_UPDATE_GUARD,
         "claim_allowed_device_runtime": False,
         "device_runtime_proof": "TOKEN_VAZIO",
     }
@@ -234,21 +366,39 @@ def atomic_copy(source: Path, target: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--arch", choices=tuple(ARCH_SPECS), default="arm")
     parser.add_argument("--zip", required=True, type=Path)
     parser.add_argument("--manifest", required=True, type=Path)
-    parser.add_argument("--dest", default=Path("app/src/main/cpp/rewritten-bootstrap-arm.zip"), type=Path)
-    parser.add_argument("--receipt", default=Path("build/reports/rafcodephi-real-bootstrap-import-arm.json"), type=Path)
+    parser.add_argument("--dest", type=Path)
+    parser.add_argument("--receipt", type=Path)
+    parser.add_argument("--validate-only", action="store_true")
     args = parser.parse_args()
 
     if not args.zip.is_file() or not args.manifest.is_file():
         raise SystemExit("source-built bootstrap ZIP/manifest unavailable")
-    receipt = validate(args.zip, args.manifest)
-    atomic_copy(args.zip, args.dest)
+    receipt = validate(args.zip, args.manifest, args.arch)
+    if args.validate_only:
+        print(
+            f"rafcodephi_real_bootstrap_validation=PASS arch={args.arch} "
+            f"sha256={receipt['sha256']} bytes={receipt['bytes']}"
+        )
+        print("claim_allowed_device_runtime=false")
+        print("device_runtime_proof=TOKEN_VAZIO")
+        return 0
 
-    args.receipt.parent.mkdir(parents=True, exist_ok=True)
-    receipt["embedded_rewritten_path"] = str(args.dest)
-    args.receipt.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(f"rafcodephi_real_bootstrap_import=PASS sha256={receipt['sha256']} bytes={receipt['bytes']}")
+    dest = args.dest or Path(f"app/src/main/cpp/rewritten-bootstrap-{args.arch}.zip")
+    receipt_path = args.receipt or Path(
+        f"build/reports/rafcodephi-real-bootstrap-import-{args.arch}.json"
+    )
+    atomic_copy(args.zip, dest)
+
+    receipt_path.parent.mkdir(parents=True, exist_ok=True)
+    receipt["embedded_rewritten_path"] = str(dest)
+    receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(
+        f"rafcodephi_real_bootstrap_import=PASS arch={args.arch} "
+        f"sha256={receipt['sha256']} bytes={receipt['bytes']}"
+    )
     print("claim_allowed_device_runtime=false")
     print("device_runtime_proof=TOKEN_VAZIO")
     return 0

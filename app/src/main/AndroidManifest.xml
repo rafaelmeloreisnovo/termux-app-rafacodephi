@@ -28,7 +28,12 @@
         android:name="${TERMUX_PACKAGE_NAME}.permission.BOOTSTRAP_HANDOFF"
         android:protectionLevel="signature" />
 
+    <permission
+        android:name="${TERMUX_PACKAGE_NAME}.permission.TERMUX_API"
+        android:protectionLevel="signature" />
+
     <uses-permission android:name="${TERMUX_PACKAGE_NAME}.permission.BOOTSTRAP_HANDOFF" />
+    <uses-permission android:name="${TERMUX_PACKAGE_NAME}.permission.TERMUX_API" />
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />

@@ -59,7 +59,7 @@ NOT_RELEASE_RUNTIME_PROOF
 
 Esse modo prova estrutura e empacotamento, mas não prova backend real de `apt`, `busybox`, `proot` ou shell completo.
 
-## Fonte 2 — pacotes Termux reais
+## Fonte 2 — candidato upstream pré-compilado (compatibilidade bloqueada)
 
 Ativação explícita:
 
@@ -81,9 +81,66 @@ Variáveis do contrato:
 | `TERMUX_BOOTSTRAP_PACKAGE_NAME` | `com.termux.rafacodephi` | package/prefix canônico |
 | `TERMUX_BOOTSTRAP_PAGE_SIZE` | `16384` | contrato de page size |
 
-A URL acima é fonte de pacotes, não um endpoint de ZIP pronto. A geração continua sendo local e deve registrar versões e hashes dos pacotes consumidos.
+A URL acima é fonte de pacotes, não um endpoint de ZIP pronto. Esses binários
+upstream foram compilados para `/data/data/com.termux/files/usr`; portanto esta
+rota permanece `LEGACY_PREFIX_BINARY_RISK` e não é a fonte canônica de release.
 
-## Fonte 3 — artefato de release
+## Fonte 3 — source-build RAFCODEPHI ARM/ARM64
+
+A fonte canônica de payload real recompila os pacotes no fork de
+`termux-packages`, já com o package/prefix RAFCODEPHI:
+
+```bash
+cd ../termux-packages
+./scripts/build-rafcodephi-real-bootstrap.sh \
+  --architectures arm,aarch64
+```
+
+O bootstrap inclui `bash`, `pkg`, `apt`, `apt-get`, `dpkg`, `busybox`, `proot`,
+certificados e o cliente CLI `termux-api`. O cliente é compilado para enviar
+broadcast explícito a:
+
+```text
+com.termux.rafacodephi.api/com.termux.api.TermuxApiReceiver
+```
+
+A comunicação não depende de `sharedUserId`: o app principal define a permissão
+`com.termux.rafacodephi.permission.TERMUX_API` com proteção `signature`, o
+plugin protege o receptor com essa permissão e o cliente usa sockets abstratos.
+O lado esquerdo do componente é o `applicationId`; o lado direito preserva o
+pacote Java real do fork, evitando resolução incorreta de classe abreviada.
+Os dois APKs ainda precisam da mesma assinatura.
+
+O app importa obrigatoriamente o par ARM/AArch64 antes do build:
+
+```bash
+RAF_BOOTSTRAP_SOURCE=source-built-real \
+RAF_REAL_BOOTSTRAP_ZIP_ARM=/caminho/rafcodephi-bootstrap-arm.zip \
+RAF_REAL_BOOTSTRAP_ZIP_AARCH64=/caminho/rafcodephi-bootstrap-aarch64.zip \
+RAF_REAL_BOOTSTRAP_MANIFEST=/caminho/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt \
+./scripts/prepare_bootstrap_env.sh --print-env
+```
+
+O importador valida SHA-256, perfil, package, prefixo, ELF32 `EM_ARM`, ELF64
+`EM_AARCH64`, ausência do prefixo legado, ausência de bridges e presença da
+rota CLI/API. Ele produz receipts por arquitetura e uma matriz conjunta.
+
+Limite atual, preservado no manifesto:
+
+```text
+package_repo_runtime_state=BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED
+apt_update_guard=RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED
+device_runtime_proof=TOKEN_VAZIO
+claim_allowed_device_runtime=false
+```
+
+Enquanto esse estado estiver ativo, o payload mantém
+`etc/apt/sources.list.d/termux.sources` com `Enabled: no` e instala um hook que
+faz `apt update` encerrar com `RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED`.
+Isso impede que binários upstream, compilados para outro prefixo, corrompam o
+runtime customizado.
+
+## Fonte 4 — artefato de release
 
 Um ZIP só pode receber classificação `RELEASE_BOOTSTRAP_VERIFIED` quando houver:
 
@@ -139,6 +196,8 @@ A promoção exige:
 source_contract_documented = true
 legacy_download_task_claim = removed
 default_payload = BOOTSTRAP_BRIDGE_ONLY
-real_arm_payload_path = implemented_but_unproven_on_current_head
+real_arm_aarch64_sourcebuild_path = implemented_structurally
+termux_api_cli_route = embedded_and_structurally_verified
+custom_binary_repository = BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED
 release_hashes = BLOCKED_BY[CANONICAL_BUILD_EVIDENCE_REQUIRED]
 ```

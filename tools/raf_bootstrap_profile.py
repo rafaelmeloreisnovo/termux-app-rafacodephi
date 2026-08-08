@@ -21,7 +21,11 @@ BASE_REQUIRED = (
     INFO_FILE, SYMLINKS_FILE, "bin/sh", "bin/pkg", "bin/apt",
     "bin/apt-get", "bin/busybox", "bin/proot",
 )
-REAL_REQUIRED = BASE_REQUIRED + ("bin/dpkg", "etc/apt/sources.list", "var/lib/dpkg/status")
+REAL_REQUIRED = BASE_REQUIRED + ("bin/dpkg", "var/lib/dpkg/status")
+APT_SOURCE_LEGACY = "etc/apt/sources.list"
+APT_SOURCE_DEB822 = "etc/apt/sources.list.d/termux.sources"
+APT_UPDATE_BLOCK = "etc/apt/apt.conf.d/00rafcodephi-repository-block"
+REPOSITORY_BLOCKED = "BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED"
 BRIDGE_MARKERS = (
     b"RAFCODEPHI pkg bridge", b"RAFCODEPHI apt bridge",
     b"real apt backend is not installed yet",
@@ -123,7 +127,14 @@ def clone(info: zipfile.ZipInfo) -> zipfile.ZipInfo:
     return out
 
 
-def manifest(profile: str, arch: str, package: str, source_repo: str, source_sha: str) -> dict:
+def manifest(
+    profile: str,
+    arch: str,
+    package: str,
+    source_repo: str,
+    source_sha: str,
+    apt_source: str = APT_SOURCE_LEGACY,
+) -> dict:
     return {
         "schema": SCHEMA,
         "profile": profile,
@@ -133,7 +144,7 @@ def manifest(profile: str, arch: str, package: str, source_repo: str, source_sha
         "arch": arch,
         "source_repository": source_repo,
         "source_zip_sha256": source_sha,
-        "required_entries": list(REAL_REQUIRED if profile == "real-pkg" else BASE_REQUIRED),
+        "required_entries": list(REAL_REQUIRED + (apt_source,) if profile == "real-pkg" else BASE_REQUIRED),
         "legacy_prefix_forbidden": profile == "real-pkg",
         "bridge_markers_forbidden": profile == "real-pkg",
         "structural_validation": "CANDIDATE",
@@ -167,8 +178,9 @@ def materialize(path: Path, *, profile: str, arch: str, package_name: str, sourc
         "BOOTSTRAP_APT_REAL": "1" if real else "0",
         "BOOTSTRAP_DPKG_REAL": "1" if real else "0",
     })
+    apt_source = APT_SOURCE_DEB822 if APT_SOURCE_DEB822 in by_name else APT_SOURCE_LEGACY
     profile_data = (json.dumps(
-        manifest(profile, arch, package_name, source_repo, source_sha),
+        manifest(profile, arch, package_name, source_repo, source_sha, apt_source),
         sort_keys=True, indent=2
     ) + "\n").encode()
 
@@ -248,6 +260,12 @@ def validate(path: Path, *, expected_profile: str | None, expected_arch: str | N
         missing = [name for name in required if name not in available]
         if missing:
             raise ProfileError("missing installed entries: " + ", ".join(missing))
+        apt_source = next(
+            (name for name in (APT_SOURCE_DEB822, APT_SOURCE_LEGACY) if name in available),
+            None,
+        )
+        if profile == "real-pkg" and apt_source is None:
+            raise ProfileError("real-pkg has no apt repository definition")
         declared_required = profile_doc.get("required_entries")
         if not isinstance(declared_required, list) or not declared_required:
             raise ProfileError("profile required_entries missing")
@@ -286,13 +304,28 @@ def validate(path: Path, *, expected_profile: str | None, expected_arch: str | N
                     raise ProfileError(f"bridge marker in {name}")
             if not any(n == "lib/libapt-pkg.so" or n.startswith("lib/libapt-pkg.so.") for n in names):
                 raise ProfileError("libapt-pkg missing")
-            sources = zf.read("etc/apt/sources.list").decode(errors="replace")
-            if not any(
+            sources = zf.read(apt_source).decode(errors="replace")
+            if profile_doc.get("package_repo_runtime_state") == REPOSITORY_BLOCKED:
+                if apt_source != APT_SOURCE_DEB822:
+                    raise ProfileError("blocked custom repository must use the Deb822 source contract")
+                required_source_tokens = (
+                    "# RAFCODEPHI_PACKAGE_REPOSITORY=BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED",
+                    "Enabled: no",
+                    "URIs: https://packages.rafcodephi.invalid/termux",
+                )
+                if any(token not in sources for token in required_source_tokens) or "termux.net" in sources:
+                    raise ProfileError("custom-prefix apt repository is not deterministically disabled")
+                if APT_UPDATE_BLOCK not in names:
+                    raise ProfileError("apt update fail-closed hook missing")
+                block = zf.read(APT_UPDATE_BLOCK).decode(errors="replace")
+                if "RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED" not in block or "exit 100" not in block:
+                    raise ProfileError("apt update fail-closed hook invalid")
+            elif not any(
                 line.strip() and not line.lstrip().startswith("#") and
                 ("http://" in line or "https://" in line)
                 for line in sources.splitlines()
             ):
-                raise ProfileError("sources.list has no repository")
+                raise ProfileError("apt source has no repository")
             legacy = scan_legacy(zf)
             if legacy:
                 raise ProfileError(f"legacy prefix in {legacy}")

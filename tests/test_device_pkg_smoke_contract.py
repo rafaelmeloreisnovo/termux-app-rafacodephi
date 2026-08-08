@@ -74,8 +74,8 @@ def test_truth_table_keeps_real_pkg_unproved_until_device_smoke() -> None:
     expected_states = {
         "`pkg update`": "FUTURO",
         "`pkg install`": "FUTURO",
-        "`apt`": "TOKEN_VAZIO",
-        "`dpkg`": "TOKEN_VAZIO",
+        "`apt`": "PROVADO ESTRUTURAL NO PAYLOAD, TOKEN_VAZIO NO DEVICE",
+        "`dpkg`": "PROVADO ESTRUTURAL NO PAYLOAD, TOKEN_VAZIO NO DEVICE",
     }
     for resource, expected_state in expected_states.items():
         assert rows.get(resource) == expected_state

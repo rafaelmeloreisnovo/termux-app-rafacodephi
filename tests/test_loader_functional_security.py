@@ -13,8 +13,31 @@ module = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(module)
 
 
-def stub_fixture():
+def current_fixture():
     return module.load(ROOT)
+
+
+def stub_fixture():
+    files = current_fixture()
+    for key in ("install_contract", "activity", "service", "source_policy", "provider"):
+        files[key] = ""
+    files["manifest"] = '''<manifest><application
+android:hasCode="false" android:debuggable="false">
+<meta-data android:name="CONTRACT_STATE" android:value="STUB_NO_BOOTSTRAP_PAYLOAD"/>
+</application></manifest>'''
+    files["readme"] = "\n".join((
+        "has_code = false",
+        "installer_behavior = absent",
+        "release_allowed = false",
+        "BLOCKED_BY[LOADER_FUNCTIONAL_CONTRACT_REQUIRED]",
+    ))
+    files["loader_gradle"] = 'versionName "0.1.0-stub"\n// Builds the loader stub\n'
+    files["artifact_verifier"] = "\n".join((
+        "state=STUB_NO_BOOTSTRAP_PAYLOAD",
+        "manifest_has_code_false",
+        "dex_policy=no_dex",
+    ))
+    return files
 
 
 def functional_fixture():
@@ -61,9 +84,9 @@ class LoaderFunctionalSecurityTests(unittest.TestCase):
         self.assertTrue(errors)
         self.assertIn(phrase, "\n".join(errors))
 
-    def test_current_stub_is_safe_and_blocked(self):
-        state, errors = module.validate_snapshot(stub_fixture())
-        self.assertEqual("STUB_SAFE_BLOCKED", state)
+    def test_current_loader_is_functional_and_security_gated(self):
+        state, errors = module.validate_snapshot(current_fixture())
+        self.assertEqual("FUNCTIONAL_SECURITY_GATED", state)
         self.assertEqual([], errors)
 
     def test_complete_functional_fixture_is_accepted_as_gated(self):
