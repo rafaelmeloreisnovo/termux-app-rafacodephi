@@ -23,31 +23,19 @@ import java.util.Locale;
 import java.util.TimeZone;
 
 /**
- * Fail-closed evidence boundary for the PA freestanding ELF device execution.
+ * Append-safe evidence boundary for the PA freestanding ELF device execution.
  *
- * The latest receipt is an atomic convenience pointer. Every attempted run is
- * also written to an immutable-by-convention history file before latest is
- * replaced, so a later failed run does not erase prior evidence.
- *
- * The receipt proves only what the launcher directly observes: artifact
- * identity, linker route, exit code, captured stdout markers, timeout state and
- * capture completeness. It does not promote those observations into claims
- * about isolated silicon behavior, timer accuracy, thermal stability or
- * statistical reproducibility.
+ * The receipt deliberately proves only what the launcher directly observes:
+ * artifact identity, linker route, exit code and exact stdout markers. It does
+ * not promote those observations into claims about isolated silicon behavior,
+ * timer accuracy, thermal stability or statistical reproducibility.
  */
 public final class PaBenchmarkReceipt {
 
-    public static final String SCHEMA = "rafcodephi.pa-elf-runtime-receipt/v2";
+    public static final String SCHEMA = "rafcodephi.pa-elf-runtime-receipt/v1";
     public static final String DIRECTORY = "rafaelia/receipts";
-    public static final String HISTORY_DIRECTORY = DIRECTORY + "/pa-history";
-    public static final String FILE_NAME = "pa_freestanding_elf_runtime_v2.json";
+    public static final String FILE_NAME = "pa_freestanding_elf_runtime_v1.json";
 
-    public static final String STATE_PASS = "PASS";
-    public static final String STATE_FAIL = "FAIL";
-    public static final String STATE_BLOCKED = "BLOCKED";
-    public static final String STATE_INVALIDATED = "INVALIDATED";
-
-    private static final int MAX_RECEIPT_BYTES = 256 * 1024;
     private static final String HEADER = "RAFCODEPHI-PA-ELF 00000001";
     private static final String MODE = "MODE FREESTANDING NO_LIBC NO_MALLOC NO_JNI DIRECT_SYSCALL";
     private static final String END = "END 00000000";
@@ -59,55 +47,15 @@ public final class PaBenchmarkReceipt {
         return new File(directory, FILE_NAME);
     }
 
-    public static File getHistoryDirectory(Context context) {
-        return new File(context.getFilesDir(), HISTORY_DIRECTORY);
-    }
-
-    public static String getReadState(Context context) {
-        File file = getReceiptFile(context);
-        if (!file.isFile()) return "NOT_MEASURED";
-        return read(context) == null ? "INVALIDATED" : "AVAILABLE";
-    }
-
-    public static String classifyEvidenceState(boolean timedOut,
-                                               boolean executionError,
-                                               int exitCode,
-                                               boolean stdoutTruncated,
-                                               boolean markerComplete) {
-        if (timedOut || executionError) return STATE_BLOCKED;
-        if (exitCode != 0) return STATE_FAIL;
-        if (stdoutTruncated || !markerComplete) return STATE_INVALIDATED;
-        return STATE_PASS;
-    }
-
-    public static String classifyEvidenceReason(boolean timedOut,
-                                                boolean executionError,
-                                                int exitCode,
-                                                boolean stdoutTruncated,
-                                                boolean markerComplete) {
-        if (timedOut) return "PROCESS_TIMEOUT";
-        if (executionError) return "EXECUTION_ERROR";
-        if (exitCode != 0) return "NONZERO_EXIT_CODE";
-        if (stdoutTruncated) return "STDOUT_CAPTURE_TRUNCATED";
-        if (!markerComplete) return "REQUIRED_MARKERS_MISSING";
-        return "ALL_RUNTIME_PREDICATES_SATISFIED";
-    }
-
     public static File recordExecution(Context context,
                                        File elf,
                                        String linker,
                                        int exitCode,
                                        String stdout,
-                                       Throwable executionError,
-                                       boolean timedOut,
-                                       boolean stdoutTruncated,
-                                       long stdoutObservedBytes,
-                                       long wallTimeMs) throws Exception {
+                                       Throwable executionError) throws Exception {
         JSONObject receipt = new JSONObject();
-        String generatedAt = utcNow();
-
         receipt.put("schema", SCHEMA);
-        receipt.put("generated_at_utc", generatedAt);
+        receipt.put("generated_at_utc", utcNow());
         receipt.put("package_name", context.getPackageName());
         receipt.put("app_version", BuildConfig.VERSION_NAME);
         receipt.put("android_release", Build.VERSION.RELEASE);
@@ -115,9 +63,6 @@ public final class PaBenchmarkReceipt {
         receipt.put("manufacturer", Build.MANUFACTURER);
         receipt.put("model", Build.MODEL);
         receipt.put("process_is_64_bit", Build.VERSION.SDK_INT >= 23 && Process.is64Bit());
-        receipt.put("vectra_scope", "INTERNAL_TERMUX_RAFCODEPHI_SCREEN");
-        receipt.put("external_vectras_app_required", false);
-        receipt.put("external_vectras_ci_required", false);
 
         JSONArray abis = new JSONArray();
         if (Build.SUPPORTED_ABIS != null) {
@@ -127,19 +72,12 @@ public final class PaBenchmarkReceipt {
 
         receipt.put("linker", linker == null ? "" : linker);
         receipt.put("elf_path", elf == null ? "" : elf.getAbsolutePath());
-        String elfSha = elf != null && elf.isFile() ? sha256File(elf) : "";
-        receipt.put("elf_sha256", elfSha);
+        receipt.put("elf_sha256", elf != null && elf.isFile() ? sha256File(elf) : "");
         receipt.put("exit_code", exitCode);
-        receipt.put("timed_out", timedOut);
-        receipt.put("wall_time_ms", Math.max(0L, wallTimeMs));
 
         String captured = stdout == null ? "" : stdout;
-        byte[] capturedBytes = captured.getBytes(StandardCharsets.US_ASCII);
-        String stdoutSha = sha256Bytes(capturedBytes);
-        receipt.put("stdout_sha256", stdoutSha);
-        receipt.put("stdout_captured_bytes", capturedBytes.length);
-        receipt.put("stdout_observed_bytes", Math.max(stdoutObservedBytes, capturedBytes.length));
-        receipt.put("stdout_truncated", stdoutTruncated);
+        receipt.put("stdout_sha256", sha256Bytes(captured.getBytes(StandardCharsets.US_ASCII)));
+        receipt.put("stdout_bytes", captured.getBytes(StandardCharsets.US_ASCII).length);
         receipt.put("stdout", captured);
 
         JSONObject markers = new JSONObject();
@@ -158,20 +96,8 @@ public final class PaBenchmarkReceipt {
             && markers.getBoolean("mode_contract_marker")
             && allRuns
             && markers.getBoolean("end");
-
-        boolean hasExecutionError = executionError != null;
-        String evidenceState = classifyEvidenceState(
-            timedOut, hasExecutionError, exitCode, stdoutTruncated, markerComplete);
-        String evidenceReason = classifyEvidenceReason(
-            timedOut, hasExecutionError, exitCode, stdoutTruncated, markerComplete);
-        boolean runtimePass = STATE_PASS.equals(evidenceState);
-
-        receipt.put("evidence_state", evidenceState);
-        receipt.put("evidence_reason", evidenceReason);
+        boolean runtimePass = executionError == null && exitCode == 0 && markerComplete;
         receipt.put("runtime_exec_pass", runtimePass);
-        receipt.put("claim_allowed_runtime_execution", runtimePass);
-        receipt.put("claim_allowed_isolated_silicon", false);
-        receipt.put("claim_allowed_reproducibility", false);
         receipt.put("evidence_scope", "physical_process_execution_observation");
         receipt.put("claim_boundary",
             "Does not by itself prove isolated silicon performance, timer accuracy, thermal stability, " +
@@ -184,38 +110,21 @@ public final class PaBenchmarkReceipt {
             receipt.put("execution_error", error);
         }
 
-        File historyDirectory = getHistoryDirectory(context);
-        if (!historyDirectory.exists() && !historyDirectory.mkdirs() && !historyDirectory.exists()) {
-            throw new IOException("Unable to create PA receipt history directory: " + historyDirectory);
-        }
-
-        String identityHash = !stdoutSha.isEmpty() ? stdoutSha : (!elfSha.isEmpty() ? elfSha : "nohash");
-        String shortHash = identityHash.length() >= 12 ? identityHash.substring(0, 12) : identityHash;
-        File historyFile = new File(historyDirectory,
-            "pa_" + utcFileStamp() + "_" + evidenceState.toLowerCase(Locale.US) + "_" + shortHash + ".json");
-        receipt.put("history_file", historyFile.getAbsolutePath());
-        receipt.put("latest_file", getReceiptFile(context).getAbsolutePath());
-
-        writeAtomicFile(historyFile, receipt);
-        writeAtomicFile(getReceiptFile(context), receipt);
-        return getReceiptFile(context);
+        return writeAtomic(context, receipt);
     }
 
     public static JSONObject read(Context context) {
-        return readFile(getReceiptFile(context));
-    }
-
-    private static JSONObject readFile(File file) {
-        if (file == null || !file.isFile()) return null;
+        File file = getReceiptFile(context);
+        if (!file.isFile()) return null;
         try (FileInputStream input = new FileInputStream(file)) {
-            ByteArrayOutputStream bytes = new ByteArrayOutputStream((int) Math.min(file.length(), MAX_RECEIPT_BYTES));
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream((int) Math.min(file.length(), 128 * 1024));
             byte[] buffer = new byte[4096];
             int read;
             int total = 0;
             while ((read = input.read(buffer)) >= 0) {
                 if (read == 0) continue;
                 total += read;
-                if (total > MAX_RECEIPT_BYTES) return null;
+                if (total > 128 * 1024) return null;
                 bytes.write(buffer, 0, read);
             }
             return new JSONObject(new String(bytes.toByteArray(), StandardCharsets.UTF_8));
@@ -224,7 +133,8 @@ public final class PaBenchmarkReceipt {
         }
     }
 
-    private static void writeAtomicFile(File file, JSONObject receipt) throws IOException {
+    private static File writeAtomic(Context context, JSONObject receipt) throws IOException {
+        File file = getReceiptFile(context);
         File parent = file.getParentFile();
         if (parent == null || (!parent.exists() && !parent.mkdirs() && !parent.exists())) {
             throw new IOException("Unable to create receipt directory: " + parent);
@@ -239,6 +149,7 @@ public final class PaBenchmarkReceipt {
             output.flush();
             output.getFD().sync();
             atomicFile.finishWrite(output);
+            return file;
         } catch (IOException error) {
             if (output != null) atomicFile.failWrite(output);
             throw error;
@@ -270,12 +181,6 @@ public final class PaBenchmarkReceipt {
 
     private static String utcNow() {
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
-        format.setTimeZone(TimeZone.getTimeZone("UTC"));
-        return format.format(new Date());
-    }
-
-    private static String utcFileStamp() {
-        SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd'T'HHmmssSSS'Z'", Locale.US);
         format.setTimeZone(TimeZone.getTimeZone("UTC"));
         return format.format(new Date());
     }
