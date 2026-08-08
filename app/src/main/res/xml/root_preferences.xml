@@ -28,8 +28,8 @@
 
     <Preference
         app:key="pa_freestanding_elf"
-        app:title="PA Silicon · Freestanding ELF"
-        app:summary="Execute o núcleo C/ASM diretamente pelo linker Android; sem JNI, libc, malloc ou ZIP"
+        app:title="RAFCODEΦ · First Beta Orchestrator"
+        app:summary="Wizard/bootstrap readiness + PA observation + optional governed n=30 + analysis + export in one fail-closed pipeline"
         app:persistent="false">
         <intent
             android:targetPackage="com.termux.rafacodephi"
