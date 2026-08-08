@@ -114,7 +114,7 @@ def test_orchestrator_has_process_wide_single_flight_nonempty_plan_watchdog_canc
     assert bootstrap < single < series < analysis < export
 
 
-def test_operator_ui_has_comprehensible_checkboxes_export_paths_lifecycle_and_process_recovery() -> None:
+def test_operator_ui_has_comprehensible_checkboxes_exports_lifecycle_and_process_recovery() -> None:
     ui = read("app/src/main/java/com/termux/app/activities/BetaOrchestratorActivity.java")
     prefs = read("app/src/main/res/xml/root_preferences.xml")
 
@@ -131,6 +131,14 @@ def test_operator_ui_has_comprehensible_checkboxes_export_paths_lifecycle_and_pr
         "OPEN BOOTSTRAP / PERMISSIONS WIZARD",
         "OPEN VECTRA EXPERT DIAGNOSTICS",
         "REFRESH READINESS + PROCESS STATE + LATEST RECEIPT",
+        "EXPORT LATEST RECEIPT…",
+        "Intent.ACTION_CREATE_DOCUMENT",
+        'intent.setType("application/json")',
+        "Intent.EXTRA_TITLE",
+        'getContentResolver().openFileDescriptor(target, "rwt")',
+        "stream.getFD().sync()",
+        "USER_SELECTED_EXPORT=PASS",
+        "USER_SELECTED_EXPORT_AUTHORITY=copy_only canonical_receipt_remains_authoritative",
         "PROCESS_WIDE_PIPELINE=RUNNING",
         "SINGLE_FLIGHT_INVARIANT",
         "FINAL_EVIDENCE_STATE=",
@@ -143,6 +151,7 @@ def test_operator_ui_has_comprehensible_checkboxes_export_paths_lifecycle_and_pr
         "protected void onDestroy()",
         "orchestrator.cancelAfterCurrentAtomicStage()",
         "refresh.setEnabled(true)",
+        "exportLatest.setEnabled(!running)",
     ]:
         assert token in ui
 
