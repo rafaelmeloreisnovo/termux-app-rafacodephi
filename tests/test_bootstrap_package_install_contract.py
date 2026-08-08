@@ -81,6 +81,9 @@ def test_wizard_exposes_real_bootstrap_zip_document_route_through_compatibility_
 
     for token in [
         'SCHEMA = "rafcodephi.bootstrap-readiness/v1"',
+        'PROFILE_SCHEMA = "rafcodephi-bootstrap-profile/v1"',
+        'PROFILE_FILE = "BOOTSTRAP_PROFILE.json"',
+        'PROFILE_READ_LIMIT = 64 * 1024',
         '"sh"',
         '"pkg"',
         '"apkmanager"',
@@ -88,9 +91,22 @@ def test_wizard_exposes_real_bootstrap_zip_document_route_through_compatibility_
         '"busybox-safe"',
         '"proot-safe"',
         "TermuxRuntimePaths.storageHomeDir()",
+        'context.getPackageName().equals(profile.optString("package_name", ""))',
+        'prefix.getAbsolutePath().equals(profile.optString("prefix", ""))',
+        'expectedBootstrapArch().equals(profile.optString("arch", ""))',
+        '!profile.optBoolean("claim_allowed", true)',
+        '!profile.optBoolean("release_allowed", true)',
+        'TOKEN_VAZIO.equals(profile.optString("device_validation", ""))',
+        'profile.optJSONArray("required_entries")',
+        'canonicalTarget.startsWith(canonicalPrefix)',
         "claim_allowed_release=false",
     ]:
         assert token in readiness
+
+    assert ".mkdirs()" not in readiness
+    assert "Os.chmod" not in readiness
+    assert ".delete()" not in readiness
+    assert "setupBootstrapIfNeeded" not in readiness
 
     for token in [
         "HOST_ACCEPTED_CANONICAL_BOOTSTRAP",
@@ -164,7 +180,7 @@ def test_application_environment_and_terminal_share_runtime_path_graph() -> None
     assert "/system/bin/sh" in session
 
 
-def test_validator_is_claim_bounded() -> None:
+def test_validator_is_claim_bounded_and_checks_read_only_profile_gate() -> None:
     validator = read("tools/validate_bootstrap_package_install_contract.py")
     for token in [
         "bootstrap_package_install_contract=PASS",
@@ -172,9 +188,11 @@ def test_validator_is_claim_bounded() -> None:
         "wizard_bootstrap_document_source=fail_closed_b3_abi_profile_bound",
         "wizard_compatibility_entry=preserved",
         "wizard_readiness_gate=shared_fail_closed",
+        "wizard_readiness_profile_contract=read_only_fail_closed",
         "runtime_filesystem=context_getFilesDir_resolved",
         "installed_profile=source_prefix_preserved_runtime_prefix_materialized",
         "relocated_bridge_runtime=structurally_supported_claim_still_closed",
         "real_pkg_relocation=BLOCKED",
+        'for token in (".mkdirs()", "Os.chmod", ".delete()", "setupBootstrapIfNeeded")',
     ]:
         assert token in validator
