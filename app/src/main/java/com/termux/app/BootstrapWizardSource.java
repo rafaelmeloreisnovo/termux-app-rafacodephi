@@ -19,7 +19,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -35,6 +37,7 @@ public final class BootstrapWizardSource {
     private static final String LOG_TAG = "BootstrapWizardSource";
     private static final long MAX_BOOTSTRAP_BYTES = 256L * 1024L * 1024L;
     private static final int MAX_PROFILE_BYTES = 64 * 1024;
+    private static final int MAX_SYMLINKS_BYTES = 1024 * 1024;
     private static final Pattern HASH_256 = Pattern.compile("^[0-9a-f]{64}$");
 
     private BootstrapWizardSource() {}
@@ -198,39 +201,40 @@ public final class BootstrapWizardSource {
 
     private static Validation validateZipContract(File zip, boolean relocated) throws Exception {
         boolean symlinks = false;
-        boolean sh = false;
-        boolean pkg = false;
-        boolean busybox = false;
-        boolean proot = false;
+        boolean shDirect = false;
+        boolean pkgDirect = false;
+        boolean busyboxDirect = false;
+        boolean prootDirect = false;
+        String symlinkText = null;
         String profileJson = null;
         try (ZipInputStream input = new ZipInputStream(new BufferedInputStream(new FileInputStream(zip), 65_536))) {
             ZipEntry entry;
             while ((entry = input.getNextEntry()) != null) {
                 String name = entry.getName();
-                if (name.startsWith("/") || name.contains("../") || name.equals("..")) {
+                if (name.startsWith("/") || name.contains("../") || name.equals("..") || name.contains("\\")) {
                     throw new SecurityException("BOOTSTRAP_ZIP_TRAVERSAL: " + name);
                 }
-                if ("SYMLINKS.txt".equals(name)) symlinks = true;
-                if ("bin/sh".equals(name)) sh = true;
-                if ("bin/pkg".equals(name)) pkg = true;
-                if ("bin/busybox".equals(name)) busybox = true;
-                if ("bin/proot".equals(name)) proot = true;
+                if ("SYMLINKS.txt".equals(name)) {
+                    symlinks = true;
+                    symlinkText = readZipEntryBounded(input, MAX_SYMLINKS_BYTES, "BOOTSTRAP_SYMLINKS_TOO_LARGE");
+                }
+                if ("bin/sh".equals(name)) shDirect = true;
+                if ("bin/pkg".equals(name)) pkgDirect = true;
+                if ("bin/busybox".equals(name)) busyboxDirect = true;
+                if ("bin/proot".equals(name)) prootDirect = true;
                 if ("BOOTSTRAP_PROFILE.json".equals(name)) {
-                    ByteArrayOutputStream profile = new ByteArrayOutputStream();
-                    byte[] buffer = new byte[4096];
-                    int read;
-                    int total = 0;
-                    while ((read = input.read(buffer)) != -1) {
-                        total += read;
-                        if (total > MAX_PROFILE_BYTES) throw new IllegalArgumentException("BOOTSTRAP_PROFILE_TOO_LARGE");
-                        profile.write(buffer, 0, read);
-                    }
-                    profileJson = new String(profile.toByteArray(), StandardCharsets.UTF_8);
+                    profileJson = readZipEntryBounded(input, MAX_PROFILE_BYTES, "BOOTSTRAP_PROFILE_TOO_LARGE");
                 }
             }
         }
+
+        Set<String> symlinkDestinations = parseSymlinkDestinations(symlinkText);
+        boolean sh = shDirect || symlinkDestinations.contains("bin/sh");
+        boolean pkg = pkgDirect || symlinkDestinations.contains("bin/pkg");
+        boolean busybox = busyboxDirect || symlinkDestinations.contains("bin/busybox");
+        boolean proot = prootDirect || symlinkDestinations.contains("bin/proot");
         if (!symlinks || !sh || !pkg || !busybox || !proot) {
-            throw new IllegalArgumentException("BOOTSTRAP_REQUIRED_ENTRIES_MISSING symlinks=" + symlinks
+            throw new IllegalArgumentException("BOOTSTRAP_REQUIRED_INSTALLED_ENTRIES_MISSING symlinks=" + symlinks
                 + " sh=" + sh + " pkg=" + pkg + " busybox=" + busybox + " proot=" + proot);
         }
 
@@ -251,6 +255,45 @@ public final class BootstrapWizardSource {
                 + profile + " package_layer=" + packageLayer);
         }
         return new Validation(profile, packageLayer, relocationAllowed);
+    }
+
+    private static String readZipEntryBounded(ZipInputStream input, int limit, String overflowReason) throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] buffer = new byte[4096];
+        int read;
+        int total = 0;
+        while ((read = input.read(buffer)) != -1) {
+            total += read;
+            if (total > limit) throw new IllegalArgumentException(overflowReason);
+            output.write(buffer, 0, read);
+        }
+        return new String(output.toByteArray(), StandardCharsets.UTF_8);
+    }
+
+    private static Set<String> parseSymlinkDestinations(@Nullable String text) {
+        Set<String> destinations = new HashSet<>();
+        if (text == null || text.isEmpty()) return destinations;
+        int number = 0;
+        for (String raw : text.split("\\r?\\n")) {
+            number++;
+            if (raw.isEmpty()) continue;
+            String[] parts = raw.split("←", -1);
+            if (parts.length != 2 || parts[0].isEmpty() || parts[1].isEmpty()) {
+                throw new IllegalArgumentException("MALFORMED_BOOTSTRAP_SYMLINK_LINE_" + number);
+            }
+            String target = parts[0];
+            String link = parts[1];
+            if (link.startsWith("/") || link.contains("..") || link.contains("\\")) {
+                throw new SecurityException("UNSAFE_BOOTSTRAP_SYMLINK_DESTINATION_" + number + ":" + link);
+            }
+            if (!destinations.add(link)) {
+                throw new IllegalArgumentException("DUPLICATE_BOOTSTRAP_SYMLINK_DESTINATION_" + number + ":" + link);
+            }
+            if (target.contains("/data/data/com.termux/files/usr")) {
+                throw new SecurityException("LEGACY_BOOTSTRAP_SYMLINK_TARGET_" + number);
+            }
+        }
+        return destinations;
     }
 
     private static String currentBootstrapAbi() {

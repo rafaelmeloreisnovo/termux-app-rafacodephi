@@ -13,11 +13,12 @@ import zipfile
 SCHEMA = "rafcodephi-bootstrap-profile/v1"
 PROFILE_FILE = "BOOTSTRAP_PROFILE.json"
 INFO_FILE = "BOOTSTRAP_INFO"
+SYMLINKS_FILE = "SYMLINKS.txt"
 LEGACY_PREFIX = b"/data/data/com.termux/files/usr"
 PROFILES = {"bridge", "real-pkg"}
 ARCHES = {"arm", "aarch64", "i686", "x86_64"}
 BASE_REQUIRED = (
-    INFO_FILE, "SYMLINKS.txt", "bin/sh", "bin/pkg", "bin/apt",
+    INFO_FILE, SYMLINKS_FILE, "bin/sh", "bin/pkg", "bin/apt",
     "bin/apt-get", "bin/busybox", "bin/proot",
 )
 REAL_REQUIRED = BASE_REQUIRED + ("bin/dpkg", "etc/apt/sources.list", "var/lib/dpkg/status")
@@ -70,6 +71,43 @@ def parse_info(data: bytes) -> dict[str, str]:
             key, value = line.split("=", 1)
             out[key] = value
     return out
+
+
+def parse_symlink_destinations(data: bytes) -> set[str]:
+    if len(data) > 1024 * 1024:
+        raise ProfileError("SYMLINKS.txt exceeds 1 MiB")
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ProfileError("SYMLINKS.txt is not UTF-8") from exc
+    destinations: set[str] = set()
+    for number, line in enumerate(text.splitlines(), 1):
+        if not line:
+            continue
+        parts = line.split("←")
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            raise ProfileError(f"malformed SYMLINKS.txt line {number}: {line!r}")
+        target, link = parts
+        safe_name(link)
+        if link in destinations:
+            raise ProfileError(f"duplicate symlink destination: {link}")
+        if target.startswith("/") and LEGACY_PREFIX.decode() in target:
+            raise ProfileError(f"legacy prefix in symlink target: {target}")
+        destinations.add(link)
+    if not destinations:
+        raise ProfileError("SYMLINKS.txt contains no symlinks")
+    return destinations
+
+
+def installed_entries(zf: zipfile.ZipFile) -> set[str]:
+    names = set(zf.namelist())
+    if SYMLINKS_FILE not in names:
+        return names
+    destinations = parse_symlink_destinations(zf.read(SYMLINKS_FILE))
+    conflicts = destinations & names
+    if conflicts:
+        raise ProfileError("symlink destination conflicts with archive entry: " + ", ".join(sorted(conflicts)))
+    return names | destinations
 
 
 def encode_info(values: dict[str, str]) -> bytes:
@@ -205,10 +243,17 @@ def validate(path: Path, *, expected_profile: str | None, expected_arch: str | N
         if profile_doc.get("device_validation") != "TOKEN_VAZIO":
             raise ProfileError("device evidence must remain TOKEN_VAZIO")
 
+        available = installed_entries(zf)
         required = REAL_REQUIRED if profile == "real-pkg" else BASE_REQUIRED
-        missing = [name for name in required if name not in names]
+        missing = [name for name in required if name not in available]
         if missing:
-            raise ProfileError("missing: " + ", ".join(missing))
+            raise ProfileError("missing installed entries: " + ", ".join(missing))
+        declared_required = profile_doc.get("required_entries")
+        if not isinstance(declared_required, list) or not declared_required:
+            raise ProfileError("profile required_entries missing")
+        unresolved = [name for name in declared_required if not isinstance(name, str) or name not in available]
+        if unresolved:
+            raise ProfileError("profile required entries unresolved: " + ", ".join(map(str, unresolved)))
 
         info = parse_info(zf.read(INFO_FILE))
         if info.get("RAFCODEPHI_BOOTSTRAP_PROFILE") != profile or info.get("RAFCODEPHI_PACKAGE_LAYER") != profile:
@@ -218,6 +263,8 @@ def validate(path: Path, *, expected_profile: str | None, expected_arch: str | N
 
         classifications = {}
         for name in ("bin/pkg", "bin/apt", "bin/apt-get"):
+            if name not in names:
+                raise ProfileError(f"required archive entry missing: {name}")
             data = first(zf, name)
             classifications[name] = (
                 "ELF" if data.startswith(b"\x7fELF")

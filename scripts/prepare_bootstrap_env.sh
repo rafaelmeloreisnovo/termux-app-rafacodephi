@@ -9,6 +9,7 @@ SKIP_ANDROID_PREFLIGHT=false
 
 usage() {
   echo "Usage: $0 [--print-env|--github-env] [--skip-android-preflight]" >&2
+  echo "RAF_BOOTSTRAP_SOURCE: local | upstream | source-built-real" >&2
 }
 
 for arg in "$@"; do
@@ -40,6 +41,7 @@ fi
 
 BOOTSTRAP_SOURCE="${RAF_BOOTSTRAP_SOURCE:-local}"
 PROFILE_REQUIREMENT="auto"
+SOURCE_BUILT_RECEIPT=""
 log "Bootstrap source: $BOOTSTRAP_SOURCE"
 case "$BOOTSTRAP_SOURCE" in
   local)
@@ -50,8 +52,22 @@ case "$BOOTSTRAP_SOURCE" in
     ./gradlew :app:downloadBootstraps --no-daemon >&2
     log "Upstream source does not receive RAFCODEPhi profile promotion automatically"
     ;;
+  source-built-real)
+    : "${RAF_REAL_BOOTSTRAP_ZIP_ARM:?RAF_REAL_BOOTSTRAP_ZIP_ARM is required for source-built-real}"
+    : "${RAF_REAL_BOOTSTRAP_MANIFEST:?RAF_REAL_BOOTSTRAP_MANIFEST is required for source-built-real}"
+    [[ -f "$RAF_REAL_BOOTSTRAP_ZIP_ARM" ]] || { log "ERROR: Missing source-built ARM bootstrap: $RAF_REAL_BOOTSTRAP_ZIP_ARM"; exit 1; }
+    [[ -f "$RAF_REAL_BOOTSTRAP_MANIFEST" ]] || { log "ERROR: Missing source-built bootstrap manifest: $RAF_REAL_BOOTSTRAP_MANIFEST"; exit 1; }
+    SOURCE_BUILT_RECEIPT="build/reports/rafcodephi-real-bootstrap-import-arm.json"
+    python3 scripts/import_rafcodephi_real_bootstrap.py \
+      --zip "$RAF_REAL_BOOTSTRAP_ZIP_ARM" \
+      --manifest "$RAF_REAL_BOOTSTRAP_MANIFEST" \
+      --dest app/src/main/cpp/rewritten-bootstrap-arm.zip \
+      --receipt "$SOURCE_BUILT_RECEIPT" >&2
+    PROFILE_REQUIREMENT="required"
+    log "Source-built real ARM bootstrap imported fail-closed"
+    ;;
   *)
-    echo "Unsupported RAF_BOOTSTRAP_SOURCE=$BOOTSTRAP_SOURCE (allowed: local, upstream)" >&2
+    echo "Unsupported RAF_BOOTSTRAP_SOURCE=$BOOTSTRAP_SOURCE (allowed: local, upstream, source-built-real)" >&2
     exit 2
     ;;
 esac
@@ -71,6 +87,14 @@ if [[ "$BOOTSTRAP_SOURCE" == "local" ]]; then
   MATRIX_SHA256="$(sha256sum "$MATRIX" | awk '{print $1}')"
   [[ "$MATRIX_SHA256" =~ ^[0-9a-f]{64}$ ]] || { log "ERROR: Invalid bootstrap profile matrix SHA256"; exit 1; }
   log "Bootstrap profile matrix SHA256: $MATRIX_SHA256"
+elif [[ "$BOOTSTRAP_SOURCE" == "source-built-real" ]]; then
+  [[ -n "$SOURCE_BUILT_RECEIPT" && -s "$SOURCE_BUILT_RECEIPT" ]] || {
+    log "ERROR: source-built-real import receipt missing"
+    exit 1
+  }
+  IMPORT_SHA256="$(sha256sum "$SOURCE_BUILT_RECEIPT" | awk '{print $1}')"
+  [[ "$IMPORT_SHA256" =~ ^[0-9a-f]{64}$ ]] || { log "ERROR: Invalid source-built import receipt SHA256"; exit 1; }
+  log "Source-built import receipt SHA256: $IMPORT_SHA256"
 fi
 
 if ! python3 -c 'import blake3' >/dev/null 2>&1; then
