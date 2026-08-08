@@ -3,25 +3,36 @@ package com.termux.app.benchmark;
 import android.app.Activity;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import org.json.JSONObject;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * DEX edge for the freestanding PA benchmark.
+ * DEX edge for the freestanding PA benchmark inside Termux RAFCODEΦ.
  *
  * This class does not load a library and declares no Java native method.
  * It only asks Android's linker to execute the packaged ELF, captures stdout,
  * and persists an atomic evidence receipt for the runtime/industrial views.
  */
 public final class BenchmarkMenuActivity extends Activity {
+
+    private static final int STDOUT_CAPTURE_LIMIT = 64 * 1024;
+    private static final long PROCESS_TIMEOUT_MS = 60_000L;
+    private static final long PROCESS_POLL_MS = 25L;
+    private static final long READER_JOIN_MS = 2_000L;
 
     private TextView output;
     private Button run;
@@ -87,17 +98,48 @@ public final class BenchmarkMenuActivity extends Activity {
                     .redirectErrorStream(true)
                     .start();
 
-                ByteArrayOutputStream bytes = new ByteArrayOutputStream(4096);
-                try (InputStream stream = process.getInputStream()) {
-                    byte[] buffer = new byte[1024];
-                    int total = 0;
-                    int read;
-                    while ((read = stream.read(buffer)) >= 0) {
-                        if (read == 0) continue;
-                        int accepted = Math.min(read, 65536 - total);
-                        if (accepted > 0) bytes.write(buffer, 0, accepted);
-                        total += accepted;
-                        if (total >= 65536) break;
+                processOutput = process.getInputStream();
+                final InputStream readerStream = processOutput;
+                reader = new Thread(() -> {
+                    try (InputStream stream = readerStream) {
+                        byte[] buffer = new byte[1024];
+                        int read;
+                        while ((read = stream.read(buffer)) >= 0) {
+                            if (read == 0) continue;
+                            long previous = observed.getAndAdd(read);
+                            int remaining = (int) Math.max(0L, STDOUT_CAPTURE_LIMIT - previous);
+                            int accepted = Math.min(read, remaining);
+                            if (accepted > 0) {
+                                synchronized (captured) {
+                                    captured.write(buffer, 0, accepted);
+                                }
+                            }
+                            if (accepted < read || previous + read > STDOUT_CAPTURE_LIMIT) truncated.set(true);
+                        }
+                    } catch (Throwable error) {
+                        readerError.compareAndSet(null, error);
+                    }
+                }, "pa-elf-stdout");
+                reader.start();
+
+                long deadline = startMs + PROCESS_TIMEOUT_MS;
+                boolean finished = false;
+                while (SystemClock.elapsedRealtime() < deadline) {
+                    try {
+                        exit = process.exitValue();
+                        finished = true;
+                        break;
+                    } catch (IllegalThreadStateException stillRunning) {
+                        Thread.sleep(PROCESS_POLL_MS);
+                    }
+                }
+
+                if (!finished) {
+                    timedOut = true;
+                    process.destroy();
+                    try {
+                        if (processOutput != null) processOutput.close();
+                    } catch (Throwable ignored) {
                     }
                 }
 
@@ -134,6 +176,9 @@ public final class BenchmarkMenuActivity extends Activity {
             ? "/apex/com.android.runtime/bin/linker64"
             : "/apex/com.android.runtime/bin/linker";
         if (new File(apex).isFile()) return apex;
-        return process64 ? "/system/bin/linker64" : "/system/bin/linker";
+
+        String system = process64 ? "/system/bin/linker64" : "/system/bin/linker";
+        if (new File(system).isFile()) return system;
+        return null;
     }
 }

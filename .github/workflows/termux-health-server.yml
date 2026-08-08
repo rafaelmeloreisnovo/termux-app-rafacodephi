@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Python identity
         run: python3 --version
@@ -53,7 +53,7 @@ jobs:
           PY
 
       - name: Upload contract artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: termux-health-contract
           path: termux-health-snapshot.json
