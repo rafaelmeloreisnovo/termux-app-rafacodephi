@@ -37,7 +37,7 @@ def test_arm32_hwcap_namespace_cannot_promote_sve_or_sve2() -> None:
     assert "if (hwcap2 & HWCAP2_SVE2)" in native
 
 
-def test_receipt_v3_preserves_legacy_execution_but_gates_timing_claim() -> None:
+def test_receipt_v3_preserves_legacy_execution_but_gates_timing_and_series_claims() -> None:
     src = read("app/src/main/java/com/termux/app/benchmark/PaBenchmarkReceipt.java")
     assert "rafcodephi.pa-elf-runtime-receipt/v3" in src
     assert "pa_freestanding_elf_runtime_v2.json" in src
@@ -45,18 +45,59 @@ def test_receipt_v3_preserves_legacy_execution_but_gates_timing_claim() -> None:
     assert "CALIBRATED_V2" in src
     assert "claim_allowed_runtime_execution" in src
     assert "claim_allowed_timing_measurement" in src
+    assert "claim_allowed_series_membership" in src
+    assert "claim_allowed_environment_stability" in src
     assert "claim_allowed_cross_device_comparison" in src
     assert "timing_contract_complete" in src
+    assert "environment_before" in src
+    assert "environment_after" in src
+    assert "series_governed" in src
     assert "parseWorkloads" in src
 
 
-def test_series_analyzer_never_pools_heterogeneous_workloads() -> None:
+def test_series_analyzer_requires_explicit_series_id_and_never_pools_heterogeneous_workloads() -> None:
     src = read("app/src/main/java/com/termux/app/benchmark/PaBenchmarkSeriesAnalyzer.java")
     assert "MIN_DISTRIBUTION_N = 30" in src
-    assert "same_artifact_abi_linker_protocol_workload_ops_flags_only" in src
-    assert "heterogeneous_workload_pooling" in src
+    assert "same_series_artifact_abi_linker_protocol_workload_ops_flags_only" in src
     assert 'report.put("heterogeneous_workload_pooling", false)' in src
+    assert 'report.put("cross_series_pooling", false)' in src
+    assert 'report.put("ad_hoc_promotion_to_series", false)' in src
+    assert 'receipt.optString("series_id", "")' in src
     assert "DETERMINISTIC_SCORE_OR_CHECKSUM_DRIFT" in src
+    assert "environment_complete_samples" in src
+    assert "thermal_interference_samples" in src
     assert "claim_allowed_distribution_summary" in src
     assert 'report.put("claim_allowed_reproducibility", false)' in src
     assert 'report.put("claim_allowed_cross_device_comparison", false)' in src
+
+
+def test_environment_snapshot_is_observation_not_energy_or_cpu_temperature_claim() -> None:
+    src = read("app/src/main/java/com/termux/app/benchmark/BenchmarkEnvironmentSnapshot.java")
+    assert "getCurrentThermalStatus" in src
+    assert "scaling_cur_freq" in src
+    assert "memory_avail_bytes" in src
+    assert "BATTERY_NOT_CPU_SOC" in src
+    assert 'out.put("claim_allowed_cpu_temperature", false)' in src
+    assert 'out.put("claim_allowed_energy_measurement", false)' in src
+    assert 'out.put("claim_allowed_pmu", false)' in src
+
+
+def test_central_runner_binds_pre_post_environment_and_series_metadata() -> None:
+    src = read("app/src/main/java/com/termux/app/benchmark/PaBenchmarkRunner.java")
+    assert "BenchmarkEnvironmentSnapshot.capture(context)" in src
+    assert "PaBenchmarkReceipt.recordExecution(" in src
+    assert "seriesId, seriesIndex, seriesTargetN" in src
+    assert "PROCESS_TIMEOUT_MS = 60_000L" in src
+    assert "STDOUT_CAPTURE_LIMIT = 64 * 1024" in src
+
+
+def test_activity_exposes_governed_30_trial_series_without_silent_warmup_or_outlier_deletion() -> None:
+    src = read("app/src/main/java/com/termux/app/benchmark/BenchmarkMenuActivity.java")
+    assert "Run Governed 30-Trial Series" in src
+    assert "PaBenchmarkSeriesAnalyzer.MIN_DISTRIBUTION_N" in src
+    assert "NO_SILENT_WARMUP_NO_OUTLIER_DELETION" in src
+    assert "Cancel Series After Current Trial" in src
+    assert "PaBenchmarkRunner.runOnce(this, seriesId, index, target)" in src
+    assert "PaBenchmarkSeriesAnalyzer.analyzeAndWrite(this)" in src
+    assert "claim_allowed_reproducibility=false" in src
+    assert "claim_allowed_cross_device_comparison=false" in src
