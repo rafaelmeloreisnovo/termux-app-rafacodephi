@@ -3,7 +3,8 @@
 
 This importer is intentionally stricter than a normal ZIP copy. It refuses bridge
 payloads, wrong package/prefix/ABI, malformed provenance, non-ELF package-manager
-backends and legacy com.termux critical-path references.
+backends and legacy com.termux critical-path references. Canonical Termux symlinks
+from SYMLINKS.txt count as installed entries without being materialized prematurely.
 """
 from __future__ import annotations
 
@@ -79,6 +80,33 @@ def safe_zip_names(zf: zipfile.ZipFile) -> set[str]:
     return names
 
 
+def parse_symlink_destinations(zf: zipfile.ZipFile, names: set[str]) -> set[str]:
+    if "SYMLINKS.txt" not in names:
+        raise SystemExit("SYMLINKS.txt missing")
+    raw = zf.read("SYMLINKS.txt")
+    if len(raw) > 1024 * 1024:
+        raise SystemExit("SYMLINKS.txt exceeds 1 MiB")
+    text = raw.decode("utf-8")
+    destinations: set[str] = set()
+    for number, line in enumerate(text.splitlines(), 1):
+        if not line:
+            continue
+        parts = line.split("←")
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            raise SystemExit(f"malformed SYMLINKS.txt line {number}: {line!r}")
+        target, link = parts
+        if link.startswith("/") or ".." in link or "\\" in link:
+            raise SystemExit(f"unsafe symlink destination line {number}: {link!r}")
+        if link in destinations or link in names:
+            raise SystemExit(f"duplicate/conflicting symlink destination: {link}")
+        if target.startswith("/") and LEGACY_PREFIX.decode() in target:
+            raise SystemExit(f"symlink target embeds forbidden legacy prefix: {target}")
+        destinations.add(link)
+    if not destinations:
+        raise SystemExit("SYMLINKS.txt contains no symlinks")
+    return destinations
+
+
 def require_arm_elf(payload: bytes, label: str) -> None:
     if len(payload) < 20 or payload[:4] != b"\x7fELF":
         raise SystemExit(f"{label} is not ELF")
@@ -117,9 +145,11 @@ def validate(zip_path: Path, manifest_path: Path) -> dict[str, object]:
         if zf.testzip() is not None:
             raise SystemExit("bootstrap ZIP CRC validation failed")
         names = safe_zip_names(zf)
-        missing = [name for name in REQUIRED if name not in names]
+        symlink_destinations = parse_symlink_destinations(zf, names)
+        available = names | symlink_destinations
+        missing = [name for name in REQUIRED if name not in available]
         if missing:
-            raise SystemExit("bootstrap required entries missing: " + ",".join(missing))
+            raise SystemExit("bootstrap installed entries missing: " + ",".join(missing))
 
         profile_raw = zf.read("BOOTSTRAP_PROFILE.json")
         if len(profile_raw) > 64 * 1024:
@@ -144,12 +174,16 @@ def validate(zip_path: Path, manifest_path: Path) -> dict[str, object]:
         if not isinstance(required_profile, list) or not required_profile:
             raise SystemExit("profile required_entries missing/empty")
         for name in required_profile:
-            if not isinstance(name, str) or name not in names:
-                raise SystemExit(f"profile required entry not present in ZIP: {name!r}")
+            if not isinstance(name, str) or name not in available:
+                raise SystemExit(f"profile required installed entry unresolved: {name!r}")
 
         for name in ELF_REQUIRED:
+            if name not in names:
+                raise SystemExit(f"required ELF archive entry missing: {name}")
             require_arm_elf(zf.read(name), name)
 
+        if "bin/pkg" not in names:
+            raise SystemExit("bin/pkg must be a real archive script entry")
         pkg = zf.read("bin/pkg")
         if LEGACY_PREFIX in pkg:
             raise SystemExit("bin/pkg embeds forbidden legacy prefix")
