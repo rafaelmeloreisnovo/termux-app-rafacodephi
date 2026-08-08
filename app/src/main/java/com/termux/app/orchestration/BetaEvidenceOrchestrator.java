@@ -11,7 +11,9 @@ import com.termux.app.benchmark.PaBenchmarkSeriesAnalyzer;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -30,7 +32,9 @@ public final class BetaEvidenceOrchestrator {
 
     public static final String SCHEMA = "rafcodephi.beta-evidence-orchestrator/v1";
     public static final String DIRECTORY = "rafcodephi-beta-orchestrator";
+    public static final String EXPORT_DIRECTORY = "beta-evidence";
     public static final String LATEST_FILE = "latest.json";
+    private static final int RECEIPT_READ_LIMIT = 1024 * 1024;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean cancelRequested = new AtomicBoolean(false);
@@ -52,14 +56,33 @@ public final class BetaEvidenceOrchestrator {
         return running.get();
     }
 
+    /** Read the bounded canonical latest receipt. Unreadable evidence stays unavailable. */
+    public static JSONObject readLatest(Context context) {
+        if (context == null) return null;
+        File latest = new File(new File(context.getFilesDir(), DIRECTORY), LATEST_FILE);
+        if (!latest.isFile() || latest.length() <= 0L || latest.length() > RECEIPT_READ_LIMIT) return null;
+        try (FileInputStream input = new FileInputStream(latest);
+             ByteArrayOutputStream output = new ByteArrayOutputStream((int) Math.min(latest.length(), 16 * 1024L))) {
+            byte[] buffer = new byte[4096];
+            int total = 0;
+            int count;
+            while ((count = input.read(buffer)) >= 0) {
+                if (count == 0) continue;
+                total += count;
+                if (total > RECEIPT_READ_LIMIT) return null;
+                output.write(buffer, 0, count);
+            }
+            return new JSONObject(new String(output.toByteArray(), StandardCharsets.UTF_8));
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
     private void execute(Context context, Plan plan, Listener listener) {
         final long startedMs = System.currentTimeMillis();
         final String runId = "beta-" + startedMs + "-" + UUID.randomUUID().toString().substring(0, 8);
         JSONObject receipt = new JSONObject();
         JSONArray stages = new JSONArray();
-        File persisted = null;
-        String finalState = "FAIL";
-        String finalReason = "ORCHESTRATOR_EXCEPTION";
 
         try {
             receipt.put("schema", SCHEMA);
@@ -77,16 +100,12 @@ public final class BetaEvidenceOrchestrator {
             stages.put(stage("BOOTSTRAP_PREFLIGHT", bootstrap.state, bootstrap.reason, bootstrap.toJson()));
             emit(listener, "BOOTSTRAP_PREFLIGHT", bootstrap.state, bootstrap.reason);
             if (!bootstrap.isPass()) {
-                finalState = "BLOCKED";
-                finalReason = "BOOTSTRAP_READINESS_BLOCKED_OPEN_WIZARD";
-                persisted = finish(context, receipt, finalState, finalReason, listener);
+                finish(context, receipt, "BLOCKED", "BOOTSTRAP_READINESS_BLOCKED_OPEN_WIZARD", listener);
                 return;
             }
 
             if (cancelRequested.get()) {
-                finalState = "BLOCKED";
-                finalReason = "USER_CANCELLED_AFTER_BOOTSTRAP_PREFLIGHT";
-                persisted = finish(context, receipt, finalState, finalReason, listener);
+                finish(context, receipt, "BLOCKED", "USER_CANCELLED_AFTER_BOOTSTRAP_PREFLIGHT", listener);
                 return;
             }
 
@@ -107,17 +126,13 @@ public final class BetaEvidenceOrchestrator {
                 stages.put(stage("PA_SINGLE", state, reason, details));
                 emit(listener, "PA_SINGLE", state, reason);
                 if (!result.runtimePass() || !result.timingPass()) {
-                    finalState = "FAIL";
-                    finalReason = reason;
-                    persisted = finish(context, receipt, finalState, finalReason, listener);
+                    finish(context, receipt, "FAIL", reason, listener);
                     return;
                 }
             }
 
             if (cancelRequested.get()) {
-                finalState = "BLOCKED";
-                finalReason = "USER_CANCELLED_AFTER_SINGLE_OBSERVATION";
-                persisted = finish(context, receipt, finalState, finalReason, listener);
+                finish(context, receipt, "BLOCKED", "USER_CANCELLED_AFTER_SINGLE_OBSERVATION", listener);
                 return;
             }
 
@@ -165,17 +180,13 @@ public final class BetaEvidenceOrchestrator {
                 stages.put(stage("PA_SERIES", seriesState, seriesReason, details));
                 emit(listener, "PA_SERIES", seriesState, seriesReason);
                 if (!"PASS".equals(seriesState)) {
-                    finalState = seriesState;
-                    finalReason = seriesReason;
-                    persisted = finish(context, receipt, finalState, finalReason, listener);
+                    finish(context, receipt, seriesState, seriesReason, listener);
                     return;
                 }
             }
 
             if (cancelRequested.get()) {
-                finalState = "BLOCKED";
-                finalReason = "USER_CANCELLED_BEFORE_ANALYSIS";
-                persisted = finish(context, receipt, finalState, finalReason, listener);
+                finish(context, receipt, "BLOCKED", "USER_CANCELLED_BEFORE_ANALYSIS", listener);
                 return;
             }
 
@@ -196,17 +207,13 @@ public final class BetaEvidenceOrchestrator {
                 stages.put(stage("SERIES_ANALYSIS", state, reason, details));
                 emit(listener, "SERIES_ANALYSIS", state, reason);
                 if ("INVALIDATED".equals(state)) {
-                    finalState = "FAIL";
-                    finalReason = "SERIES_ANALYSIS_INVALIDATED";
-                    persisted = finish(context, receipt, finalState, finalReason, listener);
+                    finish(context, receipt, "FAIL", "SERIES_ANALYSIS_INVALIDATED", listener);
                     return;
                 }
             }
 
             if (cancelRequested.get()) {
-                finalState = "BLOCKED";
-                finalReason = "USER_CANCELLED_BEFORE_EXPORT";
-                persisted = finish(context, receipt, finalState, finalReason, listener);
+                finish(context, receipt, "BLOCKED", "USER_CANCELLED_BEFORE_EXPORT", listener);
                 return;
             }
 
@@ -222,20 +229,18 @@ public final class BetaEvidenceOrchestrator {
                 emit(listener, "METHOD_EXPORT", ok ? "PASS" : "FAIL",
                     ok ? "METHOD_ARTIFACT_WRITTEN" : "METHOD_ARTIFACT_MISSING");
                 if (!ok) {
-                    finalState = "FAIL";
-                    finalReason = "METHOD_EXPORT_FAILED";
-                    persisted = finish(context, receipt, finalState, finalReason, listener);
+                    finish(context, receipt, "FAIL", "METHOD_EXPORT_FAILED", listener);
                     return;
                 }
             }
 
-            finalState = "PASS";
-            finalReason = plan.runGovernedSeries
-                ? "SELECTED_PIPELINE_COMPLETED_GOVERNED_SERIES_PRESENT"
-                : "SELECTED_PIPELINE_COMPLETED_GOVERNED_SERIES_OPTIONAL_NOT_SELECTED";
             receipt.put("publication_gate_state", "BLOCKED");
             receipt.put("publication_gate_reason", "REVIEW_RELEASE_AND_CROSS_DEVICE_EVIDENCE_NOT_PROVEN_BY_LOCAL_ORCHESTRATION");
-            persisted = finish(context, receipt, finalState, finalReason, listener);
+            finish(context, receipt, "PASS",
+                plan.runGovernedSeries
+                    ? "SELECTED_PIPELINE_COMPLETED_GOVERNED_SERIES_PRESENT"
+                    : "SELECTED_PIPELINE_COMPLETED_GOVERNED_SERIES_OPTIONAL_NOT_SELECTED",
+                listener);
         } catch (Throwable error) {
             try {
                 receipt.put("exception", error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage()));
@@ -243,7 +248,7 @@ public final class BetaEvidenceOrchestrator {
             }
             emit(listener, "ORCHESTRATOR", "FAIL", error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage()));
             try {
-                persisted = finish(context, receipt, "FAIL", "ORCHESTRATOR_EXCEPTION", listener);
+                finish(context, receipt, "FAIL", "ORCHESTRATOR_EXCEPTION", listener);
             } catch (Throwable ignored) {
                 if (listener != null) listener.onFinished(receipt, null);
             }
@@ -279,17 +284,70 @@ public final class BetaEvidenceOrchestrator {
         if (listener != null) listener.onEvent(stage, state, detail);
     }
 
+    /**
+     * Canonical receipt is always app-private. External app-specific export is a
+     * secondary mirror: its failure is recorded but never destroys canonical evidence.
+     */
     private static File persistReceipt(Context context, JSONObject receipt) throws Exception {
         File root = new File(context.getFilesDir(), DIRECTORY);
         File history = new File(root, "history");
         if ((!history.exists() && !history.mkdirs()) || !history.isDirectory()) {
             throw new IllegalStateException("Unable to create orchestrator history directory: " + history);
         }
+
         String runId = receipt.optString("run_id", "unknown-" + System.currentTimeMillis());
         File historyFile = new File(history, runId + ".json");
-        atomicWrite(historyFile, receipt.toString() + "\n");
         File latest = new File(root, LATEST_FILE);
+        receipt.put("canonical_receipt", historyFile.getAbsolutePath());
+        receipt.put("canonical_latest", latest.getAbsolutePath());
+
+        // First canonical publication is deliberately conservative. If the process
+        // dies before external mirroring finishes, the surviving receipt cannot claim export success.
+        receipt.put("external_export_state", "NOT_MEASURED");
+        receipt.put("external_export_path", "UNAVAILABLE");
+        atomicWrite(historyFile, receipt.toString() + "\n");
         atomicWrite(latest, receipt.toString() + "\n");
+
+        File externalRoot = context.getExternalFilesDir(EXPORT_DIRECTORY);
+        if (externalRoot == null) {
+            receipt.put("external_export_state", "UNAVAILABLE");
+            receipt.put("external_export_reason", "EXTERNAL_FILES_DIR_UNAVAILABLE");
+            atomicWrite(historyFile, receipt.toString() + "\n");
+            atomicWrite(latest, receipt.toString() + "\n");
+            return historyFile;
+        }
+
+        File externalHistory = new File(externalRoot, "history");
+        if ((!externalHistory.exists() && !externalHistory.mkdirs()) || !externalHistory.isDirectory()) {
+            receipt.put("external_export_state", "UNAVAILABLE");
+            receipt.put("external_export_reason", "EXTERNAL_HISTORY_DIRECTORY_UNAVAILABLE");
+            receipt.put("external_export_path", externalRoot.getAbsolutePath());
+            atomicWrite(historyFile, receipt.toString() + "\n");
+            atomicWrite(latest, receipt.toString() + "\n");
+            return historyFile;
+        }
+
+        File externalHistoryFile = new File(externalHistory, runId + ".json");
+        File externalLatest = new File(externalRoot, LATEST_FILE);
+        receipt.put("external_export_state", "PASS");
+        receipt.put("external_export_reason", "APP_SPECIFIC_EXTERNAL_MIRROR_WRITTEN_ATOMICALLY");
+        receipt.put("external_export_path", externalHistoryFile.getAbsolutePath());
+        receipt.put("external_export_latest", externalLatest.getAbsolutePath());
+
+        try {
+            String finalText = receipt.toString() + "\n";
+            atomicWrite(externalHistoryFile, finalText);
+            atomicWrite(externalLatest, finalText);
+            atomicWrite(historyFile, finalText);
+            atomicWrite(latest, finalText);
+        } catch (Throwable exportError) {
+            receipt.put("external_export_state", "FAIL");
+            receipt.put("external_export_reason", exportError.getClass().getSimpleName() + ": "
+                + String.valueOf(exportError.getMessage()));
+            receipt.put("external_export_path", "UNAVAILABLE");
+            atomicWrite(historyFile, receipt.toString() + "\n");
+            atomicWrite(latest, receipt.toString() + "\n");
+        }
         return historyFile;
     }
 
