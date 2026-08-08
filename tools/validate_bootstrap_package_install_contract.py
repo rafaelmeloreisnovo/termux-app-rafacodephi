@@ -100,7 +100,10 @@ def validate() -> list[str]:
     for token in (
         "TermuxRuntimePaths.init(activity)", "verifyRuntimeFilesDirectoryWritable(activity)",
         "BootstrapWizardSource.loadAcceptedBytes(context)", "verifyBootstrapZipIntegrity(zipBytes)",
-        "verifyRelocationContract(zipBytes)", "staging.renameTo(prefix)",
+        "verifyRelocationContract(zipBytes)", "materializeRuntimeBootstrapProfile(staging, prefix.getAbsolutePath())",
+        'profile.put("source_prefix", sourcePrefix)', 'profile.put("prefix", runtimePrefix)',
+        'profile.put("real_pkg_relocation_claim_allowed", false)',
+        "staging.renameTo(prefix)",
         "verifyRuntimeBinary(new File(staging, \"bin/sh\"), \"sh\", true)",
         "verifyRuntimeBinary(new File(staging, \"bin/pkg\"), \"pkg\", true)",
         "verifyRuntimeBinary(new File(staging, \"bin/busybox\"), \"busybox\", true)",
@@ -165,6 +168,7 @@ def main() -> int:
     print("native_incbin=rewritten_bootstrap_packages_declared")
     print("wizard_bootstrap_document_source=fail_closed_b3_abi_profile_bound")
     print("runtime_filesystem=context_getFilesDir_resolved")
+    print("installed_profile=source_prefix_preserved_runtime_prefix_materialized")
     print("relocated_bridge_runtime=structurally_supported_claim_still_closed")
     print("real_pkg_relocation=BLOCKED")
     return 0
