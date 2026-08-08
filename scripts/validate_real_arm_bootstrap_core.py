@@ -22,6 +22,7 @@ LEGACY_PREFIXES = (
 BINARY_RISK = "LEGACY_PREFIX_BINARY_RISK"
 TEXT_RISK = "LEGACY_PREFIX_TEXT"
 SCHEMA = "rafcodephi-real-pkg-prefix-audit/v1"
+MATRIX_SCHEMA = "rafcodephi-real-pkg-prefix-audit-matrix/v2"
 
 
 def decode_utf8(data: bytes) -> str | None:
@@ -134,6 +135,21 @@ def classify_state(findings: list[dict]) -> tuple[str, str]:
     if structural:
         return "FAIL", "STRUCTURAL_BOOTSTRAP_CONTRACT_FAILURE"
     return "BLOCKED", "UPSTREAM_BINARY_PREFIX_REBUILD_REQUIRED"
+
+
+def classify_matrix_state(reports: list[dict]) -> tuple[str, str]:
+    """Preserve PASS/BLOCKED/FAIL semantics across multi-artifact audits.
+
+    BLOCKED is an expected fail-closed observation and must never be silently
+    rewritten to FAIL. Any real FAIL dominates the matrix. PASS is allowed only
+    when every constituent report is PASS.
+    """
+    states = {str(report.get("state", "FAIL")) for report in reports}
+    if states == {"PASS"}:
+        return "PASS", "ALL_ARTIFACTS_PREFIX_AND_STRUCTURE_PASS"
+    if "FAIL" in states or not states.issubset({"PASS", "BLOCKED"}):
+        return "FAIL", "AT_LEAST_ONE_ARTIFACT_FAILED_AUDIT"
+    return "BLOCKED", "AT_LEAST_ONE_ARTIFACT_REQUIRES_PREFIX_REBUILD"
 
 
 def audit(path: Path) -> dict:
@@ -262,13 +278,20 @@ def main(argv: list[str]) -> int:
                 "next_required_action": "FIX_AUDIT_EXCEPTION",
             })
 
-    payload = reports[0] if len(reports) == 1 else {
-        "schema": "rafcodephi-real-pkg-prefix-audit-matrix/v1",
-        "reports": reports,
-        "state": "PASS" if all(r["state"] == "PASS" for r in reports) else "FAIL",
-        "claim_allowed_device_runtime": False,
-        "release_allowed": False,
-    }
+    if len(reports) == 1:
+        payload = reports[0]
+    else:
+        matrix_state, matrix_reason = classify_matrix_state(reports)
+        payload = {
+            "schema": MATRIX_SCHEMA,
+            "reports": reports,
+            "state": matrix_state,
+            "reason": matrix_reason,
+            "claim_allowed_structural_real_pkg": matrix_state == "PASS",
+            "claim_allowed_device_runtime": False,
+            "claim_allowed_pkg_runtime": False,
+            "release_allowed": False,
+        }
     if args.json_path:
         write_report(args.json_path, payload)
     print(json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2))
@@ -282,7 +305,7 @@ def main(argv: list[str]) -> int:
     if states == {"PASS"}:
         print("real_arm_bootstrap_core=PASS")
         return 0
-    # BLOCKED and FAIL both stop promotion. The JSON reason distinguishes them.
+    # BLOCKED and FAIL both stop promotion. JSON state/reason preserve the distinction.
     return 1
 
 
