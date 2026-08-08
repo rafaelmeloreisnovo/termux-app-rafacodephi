@@ -58,9 +58,13 @@ def test_runtime_paths_are_derived_from_android_assigned_files_dir() -> None:
         assert token in source
 
 
-def test_wizard_exposes_real_bootstrap_zip_document_route() -> None:
-    wizard = read("app/src/main/java/com/termux/app/activities/Android15WizardActivity.java")
+def test_wizard_exposes_real_bootstrap_zip_document_route_through_compatibility_entry() -> None:
+    entry = read("app/src/main/java/com/termux/app/activities/Android15WizardActivity.java")
+    wizard = read("app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java")
+    readiness = read("app/src/main/java/com/termux/app/BootstrapReadinessGate.java")
     source = read("app/src/main/java/com/termux/app/BootstrapWizardSource.java")
+
+    assert "extends BetaBootstrapWizardActivity" in entry
 
     for token in [
         "Intent.ACTION_OPEN_DOCUMENT",
@@ -68,11 +72,25 @@ def test_wizard_exposes_real_bootstrap_zip_document_route() -> None:
         "BootstrapWizardSource.accept(this, uri)",
         "TermuxRuntimePaths.filesDirPath()",
         "TermuxRuntimePaths.prefixDirPath()",
-        "Canonical compiled PREFIX",
+        "compiled PREFIX",
         "isBlockingStep",
-        "Install Filesystem",
+        "Install / Repair Bootstrap",
+        "BootstrapReadinessGate.evaluate(this).isPass()",
     ]:
         assert token in wizard
+
+    for token in [
+        'SCHEMA = "rafcodephi.bootstrap-readiness/v1"',
+        '"sh"',
+        '"pkg"',
+        '"apkmanager"',
+        '"shellbash"',
+        '"busybox-safe"',
+        '"proot-safe"',
+        "TermuxRuntimePaths.storageHomeDir()",
+        "claim_allowed_release=false",
+    ]:
+        assert token in readiness
 
     for token in [
         "HOST_ACCEPTED_CANONICAL_BOOTSTRAP",
@@ -152,6 +170,8 @@ def test_validator_is_claim_bounded() -> None:
         "bootstrap_package_install_contract=PASS",
         "claim_boundary=structural_only_physical_filesystem_and_first_shell_still_required",
         "wizard_bootstrap_document_source=fail_closed_b3_abi_profile_bound",
+        "wizard_compatibility_entry=preserved",
+        "wizard_readiness_gate=shared_fail_closed",
         "runtime_filesystem=context_getFilesDir_resolved",
         "installed_profile=source_prefix_preserved_runtime_prefix_materialized",
         "relocated_bridge_runtime=structurally_supported_claim_still_closed",
