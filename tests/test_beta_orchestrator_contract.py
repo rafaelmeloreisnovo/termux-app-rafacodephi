@@ -44,12 +44,17 @@ def test_wizard_and_benchmark_compatibility_entries_delegate_to_unified_implemen
     assert "extends BetaOrchestratorActivity" in benchmark_entry
 
 
-def test_orchestrator_has_one_action_plan_watchdog_cancel_atomic_receipt_and_export_semantics() -> None:
+def test_orchestrator_has_process_wide_single_flight_nonempty_plan_watchdog_cancel_atomic_receipt_and_export_semantics() -> None:
     engine = read("app/src/main/java/com/termux/app/orchestration/BetaEvidenceOrchestrator.java")
 
     required = [
         'SCHEMA = "rafcodephi.beta-evidence-orchestrator/v1"',
         'EXPORT_DIRECTORY = "beta-evidence"',
+        "private static final AtomicBoolean PROCESS_RUNNING",
+        "private static final AtomicBoolean PROCESS_CANCEL_REQUESTED",
+        "!plan.hasSelectedAction()",
+        "PROCESS_RUNNING.compareAndSet(false, true)",
+        "PROCESS_CANCEL_REQUESTED.get()",
         "BootstrapReadinessGate.evaluate(context)",
         "PaBenchmarkRunner.runOnce(context)",
         "PaBenchmarkSeriesAnalyzer.MIN_DISTRIBUTION_N",
@@ -62,6 +67,11 @@ def test_orchestrator_has_one_action_plan_watchdog_cancel_atomic_receipt_and_exp
         'receipt.put("external_export_state", "UNAVAILABLE")',
         'receipt.put("external_export_state", "PASS")',
         'receipt.put("external_export_state", "FAIL")',
+        'receipt.put("local_pipeline_completed", true)',
+        'finish(context, receipt, "OBSERVED_LIMITED"',
+        '"orchestration_execution_state"',
+        '"empty_plan_allowed", false',
+        '"single_flight_scope", "ANDROID_APP_PROCESS"',
         '"claim_allowed_release", false',
         '"claim_allowed_certification", false',
         '"claim_allowed_cross_device_comparison", false',
@@ -87,7 +97,7 @@ def test_orchestrator_has_one_action_plan_watchdog_cancel_atomic_receipt_and_exp
     assert bootstrap < single < series < analysis < export
 
 
-def test_operator_ui_has_comprehensible_checkboxes_export_paths_and_lifecycle_failsafe() -> None:
+def test_operator_ui_has_comprehensible_checkboxes_export_paths_lifecycle_and_process_recovery() -> None:
     ui = read("app/src/main/java/com/termux/app/activities/BetaOrchestratorActivity.java")
     prefs = read("app/src/main/res/xml/root_preferences.xml")
 
@@ -103,7 +113,11 @@ def test_operator_ui_has_comprehensible_checkboxes_export_paths_and_lifecycle_fa
         "STOP AFTER CURRENT ATOMIC STAGE",
         "OPEN BOOTSTRAP / PERMISSIONS WIZARD",
         "OPEN VECTRA EXPERT DIAGNOSTICS",
-        "REFRESH READINESS + LATEST RECEIPT",
+        "REFRESH READINESS + PROCESS STATE + LATEST RECEIPT",
+        "PROCESS_WIDE_PIPELINE=RUNNING",
+        "SINGLE_FLIGHT_INVARIANT",
+        "FINAL_EVIDENCE_STATE=",
+        "ORCHESTRATION_EXECUTION_STATE=",
         "CANONICAL_RECEIPT=",
         "EXTERNAL_EXPORT_STATE=",
         "EXTERNAL_EXPORT_PATH=",
@@ -111,6 +125,7 @@ def test_operator_ui_has_comprehensible_checkboxes_export_paths_and_lifecycle_fa
         "isFinishing() || isDestroyed()",
         "protected void onDestroy()",
         "orchestrator.cancelAfterCurrentAtomicStage()",
+        "refresh.setEnabled(true)",
     ]:
         assert token in ui
 
@@ -124,6 +139,8 @@ def test_full_beta_does_not_self_promote_to_certification_or_release() -> None:
 
     assert "claim_allowed_release=false" in ui
     assert "Certification/release/cross-device claims remain blocked" in ui
+    assert "Local execution PASS is reported separately from evidence state" in ui
+    assert 'finish(context, receipt, "OBSERVED_LIMITED"' in engine
     assert 'receipt.put("claim_allowed_release", false)' in engine
     assert 'receipt.put("claim_allowed_certification", false)' in engine
     assert "certified=true" not in engine.lower()
