@@ -97,7 +97,7 @@ float vop_sum(const float* a, uint32_t n);
 float vop_min(const float* a, uint32_t n);
 float vop_max(const float* a, uint32_t n);
 float vop_dot(const float* a, const float* b, uint32_t n);
-float vop_norm(const float* a);
+float vop_norm(const float* a, uint32_t n);
 
 /* ASM kernels (runtime-dispatched when available) */
 #if defined(HAS_BM_NEON_ASM)
