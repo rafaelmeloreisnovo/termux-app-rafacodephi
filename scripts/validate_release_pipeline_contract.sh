@@ -38,9 +38,24 @@ if arm32_idx < 0:
 block = text[arm32_idx:text.find('endif', arm32_idx)]
 if 'lowlevel/baremetal_asm.S' not in block or 'HAS_BM_NEON_ASM=1' not in block:
     raise SystemExit(2)
+
+pa_idx = text.find('LOCAL_MODULE := raf_pa_core')
+if pa_idx < 0:
+    raise SystemExit(3)
+pa_end = text.find('include $(BUILD_SHARED_LIBRARY)', pa_idx)
+pa_block = text[pa_idx:pa_end]
+pa_arm_idx = pa_block.find('ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)')
+if pa_arm_idx < 0:
+    raise SystemExit(4)
+pa_arm_end = pa_block.find('endif', pa_arm_idx)
+pa_arm_block = pa_block[pa_arm_idx:pa_arm_end]
+if 'LOCAL_ARM_MODE := arm' not in pa_arm_block:
+    raise SystemExit(5)
+if 'freestanding/raf_pa_entry_arm32.S' not in pa_arm_block:
+    raise SystemExit(6)
 PYCHK
 then
-  fail "ARM32 branch must set HAS_BM_NEON_ASM=1 when asm is built"
+  fail "ARM32 native contracts drifted: baremetal NEON and raf_pa_core ARM syscall mode are mandatory"
 fi
 grep -Eq 'verifyBootstrapZipsPresent' app/build.gradle || fail "app/build.gradle must contain verifyBootstrapZipsPresent"
 for v in AARCH64 ARM I686 X86_64; do
