@@ -44,11 +44,12 @@ def test_wizard_and_benchmark_compatibility_entries_delegate_to_unified_implemen
     assert "extends BetaOrchestratorActivity" in benchmark_entry
 
 
-def test_orchestrator_has_one_action_plan_watchdog_cancel_and_atomic_receipt_semantics() -> None:
+def test_orchestrator_has_one_action_plan_watchdog_cancel_atomic_receipt_and_export_semantics() -> None:
     engine = read("app/src/main/java/com/termux/app/orchestration/BetaEvidenceOrchestrator.java")
 
     required = [
         'SCHEMA = "rafcodephi.beta-evidence-orchestrator/v1"',
+        'EXPORT_DIRECTORY = "beta-evidence"',
         "BootstrapReadinessGate.evaluate(context)",
         "PaBenchmarkRunner.runOnce(context)",
         "PaBenchmarkSeriesAnalyzer.MIN_DISTRIBUTION_N",
@@ -56,6 +57,11 @@ def test_orchestrator_has_one_action_plan_watchdog_cancel_and_atomic_receipt_sem
         "IndustrialBenchmarkMethodology.write(context)",
         "cancelAfterCurrentAtomicStage",
         "AtomicFile",
+        "context.getExternalFilesDir(EXPORT_DIRECTORY)",
+        'receipt.put("external_export_state", "NOT_MEASURED")',
+        'receipt.put("external_export_state", "UNAVAILABLE")',
+        'receipt.put("external_export_state", "PASS")',
+        'receipt.put("external_export_state", "FAIL")',
         '"claim_allowed_release", false',
         '"claim_allowed_certification", false',
         '"claim_allowed_cross_device_comparison", false',
@@ -66,6 +72,13 @@ def test_orchestrator_has_one_action_plan_watchdog_cancel_and_atomic_receipt_sem
     for token in required:
         assert token in engine
 
+    # A surviving canonical receipt defaults to NOT_MEASURED before any external mirror
+    # can be promoted, so a crash between writes fails closed rather than inventing export success.
+    conservative = engine.index('receipt.put("external_export_state", "NOT_MEASURED")')
+    canonical_write = engine.index("atomicWrite(historyFile", conservative)
+    external_probe = engine.index("context.getExternalFilesDir(EXPORT_DIRECTORY)", canonical_write)
+    assert conservative < canonical_write < external_probe
+
     bootstrap = engine.index('emit(listener, "BOOTSTRAP_PREFLIGHT"')
     single = engine.index('if (plan.runSingleObservation)')
     series = engine.index('if (plan.runGovernedSeries)')
@@ -74,7 +87,7 @@ def test_orchestrator_has_one_action_plan_watchdog_cancel_and_atomic_receipt_sem
     assert bootstrap < single < series < analysis < export
 
 
-def test_operator_ui_has_comprehensible_checkboxes_and_full_beta_action() -> None:
+def test_operator_ui_has_comprehensible_checkboxes_export_paths_and_lifecycle_failsafe() -> None:
     ui = read("app/src/main/java/com/termux/app/activities/BetaOrchestratorActivity.java")
     prefs = read("app/src/main/res/xml/root_preferences.xml")
 
@@ -90,7 +103,14 @@ def test_operator_ui_has_comprehensible_checkboxes_and_full_beta_action() -> Non
         "STOP AFTER CURRENT ATOMIC STAGE",
         "OPEN BOOTSTRAP / PERMISSIONS WIZARD",
         "OPEN VECTRA EXPERT DIAGNOSTICS",
-        "ORCHESTRATOR_RECEIPT=",
+        "REFRESH READINESS + LATEST RECEIPT",
+        "CANONICAL_RECEIPT=",
+        "EXTERNAL_EXPORT_STATE=",
+        "EXTERNAL_EXPORT_PATH=",
+        "BetaEvidenceOrchestrator.readLatest(this)",
+        "isFinishing() || isDestroyed()",
+        "protected void onDestroy()",
+        "orchestrator.cancelAfterCurrentAtomicStage()",
     ]:
         assert token in ui
 
