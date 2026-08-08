@@ -244,13 +244,9 @@ def main() -> int:
         raise SystemExit("source-built bootstrap ZIP/manifest unavailable")
     receipt = validate(args.zip, args.manifest)
     atomic_copy(args.zip, args.dest)
-    # Keep the non-rewritten name synchronized for tooling that inspects both.
-    canonical = args.dest.with_name("bootstrap-arm.zip")
-    atomic_copy(args.zip, canonical)
 
     args.receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt["embedded_rewritten_path"] = str(args.dest)
-    receipt["embedded_canonical_path"] = str(canonical)
     args.receipt.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"rafcodephi_real_bootstrap_import=PASS sha256={receipt['sha256']} bytes={receipt['bytes']}")
     print("claim_allowed_device_runtime=false")
