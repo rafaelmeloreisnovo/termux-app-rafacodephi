@@ -38,6 +38,13 @@ android {
             path file('src/main/cpp/Android.mk')
         }
     }
+
+    publishing {
+        // Materialize the Android release component for maven-publish. Without
+        // this declaration a publish task may emit metadata/sources without
+        // the AAR resources and bytecode consumed by the API plugin.
+        singleVariant("release")
+    }
 }
 
 dependencies {
@@ -75,7 +82,7 @@ afterEvaluate {
         publications {
             // Creates a Maven publication called "release".
             release(MavenPublication) {
-                from components.findByName('release')
+                from components.release
                 groupId = 'com.termux'
                 artifactId = 'termux-shared'
                 version = '0.118.0'
