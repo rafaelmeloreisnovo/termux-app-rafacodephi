@@ -144,7 +144,7 @@ public final class PaBenchmarkReceipt {
         FileOutputStream output = null;
         try {
             output = atomicFile.startWrite();
-            byte[] bytes = (receipt.toString(2) + "\n").getBytes(StandardCharsets.UTF_8);
+            byte[] bytes = (receipt.toString() + "\n").getBytes(StandardCharsets.UTF_8);
             output.write(bytes);
             output.flush();
             output.getFD().sync();
