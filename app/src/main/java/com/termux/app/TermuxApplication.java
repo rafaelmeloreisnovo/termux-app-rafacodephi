@@ -5,12 +5,11 @@ import android.content.Context;
 
 import com.termux.app.rafaelia.RafaeliaZeroRuntime;
 import com.termux.rafacodephi.BuildConfig;
-import com.termux.shared.errors.Error;
 import com.termux.shared.logger.Logger;
 import com.termux.shared.termux.TermuxBootstrap;
 import com.termux.shared.termux.TermuxConstants;
+import com.termux.shared.termux.TermuxRuntimePaths;
 import com.termux.shared.termux.crash.TermuxCrashUtils;
-import com.termux.shared.termux.file.TermuxFileUtils;
 import com.termux.shared.termux.settings.preferences.TermuxAppSharedPreferences;
 import com.termux.shared.termux.settings.properties.TermuxAppSharedProperties;
 import com.termux.shared.termux.shell.command.environment.TermuxShellEnvironment;
@@ -19,6 +18,7 @@ import com.termux.shared.termux.shell.TermuxShellManager;
 import com.termux.shared.termux.theme.TermuxThemeUtils;
 
 import java.io.File;
+import java.io.FileOutputStream;
 
 public class TermuxApplication extends Application {
 
@@ -27,156 +27,150 @@ public class TermuxApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-
         try {
             initializeApplication();
-        } catch (Exception e) {
-            // Log the error but don't crash the app during initialization
-            Logger.logError(LOG_TAG, "Critical error during application initialization: " + e.getMessage());
+        } catch (Throwable e) {
             Logger.logStackTraceWithMessage(LOG_TAG, "Application initialization failed", e);
         }
     }
 
-    /**
-     * Initialize the application with comprehensive error handling.
-     * This method contains all the initialization logic that was previously in onCreate.
-     */
     private void initializeApplication() {
         Context context = getApplicationContext();
+        TermuxRuntimePaths.init(context);
+        Logger.logInfo(LOG_TAG, "runtime-filesystem filesDir=" + TermuxRuntimePaths.filesDirPath()
+            + " prefix=" + TermuxRuntimePaths.prefixDirPath()
+            + " canonicalPrefix=" + TermuxConstants.TERMUX_PREFIX_DIR_PATH
+            + " layout=" + TermuxRuntimePaths.layoutState());
 
-        // Set crash handler for the app - do this first to catch any subsequent crashes
         try {
             TermuxCrashUtils.setDefaultCrashHandler(this);
-        } catch (Exception e) {
-            Logger.logError(LOG_TAG, "Failed to set crash handler: " + e.getMessage());
+        } catch (Throwable e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to set crash handler", e);
         }
 
-        // Set log config for the app
         try {
             setLogConfig(context);
-        } catch (Exception e) {
-            Logger.logError(LOG_TAG, "Failed to set log config: " + e.getMessage());
+        } catch (Throwable e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to set log config", e);
         }
 
         try {
             com.termux.app.api.ApiLowLevelBridge.nativeInit();
             Logger.logDebug(LOG_TAG, "ApiLowLevelBridge.nativeInit() ok");
-        } catch (Exception e) {
-            Logger.logError(LOG_TAG, "ApiLowLevelBridge nativeInit failed: " + e.getMessage());
+        } catch (Throwable e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "ApiLowLevelBridge nativeInit failed", e);
         }
 
         try {
             int zeroStatus = RafaeliaZeroRuntime.init();
-            if (zeroStatus == RafaeliaZeroRuntime.OK) {
+            if (zeroStatus == RafaeliaZeroRuntime.OK)
                 Logger.logDebug(LOG_TAG, "RafaeliaZeroRuntime init ok arch=" + RafaeliaZeroRuntime.architectureId());
-            } else {
+            else
                 Logger.logError(LOG_TAG, "RafaeliaZeroRuntime init status=" + zeroStatus);
-            }
         } catch (Throwable t) {
             Logger.logStackTraceWithMessage(LOG_TAG, "RafaeliaZeroRuntime initialization failed", t);
         }
 
         try {
             BootstrapBaremetalGuard.selftest();
-            Logger.logDebug(LOG_TAG, "BootstrapBaremetalGuard.selftest() ok");
-        } catch (Exception e) {
-            Logger.logError(LOG_TAG, "BootstrapBaremetalGuard selftest failed: " + e.getMessage());
+        } catch (Throwable e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "BootstrapBaremetalGuard selftest unavailable", e);
         }
 
-        Logger.logDebug("Starting Application");
-
-        // Set TermuxBootstrap.TERMUX_APP_PACKAGE_MANAGER and TermuxBootstrap.TERMUX_APP_PACKAGE_VARIANT
         try {
             TermuxBootstrap.setTermuxPackageManagerAndVariant(BuildConfig.TERMUX_PACKAGE_VARIANT);
-        } catch (Exception e) {
-            Logger.logError(LOG_TAG, "Failed to set package manager variant: " + e.getMessage());
+        } catch (Throwable e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to set package manager variant", e);
         }
 
-        // Init app wide SharedProperties loaded from termux.properties
         TermuxAppSharedProperties properties = null;
         try {
             properties = TermuxAppSharedProperties.init(context);
-        } catch (Exception e) {
-            Logger.logError(LOG_TAG, "Failed to initialize shared properties: " + e.getMessage());
+        } catch (Throwable e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to initialize shared properties", e);
         }
 
-        // Init app wide shell manager
         try {
             TermuxShellManager.init(context);
-        } catch (Exception e) {
-            Logger.logError(LOG_TAG, "Failed to initialize shell manager: " + e.getMessage());
+        } catch (Throwable e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to initialize shell manager", e);
         }
 
-        // Set NightMode.APP_NIGHT_MODE
         try {
-            if (properties != null) {
-                TermuxThemeUtils.setAppNightMode(properties.getNightMode());
-            }
-        } catch (Exception e) {
-            Logger.logError(LOG_TAG, "Failed to set night mode: " + e.getMessage());
+            if (properties != null) TermuxThemeUtils.setAppNightMode(properties.getNightMode());
+        } catch (Throwable e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to set night mode", e);
         }
 
-        // Check and create termux files directory. If failed to access it like in case of secondary
-        // user or external sd card installation, then don't run files directory related code
-        Error error = null;
-        boolean isTermuxFilesDirectoryAccessible = false;
-        try {
-            error = TermuxFileUtils.isTermuxFilesDirectoryAccessible(this, true, true);
-            isTermuxFilesDirectoryAccessible = error == null;
-        } catch (Exception e) {
-            Logger.logError(LOG_TAG, "Failed to check files directory accessibility: " + e.getMessage());
-        }
-        
-        if (isTermuxFilesDirectoryAccessible) {
-            Logger.logInfo(LOG_TAG, "Termux files directory is accessible");
-
-            try {
-                error = TermuxFileUtils.isAppsTermuxAppDirectoryAccessible(true, true);
-                if (error != null) {
-                    Logger.logErrorExtended(LOG_TAG, "Create apps/termux-app directory failed\n" + error);
-                    return;
+        boolean runtimeFilesAccessible = runtimeFilesDirectoryAccessible();
+        if (runtimeFilesAccessible) {
+            Logger.logInfo(LOG_TAG, "Android-assigned Termux files directory is accessible");
+            if (TermuxRuntimePaths.isCanonicalLayout()) {
+                try {
+                    // The existing AM socket helper still owns canonical-prefix assumptions.
+                    TermuxAmSocketServer.setupTermuxAmSocketServer(context);
+                } catch (Throwable e) {
+                    Logger.logStackTraceWithMessage(LOG_TAG, "Failed to setup termux-am socket server", e);
                 }
-
-                // Setup termux-am-socket server
-                TermuxAmSocketServer.setupTermuxAmSocketServer(context);
-            } catch (Exception e) {
-                Logger.logError(LOG_TAG, "Failed to setup app directory or socket server: " + e.getMessage());
+            } else {
+                Logger.logWarn(LOG_TAG,
+                    "termux-am socket setup skipped for relocated layout until its path contract is runtime-resolved");
             }
         } else {
-            Logger.logErrorExtended(LOG_TAG, "Termux files directory is not accessible\n" + error);
+            Logger.logError(LOG_TAG, "Android-assigned Termux files directory is not writable: "
+                + TermuxRuntimePaths.filesDirPath());
         }
 
-        // Init TermuxShellEnvironment constants and caches after everything has been setup including termux-am-socket server
         try {
             TermuxShellEnvironment.init(this);
-        } catch (Exception e) {
-            Logger.logError(LOG_TAG, "Failed to initialize shell environment: " + e.getMessage());
+        } catch (Throwable e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to initialize shell environment", e);
         }
 
-        if (isTermuxFilesDirectoryAccessible) {
+        if (runtimeFilesAccessible) {
             initializeInstalledBootstrapEnvironment();
             writeShellEnvironmentFile("application-startup");
         }
     }
 
-    private void initializeInstalledBootstrapEnvironment() {
-        File shell = new File(TermuxConstants.TERMUX_PREFIX_DIR_PATH + "/bin/sh");
-        File packageManager = new File(TermuxConstants.TERMUX_PREFIX_DIR_PATH + "/bin/pkg");
+    /** Direct capability probe of Context.getFilesDir(), not a hard-coded /data/data alias. */
+    private boolean runtimeFilesDirectoryAccessible() {
+        File files = TermuxRuntimePaths.filesDir();
+        try {
+            if (!files.exists() && !files.mkdirs() && !files.isDirectory()) return false;
+            if (!files.isDirectory() || !files.canRead() || !files.canWrite() || !files.canExecute()) return false;
+            File probe = new File(files, ".rafcodephi-app-init-write-probe.tmp");
+            try (FileOutputStream output = new FileOutputStream(probe)) {
+                output.write(0x52);
+                output.flush();
+                output.getFD().sync();
+            }
+            boolean ok = probe.isFile() && probe.length() == 1L;
+            if (!probe.delete()) Logger.logWarn(LOG_TAG, "Could not delete app init write probe");
+            return ok;
+        } catch (Throwable t) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Runtime files directory capability probe failed", t);
+            return false;
+        }
+    }
 
-        if (!shell.exists() || !packageManager.exists()) {
-            Logger.logInfo(LOG_TAG, "bootstrap-env-init skipped: prefix not ready yet shell=" + shell.exists() + " pkg=" + packageManager.exists());
+    private void initializeInstalledBootstrapEnvironment() {
+        File shell = new File(TermuxRuntimePaths.binDirPath(), "sh");
+        File packageManager = new File(TermuxRuntimePaths.binDirPath(), "pkg");
+        if (!shell.isFile() || !packageManager.isFile()) {
+            Logger.logInfo(LOG_TAG, "bootstrap-env-init skipped: runtime prefix not ready shell="
+                + shell.isFile() + " pkg=" + packageManager.isFile());
             return;
         }
 
         try {
-            Logger.logInfo(LOG_TAG, "bootstrap-env-init phase=guard-existing-prefix prefix=" + TermuxConstants.TERMUX_PREFIX_DIR_PATH);
-            BootstrapBaremetalGuard.validateAfterBootstrap(TermuxConstants.TERMUX_PREFIX_DIR_PATH);
+            Logger.logInfo(LOG_TAG, "bootstrap-env-init phase=guard-existing-prefix prefix=" + TermuxRuntimePaths.prefixDirPath());
+            BootstrapBaremetalGuard.validateAfterBootstrap(TermuxRuntimePaths.prefixDirPath());
             Logger.logInfo(LOG_TAG, "bootstrap-env-init phase=guard-existing-prefix status=ok");
         } catch (Throwable t) {
-            Logger.logStackTraceWithMessage(LOG_TAG, "bootstrap-env-init failed for existing prefix", t);
-            if (BuildConfig.BOOTSTRAP_BAREMETAL_STRICT) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "bootstrap-env-init failed for existing runtime prefix", t);
+            if (BuildConfig.BOOTSTRAP_BAREMETAL_STRICT)
                 throw new RuntimeException("Existing bootstrap environment failed initialization", t);
-            }
         }
     }
 
@@ -184,18 +178,15 @@ public class TermuxApplication extends Application {
         try {
             Logger.logInfo(LOG_TAG, "bootstrap-env-init phase=" + phase + " action=write-shell-environment");
             TermuxShellEnvironment.writeEnvironmentToFile(this);
-        } catch (Exception e) {
-            Logger.logError(LOG_TAG, "Failed to write environment to file: " + e.getMessage());
+        } catch (Throwable e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to write runtime environment file", e);
         }
     }
 
     public static void setLogConfig(Context context) {
         Logger.setDefaultLogTag(TermuxConstants.TERMUX_APP_NAME);
-
-        // Load the log level from shared preferences and set it to the {@link Logger.CURRENT_LOG_LEVEL}
         TermuxAppSharedPreferences preferences = TermuxAppSharedPreferences.build(context);
         if (preferences == null) return;
         preferences.setLogLevel(null, preferences.getLogLevel());
     }
-
 }

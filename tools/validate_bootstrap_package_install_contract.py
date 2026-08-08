@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Validate RAFCODEPHI bootstrap package installability contract.
+"""Validate RAFCODEPHI bootstrap filesystem/install contract.
 
-Structural only: this does not build the APK, does not install on Android and
-does not claim device runtime. It protects the source paths that make the
-bootstrap package discoverable by native incbin and installable after extraction.
+Structural only. This validator intentionally distinguishes:
+- canonical compile/build prefix metadata;
+- Android-assigned runtime app-private filesDir;
+- wizard-selected bootstrap.zip provenance;
+- relocated bridge runtime from unproven real-pkg relocation.
+
+It does not claim device runtime. Physical filesystem + first-shell receipts are
+required before the relocated runtime can be promoted from TOKEN_VAZIO.
 """
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -16,55 +20,27 @@ BUILD_GRADLE = ROOT / "app/build.gradle"
 ASM = ROOT / "app/src/main/cpp/termux-bootstrap-zip.S"
 BUILDER = ROOT / "scripts/bootstrap_zip_builder.c"
 BUILD_SCRIPT = ROOT / "scripts/build_rafaelia_bootstraps.sh"
+PREPARE = ROOT / "scripts/prepare_bootstrap_env.sh"
 INSTALLER = ROOT / "app/src/main/java/com/termux/app/TermuxInstaller.java"
 APPLICATION = ROOT / "app/src/main/java/com/termux/app/TermuxApplication.java"
+WIZARD = ROOT / "app/src/main/java/com/termux/app/activities/Android15WizardActivity.java"
+WIZARD_SOURCE = ROOT / "app/src/main/java/com/termux/app/BootstrapWizardSource.java"
+RUNTIME_PATHS = ROOT / "termux-shared/src/main/java/com/termux/shared/termux/TermuxRuntimePaths.java"
+SHELL_ENV = ROOT / "termux-shared/src/main/java/com/termux/shared/termux/shell/command/environment/TermuxShellEnvironment.java"
+SESSION = ROOT / "termux-shared/src/main/java/com/termux/shared/termux/shell/command/runner/terminal/TermuxSession.java"
+PROFILE_TOOL = ROOT / "tools/raf_bootstrap_profile.py"
 
 REWRITTEN_ZIPS = (
     "rewritten-bootstrap-aarch64.zip",
     "rewritten-bootstrap-arm.zip",
     "rewritten-bootstrap-i686.zip",
-    "rewritten-bootstrap_x86_64.zip".replace("_x86", "-x86"),
-)
-
-RUNTIME_FILES = (
-    "bin/sh",
-    "bin/pkg",
-    "bin/busybox",
-    "bin/proot",
-    "bin/apkmanager",
-    "bin/shellbash",
-    "bin/busybox-safe",
-    "bin/proot-safe",
+    "rewritten-bootstrap-x86_64.zip",
 )
 
 COMMAND_WRAPPER_APPLETS = (
-    "cat",
-    "ls",
-    "clear",
-    "grep",
-    "sed",
-    "awk",
-    "head",
-    "tail",
-    "wc",
-    "mkdir",
-    "rm",
-    "cp",
-    "mv",
-    "ln",
-    "chmod",
-    "pwd",
-    "env",
-    "which",
-    "find",
-    "tar",
-    "gzip",
-    "gunzip",
-    "zcat",
-    "stat",
-    "strings",
-    "file",
-    "whoami",
+    "cat", "ls", "clear", "grep", "sed", "awk", "head", "tail", "wc",
+    "mkdir", "rm", "cp", "mv", "ln", "chmod", "pwd", "env", "which",
+    "find", "tar", "gzip", "gunzip", "zcat", "stat", "strings", "file", "whoami",
 )
 
 
@@ -86,90 +62,95 @@ def validate() -> list[str]:
     asm = read(ASM, errors)
     builder = read(BUILDER, errors)
     build_script = read(BUILD_SCRIPT, errors)
+    prepare = read(PREPARE, errors)
     installer = read(INSTALLER, errors)
     application = read(APPLICATION, errors)
+    wizard = read(WIZARD, errors)
+    wizard_source = read(WIZARD_SOURCE, errors)
+    runtime_paths = read(RUNTIME_PATHS, errors)
+    shell_env = read(SHELL_ENV, errors)
+    session = read(SESSION, errors)
+    profile_tool = read(PROFILE_TOOL, errors)
 
     for zip_name in REWRITTEN_ZIPS:
         require(asm, f'.incbin "{zip_name}"', "native incbin", errors)
-        require(build_gradle, zip_name, "gradle generated bootstrap outputs", errors)
+        require(build_gradle, zip_name, "gradle bootstrap input declaration", errors)
         require(build_script, zip_name, "bootstrap generation script", errors)
-
-    require(build_gradle, "generateRafcodephiBootstraps", "gradle task", errors)
-    require(build_gradle, "scripts/build_rafaelia_bootstraps.sh", "gradle task", errors)
-    require(build_gradle, "preBuild", "gradle task", errors)
-    require(build_gradle, "externalNativeBuild", "gradle task", errors)
-    require(build_gradle, "generateJsonModel", "gradle task", errors)
+    for token in ("verifyBootstrapZipsPresent", "externalNativeBuild", "validateSideBySideContract"):
+        require(build_gradle, token, "gradle bootstrap contract", errors)
+    for token in ("Bootstrap source:", "bash scripts/build_bootstrap_profile.sh", "Verifying bootstrap contract"):
+        require(prepare, token, "bootstrap preflight materializer", errors)
 
     for token in (
-        "def validateVersionName(String candidateVersionName)",
-        "def hasReleaseTaskRequested()",
-        "def effectiveVersionName = appVersionName ?: \"0.118.0\"",
-        "validateVersionName(effectiveVersionName)",
-        "versionName effectiveVersionName",
+        "bin/sh", "bin/pkg", "bin/busybox", "bin/proot", "bin/apkmanager",
+        "bin/shellbash", "bin/busybox-safe", "bin/proot-safe", "SYMLINKS.txt",
+        "BOOTSTRAP_PACKAGE_INSTALLABLE=1", "BOOTSTRAP_COMMAND_WRAPPERS_READY=1",
+        "command_wrapper_names", "wrapper_paths",
     ):
-        require(build_gradle, token, "gradle version helper", errors)
-    if "validateVersionName(versionName)" in build_gradle:
-        errors.append("app/build.gradle: validateVersionName must not be called on Gradle DSL versionName")
-
-    if build_gradle.count('implementation project(":termux-shared")') != 1:
-        errors.append("app/build.gradle: termux-shared dependency must appear exactly once")
-
-    for runtime_file in RUNTIME_FILES:
-        require(build_script, runtime_file, "bootstrap source generator", errors)
-        require(builder, runtime_file, "bootstrap zip builder", errors)
-
-    for token in (
-        "runtime_command_wrappers",
-        "write_busybox_applet_wrapper",
-        "${generated_root}/bin/${app}",
-        "command_wrapper_names",
-        "wrapper_paths",
-        "bin/%s",
-        "load_file(payload_root,wrapper_paths[i],wrapper_bufs[i],&wrapper_sizes[i])",
-    ):
-        require(build_script + "\n" + builder, token, "explicit busybox command wrapper machinery", errors)
-
+        require(builder + "\n" + build_script, token, "bootstrap runtime payload", errors)
     for applet in COMMAND_WRAPPER_APPLETS:
-        require(build_script, applet, "explicit busybox command wrapper source applet list", errors)
-        require(builder, f'"{applet}"', "explicit busybox command wrapper zip applet list", errors)
+        require(build_script + "\n" + builder, applet, "busybox wrapper applet", errors)
 
-    for marker in (
-        "BOOTSTRAP_UTILS_READY=1",
-        "BOOTSTRAP_APKMANAGER_READY=1",
-        "BOOTSTRAP_SHELLBASH_READY=1",
-        "BOOTSTRAP_BUSYBOX_SAFE_READY=1",
-        "BOOTSTRAP_PROOT_SAFE_READY=1",
-        "RUNTIME_READY=1",
-        "BOOTSTRAP_PACKAGE_INSTALLABLE=1",
-        "BOOTSTRAP_COMMAND_WRAPPERS_READY=1",
-        "BOOTSTRAP_EXPLICIT_APPLET_WRAPPERS=1",
-        "EXPLICIT_APPLET_WRAPPERS_READY=1",
-        "SYMLINKS.txt",
-        "raf-bootstrap-sh",
+    for token in (
+        "context.getFilesDir()", "prefixDirPath()", "stagingPrefixDirPath()",
+        "RELOCATED_ANDROID_ASSIGNED", "realPkgRelocationClaimAllowed()", "return false;",
     ):
-        require(builder, marker, "bootstrap zip builder metadata", errors)
+        require(runtime_paths, token, "runtime path resolver", errors)
 
-    for installer_token in (
-        "verifyBootstrapZipIntegrity(zipBytes)",
-        "verifyRuntimeBinary(TERMUX_STAGING_PREFIX_DIR_PATH + \"/bin/sh\", \"sh\")",
-        "verifyRuntimeBinary(TERMUX_STAGING_PREFIX_DIR_PATH + \"/bin/busybox\", \"busybox\")",
-        "verifyRuntimeBinary(TERMUX_STAGING_PREFIX_DIR_PATH + \"/bin/proot\", \"proot\")",
-        "BootstrapBaremetalGuard.validateAfterBootstrap(TERMUX_PREFIX_DIR_PATH)",
+    for token in (
+        "TermuxRuntimePaths.init(activity)", "verifyRuntimeFilesDirectoryWritable(activity)",
+        "BootstrapWizardSource.loadAcceptedBytes(context)", "verifyBootstrapZipIntegrity(zipBytes)",
+        "verifyRelocationContract(zipBytes)", "materializeRuntimeBootstrapProfile(staging, prefix.getAbsolutePath())",
+        'profile.put("source_prefix", sourcePrefix)', 'profile.put("prefix", runtimePrefix)',
+        'profile.put("real_pkg_relocation_claim_allowed", false)',
+        "staging.renameTo(prefix)",
+        "verifyRuntimeBinary(new File(staging, \"bin/sh\"), \"sh\", true)",
+        "verifyRuntimeBinary(new File(staging, \"bin/pkg\"), \"pkg\", true)",
+        "verifyRuntimeBinary(new File(staging, \"bin/busybox\"), \"busybox\", true)",
+        "verifyRuntimeBinary(new File(staging, \"bin/proot\"), \"proot\", true)",
+        "BootstrapBaremetalGuard.validateAfterBootstrap(prefix.getAbsolutePath())",
         "TermuxShellEnvironment.writeEnvironmentToFile(activity)",
-        "rollbackFailedBootstrapInstall",
+        "rollbackFailedBootstrapInstall", "RELOCATED_RUNTIME_BLOCKED_FOR_REAL_OR_UNPROVEN_PACKAGE_LAYER",
     ):
-        require(installer, installer_token, "installer", errors)
+        require(installer, token, "runtime installer", errors)
 
-    for application_token in (
-        "initializeInstalledBootstrapEnvironment()",
-        "writeShellEnvironmentFile(\"application-startup\")",
-        "new File(TermuxConstants.TERMUX_PREFIX_DIR_PATH + \"/bin/sh\")",
-        "new File(TermuxConstants.TERMUX_PREFIX_DIR_PATH + \"/bin/pkg\")",
-        "BootstrapBaremetalGuard.validateAfterBootstrap(TermuxConstants.TERMUX_PREFIX_DIR_PATH)",
-        "bootstrap-env-init phase=guard-existing-prefix",
+    for token in (
+        "Intent.ACTION_OPEN_DOCUMENT", "Select bootstrap.zip", "BootstrapWizardSource.accept(this, uri)",
+        "TermuxRuntimePaths.filesDirPath()", "TermuxRuntimePaths.prefixDirPath()",
+        "Canonical compiled PREFIX", "isBlockingStep", "Install Filesystem",
+    ):
+        require(wizard, token, "wizard filesystem route", errors)
+
+    for token in (
+        "HOST_ACCEPTED_CANONICAL_BOOTSTRAP", "expectedHashForCurrentAbi()", "blake3Hex",
+        "BOOTSTRAP_PROFILE.json", "SYMLINKS.txt", "bin/sh", "bin/pkg", "bin/busybox", "bin/proot",
+        "RELOCATED_RUNTIME_BLOCKED_FOR_NON_RELOCATABLE_BOOTSTRAP", "claim_allowed", "false",
+        "getFD().sync()", "renameTo(target)",
+    ):
+        require(wizard_source, token, "wizard bootstrap source", errors)
+
+    for token in ("PROFILE_FILE = \"BOOTSTRAP_PROFILE.json\"", "out.writestr(zi, profile_data)", "claim_allowed"):
+        require(profile_tool, token, "bootstrap profile manifest", errors)
+
+    for token in (
+        "TermuxRuntimePaths.init(context)", "runtimeFilesDirectoryAccessible()",
+        "new File(TermuxRuntimePaths.binDirPath(), \"sh\")",
+        "new File(TermuxRuntimePaths.binDirPath(), \"pkg\")",
+        "BootstrapBaremetalGuard.validateAfterBootstrap(TermuxRuntimePaths.prefixDirPath())",
         "TermuxShellEnvironment.writeEnvironmentToFile(this)",
     ):
-        require(application, application_token, "application bootstrap env init", errors)
+        require(application, token, "application runtime bootstrap init", errors)
+    for token in (
+        "ENV_HOME, TermuxRuntimePaths.homeDirPath()", "ENV_PREFIX, TermuxRuntimePaths.prefixDirPath()",
+        "ENV_TMPDIR, TermuxRuntimePaths.tmpDirPath()", "ENV_PATH, TermuxRuntimePaths.binDirPath()",
+        "TERMUX_REAL_PKG_RELOCATION_CLAIM_ALLOWED", "false",
+    ):
+        require(shell_env, token, "runtime shell environment", errors)
+    for token in (
+        "Do not hard-gate terminal startup on bash", "LOGIN_SHELL_BINARIES", "/system/bin/sh",
+        "TermuxRuntimePaths.layoutState()",
+    ):
+        require(session, token, "terminal startup fallback", errors)
 
     return errors
 
@@ -182,12 +163,14 @@ def main() -> int:
             print(f"ERROR: {error}", file=sys.stderr)
         return 1
     print("bootstrap_package_install_contract=PASS")
-    print("claim_boundary=structural_only_no_device_runtime_claim")
-    print("bootstrap_generation=gradle_prebuild_wired")
+    print("claim_boundary=structural_only_physical_filesystem_and_first_shell_still_required")
+    print("bootstrap_generation=preflight_materialized_rewritten_archives")
     print("native_incbin=rewritten_bootstrap_packages_declared")
-    print("gradle_version_helpers=present_and_safe")
-    print("existing_bootstrap_environment_init=application_startup_guarded")
-    print("explicit_busybox_command_wrappers=present")
+    print("wizard_bootstrap_document_source=fail_closed_b3_abi_profile_bound")
+    print("runtime_filesystem=context_getFilesDir_resolved")
+    print("installed_profile=source_prefix_preserved_runtime_prefix_materialized")
+    print("relocated_bridge_runtime=structurally_supported_claim_still_closed")
+    print("real_pkg_relocation=BLOCKED")
     return 0
 
 

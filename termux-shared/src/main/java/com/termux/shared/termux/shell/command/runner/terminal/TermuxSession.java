@@ -11,13 +11,12 @@ import com.termux.shared.R;
 import com.termux.shared.shell.command.ExecutionCommand;
 import com.termux.shared.shell.command.environment.ShellEnvironmentUtils;
 import com.termux.shared.shell.command.environment.UnixShellEnvironment;
-import com.termux.shared.shell.command.result.ResultData;
 import com.termux.shared.errors.Error;
 import com.termux.shared.errors.Errno;
 import com.termux.shared.logger.Logger;
 import com.termux.shared.shell.command.environment.IShellEnvironment;
 import com.termux.shared.shell.ShellUtils;
-import com.termux.shared.termux.TermuxConstants;
+import com.termux.shared.termux.TermuxRuntimePaths;
 import com.termux.shared.termux.shell.TermuxQualityManager;
 import com.termux.terminal.TerminalSession;
 import com.termux.terminal.TerminalSessionClient;
@@ -49,39 +48,13 @@ public class TermuxSession {
         this.mSetStdoutOnExit = setStdoutOnExit;
     }
 
-    /**
-     * Start execution of an {@link ExecutionCommand} with {@link Runtime#exec(String[], String[], File)}.
-     *
-     * The {@link ExecutionCommand#executable}, must be set, {@link ExecutionCommand#commandLabel},
-     * {@link ExecutionCommand#arguments} and {@link ExecutionCommand#workingDirectory} may optionally
-     * be set.
-     *
-     * If {@link ExecutionCommand#executable} is {@code null}, then a default shell is automatically
-     * chosen.
-     *
-     * @param currentPackageContext The {@link Context} for operations. This must be the context for
-     *                              the current package and not the context of a `sharedUserId` package,
-     *                              since environment setup may be dependent on current package.
-     * @param executionCommand The {@link ExecutionCommand} containing the information for execution command.
-     * @param terminalSessionClient The {@link TerminalSessionClient} interface implementation.
-     * @param termuxSessionClient The {@link TermuxSessionClient} interface implementation.
-     * @param shellEnvironmentClient The {@link IShellEnvironment} interface implementation.
-     * @param additionalEnvironment The additional shell environment variables to export. Existing
-     *                              variables will be overridden.
-     * @param setStdoutOnExit If set to {@code true}, then the {@link ResultData#stdout}
-     *                        available in the {@link TermuxSessionClient#onTermuxSessionExited(TermuxSession)}
-     *                        callback will be set to the {@link TerminalSession} transcript. The session
-     *                        transcript will contain both stdout and stderr combined, basically
-     *                        anything sent to the the pseudo terminal /dev/pts, including PS1 prefixes.
-     *                        Set this to {@code true} only if the session transcript is required,
-     *                        since this requires extra processing to get it.
-     * @return Returns the {@link TermuxSession}. This will be {@code null} if failed to start the execution command.
-     */
     public static TermuxSession execute(@NonNull final Context currentPackageContext, @NonNull ExecutionCommand executionCommand,
                                         @NonNull final TerminalSessionClient terminalSessionClient, final TermuxSessionClient termuxSessionClient,
                                         @NonNull final IShellEnvironment shellEnvironmentClient,
                                         @Nullable HashMap<String, String> additionalEnvironment,
                                         final boolean setStdoutOnExit) {
+        TermuxRuntimePaths.init(currentPackageContext);
+
         if (executionCommand.executable != null && executionCommand.executable.isEmpty())
             executionCommand.executable = null;
         if (executionCommand.workingDirectory == null || executionCommand.workingDirectory.isEmpty())
@@ -91,8 +64,8 @@ public class TermuxSession {
         String defaultBinPath = shellEnvironmentClient.getDefaultBinPath();
         Logger.logInfo(LOG_TAG, "defaultBinPath=" + defaultBinPath);
         Logger.logInfo(LOG_TAG, "workingDirectory=" + executionCommand.workingDirectory);
-        if (defaultBinPath.isEmpty())
-            defaultBinPath = "/system/bin";
+        Logger.logInfo(LOG_TAG, "runtimeLayout=" + TermuxRuntimePaths.layoutState());
+        if (defaultBinPath.isEmpty()) defaultBinPath = "/system/bin";
 
         boolean isLoginShell = false;
         boolean systemShellFallback = false;
@@ -100,19 +73,12 @@ public class TermuxSession {
             if (!executionCommand.isFailsafe) {
                 Error bootstrapError = TermuxQualityManager.checkBootstrapComplete();
                 if (bootstrapError != null) {
-                    // Keep terminal bootstrap resilient: missing/corrupted prefix payloads can be
-                    // recovered from an emergency shell, while failing hard here prevents any
-                    // repair workflow from running in-app.
                     Logger.logWarn(LOG_TAG, "Bootstrap validation failed, continuing with shell fallback: " + bootstrapError.getMessage());
                 }
-
-                // Do not hard-gate terminal startup on bash. The bootstrap contract only
-                // requires $PREFIX/bin/sh, and developer/CI bootstrap payloads may ship
-                // sh first while full package installation can add bash later. The login
-                // shell selection below still prefers bash when it exists and falls back
-                // through zsh, fish and sh.
             }
 
+            // Do not hard-gate terminal startup on bash: scan every supported login shell,
+            // then keep /system/bin/sh as the recovery shell when the runtime prefix is incomplete.
             if (!executionCommand.isFailsafe) {
                 StringBuilder foundCandidates = new StringBuilder();
                 for (String shellBinary : UnixShellEnvironment.LOGIN_SHELL_BINARIES) {
@@ -127,14 +93,6 @@ public class TermuxSession {
             }
 
             if (executionCommand.executable == null) {
-                // Fall back to system shell as last resort:
-                // Do not start a login shell since ~/.profile may cause startup failure if its invalid.
-                // /system/bin/sh is provided by mksh (not toybox) and does load .mkshrc but for android its set
-                // to /system/etc/mkshrc even though its default is ~/.mkshrc.
-                // So /system/etc/mkshrc must still be valid for failsafe session to start properly.
-                // https://cs.android.com/android/platform/superproject/+/android-11.0.0_r3:external/mksh/src/main.c;l=663
-                // https://cs.android.com/android/platform/superproject/+/android-11.0.0_r3:external/mksh/src/main.c;l=41
-                // https://cs.android.com/android/platform/superproject/+/android-11.0.0_r3:external/mksh/Android.bp;l=114
                 Logger.logWarn(LOG_TAG, "fallback /system/bin/sh selected");
                 executionCommand.executable = "/system/bin/sh";
                 systemShellFallback = true;
@@ -142,12 +100,9 @@ public class TermuxSession {
                 isLoginShell = true;
                 Logger.logInfo(LOG_TAG, "selected shell=" + executionCommand.executable);
             }
-
         }
 
-        // Setup command args
         String[] commandArgs = shellEnvironmentClient.setupShellCommandArguments(executionCommand.executable, executionCommand.arguments);
-
         executionCommand.executable = commandArgs[0];
         Logger.logInfo(LOG_TAG, "final executable=" + executionCommand.executable);
         String processName = (isLoginShell ? "-" : "") + ShellUtils.getExecutableBasename(executionCommand.executable);
@@ -156,19 +111,14 @@ public class TermuxSession {
         String[] arguments = new String[commandArgs.length];
         arguments[0] = processName;
         if (commandArgs.length > 1) System.arraycopy(commandArgs, 1, arguments, 1, commandArgs.length - 1);
-
         executionCommand.arguments = arguments;
 
-        if (executionCommand.commandLabel == null)
-            executionCommand.commandLabel = processName;
+        if (executionCommand.commandLabel == null) executionCommand.commandLabel = processName;
 
-        // Setup command environment
         HashMap<String, String> environment = shellEnvironmentClient.setupShellCommandEnvironment(currentPackageContext,
             executionCommand);
-        if (systemShellFallback)
-            hardenSystemShellFallbackEnvironment(environment, executionCommand.workingDirectory);
-        if (additionalEnvironment != null)
-            environment.putAll(additionalEnvironment);
+        if (systemShellFallback) hardenSystemShellFallbackEnvironment(environment, executionCommand.workingDirectory);
+        if (additionalEnvironment != null) environment.putAll(additionalEnvironment);
         List<String> environmentList = ShellEnvironmentUtils.convertEnvironmentToEnviron(environment);
         Collections.sort(environmentList);
         String[] environmentArray = environmentList.toArray(new String[0]);
@@ -188,30 +138,24 @@ public class TermuxSession {
             executionCommand.workingDirectory, executionCommand.arguments, environmentArray,
             executionCommand.terminalTranscriptRows, terminalSessionClient);
 
-        if (executionCommand.shellName != null) {
-            terminalSession.mSessionName = executionCommand.shellName;
-        }
-
+        if (executionCommand.shellName != null) terminalSession.mSessionName = executionCommand.shellName;
         return new TermuxSession(terminalSession, executionCommand, termuxSessionClient, setStdoutOnExit);
     }
 
     private static String resolveBootWorkingDirectory(@Nullable String requestedWorkingDirectory) {
         String workingDirectory = requestedWorkingDirectory;
         if (workingDirectory == null || workingDirectory.isEmpty())
-            workingDirectory = TermuxConstants.TERMUX_HOME_DIR_PATH;
+            workingDirectory = TermuxRuntimePaths.homeDirPath();
 
         File candidate = new File(workingDirectory);
         if (!candidate.isDirectory() && isPrivateBootDirectory(candidate)) {
             if (candidate.mkdirs())
                 Logger.logInfo(LOG_TAG, "Created terminal working directory=" + candidate.getAbsolutePath());
         }
+        if (isUsableDirectory(candidate)) return candidate.getAbsolutePath();
 
-        if (isUsableDirectory(candidate))
-            return candidate.getAbsolutePath();
-
-        File filesDir = TermuxConstants.TERMUX_FILES_DIR;
-        if (!filesDir.isDirectory())
-            filesDir.mkdirs();
+        File filesDir = TermuxRuntimePaths.filesDir();
+        if (!filesDir.isDirectory()) filesDir.mkdirs();
         if (isUsableDirectory(filesDir)) {
             Logger.logWarn(LOG_TAG, "workingDirectory fallback selected=" + filesDir.getAbsolutePath());
             return filesDir.getAbsolutePath();
@@ -223,119 +167,79 @@ public class TermuxSession {
 
     private static boolean isPrivateBootDirectory(@NonNull File candidate) {
         String path = candidate.getAbsolutePath();
-        return path.equals(TermuxConstants.TERMUX_HOME_DIR_PATH) ||
-            path.startsWith(TermuxConstants.TERMUX_FILES_DIR_PATH + "/");
+        return path.equals(TermuxRuntimePaths.homeDirPath()) ||
+            path.equals(TermuxRuntimePaths.filesDirPath()) ||
+            path.startsWith(TermuxRuntimePaths.filesDirPath() + "/");
     }
 
     private static boolean isUsableDirectory(@NonNull File candidate) {
-        return candidate.isDirectory() && candidate.canRead() && candidate.canExecute();
+        return candidate != null && candidate.isDirectory() && candidate.canRead() && candidate.canExecute();
     }
 
     private static void hardenSystemShellFallbackEnvironment(@NonNull HashMap<String, String> environment,
                                                             @NonNull String workingDirectory) {
         String existingPath = environment.get(UnixShellEnvironment.ENV_PATH);
         String systemPath = "/system/bin:/system/xbin";
-        if (existingPath != null && !existingPath.isEmpty())
-            systemPath = systemPath + ":" + existingPath;
+        if (existingPath != null && !existingPath.isEmpty()) systemPath = systemPath + ":" + existingPath;
         environment.put(UnixShellEnvironment.ENV_PATH, systemPath);
 
-        if (!isUsableDirectory(new File(environment.get(UnixShellEnvironment.ENV_TMPDIR))))
+        String tmp = environment.get(UnixShellEnvironment.ENV_TMPDIR);
+        if (tmp == null || !isUsableDirectory(new File(tmp)))
             environment.put(UnixShellEnvironment.ENV_TMPDIR, workingDirectory);
-        if (!isUsableDirectory(new File(environment.get(UnixShellEnvironment.ENV_HOME))))
+        String home = environment.get(UnixShellEnvironment.ENV_HOME);
+        if (home == null || !isUsableDirectory(new File(home)))
             environment.put(UnixShellEnvironment.ENV_HOME, workingDirectory);
 
         Logger.logWarn(LOG_TAG, "system shell fallback environment hardened for boot recovery");
     }
 
-    /**
-     * Signal that this {@link TermuxSession} has finished.  This should be called when
-     * {@link TerminalSessionClient#onSessionFinished(TerminalSession)} callback is received by the caller.
-     *
-     * If the processes has finished, then sets {@link ResultData#stdout}, {@link ResultData#stderr}
-     * and {@link ResultData#exitCode} for the {@link #mExecutionCommand} of the {@code termuxTask}
-     * and then calls the {@link #processTermuxSessionResult(TermuxSession, ExecutionCommand)} to process the result}.
-     *
-     */
     public void finish() {
-        // If process is still running, then ignore the call
         if (mTerminalSession.isRunning()) return;
-
         int exitCode = mTerminalSession.getExitStatus();
-
         if (exitCode == 0)
             Logger.logDebug(LOG_TAG, "The \"" + mExecutionCommand.getCommandIdAndLabelLogString() + "\" TermuxSession exited normally");
         else
             Logger.logDebug(LOG_TAG, "The \"" + mExecutionCommand.getCommandIdAndLabelLogString() + "\" TermuxSession exited with code: " + exitCode);
 
-        // If the execution command has already failed, like SIGKILL was sent, then don't continue
         if (mExecutionCommand.isStateFailed()) {
-            Logger.logDebug(LOG_TAG, "Ignoring setting \"" + mExecutionCommand.getCommandIdAndLabelLogString() + "\" TermuxSession state to ExecutionState.EXECUTED and processing results since it has already failed");
+            Logger.logDebug(LOG_TAG, "Ignoring result processing since execution command already failed");
             return;
         }
-
         mExecutionCommand.resultData.exitCode = exitCode;
-
         if (this.mSetStdoutOnExit)
             mExecutionCommand.resultData.stdout.append(ShellUtils.getTerminalSessionTranscriptText(mTerminalSession, true, false));
-
-        if (!mExecutionCommand.setState(ExecutionCommand.ExecutionState.EXECUTED))
-            return;
-
+        if (!mExecutionCommand.setState(ExecutionCommand.ExecutionState.EXECUTED)) return;
         TermuxSession.processTermuxSessionResult(this, null);
     }
 
-    /**
-     * Kill this {@link TermuxSession} by sending a {@link OsConstants#SIGILL} to its {@link #mTerminalSession}
-     * if its still executing.
-     *
-     * @param context The {@link Context} for operations.
-     * @param processResult If set to {@code true}, then the {@link #processTermuxSessionResult(TermuxSession, ExecutionCommand)}
-     *                      will be called to process the failure.
-     */
     public void killIfExecuting(@NonNull final Context context, boolean processResult) {
-        // If execution command has already finished executing, then no need to process results or send SIGKILL
         if (mExecutionCommand.hasExecuted()) {
-            Logger.logDebug(LOG_TAG, "Ignoring sending SIGKILL to \"" + mExecutionCommand.getCommandIdAndLabelLogString() + "\" TermuxSession since it has already finished executing");
+            Logger.logDebug(LOG_TAG, "Ignoring SIGKILL for completed command");
             return;
         }
 
-        Logger.logDebug(LOG_TAG, "Send SIGKILL to \"" + mExecutionCommand.getCommandIdAndLabelLogString() + "\" TermuxSession");
+        Logger.logDebug(LOG_TAG, "Send SIGKILL to \"" + mExecutionCommand.getCommandIdAndLabelLogString() + "\"");
         if (mExecutionCommand.setStateFailed(Errno.ERRNO_FAILED.getCode(), context.getString(R.string.error_sending_sigkill_to_process))) {
             if (processResult) {
-                mExecutionCommand.resultData.exitCode = 137; // SIGKILL
-
-                // Get whatever output has been set till now in case its needed
+                mExecutionCommand.resultData.exitCode = 137;
                 if (this.mSetStdoutOnExit)
                     mExecutionCommand.resultData.stdout.append(ShellUtils.getTerminalSessionTranscriptText(mTerminalSession, true, false));
-
                 TermuxSession.processTermuxSessionResult(this, null);
             }
         }
-
-        // Send SIGKILL to process
         mTerminalSession.finishIfRunning();
     }
 
     public static void processTermuxSessionResult(@Nullable TermuxSession termuxSession,
                                                   @Nullable ExecutionCommand executionCommand) {
-        if (termuxSession != null)
-            executionCommand = termuxSession.mExecutionCommand;
+        if (termuxSession != null) executionCommand = termuxSession.mExecutionCommand;
         if (executionCommand == null) return;
-
         executionCommand.setState(ExecutionCommand.ExecutionState.EXECUTED);
     }
 
-    public TerminalSession getTerminalSession() {
-        return mTerminalSession;
-    }
-
-    public ExecutionCommand getExecutionCommand() {
-        return mExecutionCommand;
-    }
-
-    public TermuxSessionClient getTermuxSessionClient() {
-        return mTermuxSessionClient;
-    }
+    public TerminalSession getTerminalSession() { return mTerminalSession; }
+    public ExecutionCommand getExecutionCommand() { return mExecutionCommand; }
+    public TermuxSessionClient getTermuxSessionClient() { return mTermuxSessionClient; }
 
     public interface TermuxSessionClient {
         void onTermuxSessionExited(TermuxSession termuxSession);

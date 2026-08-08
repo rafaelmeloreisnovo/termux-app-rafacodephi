@@ -11,21 +11,20 @@ import androidx.annotation.Nullable;
 
 import com.termux.shared.data.IntentUtils;
 import com.termux.shared.logger.Logger;
+import com.termux.shared.termux.TermuxRuntimePaths;
 import com.termux.shared.termux.TermuxUtils;
-import com.termux.shared.termux.file.TermuxFileUtils;
 import com.termux.shared.termux.shell.command.environment.TermuxShellEnvironment;
 import com.termux.shared.termux.shell.TermuxShellManager;
+
+import java.io.File;
 
 public class SystemEventReceiver extends BroadcastReceiver {
 
     private static SystemEventReceiver mInstance;
-
     private static final String LOG_TAG = "SystemEventReceiver";
 
     public static synchronized SystemEventReceiver getInstance() {
-        if (mInstance == null) {
-            mInstance = new SystemEventReceiver();
-        }
+        if (mInstance == null) mInstance = new SystemEventReceiver();
         return mInstance;
     }
 
@@ -35,16 +34,13 @@ public class SystemEventReceiver extends BroadcastReceiver {
             Logger.logError(LOG_TAG, "Received null intent");
             return;
         }
-        
         try {
             Logger.logDebug(LOG_TAG, "Intent Received:\n" + IntentUtils.getIntentString(intent));
-
             String action = intent.getAction();
             if (action == null) {
                 Logger.logError(LOG_TAG, "Received intent with null action");
                 return;
             }
-
             switch (action) {
                 case Intent.ACTION_BOOT_COMPLETED:
                 case Intent.ACTION_LOCKED_BOOT_COMPLETED:
@@ -65,7 +61,8 @@ public class SystemEventReceiver extends BroadcastReceiver {
 
     public synchronized void onActionBootCompleted(@NonNull Context context, @NonNull Intent intent) {
         try {
-            Logger.logInfo(LOG_TAG, "Device boot completed, initializing Termux environment");
+            TermuxRuntimePaths.init(context);
+            Logger.logInfo(LOG_TAG, "Device boot completed, runtime layout=" + TermuxRuntimePaths.layoutState());
             TermuxShellManager.onActionBootCompleted(context, intent);
         } catch (Exception e) {
             Logger.logStackTraceWithMessage(LOG_TAG, "Error handling boot completed event", e);
@@ -78,14 +75,17 @@ public class SystemEventReceiver extends BroadcastReceiver {
             if (data != null && TermuxUtils.isUriDataForTermuxPluginPackage(data)) {
                 String actionName = intent.getAction();
                 String packageName = data.toString().replaceAll("^package:", "");
-                
                 if (actionName != null) {
                     Logger.logDebug(LOG_TAG, actionName.replaceAll("^android.intent.action.", "") +
                         " event received for \"" + packageName + "\"");
                 }
-                
-                if (TermuxFileUtils.isTermuxFilesDirectoryAccessible(context, false, false) == null) {
+
+                TermuxRuntimePaths.init(context);
+                File filesDir = TermuxRuntimePaths.filesDir();
+                if (filesDir.isDirectory() && filesDir.canRead() && filesDir.canWrite() && filesDir.canExecute()) {
                     TermuxShellEnvironment.writeEnvironmentToFile(context);
+                } else {
+                    Logger.logWarn(LOG_TAG, "Skipping env refresh: Android-assigned filesDir inaccessible: " + filesDir);
                 }
             }
         } catch (Exception e) {
@@ -93,16 +93,6 @@ public class SystemEventReceiver extends BroadcastReceiver {
         }
     }
 
-
-
-    /**
-     * Register {@link SystemEventReceiver} to listen to {@link Intent#ACTION_PACKAGE_ADDED},
-     * {@link Intent#ACTION_PACKAGE_REMOVED} and {@link Intent#ACTION_PACKAGE_REPLACED} broadcasts.
-     * They must be registered dynamically and cannot be registered implicitly in
-     * the AndroidManifest.xml due to Android 8+ restrictions.
-     *
-     *  https://developer.android.com/guide/components/broadcast-exceptions
-     */
     public synchronized static void registerPackageUpdateEvents(@NonNull Context context) {
         try {
             IntentFilter intentFilter = new IntentFilter();
@@ -122,11 +112,9 @@ public class SystemEventReceiver extends BroadcastReceiver {
             context.unregisterReceiver(getInstance());
             Logger.logDebug(LOG_TAG, "Package update events unregistered successfully");
         } catch (IllegalArgumentException e) {
-            // Receiver was not registered, ignore
             Logger.logVerbose(LOG_TAG, "Receiver was not registered, ignoring unregister call");
         } catch (Exception e) {
             Logger.logStackTraceWithMessage(LOG_TAG, "Error unregistering package update events", e);
         }
     }
-
 }

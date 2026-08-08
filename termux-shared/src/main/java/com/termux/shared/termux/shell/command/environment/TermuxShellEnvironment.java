@@ -4,28 +4,22 @@ import android.content.Context;
 
 import androidx.annotation.NonNull;
 
-import com.termux.shared.errors.Error;
-import com.termux.shared.file.FileUtils;
 import com.termux.shared.logger.Logger;
-import com.termux.shared.shell.command.ExecutionCommand;
 import com.termux.shared.shell.command.environment.AndroidShellEnvironment;
 import com.termux.shared.shell.command.environment.ShellEnvironmentUtils;
-import com.termux.shared.shell.command.environment.ShellCommandShellEnvironment;
 import com.termux.shared.termux.TermuxBootstrap;
-import com.termux.shared.termux.TermuxConstants;
+import com.termux.shared.termux.TermuxRuntimePaths;
 import com.termux.shared.termux.shell.TermuxShellUtils;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 
-/**
- * Environment for Termux.
- */
+/** Environment for Termux with Android-assigned app-private runtime paths. */
 public class TermuxShellEnvironment extends AndroidShellEnvironment {
 
     private static final String LOG_TAG = "TermuxShellEnvironment";
-
-    /** Environment variable for the termux {@link TermuxConstants#TERMUX_PREFIX_DIR_PATH}. */
     public static final String ENV_PREFIX = "PREFIX";
 
     public TermuxShellEnvironment() {
@@ -33,79 +27,88 @@ public class TermuxShellEnvironment extends AndroidShellEnvironment {
         shellCommandShellEnvironment = new TermuxShellCommandShellEnvironment();
     }
 
-
-    /** Init {@link TermuxShellEnvironment} constants and caches. */
+    /** Init runtime path state and app shell constants/caches. */
     public synchronized static void init(@NonNull Context currentPackageContext) {
+        TermuxRuntimePaths.init(currentPackageContext);
         TermuxAppShellEnvironment.setTermuxAppEnvironment(currentPackageContext);
     }
 
-    /** Init {@link TermuxShellEnvironment} constants and caches. */
+    /** Persist the exact environment used by the current Android-assigned layout. */
     public synchronized static void writeEnvironmentToFile(@NonNull Context currentPackageContext) {
+        TermuxRuntimePaths.init(currentPackageContext);
         HashMap<String, String> environmentMap = new TermuxShellEnvironment().getEnvironment(currentPackageContext, false);
         String environmentString = ShellEnvironmentUtils.convertEnvironmentToDotEnvFile(environmentMap);
-
-        // Write environment string to temp file and then move to final location since otherwise
-        // writing may happen while file is being sourced/read
-        Error error = FileUtils.writeTextToFile("termux.env.tmp", TermuxConstants.TERMUX_ENV_TEMP_FILE_PATH,
-            Charset.defaultCharset(), environmentString, false);
-        if (error != null) {
-            Logger.logErrorExtended(LOG_TAG, error.toString());
+        File directory = new File(TermuxRuntimePaths.envDirPath());
+        if (!directory.exists() && !directory.mkdirs() && !directory.isDirectory()) {
+            Logger.logError(LOG_TAG, "Could not create runtime env directory: " + directory);
             return;
         }
 
-        error = FileUtils.moveRegularFile("termux.env.tmp", TermuxConstants.TERMUX_ENV_TEMP_FILE_PATH, TermuxConstants.TERMUX_ENV_FILE_PATH, true);
-        if (error != null) {
-            Logger.logErrorExtended(LOG_TAG, error.toString());
+        File temp = new File(TermuxRuntimePaths.envTempFilePath());
+        File target = new File(TermuxRuntimePaths.envFilePath());
+        try (FileOutputStream output = new FileOutputStream(temp)) {
+            output.write(environmentString.getBytes(Charset.defaultCharset()));
+            output.flush();
+            output.getFD().sync();
+        } catch (Exception e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to write runtime shell environment temp file", e);
+            return;
         }
+
+        if (target.exists() && !target.delete()) {
+            Logger.logError(LOG_TAG, "Could not replace runtime shell environment file: " + target);
+            return;
+        }
+        if (!temp.renameTo(target)) {
+            Logger.logError(LOG_TAG, "Could not atomically promote runtime shell environment file: " + temp + " -> " + target);
+            return;
+        }
+        Logger.logInfo(LOG_TAG, "Runtime shell environment written path=" + target
+            + " layout=" + TermuxRuntimePaths.layoutState());
     }
 
-    /** Get shell environment for Termux. */
     @NonNull
     @Override
     public HashMap<String, String> getEnvironment(@NonNull Context currentPackageContext, boolean isFailSafe) {
-
-        // Termux environment builds upon the Android environment
+        TermuxRuntimePaths.init(currentPackageContext);
         HashMap<String, String> environment = super.getEnvironment(currentPackageContext, isFailSafe);
 
         HashMap<String, String> termuxAppEnvironment = TermuxAppShellEnvironment.getEnvironment(currentPackageContext);
-        if (termuxAppEnvironment != null)
-            environment.putAll(termuxAppEnvironment);
+        if (termuxAppEnvironment != null) environment.putAll(termuxAppEnvironment);
 
         HashMap<String, String> termuxApiAppEnvironment = TermuxAPIShellEnvironment.getEnvironment(currentPackageContext);
-        if (termuxApiAppEnvironment != null)
-            environment.putAll(termuxApiAppEnvironment);
+        if (termuxApiAppEnvironment != null) environment.putAll(termuxApiAppEnvironment);
 
-        environment.put(ENV_HOME, TermuxConstants.TERMUX_HOME_DIR_PATH);
-        environment.put(ENV_PREFIX, TermuxConstants.TERMUX_PREFIX_DIR_PATH);
+        environment.put(ENV_HOME, TermuxRuntimePaths.homeDirPath());
+        environment.put(ENV_PREFIX, TermuxRuntimePaths.prefixDirPath());
 
-        // If failsafe is not enabled, then we keep default PATH and TMPDIR so that system binaries can be used
         if (!isFailSafe) {
-            environment.put(ENV_TMPDIR, TermuxConstants.TERMUX_TMP_PREFIX_DIR_PATH);
+            environment.put(ENV_TMPDIR, TermuxRuntimePaths.tmpDirPath());
             if (TermuxBootstrap.isAppPackageVariantAPTAndroid5()) {
-                // Termux in android 5/6 era shipped busybox binaries in applets directory
-                environment.put(ENV_PATH, TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + ":" + TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + "/applets");
-                environment.put(ENV_LD_LIBRARY_PATH, TermuxConstants.TERMUX_LIB_PREFIX_DIR_PATH);
+                environment.put(ENV_PATH, TermuxRuntimePaths.binDirPath() + ":" + TermuxRuntimePaths.binDirPath() + "/applets");
+                environment.put(ENV_LD_LIBRARY_PATH, TermuxRuntimePaths.libDirPath());
             } else {
-                // Termux binaries on Android 7+ rely on DT_RUNPATH, so LD_LIBRARY_PATH should be unset by default
-                environment.put(ENV_PATH, TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH);
+                environment.put(ENV_PATH, TermuxRuntimePaths.binDirPath());
                 environment.remove(ENV_LD_LIBRARY_PATH);
             }
         }
 
+        environment.put("TERMUX_RUNTIME_FILES_DIR", TermuxRuntimePaths.filesDirPath());
+        environment.put("TERMUX_RUNTIME_LAYOUT", TermuxRuntimePaths.layoutState());
+        environment.put("TERMUX_REAL_PKG_RELOCATION_CLAIM_ALLOWED", "false");
         return environment;
     }
-
 
     @NonNull
     @Override
     public String getDefaultWorkingDirectoryPath() {
-        return TermuxConstants.TERMUX_HOME_DIR_PATH;
+        return TermuxRuntimePaths.homeDirPath();
     }
 
     @NonNull
     @Override
     public String getDefaultBinPath() {
-        return TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH;
+        return TermuxRuntimePaths.binDirPath();
     }
 
     @NonNull
@@ -113,5 +116,4 @@ public class TermuxShellEnvironment extends AndroidShellEnvironment {
     public String[] setupShellCommandArguments(@NonNull String executable, String[] arguments) {
         return TermuxShellUtils.setupShellCommandArguments(executable, arguments);
     }
-
 }
