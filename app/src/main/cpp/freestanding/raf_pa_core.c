@@ -1,6 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * RAFCODEPHI PA core: direct ELF entry payload.
  * No headers. No libc. No malloc. No JNI. No Java native methods.
+ *
+ * Protocol 00000002 invariants:
+ * - elapsed time is CLOCK_MONOTONIC nanoseconds on ARM32 and AArch64;
+ * - workload identity/checksum is independent from elapsed time;
+ * - timer read overhead is emitted as an observation, never silently removed;
+ * - R0..R5 remain heterogeneous workloads and must not be pooled as one score.
  */
 
 typedef unsigned char      u8;
@@ -15,6 +21,10 @@ static u32 __attribute__((aligned(64))) q[16];
 static char __attribute__((aligned(64))) o[4096];
 static u32 z;
 
+static inline u64 ns_from_ts(const ts *x) {
+    return ((u64)(u32)x->s * 1000000000ull) + (u64)(u32)x->n;
+}
+
 #if defined(__aarch64__)
 static inline sl w(sl f, const void *p, sl n) {
     register sl x0 __asm__("x0") = f;
@@ -25,9 +35,13 @@ static inline sl w(sl f, const void *p, sl n) {
     return x0;
 }
 static inline u64 t(void) {
-    u64 x;
-    __asm__ volatile("isb\n\tmrs %0, cntvct_el0" : "=r"(x));
-    return x;
+    ts x = {0, 0};
+    register sl x0 __asm__("x0") = 1;   /* CLOCK_MONOTONIC */
+    register ts *x1 __asm__("x1") = &x;
+    register sl x8 __asm__("x8") = 113; /* __NR_clock_gettime */
+    __asm__ volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x8) : "memory", "cc");
+    if (x0 < 0) return 0;
+    return ns_from_ts(&x);
 }
 #define ARCH_FLAG 0xA6400001u
 #elif defined(__arm__)
@@ -40,12 +54,13 @@ static inline sl w(sl f, const void *p, sl n) {
     return r0;
 }
 static inline u64 t(void) {
-    ts x;
-    register sl r0 __asm__("r0") = 1;
+    ts x = {0, 0};
+    register sl r0 __asm__("r0") = 1;   /* CLOCK_MONOTONIC */
     register ts *r1 __asm__("r1") = &x;
-    register sl r7 __asm__("r7") = 263;
+    register sl r7 __asm__("r7") = 263; /* __NR_clock_gettime */
     __asm__ volatile("svc #0" : "+r"(r0) : "r"(r1), "r"(r7) : "memory", "cc");
-    return ((u64)(u32)x.s << 32) | (u32)x.n;
+    if (r0 < 0) return 0;
+    return ns_from_ts(&x);
 }
 #define ARCH_FLAG 0xA3200001u
 #else
@@ -99,10 +114,25 @@ static u32 a(u32 v0, u32 n) {
     return v0;
 }
 
-static void r(u32 cat, u32 profile, u64 *cy, u32 *cs, u32 *op, u32 *fl) {
+static u64 timer_overhead_min_ns(void) {
+    u64 best = ~0ull;
+    u32 i;
+    for (i = 0; i != 64u; ++i) {
+        u64 t0 = t();
+        u64 t1 = t();
+        if (t0 != 0 && t1 >= t0) {
+            u64 d = t1 - t0;
+            if (d < best) best = d;
+        }
+    }
+    return best == ~0ull ? 0ull : best;
+}
+
+static void r(u32 cat, u32 profile, u64 *elapsed_ns, u32 *cs, u32 *op, u32 *fl) {
     u32 i;
     u32 v0 = 0x9E3779B9u ^ (cat << 24) ^ (profile << 16);
     u64 t0 = t();
+    u64 t1;
     *fl = ARCH_FLAG | 0x00000042u;
 
     if (cat == 0u) {
@@ -151,28 +181,33 @@ static void r(u32 cat, u32 profile, u64 *cy, u32 *cs, u32 *op, u32 *fl) {
         *op = i;
     }
 
-    *cy = t() - t0;
+    t1 = t();
+    *elapsed_ns = (t0 != 0 && t1 >= t0) ? (t1 - t0) : 0ull;
     *cs = v0 ^ c(q, (u32)sizeof(q)) ^ c(m, (u32)sizeof(m));
 }
 
 __attribute__((visibility("hidden"))) void v(void *sp) {
     u32 cat;
     u32 profile = 0u;
+    u64 overhead_ns;
     (void)sp;
     z = 0u;
     for (cat = 0; cat != 1000u; ++cat) m[cat] = 0x9E3779B9u ^ cat;
     for (cat = 0; cat != 16u; ++cat) q[cat] = 0x00010001u * (cat + 1u);
 
-    s("RAFCODEPHI-PA-ELF 00000001\n");
+    overhead_ns = timer_overhead_min_ns();
+    s("RAFCODEPHI-PA-ELF 00000002\n");
     s("MODE FREESTANDING NO_LIBC NO_MALLOC NO_JNI DIRECT_SYSCALL\n");
+    s("TIMER CLOCK_MONOTONIC_NS OVERHEAD_MIN "); x64(overhead_ns); b('\n');
+    s("SCORE DETERMINISTIC_WORKLOAD_ID TIMING_EXCLUDED\n");
     for (cat = 0; cat != 6u; ++cat) {
-        u64 cy;
+        u64 elapsed_ns;
         u32 cs, op, fl;
         u64 score;
-        r(cat, profile, &cy, &cs, &op, &fl);
-        score = ((u64)cs << 32) ^ ((u64)op << 13) ^ ~cy;
+        r(cat, profile, &elapsed_ns, &cs, &op, &fl);
+        score = ((u64)cs << 32) ^ ((u64)op << 1) ^ (u64)fl ^ ((u64)cat << 56);
         b('R'); b((char)('0' + cat)); b(' ');
-        x64(score); b(' '); x64(cy); b(' '); x32(cs); b(' '); x32(op); b(' '); x32(fl); b('\n');
+        x64(score); b(' '); x64(elapsed_ns); b(' '); x32(cs); b(' '); x32(op); b(' '); x32(fl); b('\n');
     }
     s("END 00000000\n");
     (void)w(1, o, (sl)z);
