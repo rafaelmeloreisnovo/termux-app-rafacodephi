@@ -19,17 +19,20 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Statistical layer for PA protocol-v2 receipts.
+ * Statistical layer for governed PA protocol-v2 receipt series.
  *
- * Invariant: unrelated workloads are never pooled. A series is homogeneous only
- * when artifact hash, linker, ABI set, protocol, workload id, operation count
- * and flags are identical. Deterministic score/checksum drift invalidates the
- * series instead of silently splitting it into a more favorable subgroup.
+ * Invariants:
+ * - unrelated workloads are never pooled;
+ * - different explicit series IDs are never pooled;
+ * - ad-hoc history cannot accidentally become an n>=30 industrial series;
+ * - deterministic score/checksum drift invalidates the series;
+ * - environment coverage/interference is reported but does not get invented as
+ *   stability proof.
  */
 public final class PaBenchmarkSeriesAnalyzer {
 
-    public static final String SCHEMA = "rafcodephi.pa-series-analysis/v1";
-    public static final String FILE_NAME = "pa_series_analysis_v1.json";
+    public static final String SCHEMA = "rafcodephi.pa-series-analysis/v2";
+    public static final String FILE_NAME = "pa_series_analysis_v2.json";
     public static final int MIN_DISTRIBUTION_N = 30;
 
     private PaBenchmarkSeriesAnalyzer() {}
@@ -61,8 +64,11 @@ public final class PaBenchmarkSeriesAnalyzer {
         JSONObject report = new JSONObject();
         report.put("schema", SCHEMA);
         report.put("minimum_distribution_n", MIN_DISTRIBUTION_N);
-        report.put("aggregation_invariant", "same_artifact_abi_linker_protocol_workload_ops_flags_only");
+        report.put("aggregation_invariant",
+            "same_series_artifact_abi_linker_protocol_workload_ops_flags_only");
         report.put("heterogeneous_workload_pooling", false);
+        report.put("cross_series_pooling", false);
+        report.put("ad_hoc_promotion_to_series", false);
         report.put("claim_allowed_reproducibility", false);
         report.put("claim_allowed_cross_device_comparison", false);
 
@@ -79,24 +85,36 @@ public final class PaBenchmarkSeriesAnalyzer {
         Map<String, SeriesAccumulator> groups = new LinkedHashMap<>();
         int eligibleReceipts = 0;
         int ignoredReceipts = 0;
+        int adHocReceipts = 0;
 
         for (File file : files) {
             JSONObject receipt = PaBenchmarkReceipt.readHistoryFile(file);
-            if (!eligibleReceipt(receipt)) {
+            if (!eligibleMeasurementReceipt(receipt)) {
                 ignoredReceipts++;
                 continue;
             }
+            if (!receipt.optBoolean("series_governed", false)
+                || receipt.optString("series_id", "").trim().isEmpty()
+                || receipt.optInt("series_target_n", 0) < MIN_DISTRIBUTION_N) {
+                adHocReceipts++;
+                continue;
+            }
+
             eligibleReceipts++;
             JSONArray workloads = receipt.optJSONArray("workloads");
             if (workloads == null) {
                 ignoredReceipts++;
                 continue;
             }
+            String seriesId = receipt.optString("series_id", "").trim();
             String elf = receipt.optString("elf_sha256", "");
             String linker = receipt.optString("linker", "");
             String abi = receipt.optJSONArray("supported_abis") == null
                 ? "[]" : receipt.optJSONArray("supported_abis").toString();
             int protocol = receipt.optInt("pa_protocol_version", 0);
+            int seriesTargetN = receipt.optInt("series_target_n", 0);
+            boolean envComplete = receipt.optBoolean("environment_snapshot_complete", false);
+            boolean thermalInterference = receipt.optBoolean("thermal_interference_observed", false);
 
             for (int i = 0; i < workloads.length(); i++) {
                 JSONObject row = workloads.optJSONObject(i);
@@ -106,48 +124,56 @@ public final class PaBenchmarkSeriesAnalyzer {
                 String id = row.optString("id", "");
                 String ops = row.optString("operations_hex", "");
                 String flags = row.optString("flags_hex", "");
-                String keyMaterial = elf + "|" + linker + "|" + abi + "|p" + protocol + "|" + id + "|" + ops + "|" + flags;
+                String keyMaterial = seriesId + "|" + elf + "|" + linker + "|" + abi
+                    + "|p" + protocol + "|" + id + "|" + ops + "|" + flags;
                 String key = sha256(keyMaterial);
                 SeriesAccumulator acc = groups.get(key);
                 if (acc == null) {
-                    acc = new SeriesAccumulator(key, keyMaterial, id, elf, linker, abi, protocol, ops, flags);
+                    acc = new SeriesAccumulator(key, keyMaterial, seriesId, seriesTargetN,
+                        id, elf, linker, abi, protocol, ops, flags);
                     groups.put(key, acc);
                 }
-                acc.add(row, elapsed, file.getName());
+                acc.add(row, elapsed, file.getName(), envComplete, thermalInterference);
             }
         }
 
         JSONArray series = new JSONArray();
         boolean anyReady = false;
         boolean anyInvalidated = false;
+        boolean anyInterference = false;
         for (SeriesAccumulator acc : groups.values()) {
             JSONObject item = acc.toJson();
             series.put(item);
             anyReady |= item.optBoolean("claim_allowed_distribution_summary", false);
             anyInvalidated |= "INVALIDATED".equals(item.optString("state"));
+            anyInterference |= item.optInt("thermal_interference_samples", 0) > 0;
         }
 
-        report.put("eligible_receipts", eligibleReceipts);
+        report.put("eligible_governed_receipts", eligibleReceipts);
+        report.put("ad_hoc_timing_receipts_not_promoted", adHocReceipts);
         report.put("ignored_receipts", ignoredReceipts);
         report.put("series_count", series.length());
         report.put("series", series);
         if (series.length() == 0) {
             report.put("state", "NOT_MEASURED");
-            report.put("reason", "NO_PROTOCOL_V2_PASS_RECEIPTS");
+            report.put("reason", "NO_GOVERNED_PROTOCOL_V2_SERIES");
         } else if (anyInvalidated) {
             report.put("state", "INVALIDATED");
-            report.put("reason", "DETERMINISTIC_IDENTITY_DRIFT_IN_AT_LEAST_ONE_SERIES");
+            report.put("reason", "SERIES_IDENTITY_OR_SAMPLE_CONTRACT_INVALIDATED");
+        } else if (anyInterference) {
+            report.put("state", "OBSERVED_LIMITED");
+            report.put("reason", "THERMAL_INTERFERENCE_OBSERVED_NO_SILENT_DELETION");
         } else if (anyReady) {
             report.put("state", "OBSERVED_LIMITED");
-            report.put("reason", "DISTRIBUTION_SUMMARY_READY_ENVIRONMENTAL_COMPARABILITY_NOT_YET_PROVEN");
+            report.put("reason", "DISTRIBUTION_SUMMARY_READY_COMPARABILITY_STILL_BLOCKED");
         } else {
             report.put("state", "OBSERVED_LIMITED");
-            report.put("reason", "HOMOGENEOUS_SERIES_BELOW_N30");
+            report.put("reason", "GOVERNED_HOMOGENEOUS_SERIES_BELOW_N30");
         }
         return report;
     }
 
-    private static boolean eligibleReceipt(JSONObject receipt) {
+    private static boolean eligibleMeasurementReceipt(JSONObject receipt) {
         return receipt != null
             && PaBenchmarkReceipt.SCHEMA.equals(receipt.optString("schema"))
             && PaBenchmarkReceipt.STATE_PASS.equals(receipt.optString("evidence_state"))
@@ -167,6 +193,8 @@ public final class PaBenchmarkSeriesAnalyzer {
     private static final class SeriesAccumulator {
         final String key;
         final String keyMaterial;
+        final String seriesId;
+        final int seriesTargetN;
         final String workloadId;
         final String elfSha256;
         final String linker;
@@ -179,11 +207,16 @@ public final class PaBenchmarkSeriesAnalyzer {
         String deterministicScoreHex;
         String checksumHex;
         boolean identityDrift;
+        int environmentCompleteSamples;
+        int thermalInterferenceSamples;
 
-        SeriesAccumulator(String key, String keyMaterial, String workloadId, String elfSha256,
-                          String linker, String abiSet, int protocol, String operationsHex, String flagsHex) {
+        SeriesAccumulator(String key, String keyMaterial, String seriesId, int seriesTargetN,
+                          String workloadId, String elfSha256, String linker, String abiSet,
+                          int protocol, String operationsHex, String flagsHex) {
             this.key = key;
             this.keyMaterial = keyMaterial;
+            this.seriesId = seriesId;
+            this.seriesTargetN = seriesTargetN;
             this.workloadId = workloadId;
             this.elfSha256 = elfSha256;
             this.linker = linker;
@@ -193,7 +226,8 @@ public final class PaBenchmarkSeriesAnalyzer {
             this.flagsHex = flagsHex;
         }
 
-        void add(JSONObject row, long elapsed, String receiptName) {
+        void add(JSONObject row, long elapsed, String receiptName,
+                 boolean environmentComplete, boolean thermalInterference) {
             String score = row.optString("deterministic_score_hex", "");
             String checksum = row.optString("checksum_hex", "");
             if (deterministicScoreHex == null) deterministicScoreHex = score;
@@ -202,12 +236,16 @@ public final class PaBenchmarkSeriesAnalyzer {
             else if (!checksumHex.equals(checksum)) identityDrift = true;
             elapsedNs.add(elapsed);
             sourceReceipts.add(receiptName);
+            if (environmentComplete) environmentCompleteSamples++;
+            if (thermalInterference) thermalInterferenceSamples++;
         }
 
         JSONObject toJson() throws Exception {
             JSONObject out = new JSONObject();
             out.put("series_key_sha256", key);
             out.put("series_key_material", keyMaterial);
+            out.put("series_id", seriesId);
+            out.put("series_target_n", seriesTargetN);
             out.put("workload_id", workloadId);
             out.put("elf_sha256", elfSha256);
             out.put("linker", linker);
@@ -219,6 +257,10 @@ public final class PaBenchmarkSeriesAnalyzer {
             out.put("checksum_hex", checksumHex == null ? "" : checksumHex);
             out.put("n", elapsedNs.size());
             out.put("identity_drift", identityDrift);
+            out.put("environment_complete_samples", environmentCompleteSamples);
+            out.put("environment_coverage_fraction", elapsedNs.isEmpty()
+                ? 0.0 : (double) environmentCompleteSamples / (double) elapsedNs.size());
+            out.put("thermal_interference_samples", thermalInterferenceSamples);
             JSONArray sources = new JSONArray();
             for (String source : sourceReceipts) sources.put(source);
             out.put("source_receipts", sources);
@@ -226,6 +268,12 @@ public final class PaBenchmarkSeriesAnalyzer {
             if (identityDrift) {
                 out.put("state", "INVALIDATED");
                 out.put("reason", "DETERMINISTIC_SCORE_OR_CHECKSUM_DRIFT");
+                out.put("claim_allowed_distribution_summary", false);
+                return out;
+            }
+            if (elapsedNs.size() > seriesTargetN) {
+                out.put("state", "INVALIDATED");
+                out.put("reason", "SERIES_SAMPLE_COUNT_EXCEEDS_DECLARED_TARGET");
                 out.put("claim_allowed_distribution_summary", false);
                 return out;
             }
@@ -253,14 +301,29 @@ public final class PaBenchmarkSeriesAnalyzer {
             out.put("ci95_mean_low_ns", stats.ciLow);
             out.put("ci95_mean_high_ns", stats.ciHigh);
             out.put("ci_method", stats.ciMethod);
-            boolean distributionReady = values.length >= MIN_DISTRIBUTION_N;
-            out.put("claim_allowed_distribution_summary", distributionReady);
+
+            boolean targetReached = values.length >= MIN_DISTRIBUTION_N
+                && values.length == seriesTargetN;
+            boolean fullEnvironmentCoverage = environmentCompleteSamples == values.length;
+            boolean noSevereThermal = thermalInterferenceSamples == 0;
+            out.put("target_reached", targetReached);
+            out.put("full_environment_coverage", fullEnvironmentCoverage);
+            out.put("no_severe_thermal_interference_observed", noSevereThermal);
+            out.put("claim_allowed_distribution_summary", targetReached);
+            out.put("claim_allowed_environment_stability", false);
+            out.put("claim_allowed_industrial_comparison", false);
             out.put("claim_allowed_reproducibility", false);
             out.put("claim_allowed_cross_device_comparison", false);
-            out.put("state", distributionReady ? "OBSERVED_LIMITED" : "OBSERVED_LIMITED");
-            out.put("reason", distributionReady
-                ? "N30_DISTRIBUTION_READY_ENVIRONMENTAL_GATES_STILL_OPEN"
-                : "HOMOGENEOUS_SERIES_BELOW_N30");
+            out.put("state", "OBSERVED_LIMITED");
+            if (!targetReached) {
+                out.put("reason", "GOVERNED_SERIES_BELOW_DECLARED_TARGET");
+            } else if (!fullEnvironmentCoverage) {
+                out.put("reason", "N30_DISTRIBUTION_READY_ENVIRONMENT_COVERAGE_INCOMPLETE");
+            } else if (!noSevereThermal) {
+                out.put("reason", "N30_DISTRIBUTION_READY_THERMAL_INTERFERENCE_OBSERVED");
+            } else {
+                out.put("reason", "N30_DISTRIBUTION_AND_ENVIRONMENT_OBSERVED_COMPARABILITY_POLICY_STILL_BLOCKED");
+            }
             return out;
         }
     }
@@ -342,7 +405,6 @@ public final class PaBenchmarkSeriesAnalyzer {
             return sorted[lo] + fraction * (sorted[hi] - sorted[lo]);
         }
 
-        // Conservative table/approximation for a two-sided 95% mean interval.
         static double t95TwoSided(int df) {
             if (df <= 0) return 0.0;
             if (df == 1) return 12.706;
