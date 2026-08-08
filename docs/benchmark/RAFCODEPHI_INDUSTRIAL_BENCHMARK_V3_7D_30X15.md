@@ -53,44 +53,77 @@ Implemented in `PaBenchmarkReceipt`:
 - PA protocol 1 remains valid as **execution-only evidence**;
 - PA protocol 2 can separately enable `claim_allowed_timing_measurement` when timer/workload predicates are complete;
 - parsed R0…R5 workload rows are persisted structurally;
-- isolated-silicon, reproducibility and cross-device claims remain false.
+- explicit `series_id`, `series_index`, `series_target_n` and `series_governed` fields prevent ad-hoc runs from silently becoming a series;
+- pre/post environment snapshots are bound into each new governed receipt;
+- isolated-silicon, environment-stability, reproducibility and cross-device claims remain false.
 
 The old physical PA run is therefore not discarded. Its execution proof survives, while its old timing representation is prevented from silently becoming calibrated V3 evidence.
 
-### 1.4 Homogeneous series analyzer
+### 1.4 Governed homogeneous series analyzer
 
 Implemented in `PaBenchmarkSeriesAnalyzer`:
 
 - minimum distribution target `n >= 30`;
-- grouping is constrained to same ELF hash, ABI set, linker, protocol, workload id, operation count and flags;
-- different R workloads are never pooled;
+- aggregation is constrained to the **same explicit series id**, ELF hash, ABI set, linker, protocol, workload id, operation count and flags;
+- ad-hoc timing receipts are counted but cannot be promoted into a governed series;
+- different R workloads and different series are never pooled;
 - deterministic score/checksum drift invalidates a series instead of splitting the drift into convenient subgroups;
+- exceeding the declared target count invalidates the series contract;
 - statistics include `n`, min, max, mean, median, sample SD, CV, MAD, Q1, Q3, IQR and a declared approximate two-sided 95% mean interval;
-- reaching n=30 allows only a distribution summary; it does **not** automatically allow reproducibility or cross-device claims.
+- environment coverage and severe thermal-interference count are retained in the series report;
+- reaching n=30 allows only a distribution summary; it does **not** automatically allow environmental-stability, reproducibility or cross-device claims.
 
-### 1.5 Environment snapshot primitive
+### 1.5 Environment evidence bound to executions
 
-Implemented in `BenchmarkEnvironmentSnapshot` as a fail-closed primitive:
+Implemented by `BenchmarkEnvironmentSnapshot`, `PaBenchmarkRunner` and `PaBenchmarkReceipt`:
 
 - Android thermal status when API/runtime exposes it;
 - battery level, voltage and battery temperature with explicit `BATTERY_NOT_CPU_SOC` scope;
 - memory availability/pressure;
-- best-effort per-CPU cpufreq/sysfs observations;
+- best-effort per-CPU cpufreq/sysfs observations and governors;
 - unavailable fields remain `UNAVAILABLE`/`PARTIAL`;
-- no energy or CPU-temperature claim is generated from metadata.
+- no energy or CPU-temperature claim is generated from metadata;
+- every new runner execution captures a snapshot immediately before and after the ELF process and stores both in the receipt;
+- severe thermal state is recorded as interference evidence and does not silently delete the sample.
 
-Full pre/post binding of this snapshot to every repeated observation remains an integration gate.
+This closes the **snapshot-to-execution binding** gap. It does not yet establish an environment-stability model: governor visibility, cpufreq coverage and thermal state are observations, not proof that frequency was locked or scheduler interference was absent.
 
-### 1.6 CI contract
+### 1.6 Governed n=30 runner
 
-The Vectra-grade workflow now runs `tests/test_industrial_benchmark_v3_contract.py` before the Android build. The contract locks:
+Implemented in `BenchmarkMenuActivity` + `PaBenchmarkRunner`:
+
+- single ad-hoc PA observation remains available;
+- a separate `Run Governed 30-Trial Series` path creates an explicit unique series id;
+- every trial receives an index and declared target;
+- no hidden warm-up samples are thrown away;
+- no arbitrary outliers are deleted;
+- cancellation takes effect after the current trial so the receipt already being produced is preserved;
+- execution/timing failure stops the governed series fail-closed;
+- the series analyzer is run after completion/interruption.
+
+### 1.7 Seven-gate machine-readable claim matrix
+
+Implemented in `BenchmarkClaimMatrix`:
+
+- materializes `EXECUTION_PROOF`, `MEASUREMENT_VALIDITY`, `SERIES_VALIDITY`, `ENVIRONMENT_VALIDITY`, `COMPARABILITY_VALIDITY`, `ENERGY_VALIDITY`, `PUBLICATION_VALIDITY` independently;
+- `gate_inheritance=false` prevents a PA execution PASS from cascading into broader claims;
+- `composite_score_allowed=false` is explicit;
+- comparability, energy and public ranking remain blocked;
+- environment can be observed while its stability claim remains false;
+- the overall state remains narrower than the strongest individual gate.
+
+### 1.8 CI contract
+
+The Vectra-grade workflow now installs the focused test dependency and runs `tests/test_industrial_benchmark_v3_contract.py` before the Android build. The contract locks:
 
 - monotonic nanosecond timer semantics;
 - removal of the ARM32 packed-seconds timer representation;
 - deterministic workload identity independent from timing;
 - ARM32 SVE/SVE2 namespace gating;
 - receipt v3 claim separation;
-- n>=30 homogeneous series aggregation rules.
+- explicit series-id n>=30 aggregation rules;
+- pre/post environment binding;
+- the seven independent claim gates and closed broad claims.
 
 ## 2. Seven antiderivative directions
 
@@ -242,14 +275,14 @@ These are reference patterns, not claims of conformance or affiliation.
 
 | System | Strongest force | Edge RAFCODEΦ must cover | V3 response |
 |---|---|---|---|
-| SPEC CPU | reproducible CPU workload rules | controlled run conditions | explicit claim gates + homogeneous series |
+| SPEC CPU | reproducible CPU workload rules | controlled run conditions | explicit claim gates + governed homogeneous series |
 | SPECpower | power/performance synchronization | no calibrated power meter in APK | `ENERGY_VALIDITY` remains blocked |
 | MLPerf Mobile | performance + quality | workload result without correctness is unsafe | future quality predicate per AI workload |
 | Android Microbenchmark | focused repeated loops | app runtime/JIT effects | keep PA ELF route separate from Java route |
 | Android Macrobenchmark | end-to-end app UX | microkernel does not predict UX | future app-level family, never pooled with PA |
 | Perfetto | system causal trace | local duration lacks scheduler context | future trace/receipt correlation |
 | Simpleperf | hardware/software event profiling | PMU can be permission-restricted | capability probe → UNAVAILABLE, never zero |
-| Google Benchmark | repetitions/statistics | n=1 noise and warm-up | V3 n>=30 analyzer + explicit warm-up future gate |
+| Google Benchmark | repetitions/statistics | n=1 noise and warm-up policy | V3 explicit n>=30 series; warm-up remains explicit future policy, not silently discarded |
 | CoreMark | compact self-verification | single score can hide subsystem behavior | keep per-workload results visible |
 | CoreMark-PRO | diverse processor/memory workloads | current R0…R5 data sets are tiny | larger realistic workload pack planned |
 | Geekbench | cross-platform baselines | normalization can obscure method changes | version baseline and workload hashes |
@@ -258,24 +291,19 @@ These are reference patterns, not claims of conformance or affiliation.
 | PassMark | broad subsystem baseline | composite score weighting can be arbitrary | composite remains BLOCKED_BY_DESIGN |
 | Phoronix/OpenBenchmarking | automation + corpus | local-only result has weak external reproducibility | export schema + fleet/replay layer planned |
 
-## 5. Innovation methods to add after V3 core
+## 5. Innovation methods and implementation status
 
 ### M1 — Twin receipt
 
-Every measured series should eventually emit two independently hash-bound objects:
-
-- **execution receipt**: what binary ran and what it emitted;
-- **environment receipt**: under what thermal/DVFS/memory/scheduler conditions it ran.
-
-The final series report references both hashes. This avoids changing execution history when environmental analysis evolves.
+Target: independently hash-bound execution and environment objects. V3 currently binds both pre/post environment objects inside the immutable execution receipt. The next refinement is to split environment into a second hash-addressed artifact and reference its digest from the execution receipt.
 
 ### M2 — Measurement lineage DAG
 
-Represent:
+Target representation:
 
-`source commit → build configuration → ELF hash → device install → execution receipt → series → statistical report → comparison report`.
+`source commit → build configuration → ELF hash → device install → execution receipt → series → statistical report → claim matrix → comparison report`.
 
-Every edge is hash-addressed. Missing edges become `TOKEN_VAZIO`, not narrative assumptions.
+The execution receipt, series report and seven-gate claim matrix now exist. A dedicated hash-addressed DAG artifact is still open. Missing edges remain `TOKEN_VAZIO`, not narrative assumptions.
 
 ### M3 — Counterfactual pair runs
 
@@ -315,7 +343,7 @@ Requirements:
 Treat unresolved evidence as a quantitative release object:
 
 - P0: timer/protocol/artifact identity;
-- P1: n>=30 homogeneous series + thermal/DVFS context;
+- P1: n>=30 governed homogeneous series + thermal/DVFS context;
 - P2: PMU/trace/energy/fleet comparability;
 - P3: composite/public benchmark publication.
 
@@ -328,10 +356,11 @@ Engineering estimate, not measured market certification:
 | Layer | Estimated maturity | Why |
 |---|---:|---|
 | Physical execution evidence | 90% | direct ELF route + receipt/history exists; new protocol still needs device run |
-| Timer/measurement semantics | 70% structural / NOT_MEASURED physical | clock defect fixed in source; physical V2 receipt pending |
-| Artifact/provenance | 85% | hashes, linker, output, atomic latest/history |
-| Statistical engine | 65% structural / low empirical | n>=30 analyzer implemented; no current n30 V2 corpus yet |
-| Environmental control | 40% | snapshot primitive exists; pre/post series binding still incomplete |
+| Timer/measurement semantics | 75% structural / NOT_MEASURED physical | clock defect fixed, unit unified, overhead emitted; physical V2 receipt pending |
+| Artifact/provenance | 88% | hashes, linker, output, atomic latest/history, explicit protocol/series identity |
+| Statistical engine | 78% structural / low empirical | explicit governed n>=30 analyzer implemented; no current n30 V2 physical corpus yet |
+| Environmental observation | 65% structural / NOT_MEASURED series | pre/post thermal/DVFS/battery/memory bound into runner receipts; stability model still blocked |
+| Claim governance | 85% structural | seven independent machine-readable gates; broad claims stay false |
 | PMU/trace correlation | 15% | capability/profiling integration remains open |
 | Energy measurement | 5% | no calibrated energy instrument; metadata is not energy |
 | Cross-device comparability | 20% | normalization contract defined conceptually, baseline fleet absent |
@@ -345,11 +374,11 @@ PASS only if PA protocol 2 is observed physically with all R0…R5 rows, monoton
 
 ### Gate B — series integrity
 
-PASS for distribution analysis only if a homogeneous series reaches n>=30 and deterministic score/checksum remain invariant.
+PASS for distribution analysis only if one explicit governed series reaches its declared n>=30 target and deterministic score/checksum remain invariant.
 
 ### Gate C — environment integrity
 
-Requires pre/post snapshots bound to every sample or declared series window. Severe thermal events and large frequency-regime shifts must be surfaced.
+Pre/post snapshots are now bound to every runner sample. Promotion still requires a versioned stability/interference policy; severe thermal events and incomplete cpufreq visibility remain visible instead of being filtered away.
 
 ### Gate D — PMU/trace integrity
 
@@ -365,17 +394,17 @@ Blocked until a measurement source with declared calibration/accuracy exists.
 
 ### Gate G — publication
 
-Requires release artifact hash, complete method document, raw receipts, series report, environmental disclosure and review of all blocked claims.
+Requires release artifact hash, complete method document, raw receipts, series report, claim matrix, environmental disclosure and review of all blocked claims.
 
 ## 8. Immediate execution sequence
 
 1. Compile CI for ARM32 and AArch64.
 2. Run PA protocol 2 on the physical ARMv7 device.
 3. Confirm ARM32 capability output no longer contains SVE/SVE2 promotion.
-4. Produce 30 homogeneous PA protocol-2 executions.
-5. Run `PaBenchmarkSeriesAnalyzer` and inspect deterministic identity drift.
-6. Bind pre/post environment snapshots to the series.
-7. Add trace/PMU capability probes.
+4. Run the explicit governed 30-trial series.
+5. Inspect deterministic identity drift, distribution statistics, environment coverage and severe thermal flags.
+6. Materialize and review the seven-gate claim matrix.
+7. Add trace/PMU capability probes and a dedicated lineage DAG artifact.
 8. Create a versioned reference baseline before any cross-device index.
 
 ## 9. Invariant
