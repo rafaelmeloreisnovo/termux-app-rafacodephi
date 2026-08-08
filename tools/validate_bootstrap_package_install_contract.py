@@ -5,7 +5,8 @@ Structural only. This validator intentionally distinguishes:
 - canonical compile/build prefix metadata;
 - Android-assigned runtime app-private filesDir;
 - wizard-selected bootstrap.zip provenance;
-- relocated bridge runtime from unproven real-pkg relocation.
+- relocated bridge runtime from unproven real-pkg relocation;
+- compatibility entry point from the hardened Wizard implementation.
 
 It does not claim device runtime. Physical filesystem + first-shell receipts are
 required before the relocated runtime can be promoted from TOKEN_VAZIO.
@@ -23,7 +24,9 @@ BUILD_SCRIPT = ROOT / "scripts/build_rafaelia_bootstraps.sh"
 PREPARE = ROOT / "scripts/prepare_bootstrap_env.sh"
 INSTALLER = ROOT / "app/src/main/java/com/termux/app/TermuxInstaller.java"
 APPLICATION = ROOT / "app/src/main/java/com/termux/app/TermuxApplication.java"
-WIZARD = ROOT / "app/src/main/java/com/termux/app/activities/Android15WizardActivity.java"
+WIZARD_ENTRY = ROOT / "app/src/main/java/com/termux/app/activities/Android15WizardActivity.java"
+WIZARD_IMPL = ROOT / "app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java"
+READINESS_GATE = ROOT / "app/src/main/java/com/termux/app/BootstrapReadinessGate.java"
 WIZARD_SOURCE = ROOT / "app/src/main/java/com/termux/app/BootstrapWizardSource.java"
 RUNTIME_PATHS = ROOT / "termux-shared/src/main/java/com/termux/shared/termux/TermuxRuntimePaths.java"
 SHELL_ENV = ROOT / "termux-shared/src/main/java/com/termux/shared/termux/shell/command/environment/TermuxShellEnvironment.java"
@@ -65,7 +68,9 @@ def validate() -> list[str]:
     prepare = read(PREPARE, errors)
     installer = read(INSTALLER, errors)
     application = read(APPLICATION, errors)
-    wizard = read(WIZARD, errors)
+    wizard_entry = read(WIZARD_ENTRY, errors)
+    wizard_impl = read(WIZARD_IMPL, errors)
+    readiness_gate = read(READINESS_GATE, errors)
     wizard_source = read(WIZARD_SOURCE, errors)
     runtime_paths = read(RUNTIME_PATHS, errors)
     shell_env = read(SHELL_ENV, errors)
@@ -114,12 +119,23 @@ def validate() -> list[str]:
     ):
         require(installer, token, "runtime installer", errors)
 
+    # Compatibility and implementation are intentionally validated separately.
+    require(wizard_entry, "extends BetaBootstrapWizardActivity", "wizard compatibility entry", errors)
     for token in (
         "Intent.ACTION_OPEN_DOCUMENT", "Select bootstrap.zip", "BootstrapWizardSource.accept(this, uri)",
         "TermuxRuntimePaths.filesDirPath()", "TermuxRuntimePaths.prefixDirPath()",
-        "Canonical compiled PREFIX", "isBlockingStep", "Install Filesystem",
+        "compiled PREFIX", "isBlockingStep", "Install / Repair Bootstrap",
+        "BootstrapReadinessGate.evaluate(this).isPass()",
     ):
-        require(wizard, token, "wizard filesystem route", errors)
+        require(wizard_impl, token, "wizard filesystem route", errors)
+
+    for token in (
+        'SCHEMA = "rafcodephi.bootstrap-readiness/v1"',
+        '"sh"', '"pkg"', '"apkmanager"', '"shellbash"', '"busybox-safe"', '"proot-safe"',
+        "TermuxRuntimePaths.storageHomeDir()", "realPkgRelocationClaimAllowed()",
+        "device_runtime_proof=", "claim_allowed_release=false",
+    ):
+        require(readiness_gate, token, "shared bootstrap readiness gate", errors)
 
     for token in (
         "HOST_ACCEPTED_CANONICAL_BOOTSTRAP", "expectedHashForCurrentAbi()", "blake3Hex",
@@ -167,6 +183,8 @@ def main() -> int:
     print("bootstrap_generation=preflight_materialized_rewritten_archives")
     print("native_incbin=rewritten_bootstrap_packages_declared")
     print("wizard_bootstrap_document_source=fail_closed_b3_abi_profile_bound")
+    print("wizard_compatibility_entry=preserved")
+    print("wizard_readiness_gate=shared_fail_closed")
     print("runtime_filesystem=context_getFilesDir_resolved")
     print("installed_profile=source_prefix_preserved_runtime_prefix_materialized")
     print("relocated_bridge_runtime=structurally_supported_claim_still_closed")
