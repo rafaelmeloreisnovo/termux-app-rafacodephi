@@ -58,9 +58,18 @@ def validate_structure(doc: dict) -> list[str]:
     else:
         if p.get("repository") != REPO:
             errors.append(f"provenance.repository must be {REPO}")
-        if not is_hex(p.get("git_commit"), 40):
-            errors.append("provenance.git_commit must be lowercase 40-hex")
-        for key in ("apk_sha256", "bootstrap_sha256"):
+        if p.get("bootstrap_source_repository") != "rafaelmeloreisnovo/termux-packages":
+            errors.append("provenance.bootstrap_source_repository must be rafaelmeloreisnovo/termux-packages")
+        for key in ("git_commit", "bootstrap_source_commit"):
+            if not is_hex(p.get(key), 40):
+                errors.append(f"provenance.{key} must be lowercase 40-hex")
+        for key in (
+            "build_receipt_sha256",
+            "apk_sha256",
+            "bootstrap_source_manifest_sha256",
+            "bootstrap_sha256",
+            "bootstrap_profile_sha256",
+        ):
             if not is_hex(p.get(key), 64):
                 errors.append(f"provenance.{key} must be lowercase SHA-256")
 
@@ -112,7 +121,17 @@ def validate_structure(doc: dict) -> list[str]:
 
 def same_observation(a: dict, b: dict) -> list[str]:
     mismatches: list[str] = []
-    for key in ("repository", "git_commit", "apk_sha256", "bootstrap_sha256"):
+    for key in (
+        "repository",
+        "git_commit",
+        "build_receipt_sha256",
+        "apk_sha256",
+        "bootstrap_source_repository",
+        "bootstrap_source_commit",
+        "bootstrap_source_manifest_sha256",
+        "bootstrap_sha256",
+        "bootstrap_profile_sha256",
+    ):
         if a["provenance"][key] != b["provenance"][key]:
             mismatches.append(f"provenance.{key}")
     if a["workload"]["command"] != b["workload"]["command"]:
@@ -141,7 +160,7 @@ def promotion_state(receipt: dict, reference: dict | None) -> tuple[bool, str]:
     mismatch = same_observation(receipt, reference)
     if mismatch:
         return False, "reproduction mismatch: " + ", ".join(mismatch)
-    return True, "two independent receipts reproduce the same artifact/workload observation"
+    return True, "two independent receipts reproduce the same cross-repo build/workload observation"
 
 
 def load(path: Path) -> dict:
@@ -171,8 +190,13 @@ def self_test() -> int:
         "provenance": {
             "repository": REPO,
             "git_commit": "a" * 40,
+            "build_receipt_sha256": "9" * 64,
             "apk_sha256": "b" * 64,
+            "bootstrap_source_repository": "rafaelmeloreisnovo/termux-packages",
+            "bootstrap_source_commit": "e" * 40,
+            "bootstrap_source_manifest_sha256": "8" * 64,
             "bootstrap_sha256": "c" * 64,
+            "bootstrap_profile_sha256": "7" * 64,
         },
         "device": {
             "manufacturer": "synthetic",
