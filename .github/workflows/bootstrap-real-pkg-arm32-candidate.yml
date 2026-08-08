@@ -71,6 +71,7 @@ jobs:
           assert d['device_validation'] == 'TOKEN_VAZIO'
           assert d['claim_allowed'] is False
           assert d['release_allowed'] is False
+          assert any(x.get('id') == 'TV_BOOTSTRAP_DEVICE_INSTALL' for x in d['token_vazio'])
           print('TARGET_AWARE_BOOTSTRAP_PROFILE_PASS')
           PY
 
@@ -84,7 +85,8 @@ jobs:
 
       - name: Build ARM32-capable debug APK set
         run: |
-          eval "$(./scripts/prepare_bootstrap_env.sh --print-env --skip-android-preflight)"
+          # Bootstrap hashes exported by the preparation step refer to the same
+          # immutable in-workspace bytes built above. Do not rematerialize here.
           ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon
 
       - name: Resolve ARM32 APK and write candidate receipt
