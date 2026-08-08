@@ -50,8 +50,7 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
         setTitle("RAFCODEΦ · Beta Orchestrator");
         setContentView(buildLayout());
         if (getSupportActionBar() != null) getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        refreshBootstrapStatus();
-        renderLatestReceiptIfIdle();
+        refreshOperatorState(true);
     }
 
     private View buildLayout() {
@@ -71,9 +70,11 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
             "One operator surface; independent evidence gates.\n" +
             "Bootstrap readiness → PA observation → optional governed n=30 → analysis → methods export.\n" +
             "Fail-closed: TOKEN_VAZIO/UNAVAILABLE/BLOCKED are never promoted to PASS.\n" +
+            "Single-flight: only one evidence pipeline may run in the Android app process.\n" +
             "Rollback boundary: measurements are non-destructive and receipt publication is atomic.\n" +
             "Watchdog: each PA trial retains the runner's bounded 60 s process timeout.\n" +
             "Results: canonical private receipt + best-effort app-specific external mirror.\n" +
+            "Local execution PASS is reported separately from evidence state; publication stays BLOCKED.\n" +
             "Certification/release/cross-device claims remain blocked until their own evidence exists.");
         contract.setPadding(0, dp(10), 0, dp(14));
         root.addView(contract);
@@ -121,10 +122,8 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
             startActivity(new Intent(this, Android15WizardActivity.class)));
         openVectra = addButton(root, "OPEN VECTRA EXPERT DIAGNOSTICS", v ->
             startActivity(new Intent(this, VectraRuntimeActivity.class)));
-        refresh = addButton(root, "REFRESH READINESS + LATEST RECEIPT", v -> {
-            refreshBootstrapStatus();
-            renderLatestReceiptIfIdle();
-        });
+        refresh = addButton(root, "REFRESH READINESS + PROCESS STATE + LATEST RECEIPT", v ->
+            refreshOperatorState(false));
 
         TextView resultTitle = new TextView(this);
         resultTitle.setText("Execution / Receipt Log");
@@ -166,7 +165,11 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
     }
 
     private void startSelected(boolean full) {
-        if (orchestrator.isRunning()) return;
+        if (orchestrator.isRunning()) {
+            output.setText("PROCESS_WIDE_PIPELINE=RUNNING\nnew_start=BLOCKED\nreason=SINGLE_FLIGHT_INVARIANT");
+            setRunningUi(true);
+            return;
+        }
         if (full) {
             singleObservation.setChecked(true);
             governedSeries.setChecked(true);
@@ -180,7 +183,7 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
             analyzeHistory.isChecked(),
             exportMethods.isChecked());
 
-        output.setText("PIPELINE_START\nbootstrap_preflight_required=true\n");
+        output.setText("PIPELINE_START\nbootstrap_preflight_required=true\nsingle_flight_scope=ANDROID_APP_PROCESS\n");
         setRunningUi(true);
         boolean started = orchestrator.executeAsync(this, plan, new BetaEvidenceOrchestrator.Listener() {
             @Override
@@ -195,7 +198,9 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
             public void onFinished(JSONObject receipt, File receiptFile) {
                 runOnUiThread(() -> {
                     if (isFinishing() || isDestroyed()) return;
-                    append("\nFINAL_STATE=" + receipt.optString("state", "INVALIDATED") + "\n");
+                    append("\nFINAL_EVIDENCE_STATE=" + receipt.optString("state", "INVALIDATED") + "\n");
+                    append("ORCHESTRATION_EXECUTION_STATE="
+                        + receipt.optString("orchestration_execution_state", "INVALIDATED") + "\n");
                     append("FINAL_REASON=" + receipt.optString("reason", "UNKNOWN") + "\n");
                     append("CANONICAL_RECEIPT="
                         + (receiptFile == null ? "UNAVAILABLE" : receiptFile.getAbsolutePath()) + "\n");
@@ -210,8 +215,26 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
         });
 
         if (!started) {
-            append("ORCHESTRATOR_START=BLOCKED_ALREADY_RUNNING_OR_INVALID_PLAN\n");
-            setRunningUi(false);
+            output.setText("ORCHESTRATOR_START=BLOCKED\nreason=EMPTY_PLAN_OR_PROCESS_WIDE_PIPELINE_ALREADY_RUNNING\nclaim_allowed_release=false");
+            setRunningUi(orchestrator.isRunning());
+        }
+    }
+
+    private void refreshOperatorState(boolean initial) {
+        refreshBootstrapStatus();
+        boolean running = orchestrator.isRunning();
+        setRunningUi(running);
+        if (running) {
+            if (initial || output == null || !output.getText().toString().contains("PIPELINE_START")) {
+                output.setText(
+                    "PROCESS_WIDE_PIPELINE=RUNNING\n" +
+                    "new_start=BLOCKED\n" +
+                    "reason=SINGLE_FLIGHT_INVARIANT\n" +
+                    "lifecycle_note=if_previous_activity_was_destroyed_cancellation_may_complete_after_current_atomic_trial\n" +
+                    "claim_allowed_release=false");
+            }
+        } else {
+            renderLatestReceiptIfIdle();
         }
     }
 
@@ -231,8 +254,10 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
         output.setText(
             "LATEST ORCHESTRATOR RECEIPT\n" +
             "run_id=" + latest.optString("run_id", "UNKNOWN") + "\n" +
-            "state=" + latest.optString("state", "INVALIDATED") + "\n" +
+            "evidence_state=" + latest.optString("state", "INVALIDATED") + "\n" +
+            "orchestration_execution_state=" + latest.optString("orchestration_execution_state", "INVALIDATED") + "\n" +
             "reason=" + latest.optString("reason", "UNKNOWN") + "\n" +
+            "analysis_observation_state=" + latest.optString("analysis_observation_state", "NOT_SELECTED") + "\n" +
             "canonical_receipt=" + latest.optString("canonical_receipt", "UNAVAILABLE") + "\n" +
             "external_export_state=" + latest.optString("external_export_state", "NOT_MEASURED") + "\n" +
             "external_export_path=" + latest.optString("external_export_path", "UNAVAILABLE") + "\n" +
@@ -250,7 +275,8 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
         runFull.setEnabled(!running);
         openWizard.setEnabled(!running);
         openVectra.setEnabled(!running);
-        refresh.setEnabled(!running);
+        // Refresh remains enabled so a recreated Activity can recover a process-wide run.
+        refresh.setEnabled(true);
         cancel.setEnabled(running);
     }
 
@@ -265,10 +291,7 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (bootstrapStatus != null && !orchestrator.isRunning()) {
-            refreshBootstrapStatus();
-            renderLatestReceiptIfIdle();
-        }
+        if (bootstrapStatus != null) refreshOperatorState(false);
     }
 
     @Override
