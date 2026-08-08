@@ -11,9 +11,12 @@ on:
       - app/build.gradle
       - app/src/main/cpp/termux-bootstrap-zip.S
       - app/src/main/java/com/termux/app/TermuxApplication.java
+      - app/src/main/java/com/termux/app/BootstrapWizardSource.java
       - scripts/build_rafaelia_bootstraps.sh
       - scripts/bootstrap_zip_builder.c
       - scripts/build_real_arm_bootstrap_core.py
+      - scripts/import_rafcodephi_real_bootstrap.py
+      - scripts/prepare_bootstrap_env.sh
       - scripts/validate_real_arm_bootstrap_core.py
       - scripts/smoke_bootstrap_filesystem_proot_busybox_service.sh
       - scripts/device_pkg_smoke.sh
@@ -24,9 +27,11 @@ on:
       - docs/audits/DEVICE_BOOTSTRAP_COMMAND_WRAPPERS_AUDIT.md
       - docs/audits/REAL_PKG_PROMOTION_CONTRACT.md
       - tools/inspect_bootstrap_zips.py
+      - tools/raf_bootstrap_profile.py
       - tools/validate_bootstrap_package_install_contract.py
       - tools/validate_readme_runtime_claim_boundary.py
       - tests/test_bootstrap_package_install_contract.py
+      - tests/test_source_built_real_bootstrap.py
       - tests/test_device_pkg_smoke_contract.py
       - tests/test_real_arm_bootstrap_core.py
       - tests/test_real_pkg_promotion_contract.py
@@ -43,9 +48,12 @@ on:
       - app/build.gradle
       - app/src/main/cpp/termux-bootstrap-zip.S
       - app/src/main/java/com/termux/app/TermuxApplication.java
+      - app/src/main/java/com/termux/app/BootstrapWizardSource.java
       - scripts/build_rafaelia_bootstraps.sh
       - scripts/bootstrap_zip_builder.c
       - scripts/build_real_arm_bootstrap_core.py
+      - scripts/import_rafcodephi_real_bootstrap.py
+      - scripts/prepare_bootstrap_env.sh
       - scripts/validate_real_arm_bootstrap_core.py
       - scripts/smoke_bootstrap_filesystem_proot_busybox_service.sh
       - scripts/device_pkg_smoke.sh
@@ -56,9 +64,11 @@ on:
       - docs/audits/DEVICE_BOOTSTRAP_COMMAND_WRAPPERS_AUDIT.md
       - docs/audits/REAL_PKG_PROMOTION_CONTRACT.md
       - tools/inspect_bootstrap_zips.py
+      - tools/raf_bootstrap_profile.py
       - tools/validate_bootstrap_package_install_contract.py
       - tools/validate_readme_runtime_claim_boundary.py
       - tests/test_bootstrap_package_install_contract.py
+      - tests/test_source_built_real_bootstrap.py
       - tests/test_device_pkg_smoke_contract.py
       - tests/test_real_arm_bootstrap_core.py
       - tests/test_real_pkg_promotion_contract.py
@@ -94,16 +104,19 @@ jobs:
       - name: Run focused bootstrap package tests
         run: python3 -m pytest -q tests/test_bootstrap_package_install_contract.py
 
+      - name: Run source-built real bootstrap import tests
+        run: python3 -m pytest -q tests/test_source_built_real_bootstrap.py
+
       - name: Run busybox applet wrapper tests
         run: python3 -m pytest -q tests/test_bootstrap_busybox_applet_wrappers.py
 
       - name: Validate real ARM payload declaration
         run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_real_arm_core_builder_declares_required_payload_and_arches
 
-      - name: Validate real ARM rewrite and fallback
+      - name: Validate legacy real ARM rewrite path and fallback
         run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_real_arm_core_builder_verifies_hashes_rewrites_prefix_and_fills_commands
 
-      - name: Validate explicit real ARM build wiring
+      - name: Validate explicit legacy real ARM build wiring
         run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_main_bootstrap_build_keeps_real_pkg_opt_in_and_validates_when_enabled
 
       - name: Validate real ARM required runtime contract
@@ -148,14 +161,14 @@ jobs:
       - name: Run README runtime claim boundary tests
         run: python3 -m pytest -q tests/test_readme_runtime_claim_boundary.py
 
-      - name: Generate safe bootstrap packages for native incbin
+      - name: Generate legacy bridge compatibility bootstrap packages
         shell: bash
         run: |
           mkdir -p reports
           set -o pipefail
           RAFCODEPHI_REAL_PKG_BOOTSTRAP=false bash scripts/build_rafaelia_bootstraps.sh 2>&1 | tee reports/bootstrap_generation.log
 
-      - name: Upload bootstrap generation log
+      - name: Upload legacy bridge compatibility generation log
         if: always()
         uses: actions/upload-artifact@v7
         with:
@@ -164,5 +177,5 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Inspect generated installable bootstrap packages
+      - name: Inspect generated legacy compatibility bootstrap packages
         run: python3 tools/inspect_bootstrap_zips.py
