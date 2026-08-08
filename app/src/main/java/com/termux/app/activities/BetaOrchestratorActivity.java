@@ -25,7 +25,7 @@ import java.io.File;
  * Unified operator surface for first-beta bootstrap readiness + PA evidence work.
  * Expert screens remain available, but normal operation starts here.
  */
-public final class BetaOrchestratorActivity extends AppCompatActivity {
+public class BetaOrchestratorActivity extends AppCompatActivity {
 
     private final BetaEvidenceOrchestrator orchestrator = new BetaEvidenceOrchestrator();
 
