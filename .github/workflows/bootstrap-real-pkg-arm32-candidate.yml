@@ -110,11 +110,22 @@ jobs:
         env:
           RAF_BOOTSTRAP_SOURCE: local
           RAF_BOOTSTRAP_PROFILE: real-pkg
+          RAF_BOOTSTRAP_SKIP_BUILD: 'true'
           RAFCODEPHI_REAL_PKG_ARCH: arm
           RAFCODEPHI_REAL_PKG_VALIDATE: 'true'
         run: |
           chmod +x ./scripts/prepare_bootstrap_env.sh ./scripts/verify_bootstrap_contract.sh
           ./scripts/prepare_bootstrap_env.sh --github-env
+          python3 - <<'PY'
+          import json
+          d = json.load(open('build/reports/bootstrap-profile-matrix.json'))
+          assert d['reused_audited_bytes'] is True
+          assert d['embedded_profile_by_arch']['arm'] == 'real-pkg'
+          assert d['embedded_profile_by_arch']['aarch64'] == 'bridge'
+          assert d['claim_allowed'] is False
+          assert d['release_allowed'] is False
+          print('SAME_OBSERVATION_PROFILE_PROMOTION_PASS')
+          PY
           cp build/reports/bootstrap-profile-matrix.json \
             dist/bootstrap-real-pkg-arm32/bootstrap-profile-matrix.json
 
