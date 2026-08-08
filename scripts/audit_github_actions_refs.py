@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Audit GitHub Actions references without confusing version existence with execution.
 
-The policy is intentionally date-stamped and conservative. Unknown actions are reported
-for review; known unsupported majors and floating branch refs fail in --strict mode.
+The policy is date-stamped and conservative. Unknown actions are reported for review;
+known unsupported majors and floating branch refs fail in --strict mode. Policy
+metadata records where the current major was checked, but reference validity remains
+separate from workflow execution evidence.
 """
 
 from __future__ import annotations
@@ -16,12 +18,23 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-POLICY_VERIFIED_ON = "2026-07-20"
+POLICY_VERIFIED_ON = "2026-08-08"
+POLICY_SOURCES = {
+    "actions/checkout": "https://github.com/actions/checkout/releases",
+    "actions/setup-python": "https://github.com/actions/setup-python/releases",
+    "android-actions/setup-android": "https://github.com/android-actions/setup-android/releases",
+    "softprops/action-gh-release": "https://github.com/softprops/action-gh-release/releases",
+}
 POLICY: dict[str, dict[str, Any]] = {
-    "actions/checkout": {"current": 6, "compatible": {4, 6}},
+    # checkout v7.0.1 was the current release observed on 2026-08-08. v4/v6
+    # remain explicitly accepted for existing controlled workflows.
+    "actions/checkout": {"current": 7, "compatible": {4, 6, 7}},
     "actions/setup-java": {"current": 5, "compatible": {4, 5}},
+    "actions/setup-python": {"current": 7, "compatible": {6, 7}},
     "actions/upload-artifact": {"current": 7, "compatible": {4, 5, 6, 7}},
     "actions/download-artifact": {"current": 8, "compatible": {4, 5, 6, 7, 8}},
+    "android-actions/setup-android": {"current": 4, "compatible": {4}},
+    "softprops/action-gh-release": {"current": 3, "compatible": {3}},
     "gradle/actions/wrapper-validation": {"current": 6, "compatible": {3, 4, 5, 6}},
     "gradle/actions/dependency-submission": {"current": 6, "compatible": {3, 4, 5, 6}},
     "gradle/actions/setup-gradle": {"current": 6, "compatible": {3, 4, 5, 6}},
@@ -85,6 +98,7 @@ def audit(root: Path) -> list[dict[str, Any]]:
                     "ref": ref,
                     "state": state,
                     "explanation": explanation,
+                    "policy_source": POLICY_SOURCES.get(action),
                 }
             )
     return records
@@ -122,7 +136,7 @@ def markdown_report(records: list[dict[str, Any]]) -> str:
         )
     lines.append("")
     lines.append(
-        "> This audit proves only that references match the local policy. "
+        "> This audit proves only that references match the dated local policy. "
         "It does not prove that a workflow executed successfully."
     )
     return "\n".join(lines) + "\n"
@@ -154,8 +168,9 @@ def main() -> int:
 
     if args.json_path:
         output = {
-            "schema_version": 1,
+            "schema_version": 2,
             "policy_verified_on": POLICY_VERIFIED_ON,
+            "policy_sources": POLICY_SOURCES,
             "records": records,
             "summary": dict(Counter(record["state"] for record in records)),
             "claim_allowed": False,
