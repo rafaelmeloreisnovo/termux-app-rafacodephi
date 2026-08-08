@@ -51,6 +51,7 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
         setContentView(buildLayout());
         if (getSupportActionBar() != null) getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         refreshBootstrapStatus();
+        renderLatestReceiptIfIdle();
     }
 
     private View buildLayout() {
@@ -72,6 +73,7 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
             "Fail-closed: TOKEN_VAZIO/UNAVAILABLE/BLOCKED are never promoted to PASS.\n" +
             "Rollback boundary: measurements are non-destructive and receipt publication is atomic.\n" +
             "Watchdog: each PA trial retains the runner's bounded 60 s process timeout.\n" +
+            "Results: canonical private receipt + best-effort app-specific external mirror.\n" +
             "Certification/release/cross-device claims remain blocked until their own evidence exists.");
         contract.setPadding(0, dp(10), 0, dp(14));
         root.addView(contract);
@@ -119,7 +121,10 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
             startActivity(new Intent(this, Android15WizardActivity.class)));
         openVectra = addButton(root, "OPEN VECTRA EXPERT DIAGNOSTICS", v ->
             startActivity(new Intent(this, VectraRuntimeActivity.class)));
-        refresh = addButton(root, "REFRESH READINESS", v -> refreshBootstrapStatus());
+        refresh = addButton(root, "REFRESH READINESS + LATEST RECEIPT", v -> {
+            refreshBootstrapStatus();
+            renderLatestReceiptIfIdle();
+        });
 
         TextView resultTitle = new TextView(this);
         resultTitle.setText("Execution / Receipt Log");
@@ -180,16 +185,22 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
         boolean started = orchestrator.executeAsync(this, plan, new BetaEvidenceOrchestrator.Listener() {
             @Override
             public void onEvent(String stage, String state, String detail) {
-                runOnUiThread(() -> append(stage + " | " + state + " | " + detail + "\n"));
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    append(stage + " | " + state + " | " + detail + "\n");
+                });
             }
 
             @Override
             public void onFinished(JSONObject receipt, File receiptFile) {
                 runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
                     append("\nFINAL_STATE=" + receipt.optString("state", "INVALIDATED") + "\n");
                     append("FINAL_REASON=" + receipt.optString("reason", "UNKNOWN") + "\n");
-                    append("ORCHESTRATOR_RECEIPT="
+                    append("CANONICAL_RECEIPT="
                         + (receiptFile == null ? "UNAVAILABLE" : receiptFile.getAbsolutePath()) + "\n");
+                    append("EXTERNAL_EXPORT_STATE=" + receipt.optString("external_export_state", "NOT_MEASURED") + "\n");
+                    append("EXTERNAL_EXPORT_PATH=" + receipt.optString("external_export_path", "UNAVAILABLE") + "\n");
                     append("claim_allowed_release=" + receipt.optBoolean("claim_allowed_release", false) + "\n");
                     append("claim_allowed_certification=" + receipt.optBoolean("claim_allowed_certification", false) + "\n");
                     setRunningUi(false);
@@ -207,9 +218,27 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
     private void refreshBootstrapStatus() {
         BootstrapReadinessGate.Report report = BootstrapReadinessGate.evaluate(this);
         bootstrapStatus.setText("Bootstrap shared gate\n" + report.render());
-        if (!report.isPass()) {
-            openWizard.setEnabled(!orchestrator.isRunning());
+        if (!report.isPass()) openWizard.setEnabled(!orchestrator.isRunning());
+    }
+
+    private void renderLatestReceiptIfIdle() {
+        if (orchestrator.isRunning() || output == null) return;
+        JSONObject latest = BetaEvidenceOrchestrator.readLatest(this);
+        if (latest == null) {
+            output.setText("IDLE\nlatest_orchestrator_receipt=NOT_MEASURED\nclaim_allowed_release=false\npublication_gate=BLOCKED");
+            return;
         }
+        output.setText(
+            "LATEST ORCHESTRATOR RECEIPT\n" +
+            "run_id=" + latest.optString("run_id", "UNKNOWN") + "\n" +
+            "state=" + latest.optString("state", "INVALIDATED") + "\n" +
+            "reason=" + latest.optString("reason", "UNKNOWN") + "\n" +
+            "canonical_receipt=" + latest.optString("canonical_receipt", "UNAVAILABLE") + "\n" +
+            "external_export_state=" + latest.optString("external_export_state", "NOT_MEASURED") + "\n" +
+            "external_export_path=" + latest.optString("external_export_path", "UNAVAILABLE") + "\n" +
+            "publication_gate=" + latest.optString("publication_gate_state", "BLOCKED") + "\n" +
+            "claim_allowed_release=" + latest.optBoolean("claim_allowed_release", false) + "\n" +
+            "claim_allowed_certification=" + latest.optBoolean("claim_allowed_certification", false));
     }
 
     private void setRunningUi(boolean running) {
@@ -236,7 +265,18 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (bootstrapStatus != null && !orchestrator.isRunning()) refreshBootstrapStatus();
+        if (bootstrapStatus != null && !orchestrator.isRunning()) {
+            refreshBootstrapStatus();
+            renderLatestReceiptIfIdle();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        // Fail-safe lifecycle rule: never leave a UI-owned series intentionally orphaned.
+        // The current atomic PA trial is retained; cancellation is observed before the next trial/stage.
+        if (orchestrator.isRunning()) orchestrator.cancelAfterCurrentAtomicStage();
+        super.onDestroy();
     }
 
     @Override
