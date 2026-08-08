@@ -101,3 +101,22 @@ def test_activity_exposes_governed_30_trial_series_without_silent_warmup_or_outl
     assert "PaBenchmarkSeriesAnalyzer.analyzeAndWrite(this)" in src
     assert "claim_allowed_reproducibility=false" in src
     assert "claim_allowed_cross_device_comparison=false" in src
+
+
+def test_claim_matrix_keeps_seven_gates_independent_and_broad_claims_closed() -> None:
+    src = read("app/src/main/java/com/termux/app/benchmark/BenchmarkClaimMatrix.java")
+    for gate in [
+        "EXECUTION_PROOF",
+        "MEASUREMENT_VALIDITY",
+        "SERIES_VALIDITY",
+        "ENVIRONMENT_VALIDITY",
+        "COMPARABILITY_VALIDITY",
+        "ENERGY_VALIDITY",
+        "PUBLICATION_VALIDITY",
+    ]:
+        assert gate in src
+    assert 'out.put("gate_inheritance", false)' in src
+    assert 'out.put("composite_score_allowed", false)' in src
+    assert 'out.put("claim_allowed_cross_device_comparison", false)' in src
+    assert 'out.put("claim_allowed_energy_measurement", false)' in src
+    assert 'out.put("claim_allowed_public_benchmark_ranking", false)' in src
