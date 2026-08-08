@@ -39,10 +39,12 @@ else
 fi
 
 BOOTSTRAP_SOURCE="${RAF_BOOTSTRAP_SOURCE:-local}"
+PROFILE_REQUIREMENT="auto"
 log "Bootstrap source: $BOOTSTRAP_SOURCE"
 case "$BOOTSTRAP_SOURCE" in
   local)
     bash scripts/build_bootstrap_profile.sh >&2
+    PROFILE_REQUIREMENT="required"
     ;;
   upstream)
     ./gradlew :app:downloadBootstraps --no-daemon >&2
@@ -54,12 +56,20 @@ case "$BOOTSTRAP_SOURCE" in
     ;;
 esac
 
-log "Verifying bootstrap contract..."
-if ! ./scripts/verify_bootstrap_contract.sh --check >&2; then
+log "Verifying source + exact embedded bootstrap contract..."
+if ! RAF_BOOTSTRAP_REQUIRE_PROFILE="$PROFILE_REQUIREMENT" ./scripts/verify_bootstrap_contract.sh --check >&2; then
   log "ERROR: Bootstrap contract verification failed"
   exit 1
 fi
 log "Bootstrap contract OK"
+
+if [[ "$BOOTSTRAP_SOURCE" == "local" ]]; then
+  MATRIX="build/reports/bootstrap-profile-matrix.json"
+  [[ -s "$MATRIX" ]] || { log "ERROR: Missing bootstrap profile matrix: $MATRIX"; exit 1; }
+  MATRIX_SHA256="$(sha256sum "$MATRIX" | awk '{print $1}')"
+  [[ "$MATRIX_SHA256" =~ ^[0-9a-f]{64}$ ]] || { log "ERROR: Invalid bootstrap profile matrix SHA256"; exit 1; }
+  log "Bootstrap profile matrix SHA256: $MATRIX_SHA256"
+fi
 
 if ! python3 -c 'import blake3' >/dev/null 2>&1; then
   log "Installing blake3..."
@@ -125,4 +135,4 @@ else
   done
 fi
 
-log "Bootstrap environment OK (${#HASH_LINES[@]} hashes from embedded rewritten archives)"
+log "Bootstrap environment OK (${#HASH_LINES[@]} hashes from exact embedded rewritten archives)"
