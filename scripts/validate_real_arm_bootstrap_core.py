@@ -1,107 +1,263 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import sys, zipfile
+
+import argparse
+import json
+import sys
+import zipfile
+from collections import Counter
 from pathlib import Path
 
 REQUIRED = (
-    'bin/sh', 'bin/bash', 'bin/apt', 'bin/apt-get', 'bin/dpkg', 'bin/pkg',
-    'bin/proot', 'bin/proot.real', 'bin/cat', 'bin/ls', 'bin/clear', 'bin/grep',
-    'etc/apt/sources.list', 'etc/resolv.conf', 'etc/rafcodephi-core.env',
-    'BOOTSTRAP_INFO', 'SYMLINKS.txt'
+    "bin/sh", "bin/bash", "bin/apt", "bin/apt-get", "bin/dpkg", "bin/pkg",
+    "bin/proot", "bin/proot.real", "bin/cat", "bin/ls", "bin/clear", "bin/grep",
+    "etc/apt/sources.list", "etc/resolv.conf", "etc/rafcodephi-core.env",
+    "BOOTSTRAP_INFO", "SYMLINKS.txt",
 )
-PREFIX = '/data/data/com.termux.rafacodephi/files/usr'
+PREFIX = "/data/data/com.termux.rafacodephi/files/usr"
 LEGACY_PREFIXES = (
-    b'/data/data/com.termux/files/usr',
-    b'/data/data/com.termux/',
+    b"/data/data/com.termux/files/usr",
+    b"/data/data/com.termux/",
 )
-BINARY_RISK = 'LEGACY_PREFIX_BINARY_RISK'
+BINARY_RISK = "LEGACY_PREFIX_BINARY_RISK"
+TEXT_RISK = "LEGACY_PREFIX_TEXT"
+SCHEMA = "rafcodephi-real-pkg-prefix-audit/v1"
 
 
 def decode_utf8(data: bytes) -> str | None:
-    if b'\x00' in data:
+    if b"\x00" in data:
         return None
     try:
-        return data.decode('utf-8')
+        return data.decode("utf-8")
     except UnicodeDecodeError:
         return None
 
 
-def classify_legacy_prefix(path: Path, entry: str, data: bytes) -> list[str]:
-    errors: list[str] = []
+def finding(kind: str, *, entry: str = "", detail: str = "", legacy_prefix: str = "") -> dict:
+    return {
+        "kind": kind,
+        "entry": entry,
+        "legacy_prefix": legacy_prefix,
+        "detail": detail,
+    }
+
+
+def classify_legacy_prefix(entry: str, data: bytes) -> list[dict]:
+    results: list[dict] = []
     found = [prefix for prefix in LEGACY_PREFIXES if prefix in data]
     if not found:
-        return errors
+        return results
     text = decode_utf8(data)
     for prefix in found:
-        legacy = prefix.decode('utf-8')
+        legacy = prefix.decode("utf-8")
         if text is None:
-            errors.append(
-                f'{path}: {BINARY_RISK}: entry={entry} legacy_prefix={legacy} '
-                'recommendation=rebuild package with RAFCODEΦ prefix or use a safe compatibility strategy; no binary replacement was performed'
-            )
+            results.append(finding(
+                BINARY_RISK,
+                entry=entry,
+                legacy_prefix=legacy,
+                detail=(
+                    "Binary/non-UTF8 payload contains the upstream com.termux prefix. "
+                    "In-place byte replacement is forbidden because prefix lengths differ and may corrupt ELF/data."
+                ),
+            ))
         else:
-            errors.append(f'{path}: legacy prefix in text entry={entry} legacy_prefix={legacy}')
-    return errors
+            results.append(finding(
+                TEXT_RISK,
+                entry=entry,
+                legacy_prefix=legacy,
+                detail="Text payload still contains the upstream com.termux prefix.",
+            ))
+    return results
 
 
-def check(path: Path) -> list[str]:
-    errors=[]
+def check(path: Path) -> list[dict]:
+    findings: list[dict] = []
     with zipfile.ZipFile(path) as zf:
-        names=set(zf.namelist())
-        symlink_destinations=set()
-        if 'SYMLINKS.txt' in names:
-            for line in zf.read('SYMLINKS.txt').decode('utf-8', 'replace').splitlines():
-                parts=line.split('←')
+        names = set(zf.namelist())
+        symlink_destinations = set()
+        if "SYMLINKS.txt" in names:
+            for line in zf.read("SYMLINKS.txt").decode("utf-8", "replace").splitlines():
+                parts = line.split("←")
                 if len(parts) == 2:
                     symlink_destinations.add(parts[1])
         present = names | symlink_destinations
         for req in REQUIRED:
             if req not in present:
-                errors.append(f'{path}: missing {req}')
-        info=zf.read('BOOTSTRAP_INFO').decode('utf-8', 'replace') if 'BOOTSTRAP_INFO' in names else ''
+                findings.append(finding("MISSING_REQUIRED_ENTRY", entry=req, detail="required bootstrap entry missing"))
+
+        info = zf.read("BOOTSTRAP_INFO").decode("utf-8", "replace") if "BOOTSTRAP_INFO" in names else ""
         for token in [
-            'BOOTSTRAP_REAL_APT_READY=1',
-            'BOOTSTRAP_REAL_DPKG_READY=1',
-            'BOOTSTRAP_REAL_PROOT_READY=1',
-            'BOOTSTRAP_REAL_COREUTILS_READY=1',
-            'BOOTSTRAP_CA_CERTIFICATES_READY=1',
-            'BOOTSTRAP_DNS_RESOLVER_READY=1',
-            'BOOTSTRAP_MINIMUM_COMMANDS_READY=1',
+            "BOOTSTRAP_REAL_APT_READY=1",
+            "BOOTSTRAP_REAL_DPKG_READY=1",
+            "BOOTSTRAP_REAL_PROOT_READY=1",
+            "BOOTSTRAP_REAL_COREUTILS_READY=1",
+            "BOOTSTRAP_CA_CERTIFICATES_READY=1",
+            "BOOTSTRAP_DNS_RESOLVER_READY=1",
+            "BOOTSTRAP_MINIMUM_COMMANDS_READY=1",
         ]:
             if token not in info:
-                errors.append(f'{path}: missing info token {token}')
+                findings.append(finding("MISSING_BOOTSTRAP_INFO_TOKEN", detail=token))
+
         for name in names:
-            if name.startswith('/') or '..' in name.split('/'):
-                errors.append(f'{path}: unsafe zip entry {name}')
-        for name in names:
-            if name.endswith('/'):
+            if name.startswith("/") or ".." in name.split("/"):
+                findings.append(finding("UNSAFE_ZIP_ENTRY", entry=name, detail="absolute/traversal path forbidden"))
+
+        for name in sorted(names):
+            if name.endswith("/"):
                 continue
-            data = zf.read(name)
-            errors.extend(classify_legacy_prefix(path, name, data))
-        text_names=[n for n in names if n.endswith(('.list','.env','.sh')) or n in ('bin/pkg','bin/proot','bin/cat','bin/ls','bin/clear','bin/grep','etc/resolv.conf')]
+            findings.extend(classify_legacy_prefix(name, zf.read(name)))
+
+        text_names = [
+            n for n in names
+            if n.endswith((".list", ".env", ".sh"))
+            or n in ("bin/pkg", "bin/proot", "bin/cat", "bin/ls", "bin/clear", "bin/grep", "etc/resolv.conf")
+        ]
         for name in text_names:
-            data=zf.read(name)
-            text=decode_utf8(data)
+            data = zf.read(name)
+            text = decode_utf8(data)
             if text is None:
                 continue
-            if name in ('etc/rafcodephi-core.env','bin/proot','bin/cat','bin/ls','bin/clear','bin/grep') and PREFIX not in text:
-                errors.append(f'{path}: canonical prefix missing in {name}')
-    return errors
+            if name in ("etc/rafcodephi-core.env", "bin/proot", "bin/cat", "bin/ls", "bin/clear", "bin/grep") and PREFIX not in text:
+                findings.append(finding(
+                    "CANONICAL_PREFIX_MISSING",
+                    entry=name,
+                    detail=f"expected canonical prefix {PREFIX}",
+                ))
+    return findings
 
 
-def main(argv):
-    if not argv:
-        print('usage: validate_real_arm_bootstrap_core.py <zip>...', file=sys.stderr); return 2
-    errors=[]
-    for arg in argv:
-        p=Path(arg)
-        if not p.exists(): errors.append(f'missing zip: {p}')
-        else: errors.extend(check(p))
-    if errors:
-        print('\n'.join(errors), file=sys.stderr); return 1
-    print('real_arm_bootstrap_core=PASS')
-    return 0
+def classify_state(findings: list[dict]) -> tuple[str, str]:
+    if not findings:
+        return "PASS", "PREFIX_AND_STRUCTURE_PREDICATES_SATISFIED"
+    kinds = {item["kind"] for item in findings}
+    structural = kinds - {BINARY_RISK, TEXT_RISK}
+    if structural:
+        return "FAIL", "STRUCTURAL_BOOTSTRAP_CONTRACT_FAILURE"
+    return "BLOCKED", "UPSTREAM_BINARY_PREFIX_REBUILD_REQUIRED"
 
 
-if __name__ == '__main__':
+def audit(path: Path) -> dict:
+    findings = check(path)
+    state, reason = classify_state(findings)
+    counts = Counter(item["kind"] for item in findings)
+    binary_entries = sorted({item["entry"] for item in findings if item["kind"] == BINARY_RISK})
+    text_entries = sorted({item["entry"] for item in findings if item["kind"] == TEXT_RISK})
+    return {
+        "schema": SCHEMA,
+        "zip": str(path),
+        "state": state,
+        "reason": reason,
+        "canonical_prefix": PREFIX,
+        "legacy_prefixes": [p.decode("utf-8") for p in LEGACY_PREFIXES],
+        "finding_count": len(findings),
+        "finding_counts": dict(sorted(counts.items())),
+        "binary_risk_entry_count": len(binary_entries),
+        "binary_risk_entries": binary_entries,
+        "text_risk_entry_count": len(text_entries),
+        "text_risk_entries": text_entries,
+        "findings": findings,
+        "claim_allowed_structural_real_pkg": state == "PASS",
+        "claim_allowed_device_runtime": False,
+        "claim_allowed_pkg_runtime": False,
+        "release_allowed": False,
+        "device_validation": "TOKEN_VAZIO",
+        "token_vazio": [] if state == "PASS" else [
+            {
+                "id": "TV_REAL_PKG_PREFIX_REBUILD",
+                "priority": "P0",
+                "state": "TOKEN_VAZIO",
+                "blocks": [
+                    "real_pkg_profile_materialization",
+                    "real_pkg_apk_candidate",
+                    "device_pkg_smoke",
+                    "release_allowed",
+                ],
+                "closure": (
+                    "Rebuild every affected package against /data/data/com.termux.rafacodephi/files/usr "
+                    "or provide a separately validated compatibility layer. Binary in-place prefix replacement is forbidden."
+                ),
+            }
+        ],
+        "next_required_action": (
+            "REBUILD_AFFECTED_PACKAGES_FOR_RAFCODEPHI_PREFIX"
+            if state == "BLOCKED"
+            else "FIX_STRUCTURAL_BOOTSTRAP_FINDINGS"
+            if state == "FAIL"
+            else "MATERIALIZE_HASH_BOUND_REAL_PKG_PROFILE"
+        ),
+    }
+
+
+def write_report(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("paths", nargs="+")
+    parser.add_argument("--json", dest="json_path", type=Path)
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str]) -> int:
+    args = parse_args(argv)
+    reports = []
+    for raw in args.paths:
+        path = Path(raw)
+        if not path.exists():
+            reports.append({
+                "schema": SCHEMA,
+                "zip": str(path),
+                "state": "FAIL",
+                "reason": "MISSING_ZIP",
+                "finding_count": 1,
+                "findings": [finding("MISSING_ZIP", entry=str(path), detail="bootstrap zip does not exist")],
+                "claim_allowed_structural_real_pkg": False,
+                "claim_allowed_device_runtime": False,
+                "claim_allowed_pkg_runtime": False,
+                "release_allowed": False,
+                "device_validation": "TOKEN_VAZIO",
+                "token_vazio": [],
+                "next_required_action": "CREATE_BOOTSTRAP_ZIP",
+            })
+            continue
+        try:
+            reports.append(audit(path))
+        except (OSError, zipfile.BadZipFile, KeyError, UnicodeDecodeError) as exc:
+            reports.append({
+                "schema": SCHEMA,
+                "zip": str(path),
+                "state": "FAIL",
+                "reason": "AUDIT_EXCEPTION",
+                "finding_count": 1,
+                "findings": [finding("AUDIT_EXCEPTION", detail=str(exc))],
+                "claim_allowed_structural_real_pkg": False,
+                "claim_allowed_device_runtime": False,
+                "claim_allowed_pkg_runtime": False,
+                "release_allowed": False,
+                "device_validation": "TOKEN_VAZIO",
+                "token_vazio": [],
+                "next_required_action": "FIX_AUDIT_EXCEPTION",
+            })
+
+    payload = reports[0] if len(reports) == 1 else {
+        "schema": "rafcodephi-real-pkg-prefix-audit-matrix/v1",
+        "reports": reports,
+        "state": "PASS" if all(r["state"] == "PASS" for r in reports) else "FAIL",
+        "claim_allowed_device_runtime": False,
+        "release_allowed": False,
+    }
+    if args.json_path:
+        write_report(args.json_path, payload)
+    print(json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2))
+
+    states = {report["state"] for report in reports}
+    if states == {"PASS"}:
+        return 0
+    # BLOCKED and FAIL both stop promotion. The JSON reason distinguishes them.
+    return 1
+
+
+if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
