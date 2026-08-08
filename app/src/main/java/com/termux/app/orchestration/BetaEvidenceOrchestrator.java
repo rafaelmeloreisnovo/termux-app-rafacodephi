@@ -27,6 +27,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * mandatory preflight gate. No missing observation is converted into success.
  * Cancellation is cooperative between atomic stages/trials; PaBenchmarkRunner
  * remains the per-trial watchdog and preserves its own 60s process timeout.
+ *
+ * Single-flight is process-wide, not Activity-local: concurrent benchmark series
+ * would contaminate each other's environment and are therefore forbidden.
  */
 public final class BetaEvidenceOrchestrator {
 
@@ -36,24 +39,24 @@ public final class BetaEvidenceOrchestrator {
     public static final String LATEST_FILE = "latest.json";
     private static final int RECEIPT_READ_LIMIT = 1024 * 1024;
 
-    private final AtomicBoolean running = new AtomicBoolean(false);
-    private final AtomicBoolean cancelRequested = new AtomicBoolean(false);
+    private static final AtomicBoolean PROCESS_RUNNING = new AtomicBoolean(false);
+    private static final AtomicBoolean PROCESS_CANCEL_REQUESTED = new AtomicBoolean(false);
 
     public boolean executeAsync(Context context, Plan plan, Listener listener) {
-        if (context == null || plan == null) return false;
-        if (!running.compareAndSet(false, true)) return false;
-        cancelRequested.set(false);
+        if (context == null || plan == null || !plan.hasSelectedAction()) return false;
+        if (!PROCESS_RUNNING.compareAndSet(false, true)) return false;
+        PROCESS_CANCEL_REQUESTED.set(false);
         Context appContext = context.getApplicationContext();
         new Thread(() -> execute(appContext, plan, listener), "rafcodephi-beta-orchestrator").start();
         return true;
     }
 
     public void cancelAfterCurrentAtomicStage() {
-        cancelRequested.set(true);
+        PROCESS_CANCEL_REQUESTED.set(true);
     }
 
     public boolean isRunning() {
-        return running.get();
+        return PROCESS_RUNNING.get();
     }
 
     /** Read the bounded canonical latest receipt. Unreadable evidence stays unavailable. */
@@ -83,6 +86,7 @@ public final class BetaEvidenceOrchestrator {
         final String runId = "beta-" + startedMs + "-" + UUID.randomUUID().toString().substring(0, 8);
         JSONObject receipt = new JSONObject();
         JSONArray stages = new JSONArray();
+        String analysisState = "NOT_SELECTED";
 
         try {
             receipt.put("schema", SCHEMA);
@@ -90,6 +94,7 @@ public final class BetaEvidenceOrchestrator {
             receipt.put("started_unix_ms", startedMs);
             receipt.put("plan", plan.toJson());
             receipt.put("stages", stages);
+            receipt.put("orchestration_execution_state", "RUNNING");
             receipt.put("claim_allowed_release", false);
             receipt.put("claim_allowed_certification", false);
             receipt.put("claim_allowed_cross_device_comparison", false);
@@ -104,7 +109,7 @@ public final class BetaEvidenceOrchestrator {
                 return;
             }
 
-            if (cancelRequested.get()) {
+            if (PROCESS_CANCEL_REQUESTED.get()) {
                 finish(context, receipt, "BLOCKED", "USER_CANCELLED_AFTER_BOOTSTRAP_PREFLIGHT", listener);
                 return;
             }
@@ -131,7 +136,7 @@ public final class BetaEvidenceOrchestrator {
                 }
             }
 
-            if (cancelRequested.get()) {
+            if (PROCESS_CANCEL_REQUESTED.get()) {
                 finish(context, receipt, "BLOCKED", "USER_CANCELLED_AFTER_SINGLE_OBSERVATION", listener);
                 return;
             }
@@ -147,7 +152,7 @@ public final class BetaEvidenceOrchestrator {
                 String seriesReason = "TARGET_REACHED";
 
                 for (int index = 0; index < target; index++) {
-                    if (cancelRequested.get()) {
+                    if (PROCESS_CANCEL_REQUESTED.get()) {
                         seriesState = "BLOCKED";
                         seriesReason = "USER_CANCELLED_SERIES_AFTER_COMPLETED_TRIAL";
                         break;
@@ -185,7 +190,7 @@ public final class BetaEvidenceOrchestrator {
                 }
             }
 
-            if (cancelRequested.get()) {
+            if (PROCESS_CANCEL_REQUESTED.get()) {
                 finish(context, receipt, "BLOCKED", "USER_CANCELLED_BEFORE_ANALYSIS", listener);
                 return;
             }
@@ -195,6 +200,7 @@ public final class BetaEvidenceOrchestrator {
                 File analysisFile = PaBenchmarkSeriesAnalyzer.analyzeAndWrite(context);
                 JSONObject analysis = PaBenchmarkSeriesAnalyzer.analyze(context);
                 String state = analysis.optString("state", "INVALIDATED");
+                analysisState = state;
                 String reason = analysis.optString("reason", "UNKNOWN");
                 JSONObject details = new JSONObject();
                 details.put("analysis_file", analysisFile.getAbsolutePath());
@@ -212,7 +218,7 @@ public final class BetaEvidenceOrchestrator {
                 }
             }
 
-            if (cancelRequested.get()) {
+            if (PROCESS_CANCEL_REQUESTED.get()) {
                 finish(context, receipt, "BLOCKED", "USER_CANCELLED_BEFORE_EXPORT", listener);
                 return;
             }
@@ -234,12 +240,12 @@ public final class BetaEvidenceOrchestrator {
                 }
             }
 
+            receipt.put("local_pipeline_completed", true);
+            receipt.put("analysis_observation_state", analysisState);
             receipt.put("publication_gate_state", "BLOCKED");
             receipt.put("publication_gate_reason", "REVIEW_RELEASE_AND_CROSS_DEVICE_EVIDENCE_NOT_PROVEN_BY_LOCAL_ORCHESTRATION");
-            finish(context, receipt, "PASS",
-                plan.runGovernedSeries
-                    ? "SELECTED_PIPELINE_COMPLETED_GOVERNED_SERIES_PRESENT"
-                    : "SELECTED_PIPELINE_COMPLETED_GOVERNED_SERIES_OPTIONAL_NOT_SELECTED",
+            finish(context, receipt, "OBSERVED_LIMITED",
+                "LOCAL_PIPELINE_COMPLETED_PUBLICATION_GATE_BLOCKED_ANALYSIS_" + analysisState,
                 listener);
         } catch (Throwable error) {
             try {
@@ -253,8 +259,8 @@ public final class BetaEvidenceOrchestrator {
                 if (listener != null) listener.onFinished(receipt, null);
             }
         } finally {
-            running.set(false);
-            cancelRequested.set(false);
+            PROCESS_RUNNING.set(false);
+            PROCESS_CANCEL_REQUESTED.set(false);
         }
     }
 
@@ -262,6 +268,8 @@ public final class BetaEvidenceOrchestrator {
         receipt.put("state", state);
         receipt.put("reason", reason);
         receipt.put("finished_unix_ms", System.currentTimeMillis());
+        receipt.put("orchestration_execution_state",
+            "OBSERVED_LIMITED".equals(state) ? "PASS" : state);
         receipt.put("claim_allowed_release", false);
         receipt.put("claim_allowed_certification", false);
         File file = persistReceipt(context, receipt);
@@ -381,6 +389,10 @@ public final class BetaEvidenceOrchestrator {
             this.exportIndustrialMethods = exportIndustrialMethods;
         }
 
+        public boolean hasSelectedAction() {
+            return runSingleObservation || runGovernedSeries || analyzeHistory || exportIndustrialMethods;
+        }
+
         JSONObject toJson() throws Exception {
             JSONObject out = new JSONObject();
             out.put("bootstrap_preflight_required", true);
@@ -388,6 +400,8 @@ public final class BetaEvidenceOrchestrator {
             out.put("run_governed_series_n30", runGovernedSeries);
             out.put("analyze_history", analyzeHistory);
             out.put("export_industrial_methods", exportIndustrialMethods);
+            out.put("empty_plan_allowed", false);
+            out.put("single_flight_scope", "ANDROID_APP_PROCESS");
             out.put("rollback_semantics", "non_destructive_measurement_outputs_atomic_receipt_publish");
             out.put("watchdog_semantics", "PaBenchmarkRunner_per_trial_timeout_60000ms");
             out.put("failover_semantics", "no_gate_bypass_open_wizard_when_bootstrap_blocked");
