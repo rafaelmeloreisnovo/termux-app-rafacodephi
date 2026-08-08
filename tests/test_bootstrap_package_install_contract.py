@@ -95,6 +95,10 @@ def test_installer_uses_runtime_prefix_and_keeps_real_pkg_claim_closed() -> None
         "BootstrapWizardSource.loadAcceptedBytes(context)",
         "verifyBootstrapZipIntegrity(zipBytes)",
         "verifyRelocationContract(zipBytes)",
+        "materializeRuntimeBootstrapProfile(staging, prefix.getAbsolutePath())",
+        'profile.put("source_prefix", sourcePrefix)',
+        'profile.put("prefix", runtimePrefix)',
+        'profile.put("real_pkg_relocation_claim_allowed", false)',
         "staging.renameTo(prefix)",
         "verifyRuntimeBinary(new File(staging, \"bin/sh\"), \"sh\", true)",
         "verifyRuntimeBinary(new File(staging, \"bin/pkg\"), \"pkg\", true)",
@@ -149,6 +153,7 @@ def test_validator_is_claim_bounded() -> None:
         "claim_boundary=structural_only_physical_filesystem_and_first_shell_still_required",
         "wizard_bootstrap_document_source=fail_closed_b3_abi_profile_bound",
         "runtime_filesystem=context_getFilesDir_resolved",
+        "installed_profile=source_prefix_preserved_runtime_prefix_materialized",
         "relocated_bridge_runtime=structurally_supported_claim_still_closed",
         "real_pkg_relocation=BLOCKED",
     ]:
