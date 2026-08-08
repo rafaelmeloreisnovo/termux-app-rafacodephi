@@ -9,13 +9,16 @@ def read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_bootstrap_readiness_gate_is_single_fail_closed_runtime_contract() -> None:
+def test_bootstrap_readiness_gate_is_single_fail_closed_read_only_runtime_and_profile_contract() -> None:
     gate = read("app/src/main/java/com/termux/app/BootstrapReadinessGate.java")
 
     for token in [
         'SCHEMA = "rafcodephi.bootstrap-readiness/v1"',
         'STATE_BLOCKED = "BLOCKED"',
         'TOKEN_VAZIO = "TOKEN_VAZIO"',
+        'PROFILE_SCHEMA = "rafcodephi-bootstrap-profile/v1"',
+        'PROFILE_FILE = "BOOTSTRAP_PROFILE.json"',
+        'PROFILE_READ_LIMIT = 64 * 1024',
         '"sh"',
         '"pkg"',
         '"apkmanager"',
@@ -23,6 +26,14 @@ def test_bootstrap_readiness_gate_is_single_fail_closed_runtime_contract() -> No
         '"busybox-safe"',
         '"proot-safe"',
         'TermuxRuntimePaths.storageHomeDir()',
+        'context.getPackageName().equals(profile.optString("package_name", ""))',
+        'prefix.getAbsolutePath().equals(profile.optString("prefix", ""))',
+        'expectedBootstrapArch().equals(profile.optString("arch", ""))',
+        '!profile.optBoolean("claim_allowed", true)',
+        '!profile.optBoolean("release_allowed", true)',
+        'TOKEN_VAZIO.equals(profile.optString("device_validation", ""))',
+        'profile.optJSONArray("required_entries")',
+        'canonicalTarget.startsWith(canonicalPrefix)',
         'real_pkg_relocation_claim_allowed=',
         'claim_allowed_release=false',
     ]:
@@ -30,6 +41,12 @@ def test_bootstrap_readiness_gate_is_single_fail_closed_runtime_contract() -> No
 
     assert 'observeOptionalExecutable(checks, "$PREFIX/bin/busybox"' in gate
     assert 'observeOptionalExecutable(checks, "$PREFIX/bin/proot"' in gate
+
+    # Readiness must remain observation-only. Mutation belongs to installer/repair paths.
+    assert ".mkdirs()" not in gate
+    assert "Os.chmod" not in gate
+    assert ".delete()" not in gate
+    assert "setupBootstrapIfNeeded" not in gate
 
 
 def test_wizard_and_benchmark_compatibility_entries_delegate_to_unified_implementations() -> None:
