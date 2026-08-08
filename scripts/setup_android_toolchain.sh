@@ -5,6 +5,8 @@ GRADLE_PROPERTIES_FILE="${1:-gradle.properties}"
 LOCAL_PROPERTIES_FILE="${2:-local.properties}"
 SDK_ROOT_OVERRIDE="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 CMDLINE_TOOLS_VERSION="${CMDLINE_TOOLS_VERSION:-13114758}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 if [[ ! -f "$GRADLE_PROPERTIES_FILE" ]]; then
   echo "❌ Missing file: $GRADLE_PROPERTIES_FILE"
@@ -157,3 +159,18 @@ sdkmanager \
   "build-tools;${BUILD_TOOLS_VERSION}" \
   "ndk;${NDK_VERSION}" \
   "cmake;3.22.1"
+
+# GitHub Actions that use this legacy/general toolchain helper and then invoke
+# Gradle must materialize the same rewritten bootstraps as the canonical
+# RAFAELIA setup action. This closes the .incbin divergence without changing
+# local developer semantics. Set TERMUX_SKIP_BOOTSTRAP_PREPARE=1 only for jobs
+# that provably do not build the app/native bootstrap target.
+if [[ "${GITHUB_ACTIONS:-false}" == "true" && "${TERMUX_SKIP_BOOTSTRAP_PREPARE:-0}" != "1" ]]; then
+  BOOTSTRAP_PREPARE_SCRIPT="${ROOT_DIR}/scripts/prepare_bootstrap_env.sh"
+  if [[ ! -x "$BOOTSTRAP_PREPARE_SCRIPT" ]]; then
+    echo "❌ Missing executable bootstrap preparation script: $BOOTSTRAP_PREPARE_SCRIPT"
+    exit 1
+  fi
+  echo "🧬 Preparing canonical rewritten bootstraps for GitHub Actions build"
+  "$BOOTSTRAP_PREPARE_SCRIPT" --github-env --skip-android-preflight
+fi
