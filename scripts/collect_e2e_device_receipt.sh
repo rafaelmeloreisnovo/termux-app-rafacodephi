@@ -2,35 +2,35 @@
 set -euo pipefail
 
 # RAFCODEPHI physical-device receipt collector.
-# Runs on the installed com.termux.rafacodephi app without root.
-# It never promotes a claim; reproduction is intentionally TOKEN_VAZIO here.
+# Runs inside installed com.termux.rafacodephi without root.
+# It consumes a build receipt that already binds termux-packages bootstrap → APK.
+# A single run never self-promotes reproducibility.
 
 PACKAGE="com.termux.rafacodephi"
 EXPECTED_PREFIX="/data/data/${PACKAGE}/files/usr"
-REPO="rafaelmeloreisnovo/termux-app-rafacodephi"
+APP_REPO="rafaelmeloreisnovo/termux-app-rafacodephi"
+SOURCE_REPO="rafaelmeloreisnovo/termux-packages"
 OUT=""
-GIT_COMMIT=""
-APK_SHA256=""
-BOOTSTRAP_SHA256=""
+BUILD_RECEIPT=""
 WORKLOAD="printf 'RAFCODEPHI-E2E-V1\n' | sha256sum"
 
 usage() {
   cat <<'EOF'
 Usage:
   bash scripts/collect_e2e_device_receipt.sh \
-    --git-commit <40hex> \
-    --apk-sha256 <64hex> \
-    --bootstrap-sha256 <64hex> \
+    --build-receipt <e2e-build-receipt.json> \
     [--workload '<shell command>'] \
     [--out reports/device-e2e/<name>.json]
 
-The script is fail-closed:
-- installed APK hash must be readable and equal --apk-sha256;
-- canonical RAFCODEPHI prefix and required bootstrap commands must exist;
-- apt/pkg must be present;
-- workload must exit 0.
-A single run never sets claim_allowed=true. Use validate_e2e_receipt.py with
---reference against a second independent receipt to evaluate reproduction.
+The build receipt must have been emitted by scripts/emit_e2e_build_receipt.py.
+The collector verifies:
+- canonical RAFCODEPHI package/prefix/ABI;
+- required bootstrap shell/pkg/apt/dpkg/proot surface;
+- installed base.apk SHA-256 equals the build receipt APK SHA-256;
+- build receipt binds a real-pkg termux-packages source manifest;
+- workload exits 0 and stdout is hashed.
+
+A single device receipt records reproduction=TOKEN_VAZIO and claim_allowed=false.
 EOF
 }
 
@@ -39,16 +39,9 @@ die() {
   exit 2
 }
 
-is_hex() {
-  local value="$1" size="$2"
-  [[ ${#value} -eq "$size" && "$value" =~ ^[0-9a-f]+$ ]]
-}
-
 while (($#)); do
   case "$1" in
-    --git-commit) GIT_COMMIT="${2:-}"; shift 2 ;;
-    --apk-sha256) APK_SHA256="${2:-}"; shift 2 ;;
-    --bootstrap-sha256) BOOTSTRAP_SHA256="${2:-}"; shift 2 ;;
+    --build-receipt) BUILD_RECEIPT="${2:-}"; shift 2 ;;
     --workload) WORKLOAD="${2:-}"; shift 2 ;;
     --out) OUT="${2:-}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
@@ -56,14 +49,12 @@ while (($#)); do
   esac
 done
 
-command -v python3 >/dev/null 2>&1 || die "python3 is required to emit canonical JSON"
+command -v python3 >/dev/null 2>&1 || die "python3 is required"
 command -v sha256sum >/dev/null 2>&1 || die "sha256sum is required"
 command -v getprop >/dev/null 2>&1 || die "Android getprop unavailable"
 command -v pm >/dev/null 2>&1 || die "Android package manager CLI unavailable"
 
-is_hex "$GIT_COMMIT" 40 || die "--git-commit must be lowercase 40-hex"
-is_hex "$APK_SHA256" 64 || die "--apk-sha256 must be lowercase 64-hex"
-is_hex "$BOOTSTRAP_SHA256" 64 || die "--bootstrap-sha256 must be lowercase 64-hex"
+[[ -n "$BUILD_RECEIPT" && -r "$BUILD_RECEIPT" ]] || die "--build-receipt must name a readable file"
 [[ -n "$WORKLOAD" ]] || die "--workload cannot be empty"
 
 generated_at="$(date --iso-8601=seconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S%z')"
@@ -78,6 +69,73 @@ case "$abi" in
 esac
 
 [[ "${PREFIX:-}" == "$EXPECTED_PREFIX" ]] || die "PREFIX drift: ${PREFIX:-<unset>} != $EXPECTED_PREFIX"
+
+workdir="$(mktemp -d)"
+trap 'rm -rf "$workdir"' EXIT
+meta_file="$workdir/build-meta.txt"
+
+if ! python3 - "$BUILD_RECEIPT" "$abi" >"$meta_file" <<'PY'
+import json, re, sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+abi = sys.argv[2]
+doc = json.loads(path.read_text(encoding="utf-8"))
+if not isinstance(doc, dict):
+    raise SystemExit("build receipt must be an object")
+
+expected = {
+    "schema": "rafcodephi.e2e-build-receipt/v1",
+    "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "android_abi": abi,
+    "build_gate": "PASS",
+    "device_runtime": "TOKEN_VAZIO",
+    "claim_allowed": False,
+}
+drift = [k for k, v in expected.items() if doc.get(k) != v]
+if drift:
+    raise SystemExit("build receipt drift: " + ", ".join(drift))
+
+hex40 = re.compile(r"^[0-9a-f]{40}$")
+hex64 = re.compile(r"^[0-9a-f]{64}$")
+if not hex40.fullmatch(str(doc.get("git_commit", ""))):
+    raise SystemExit("invalid app git_commit")
+if not hex64.fullmatch(str(doc.get("apk_sha256", ""))):
+    raise SystemExit("invalid apk_sha256")
+
+bootstrap = doc.get("bootstrap")
+if not isinstance(bootstrap, dict):
+    raise SystemExit("bootstrap block missing")
+if bootstrap.get("source_repository") != "rafaelmeloreisnovo/termux-packages":
+    raise SystemExit("bootstrap source repository drift")
+if not hex40.fullmatch(str(bootstrap.get("source_git_commit", ""))):
+    raise SystemExit("invalid source_git_commit")
+for key in ("source_manifest_sha256", "artifact_sha256", "profile_sha256"):
+    if not hex64.fullmatch(str(bootstrap.get(key, ""))):
+        raise SystemExit(f"invalid bootstrap.{key}")
+
+print(doc["git_commit"])
+print(doc["apk_sha256"])
+print(bootstrap["source_repository"])
+print(bootstrap["source_git_commit"])
+print(bootstrap["source_manifest_sha256"])
+print(bootstrap["artifact_sha256"])
+print(bootstrap["profile_sha256"])
+PY
+then
+  die "build receipt validation failed"
+fi
+
+mapfile -t meta <"$meta_file"
+[[ "${#meta[@]}" -eq 7 ]] || die "build receipt metadata arity mismatch"
+APP_GIT_COMMIT="${meta[0]}"
+APK_SHA256="${meta[1]}"
+BOOTSTRAP_SOURCE_REPOSITORY="${meta[2]}"
+BOOTSTRAP_SOURCE_COMMIT="${meta[3]}"
+BOOTSTRAP_SOURCE_MANIFEST_SHA256="${meta[4]}"
+BOOTSTRAP_SHA256="${meta[5]}"
+BOOTSTRAP_PROFILE_SHA256="${meta[6]}"
+BUILD_RECEIPT_SHA256="$(sha256sum "$BUILD_RECEIPT" | awk '{print $1}')"
 
 required=(
   "$EXPECTED_PREFIX/bin/sh"
@@ -103,11 +161,8 @@ installed_apk_sha256="$(sha256sum "$apk_path" | awk '{print $1}')"
 [[ "$installed_apk_sha256" == "$APK_SHA256" ]] || \
   die "installed APK hash mismatch: expected=$APK_SHA256 observed=$installed_apk_sha256"
 
-workdir="$(mktemp -d)"
-trap 'rm -rf "$workdir"' EXIT
 stdout_file="$workdir/workload.stdout"
 stderr_file="$workdir/workload.stderr"
-
 set +e
 bash -lc "$WORKLOAD" >"$stdout_file" 2>"$stderr_file"
 workload_rc=$?
@@ -120,7 +175,6 @@ set -e
 stdout_sha256="$(sha256sum "$stdout_file" | awk '{print $1}')"
 
 tmp_json="$workdir/receipt.json"
-
 python3 - "$tmp_json" <<PY
 import hashlib, json, pathlib
 out = pathlib.Path(${tmp_json@Q})
@@ -129,10 +183,15 @@ doc = {
     "receipt_id": "0" * 64,
     "generated_at": ${generated_at@Q},
     "provenance": {
-        "repository": ${REPO@Q},
-        "git_commit": ${GIT_COMMIT@Q},
+        "repository": ${APP_REPO@Q},
+        "git_commit": ${APP_GIT_COMMIT@Q},
+        "build_receipt_sha256": ${BUILD_RECEIPT_SHA256@Q},
         "apk_sha256": ${APK_SHA256@Q},
+        "bootstrap_source_repository": ${BOOTSTRAP_SOURCE_REPOSITORY@Q},
+        "bootstrap_source_commit": ${BOOTSTRAP_SOURCE_COMMIT@Q},
+        "bootstrap_source_manifest_sha256": ${BOOTSTRAP_SOURCE_MANIFEST_SHA256@Q},
         "bootstrap_sha256": ${BOOTSTRAP_SHA256@Q},
+        "bootstrap_profile_sha256": ${BOOTSTRAP_PROFILE_SHA256@Q},
     },
     "device": {
         "manufacturer": ${manufacturer@Q},
@@ -175,5 +234,6 @@ cp "$tmp_json" "$OUT"
 
 printf 'receipt=%s\n' "$OUT"
 printf 'receipt_sha256=%s\n' "$(sha256sum "$OUT" | awk '{print $1}')"
+printf 'build_receipt_sha256=%s\n' "$BUILD_RECEIPT_SHA256"
 printf 'claim_allowed=false\n'
 printf 'reproduction=TOKEN_VAZIO\n'
