@@ -30,8 +30,9 @@ def test_rewritten_bootstraps_are_declared_and_preflight_materialized() -> None:
     assert "verifyBootstrapZipsPresent" in build_gradle
     assert "externalNativeBuild" in build_gradle
     assert "validateSideBySideContract" in build_gradle
-    assert "prepare_bootstrap_env" in preflight
-    assert "BOOTSTRAP_PROFILE_BUILD_PASS" in preflight
+    assert "Bootstrap source:" in preflight
+    assert "bash scripts/build_bootstrap_profile.sh" in preflight
+    assert "Verifying bootstrap contract" in preflight
 
 
 def test_gradle_version_helpers_remain_safe() -> None:
