@@ -54,4 +54,9 @@ dependencies {
   implementation 'androidx.annotation:annotation:1.8.2'
   implementation 'androidx.work:work-runtime:2.9.1'
   testImplementation 'junit:junit:4.13.2'
+  // Local JVM tests exercise the same org.json contract used on Android.
+  // The Android mockable jar returns default/null values for framework APIs,
+  // which would turn valid audit JSON into false failures. Keep production on
+  // the platform implementation while giving unit tests a real JSON runtime.
+  testImplementation 'org.json:json:20240303'
 }
