@@ -7,64 +7,49 @@ import android.content.Context;
 import android.os.Build;
 import android.os.Environment;
 import android.system.Os;
+import android.system.OsConstants;
 import android.system.StructStat;
 import android.util.Pair;
 import android.view.WindowManager;
 
 import com.termux.rafacodephi.BuildConfig;
 import com.termux.rafacodephi.R;
-import com.termux.shared.file.FileUtils;
-import com.termux.shared.termux.crash.TermuxCrashUtils;
-import com.termux.shared.termux.file.TermuxFileUtils;
-import com.termux.shared.interact.MessageDialogUtils;
-import com.termux.shared.logger.Logger;
-import com.termux.shared.markdown.MarkdownUtils;
 import com.termux.shared.errors.Error;
-import com.termux.shared.android.PackageUtils;
+import com.termux.shared.logger.Logger;
 import com.termux.shared.termux.TermuxConstants;
+import com.termux.shared.termux.TermuxRuntimePaths;
 import com.termux.shared.termux.TermuxUtils;
+import com.termux.shared.termux.crash.TermuxCrashUtils;
 import com.termux.shared.termux.shell.command.environment.TermuxShellEnvironment;
+import com.termux.shared.android.PackageUtils;
+
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import static com.termux.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR;
-import static com.termux.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR_PATH;
-import static com.termux.shared.termux.TermuxConstants.TERMUX_STAGING_PREFIX_DIR;
-import static com.termux.shared.termux.TermuxConstants.TERMUX_STAGING_PREFIX_DIR_PATH;
-
 /**
- * Install the Termux bootstrap packages if necessary by following the below steps:
- * <p/>
- * (1) If $PREFIX already exist, assume that it is correct and be done. Note that this relies on that we do not create a
- * broken $PREFIX directory below.
- * <p/>
- * (2) A progress dialog is shown with "Installing..." message and a spinner.
- * <p/>
- * (3) A staging directory, $STAGING_PREFIX, is cleared if left over from broken installation below.
- * <p/>
- * (4) The zip file is loaded from a shared library.
- * <p/>
- * (5) The zip, containing entries relative to the $PREFIX, is is downloaded and extracted by a zip input stream
- * continuously encountering zip file entries:
- * <p/>
- * (5.1) If the zip entry encountered is SYMLINKS.txt, go through it and remember all symlinks to setup.
- * <p/>
- * (5.2) For every other zip entry, extract it into $STAGING_PREFIX and set execute permissions if necessary.
+ * Installs the Termux bootstrap into the app-private directory assigned by
+ * Android. The compile-time TermuxConstants prefix remains a separate binary
+ * compatibility contract; a relocated runtime is accepted only for an
+ * explicitly bridge/relocatable bootstrap profile.
  */
 public final class TermuxInstaller {
 
     private static final String LOG_TAG = "TermuxInstaller";
+    private static final int COPY_BUFFER = 16 * 1024;
 
+    private TermuxInstaller() {}
 
     private static void logPhase(String phase, String detail) {
         Logger.logInfo(LOG_TAG, "phase=" + phase + " " + detail);
@@ -72,486 +57,436 @@ public final class TermuxInstaller {
 
     /** Performs bootstrap setup if necessary. */
     public static void setupBootstrapIfNeeded(final Activity activity, final Runnable whenDone) {
-        String bootstrapErrorMessage;
-        Error filesDirectoryAccessibleError;
+        TermuxRuntimePaths.init(activity);
 
-        // This will also call Context.getFilesDir(), which should ensure that termux files directory
-        // is created if it does not already exist
-        logPhase("files-access", "checking termux files dir accessibility");
-        filesDirectoryAccessibleError = TermuxFileUtils.isTermuxFilesDirectoryAccessible(activity, true, true);
-        boolean isFilesDirectoryAccessible = filesDirectoryAccessibleError == null;
-
-        // Termux can only be run as the primary user (device owner) since only that
-        // account has the expected file system paths. Verify that:
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !PackageUtils.isCurrentUserThePrimaryUser(activity)) {
-            bootstrapErrorMessage = activity.getString(R.string.bootstrap_error_not_primary_user_message,
-                MarkdownUtils.getMarkdownCodeForString(TERMUX_PREFIX_DIR_PATH, false));
-            Logger.logError(LOG_TAG, "isFilesDirectoryAccessible: " + isFilesDirectoryAccessible);
-            Logger.logError(LOG_TAG, bootstrapErrorMessage);
-            sendBootstrapCrashReportNotification(activity, bootstrapErrorMessage);
-            MessageDialogUtils.exitAppWithErrorMessage(activity,
-                activity.getString(R.string.bootstrap_error_title),
-                bootstrapErrorMessage);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
+            !PackageUtils.isCurrentUserThePrimaryUser(activity)) {
+            showFatalPreflight(activity, "PRIMARY_USER_REQUIRED",
+                "The Termux runtime must run as the primary Android user for this build.");
             return;
         }
 
-        if (!isFilesDirectoryAccessible) {
-            bootstrapErrorMessage = Error.getMinimalErrorString(filesDirectoryAccessibleError);
-            //noinspection SdCardPath
-            if (PackageUtils.isAppInstalledOnExternalStorage(activity) &&
-                !TermuxConstants.TERMUX_FILES_DIR_PATH.equals(activity.getFilesDir().getAbsolutePath().replaceAll("^/data/user/0/", "/data/data/"))) {
-                bootstrapErrorMessage += "\n\n" + activity.getString(R.string.bootstrap_error_installed_on_portable_sd,
-                    MarkdownUtils.getMarkdownCodeForString(TERMUX_PREFIX_DIR_PATH, false));
-            }
-
-            Logger.logError(LOG_TAG, bootstrapErrorMessage);
-            sendBootstrapCrashReportNotification(activity, bootstrapErrorMessage);
-            MessageDialogUtils.showMessage(activity,
-                activity.getString(R.string.bootstrap_error_title),
-                bootstrapErrorMessage, null);
+        try {
+            verifyRuntimeFilesDirectoryWritable(activity);
+        } catch (Throwable t) {
+            showFatalPreflight(activity, "RUNTIME_FILES_DIR_NOT_WRITABLE",
+                "Android assigned filesDir=" + TermuxRuntimePaths.filesDirPath() + "\n" + t);
             return;
         }
 
-        // If prefix directory exists, even if its a symlink to a valid directory and symlink is not broken/dangling
-        logPhase("prefix-check", "checking existing prefix contract sh/pkg");
-        if (FileUtils.directoryFileExists(TERMUX_PREFIX_DIR_PATH, true)) {
-            boolean hasRequiredBootstrapBinaries =
-                FileUtils.fileExists(TERMUX_PREFIX_DIR_PATH + "/bin/sh", false) &&
-                    FileUtils.fileExists(TERMUX_PREFIX_DIR_PATH + "/bin/pkg", false);
-
-            if (TermuxFileUtils.isTermuxPrefixDirectoryEmpty()) {
-                Logger.logInfo(LOG_TAG, "The termux prefix directory \"" + TERMUX_PREFIX_DIR_PATH + "\" exists but is empty or only contains specific unimportant files.");
-            } else if (!hasRequiredBootstrapBinaries) {
-                Logger.logWarn(LOG_TAG, "The termux prefix directory \"" + TERMUX_PREFIX_DIR_PATH +
-                    "\" exists but is missing required bootstrap binaries. Reinstalling bootstrap.");
-            } else {
-                whenDone.run();
-                return;
-            }
-        } else if (FileUtils.fileExists(TERMUX_PREFIX_DIR_PATH, false)) {
-            Logger.logInfo(LOG_TAG, "The termux prefix directory \"" + TERMUX_PREFIX_DIR_PATH + "\" does not exist but another file exists at its destination.");
+        final File prefix = TermuxRuntimePaths.prefixDir();
+        if (runtimePrefixReady(prefix)) {
+            Logger.logInfo(LOG_TAG, "runtime prefix already ready path=" + prefix
+                + " layout=" + TermuxRuntimePaths.layoutState());
+            whenDone.run();
+            return;
         }
 
-        final ProgressDialog progress = ProgressDialog.show(activity, null, activity.getString(R.string.bootstrap_installer_body), true, false);
-        new Thread() {
-            @Override
-            public void run() {
-                try {
-                    Logger.logInfo(LOG_TAG, "Installing " + TermuxConstants.TERMUX_APP_NAME + " bootstrap packages.");
+        final ProgressDialog progress = ProgressDialog.show(activity, null,
+            activity.getString(R.string.bootstrap_installer_body), true, false);
 
-                    Error error;
-
-                    // Delete prefix staging directory or any file at its destination
-                    error = FileUtils.deleteFile("termux prefix staging directory", TERMUX_STAGING_PREFIX_DIR_PATH, true);
-                    if (error != null) {
-                        showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                        return;
+        new Thread(() -> {
+            try {
+                installRuntimeBootstrap(activity);
+                activity.runOnUiThread(whenDone);
+            } catch (final Throwable t) {
+                rollbackFailedBootstrapInstall();
+                if (BuildConfig.BOOTSTRAP_BAREMETAL_STRICT) {
+                    Logger.logStackTraceWithMessage(LOG_TAG,
+                        "Bootstrap installation failed in strict mode", t);
+                }
+                showBootstrapErrorDialog(activity, whenDone,
+                    Logger.getStackTracesMarkdownString(null, Logger.getStackTracesStringArray(t)));
+            } finally {
+                activity.runOnUiThread(() -> {
+                    try {
+                        progress.dismiss();
+                    } catch (RuntimeException ignored) {
                     }
+                });
+            }
+        }, "rafcodephi-bootstrap-install").start();
+    }
 
-                    // Delete prefix directory or any file at its destination
-                    error = FileUtils.deleteFile("termux prefix directory", TERMUX_PREFIX_DIR_PATH, true);
-                    if (error != null) {
-                        showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                        return;
+    private static void installRuntimeBootstrap(Activity activity) throws Exception {
+        TermuxRuntimePaths.init(activity);
+        File filesDir = TermuxRuntimePaths.filesDir();
+        File staging = TermuxRuntimePaths.stagingPrefixDir();
+        File prefix = TermuxRuntimePaths.prefixDir();
+
+        logPhase("runtime-path", "filesDir=" + filesDir
+            + " prefix=" + prefix
+            + " canonicalPrefix=" + TermuxConstants.TERMUX_PREFIX_DIR_PATH
+            + " layout=" + TermuxRuntimePaths.layoutState());
+
+        deleteTreeInsideRuntime(staging);
+        if (prefix.exists() && !runtimePrefixReady(prefix)) deleteTreeInsideRuntime(prefix);
+        ensureDirectory(staging, 0700);
+
+        logPhase("zip-load", "loading accepted wizard bootstrap or embedded bootstrap");
+        byte[] zipBytes = loadZipBytes(activity);
+        verifyBootstrapZipIntegrity(zipBytes);
+        verifyRelocationContract(zipBytes);
+
+        final List<Pair<String, String>> symlinks = new ArrayList<>(64);
+        final String canonicalStaging = staging.getCanonicalPath() + "/";
+        long files = 0L;
+        long dirs = 0L;
+        long bytes = 0L;
+
+        try (ZipInputStream input = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+            ZipEntry entry;
+            byte[] buffer = new byte[COPY_BUFFER];
+            while ((entry = input.getNextEntry()) != null) {
+                String name = entry.getName();
+                validateZipEntryName(name);
+
+                if ("SYMLINKS.txt".equals(name)) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        String[] parts = line.split("←", -1);
+                        if (parts.length != 2 || parts[0].isEmpty() || parts[1].isEmpty())
+                            throw new IllegalArgumentException("Malformed SYMLINKS.txt line: " + line);
+                        String target = parts[0];
+                        String relativeLink = parts[1];
+                        if (relativeLink.startsWith("/") || relativeLink.contains(".."))
+                            throw new SecurityException("Unsafe symlink destination: " + line);
+                        File link = new File(staging, relativeLink);
+                        validatePathInStaging(canonicalStaging, link, "symlink");
+                        ensureDirectory(link.getParentFile(), 0700);
+                        symlinks.add(Pair.create(target, link.getAbsolutePath()));
                     }
+                    continue;
+                }
 
-                    // Create prefix staging directory if it does not already exist and set required permissions
-                    error = TermuxFileUtils.isTermuxPrefixStagingDirectoryAccessible(true, true);
-                    if (error != null) {
-                        showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                        return;
+                File target = new File(staging, name);
+                validatePathInStaging(canonicalStaging, target, "zip entry");
+                if (entry.isDirectory()) {
+                    ensureDirectory(target, 0700);
+                    dirs++;
+                    continue;
+                }
+
+                ensureDirectory(target.getParentFile(), 0700);
+                try (FileOutputStream output = new FileOutputStream(target)) {
+                    int read;
+                    while ((read = input.read(buffer)) != -1) {
+                        output.write(buffer, 0, read);
+                        bytes += read;
                     }
+                    output.flush();
+                    output.getFD().sync();
+                }
+                boolean executable = name.startsWith("bin/") || name.startsWith("libexec/") ||
+                    name.startsWith("lib/apt/apt-helper") || name.startsWith("lib/apt/methods/");
+                Os.chmod(target.getAbsolutePath(), executable ? 0700 : 0600);
+                files++;
+            }
+        }
 
-                    // Create prefix directory if it does not already exist and set required permissions
-                    error = TermuxFileUtils.isTermuxPrefixDirectoryAccessible(true, true);
-                    if (error != null) {
-                        showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                        return;
+        if (symlinks.isEmpty()) throw new IllegalStateException("No SYMLINKS.txt encountered");
+        for (Pair<String, String> link : symlinks) {
+            Os.symlink(link.first, link.second);
+        }
+
+        verifyRuntimeBinary(new File(staging, "bin/sh"), "sh", true);
+        verifyRuntimeBinary(new File(staging, "bin/pkg"), "pkg", true);
+        verifyRuntimeBinary(new File(staging, "bin/busybox"), "busybox", true);
+        verifyRuntimeBinary(new File(staging, "bin/proot"), "proot", true);
+
+        if (prefix.exists()) deleteTreeInsideRuntime(prefix);
+        if (!staging.renameTo(prefix)) {
+            throw new IllegalStateException("STAGING_TO_PREFIX_RENAME_FAILED staging=" + staging + " prefix=" + prefix);
+        }
+
+        if (!runtimePrefixReady(prefix)) {
+            throw new IllegalStateException("POST_INSTALL_PREFIX_READINESS_FAILED: " + prefix);
+        }
+
+        ensureDirectory(TermuxRuntimePaths.homeDir(), 0700);
+        ensureDirectory(TermuxRuntimePaths.storageHomeDir(), 0700);
+        ensureDirectory(new File(TermuxRuntimePaths.envDirPath()), 0700);
+
+        BootstrapBaremetalGuard.selftest();
+        BootstrapBaremetalGuard.validateAfterBootstrap(prefix.getAbsolutePath());
+        TermuxShellEnvironment.writeEnvironmentToFile(activity);
+
+        Logger.logInfo(LOG_TAG, "Bootstrap installed: files=" + files + " dirs=" + dirs
+            + " bytes=" + bytes + " prefix=" + prefix
+            + " source=" + BootstrapWizardSource.status(activity)
+            + " layout=" + TermuxRuntimePaths.layoutState());
+    }
+
+    private static void verifyRuntimeFilesDirectoryWritable(Context context) throws Exception {
+        File files = context.getFilesDir();
+        if (files == null) throw new IllegalStateException("Context.getFilesDir() returned null");
+        if (!files.exists() && !files.mkdirs() && !files.isDirectory())
+            throw new IllegalStateException("Cannot create Android-assigned files directory");
+        if (!files.isDirectory()) throw new IllegalStateException("Android-assigned files path is not a directory");
+
+        File probe = new File(files, ".rafcodephi-write-probe.tmp");
+        try (FileOutputStream output = new FileOutputStream(probe)) {
+            output.write(0x52);
+            output.flush();
+            output.getFD().sync();
+        }
+        if (!probe.isFile() || probe.length() != 1L)
+            throw new IllegalStateException("Private filesystem write probe was not durable");
+        if (!probe.delete()) Logger.logWarn(LOG_TAG, "Could not delete write probe " + probe);
+    }
+
+    private static boolean runtimePrefixReady(File prefix) {
+        File sh = new File(prefix, "bin/sh");
+        File pkg = new File(prefix, "bin/pkg");
+        File busybox = new File(prefix, "bin/busybox");
+        File proot = new File(prefix, "bin/proot");
+        return prefix.isDirectory() && sh.isFile() && sh.canExecute()
+            && pkg.isFile() && pkg.canExecute()
+            && busybox.isFile() && busybox.canExecute()
+            && proot.isFile() && proot.canExecute();
+    }
+
+    /**
+     * Public embedded-bootstrap API retained for existing build/tests. This does
+     * not consult the wizard document source because it has no Context.
+     */
+    public static byte[] loadZipBytes() {
+        System.loadLibrary("termux-bootstrap");
+        return getZip();
+    }
+
+    /** Prefer a fully accepted wizard bootstrap.zip, otherwise use embedded bytes. */
+    private static byte[] loadZipBytes(Context context) throws Exception {
+        byte[] selected = BootstrapWizardSource.loadAcceptedBytes(context);
+        if (selected != null) {
+            Logger.logInfo(LOG_TAG, "Using wizard-selected canonical bootstrap.zip");
+            return selected;
+        }
+        Logger.logInfo(LOG_TAG, "No accepted wizard bootstrap selected; using embedded bootstrap");
+        return loadZipBytes();
+    }
+
+    public static native byte[] getZip();
+
+    private static void verifyBootstrapZipIntegrity(byte[] zipBytes) {
+        String expected = BootstrapIntegrityVerifier.expectedHashForCurrentAbi();
+        if (expected == null || expected.isEmpty())
+            throw new IllegalStateException("BOOTSTRAP_BLAKE3_EXPECTATION_MISSING");
+        String actual = BootstrapIntegrityVerifier.blake3Hex(zipBytes);
+        if (!actual.equalsIgnoreCase(expected)) {
+            throw new SecurityException("BOOTSTRAP_BLAKE3_MISMATCH expected="
+                + expected.toLowerCase(Locale.US) + " actual=" + actual.toLowerCase(Locale.US));
+        }
+        Logger.logInfo(LOG_TAG, "Bootstrap BLAKE3 verified: " + actual);
+    }
+
+    /**
+     * Adopted-storage runtime can only consume an explicitly bridge profile.
+     * Real apt/dpkg ELFs may encode the canonical prefix and are therefore
+     * blocked until rebuilt/validated for the runtime layout.
+     */
+    private static void verifyRelocationContract(byte[] zipBytes) throws Exception {
+        if (!TermuxRuntimePaths.isRelocatedLayout()) return;
+
+        JSONObject profile = null;
+        try (ZipInputStream input = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+            ZipEntry entry;
+            while ((entry = input.getNextEntry()) != null) {
+                if (!"BOOTSTRAP_PROFILE.json".equals(entry.getName())) continue;
+                ByteArrayOutputStream output = new ByteArrayOutputStream();
+                byte[] buffer = new byte[4096];
+                int total = 0;
+                int read;
+                while ((read = input.read(buffer)) != -1) {
+                    total += read;
+                    if (total > 64 * 1024) throw new IllegalArgumentException("BOOTSTRAP_PROFILE_TOO_LARGE");
+                    output.write(buffer, 0, read);
+                }
+                profile = new JSONObject(new String(output.toByteArray(), StandardCharsets.UTF_8));
+                break;
+            }
+        }
+
+        if (profile == null) throw new IllegalStateException("RELOCATED_RUNTIME_REQUIRES_BOOTSTRAP_PROFILE");
+        boolean bridge = "bridge".equalsIgnoreCase(profile.optString("profile"))
+            && "bridge".equalsIgnoreCase(profile.optString("package_layer"))
+            && !profile.optBoolean("claim_allowed", true);
+        if (!bridge) {
+            throw new IllegalStateException("RELOCATED_RUNTIME_BLOCKED_FOR_REAL_OR_UNPROVEN_PACKAGE_LAYER profile="
+                + profile.optString("profile", "UNKNOWN") + " package_layer="
+                + profile.optString("package_layer", "UNKNOWN"));
+        }
+        Logger.logWarn(LOG_TAG, "Relocated Android-assigned app-private path accepted for bridge bootstrap only; real-pkg relocation claim remains false");
+    }
+
+    private static void verifyRuntimeBinary(File file, String name, boolean required) throws Exception {
+        if (!file.isFile()) {
+            if (required) throw new IllegalStateException("Missing runtime binary " + name + " at " + file);
+            return;
+        }
+        StructStat stat = Os.stat(file.getAbsolutePath());
+        if ((stat.st_mode & 0100) == 0)
+            throw new IllegalStateException("Runtime binary not owner-executable: " + name + " mode=0" + Integer.toOctalString(stat.st_mode));
+    }
+
+    private static void validateZipEntryName(String name) {
+        if (name == null || name.isEmpty() || name.startsWith("/") || name.contains("../") || name.equals(".."))
+            throw new SecurityException("Unsafe bootstrap zip entry: " + name);
+    }
+
+    private static void validatePathInStaging(String canonicalStaging, File file, String label) throws Exception {
+        String canonical = file.getCanonicalPath();
+        if (!canonical.startsWith(canonicalStaging))
+            throw new SecurityException("Unsafe " + label + " outside runtime staging: " + canonical);
+    }
+
+    private static void ensureDirectory(File directory, int mode) throws Exception {
+        if (directory == null) throw new IllegalStateException("Directory parent is null");
+        if (!directory.exists() && !directory.mkdirs() && !directory.isDirectory())
+            throw new IllegalStateException("Could not create directory: " + directory);
+        if (!directory.isDirectory()) throw new IllegalStateException("Not a directory: " + directory);
+        Os.chmod(directory.getAbsolutePath(), mode);
+    }
+
+    private static void deleteTreeInsideRuntime(File file) throws Exception {
+        if (file == null || !file.exists()) return;
+        String runtimeRoot = TermuxRuntimePaths.filesDir().getCanonicalPath();
+        String absolute = file.getCanonicalPath();
+        if (!(absolute.equals(runtimeRoot) || absolute.startsWith(runtimeRoot + "/")))
+            throw new SecurityException("Refusing delete outside Android-assigned filesDir: " + absolute);
+        if (absolute.equals(runtimeRoot))
+            throw new SecurityException("Refusing delete of runtime filesDir root");
+        deleteNode(file, runtimeRoot);
+    }
+
+    private static void deleteNode(File file, String runtimeRoot) throws Exception {
+        StructStat stat = Os.lstat(file.getAbsolutePath());
+        boolean symlink = (stat.st_mode & OsConstants.S_IFMT) == OsConstants.S_IFLNK;
+        if (!symlink && file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    String canonical = child.getCanonicalPath();
+                    if (!canonical.startsWith(runtimeRoot + "/")) {
+                        // A symlink can resolve outside the root. Delete the link itself instead of following it.
+                        StructStat childStat = Os.lstat(child.getAbsolutePath());
+                        boolean childSymlink = (childStat.st_mode & OsConstants.S_IFMT) == OsConstants.S_IFLNK;
+                        if (!childSymlink) throw new SecurityException("Delete traversal outside runtime root: " + canonical);
                     }
-
-                    Logger.logInfo(LOG_TAG, "Extracting bootstrap zip to prefix staging directory \"" + TERMUX_STAGING_PREFIX_DIR_PATH + "\".");
-
-                    final byte[] buffer = new byte[8096];
-                    final List<Pair<String, String>> symlinks = new ArrayList<>(50);
-                    long totalEntries = 0;
-                    long totalFiles = 0;
-                    long totalDirs = 0;
-                    long totalSymlinks = 0;
-                    long totalBytesExtracted = 0;
-                    final String canonicalStagingPrefix = TERMUX_STAGING_PREFIX_DIR.getCanonicalPath() + "/";
-
-                    logPhase("zip-load", "loading bootstrap zip payload");
-                    final byte[] zipBytes = loadZipBytes();
-                    logPhase("blake3-check", "verifying bootstrap payload integrity");
-                    verifyBootstrapZipIntegrity(zipBytes);
-                    logPhase("extract", "extracting bootstrap payload to staging");
-                    try (ZipInputStream zipInput = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
-                        ZipEntry zipEntry;
-                        while ((zipEntry = zipInput.getNextEntry()) != null) {
-                            totalEntries++;
-                            if (zipEntry.getName().equals("SYMLINKS.txt")) {
-                                BufferedReader symlinksReader = new BufferedReader(new InputStreamReader(zipInput));
-                                String line;
-                                while ((line = symlinksReader.readLine()) != null) {
-                                    String[] parts = line.split("←");
-                                    if (parts.length != 2)
-                                        throw new RuntimeException("Malformed symlink line: " + line);
-                                    String oldPath = parts[0];
-                                    String linkDestination = parts[1];
-                                    if (linkDestination.startsWith("/") || linkDestination.contains("..")) {
-                                        throw new RuntimeException("Unsafe symlink destination in SYMLINKS.txt: " + line);
-                                    }
-                                    String newPath = TERMUX_STAGING_PREFIX_DIR_PATH + "/" + linkDestination;
-                                    validatePathInStaging(canonicalStagingPrefix, new File(newPath), "symlink destination");
-                                    symlinks.add(Pair.create(oldPath, newPath));
-                                    totalSymlinks++;
-
-                                    error = ensureDirectoryExists(new File(newPath).getParentFile());
-                                    if (error != null) {
-                                        showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                                        return;
-                                    }
-                                }
-                            } else {
-                                String zipEntryName = zipEntry.getName();
-                                validateZipEntryName(zipEntryName);
-                                File targetFile = new File(TERMUX_STAGING_PREFIX_DIR_PATH, zipEntryName);
-                                validatePathInStaging(canonicalStagingPrefix, targetFile, "zip entry");
-                                boolean isDirectory = zipEntry.isDirectory();
-
-                                error = ensureDirectoryExists(isDirectory ? targetFile : targetFile.getParentFile());
-                                if (error != null) {
-                                    showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                                    return;
-                                }
-
-                                if (!isDirectory) {
-                                    try (FileOutputStream outStream = new FileOutputStream(targetFile)) {
-                                        int readBytes;
-                                        while ((readBytes = zipInput.read(buffer)) != -1) {
-                                            outStream.write(buffer, 0, readBytes);
-                                            totalBytesExtracted += readBytes;
-                                        }
-                                    }
-                                    totalFiles++;
-                                    if (zipEntryName.startsWith("bin/") || zipEntryName.startsWith("libexec") ||
-                                        zipEntryName.startsWith("lib/apt/apt-helper") || zipEntryName.startsWith("lib/apt/methods")) {
-                                        setPosixMode(targetFile, 0700, "executable bootstrap payload");
-                                    } else {
-                                        setPosixMode(targetFile, 0600, "bootstrap payload");
-                                    }
-                                } else {
-                                    totalDirs++;
-                                    setPosixMode(targetFile, 0700, "bootstrap directory");
-                                }
-                            }
-                        }
-                    }
-                    Logger.logInfo(LOG_TAG, "Bootstrap extraction stats: entries=" + totalEntries +
-                        ", files=" + totalFiles + ", dirs=" + totalDirs + ", symlinks=" + totalSymlinks +
-                        ", bytes=" + totalBytesExtracted);
-
-                    if (symlinks.isEmpty())
-                        throw new RuntimeException("No SYMLINKS.txt encountered");
-                    logPhase("symlinks", "creating bootstrap symlinks");
-                    for (Pair<String, String> symlink : symlinks) {
-                        Os.symlink(symlink.first, symlink.second);
-                    }
-
-                    logPhase("verify-sh", "verifying required shell");
-                    if (!FileUtils.fileExists(TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/sh", false)) {
-                        throw new RuntimeException("Bootstrap missing required shell: " + TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/sh");
-                    }
-                    logPhase("verify-pkg", "verifying required package manager");
-                    if (!FileUtils.fileExists(TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/pkg", false)) {
-                        throw new RuntimeException("Bootstrap missing required package manager: " + TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/pkg");
-                    }
-                    verifyRuntimeBinary(TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/sh", "sh");
-                    logPhase("verify-busybox", "verifying required busybox runtime");
-                    verifyRuntimeBinary(TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/busybox", "busybox");
-                    logPhase("verify-proot", "verifying required proot runtime");
-                    verifyRuntimeBinary(TERMUX_STAGING_PREFIX_DIR_PATH + "/bin/proot", "proot");
-
-                    logPhase("rename-prefix", "moving staging prefix into final prefix");
-                    Logger.logInfo(LOG_TAG, "Moving termux prefix staging to prefix directory.");
-
-                    if (!TERMUX_STAGING_PREFIX_DIR.renameTo(TERMUX_PREFIX_DIR)) {
-                        throw new RuntimeException("Moving termux prefix staging to prefix directory failed");
-                    }
-
-                    Logger.logInfo(LOG_TAG, "Bootstrap packages installed successfully.");
-                    logPhase("baremetal-guard", "running baremetal guard selftest/validate");
-                    BootstrapBaremetalGuard.selftest();
-                    BootstrapBaremetalGuard.validateAfterBootstrap(TERMUX_PREFIX_DIR_PATH);
-
-                    // Recreate env file since termux prefix was wiped earlier
-                    logPhase("env-write", "writing shell environment file");
-                    TermuxShellEnvironment.writeEnvironmentToFile(activity);
-
-                    activity.runOnUiThread(whenDone);
-
-                } catch (final Throwable t) {
-                    rollbackFailedBootstrapInstall();
-                    if (BuildConfig.BOOTSTRAP_BAREMETAL_STRICT) {
-                        Logger.logError(LOG_TAG, "Bootstrap installation failed in strict mode; propagating exception. " + t);
-                        throw new RuntimeException("Bootstrap installation failed in strict mode", t);
-                    }
-                    showBootstrapErrorDialog(activity, whenDone, Logger.getStackTracesMarkdownString(null, Logger.getStackTracesStringArray(t)));
-
-                } finally {
-                    activity.runOnUiThread(() -> {
-                        try {
-                            progress.dismiss();
-                        } catch (RuntimeException e) {
-                            // Activity already dismissed - ignore.
-                        }
-                    });
+                    deleteNode(child, runtimeRoot);
                 }
             }
-        }.start();
+        }
+        if (!file.delete() && file.exists()) throw new IllegalStateException("Failed to delete " + file);
+    }
+
+    private static void rollbackFailedBootstrapInstall() {
+        try {
+            deleteTreeInsideRuntime(TermuxRuntimePaths.stagingPrefixDir());
+            File prefix = TermuxRuntimePaths.prefixDir();
+            if (!runtimePrefixReady(prefix)) deleteTreeInsideRuntime(prefix);
+        } catch (Throwable t) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Bootstrap rollback failed", t);
+        }
     }
 
     public static void showBootstrapErrorDialog(Activity activity, Runnable whenDone, String message) {
         Logger.logErrorExtended(LOG_TAG, "Bootstrap Error:\n" + message);
-
-        // Send a notification with the exception so that the user knows why bootstrap setup failed
         sendBootstrapCrashReportNotification(activity, message);
-
         activity.runOnUiThread(() -> {
             try {
-                new AlertDialog.Builder(activity).setTitle(R.string.bootstrap_error_title).setMessage(R.string.bootstrap_error_body)
+                new AlertDialog.Builder(activity)
+                    .setTitle(R.string.bootstrap_error_title)
+                    .setMessage(R.string.bootstrap_error_body)
                     .setNegativeButton(R.string.bootstrap_error_abort, (dialog, which) -> {
                         dialog.dismiss();
                         activity.finish();
                     })
                     .setPositiveButton(R.string.bootstrap_error_try_again, (dialog, which) -> {
                         dialog.dismiss();
-                        FileUtils.deleteFile("termux prefix directory", TERMUX_PREFIX_DIR_PATH, true);
-                        TermuxInstaller.setupBootstrapIfNeeded(activity, whenDone);
-                    }).show();
-            } catch (WindowManager.BadTokenException e1) {
-                // Activity already dismissed - ignore.
+                        setupBootstrapIfNeeded(activity, whenDone);
+                    })
+                    .show();
+            } catch (WindowManager.BadTokenException ignored) {
             }
         });
     }
 
-    private static void rollbackFailedBootstrapInstall() {
-        Logger.logWarn(LOG_TAG, "Rolling back failed bootstrap installation; removing staging and incomplete prefix.");
-        FileUtils.deleteFile("termux prefix staging directory", TERMUX_STAGING_PREFIX_DIR_PATH, true);
-        if (!FileUtils.fileExists(TERMUX_PREFIX_DIR_PATH + "/bin/sh", false) ||
-            !FileUtils.fileExists(TERMUX_PREFIX_DIR_PATH + "/bin/pkg", false) ||
-            !FileUtils.fileExists(TERMUX_PREFIX_DIR_PATH + "/bin/busybox", false) ||
-            !FileUtils.fileExists(TERMUX_PREFIX_DIR_PATH + "/bin/proot", false)) {
-            FileUtils.deleteFile("incomplete termux prefix directory", TERMUX_PREFIX_DIR_PATH, true);
-        }
+    private static void showFatalPreflight(Activity activity, String state, String detail) {
+        String message = state + "\n" + detail + "\n"
+            + "runtimeFilesDir=" + TermuxRuntimePaths.filesDirPath() + "\n"
+            + "runtimePrefix=" + TermuxRuntimePaths.prefixDirPath() + "\n"
+            + "canonicalPrefix=" + TermuxConstants.TERMUX_PREFIX_DIR_PATH + "\n"
+            + "layout=" + TermuxRuntimePaths.layoutState();
+        Logger.logError(LOG_TAG, message);
+        sendBootstrapCrashReportNotification(activity, message);
+        new AlertDialog.Builder(activity)
+            .setTitle(R.string.bootstrap_error_title)
+            .setMessage(message)
+            .setPositiveButton(android.R.string.ok, null)
+            .show();
     }
 
     private static void sendBootstrapCrashReportNotification(Activity activity, String message) {
-        final String title = TermuxConstants.TERMUX_APP_NAME + " Bootstrap Error";
-
-        // Add info of all install Termux plugin apps as well since their target sdk or installation
-        // on external/portable sd card can affect Termux app files directory access or exec.
-        TermuxCrashUtils.sendCrashReportNotification(activity, LOG_TAG,
-            title, null, "## " + title + "\n\n" + message + "\n\n" +
-                TermuxUtils.getTermuxDebugMarkdownString(activity),
+        String title = TermuxConstants.TERMUX_APP_NAME + " Bootstrap Error";
+        TermuxCrashUtils.sendCrashReportNotification(activity, LOG_TAG, title, null,
+            "## " + title + "\n\n" + message + "\n\n" + TermuxUtils.getTermuxDebugMarkdownString(activity),
             true, false, TermuxUtils.AppInfoMode.TERMUX_AND_PLUGIN_PACKAGES, true);
     }
 
+    /** Setup ~/storage links under the runtime-resolved HOME. */
     static void setupStorageSymlinks(final Context context) {
-        final String LOG_TAG = "termux-storage";
-        final String title = TermuxConstants.TERMUX_APP_NAME + " Setup Storage Error";
+        TermuxRuntimePaths.init(context);
+        final String tag = "termux-storage";
+        new Thread(() -> {
+            try {
+                File storage = TermuxRuntimePaths.storageHomeDir();
+                clearDirectoryOnly(storage);
 
-        Logger.logInfo(LOG_TAG, "Setting up storage symlinks.");
+                createSymlinkSafely(tag, Environment.getExternalStorageDirectory(), storage, "shared");
+                createSymlinkSafely(tag, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), storage, "documents");
+                createSymlinkSafely(tag, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), storage, "downloads");
+                createSymlinkSafely(tag, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), storage, "dcim");
+                createSymlinkSafely(tag, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), storage, "pictures");
+                createSymlinkSafely(tag, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), storage, "music");
+                createSymlinkSafely(tag, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), storage, "movies");
+                createSymlinkSafely(tag, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PODCASTS), storage, "podcasts");
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+                    createSymlinkSafely(tag, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_AUDIOBOOKS), storage, "audiobooks");
 
-        new Thread() {
-            public void run() {
-                try {
-                    Error error;
-                    File storageDir = TermuxConstants.TERMUX_STORAGE_HOME_DIR;
-                    
-                    // Defensive null check for storage directory
-                    if (storageDir == null) {
-                        Logger.logError(LOG_TAG, "TERMUX_STORAGE_HOME_DIR is null");
-                        return;
-                    }
-
-                    error = FileUtils.clearDirectory("~/storage", storageDir.getAbsolutePath());
-                    if (error != null) {
-                        Logger.logErrorAndShowToast(context, LOG_TAG, error.getMessage());
-                        Logger.logErrorExtended(LOG_TAG, "Setup Storage Error\n" + error.toString());
-                        TermuxCrashUtils.sendCrashReportNotification(context, LOG_TAG, title, null,
-                            "## " + title + "\n\n" + Error.getErrorMarkdownString(error),
-                            true, false, TermuxUtils.AppInfoMode.TERMUX_PACKAGE, true);
-                        return;
-                    }
-
-                    Logger.logInfo(LOG_TAG, "Setting up storage symlinks at ~/storage/shared, ~/storage/downloads, ~/storage/dcim, ~/storage/pictures, ~/storage/music and ~/storage/movies for directories in \"" + Environment.getExternalStorageDirectory().getAbsolutePath() + "\".");
-
-                    // Get primary storage root "/storage/emulated/0" symlink
-                    File sharedDir = Environment.getExternalStorageDirectory();
-                    createSymlinkSafely(LOG_TAG, sharedDir, storageDir, "shared");
-
-                    File documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
-                    createSymlinkSafely(LOG_TAG, documentsDir, storageDir, "documents");
-
-                    File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                    createSymlinkSafely(LOG_TAG, downloadsDir, storageDir, "downloads");
-
-                    File dcimDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
-                    createSymlinkSafely(LOG_TAG, dcimDir, storageDir, "dcim");
-
-                    File picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-                    createSymlinkSafely(LOG_TAG, picturesDir, storageDir, "pictures");
-
-                    File musicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC);
-                    createSymlinkSafely(LOG_TAG, musicDir, storageDir, "music");
-
-                    File moviesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
-                    createSymlinkSafely(LOG_TAG, moviesDir, storageDir, "movies");
-
-                    File podcastsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PODCASTS);
-                    createSymlinkSafely(LOG_TAG, podcastsDir, storageDir, "podcasts");
-
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                        File audiobooksDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_AUDIOBOOKS);
-                        createSymlinkSafely(LOG_TAG, audiobooksDir, storageDir, "audiobooks");
-                    }
-
-                    // Dir 0 should ideally be for primary storage
-                    // https://cs.android.com/android/platform/superproject/+/android-12.0.0_r32:frameworks/base/core/java/android/app/ContextImpl.java;l=818
-                    // https://cs.android.com/android/platform/superproject/+/android-12.0.0_r32:frameworks/base/core/java/android/os/Environment.java;l=219
-                    // https://cs.android.com/android/platform/superproject/+/android-12.0.0_r32:frameworks/base/core/java/android/os/Environment.java;l=181
-                    // https://cs.android.com/android/platform/superproject/+/android-12.0.0_r32:frameworks/base/services/core/java/com/android/server/StorageManagerService.java;l=3796
-                    // https://cs.android.com/android/platform/superproject/+/android-7.0.0_r36:frameworks/base/services/core/java/com/android/server/MountService.java;l=3053
-
-                    // Create "Android/data/com.termux" symlinks
-                    File[] dirs = context.getExternalFilesDirs(null);
-                    if (dirs != null && dirs.length > 0) {
-                        for (int i = 0; i < dirs.length; i++) {
-                            File dir = dirs[i];
-                            if (dir == null) continue;
-                            String symlinkName = "external-" + i;
-                            Logger.logInfo(LOG_TAG, "Setting up storage symlinks at ~/storage/" + symlinkName + " for \"" + dir.getAbsolutePath() + "\".");
-                            Os.symlink(dir.getAbsolutePath(), new File(storageDir, symlinkName).getAbsolutePath());
-                        }
-                    }
-
-                    // Create "Android/media/com.termux" symlinks
-                    dirs = context.getExternalMediaDirs();
-                    if (dirs != null && dirs.length > 0) {
-                        for (int i = 0; i < dirs.length; i++) {
-                            File dir = dirs[i];
-                            if (dir == null) continue;
-                            String symlinkName = "media-" + i;
-                            Logger.logInfo(LOG_TAG, "Setting up storage symlinks at ~/storage/" + symlinkName + " for \"" + dir.getAbsolutePath() + "\".");
-                            Os.symlink(dir.getAbsolutePath(), new File(storageDir, symlinkName).getAbsolutePath());
-                        }
-                    }
-
-                    Logger.logInfo(LOG_TAG, "Storage symlinks created successfully.");
-                } catch (Exception e) {
-                    Logger.logErrorAndShowToast(context, LOG_TAG, e.getMessage());
-                    Logger.logStackTraceWithMessage(LOG_TAG, "Setup Storage Error: Error setting up link", e);
-                    TermuxCrashUtils.sendCrashReportNotification(context, LOG_TAG, title, null,
-                        "## " + title + "\n\n" + Logger.getStackTracesMarkdownString(null, Logger.getStackTracesStringArray(e)),
-                        true, false, TermuxUtils.AppInfoMode.TERMUX_PACKAGE, true);
+                File[] external = context.getExternalFilesDirs(null);
+                if (external != null) {
+                    for (int i = 0; i < external.length; i++)
+                        if (external[i] != null) createSymlinkSafely(tag, external[i], storage, "external-" + i);
                 }
+                File[] media = context.getExternalMediaDirs();
+                if (media != null) {
+                    for (int i = 0; i < media.length; i++)
+                        if (media[i] != null) createSymlinkSafely(tag, media[i], storage, "media-" + i);
+                }
+                Logger.logInfo(tag, "Runtime storage links ready at " + storage);
+            } catch (Throwable t) {
+                Logger.logStackTraceWithMessage(tag, "Setup Storage Error", t);
             }
-        }.start();
+        }, "rafcodephi-storage-links").start();
     }
 
-    /**
-     * Safely create a symlink with proper error handling.
-     * Prevents crashes from null directories or symlink creation failures.
-     *
-     * @param logTag Log tag for error messages
-     * @param sourceDir Source directory to link from
-     * @param storageDir Parent storage directory
-     * @param linkName Name of the symlink to create
-     */
-    private static void createSymlinkSafely(String logTag, File sourceDir, File storageDir, String linkName) {
+    private static void clearDirectoryOnly(File directory) throws Exception {
+        if (!directory.exists()) ensureDirectory(directory, 0700);
+        File[] children = directory.listFiles();
+        if (children != null) for (File child : children) deleteNode(child, TermuxRuntimePaths.filesDir().getCanonicalPath());
+        ensureDirectory(directory, 0700);
+    }
+
+    private static void createSymlinkSafely(String tag, File source, File storage, String name) {
         try {
-            if (sourceDir == null) {
-                Logger.logWarn(logTag, "Source directory for " + linkName + " symlink is null, skipping");
-                return;
-            }
-            Os.symlink(sourceDir.getAbsolutePath(), new File(storageDir, linkName).getAbsolutePath());
-        } catch (Exception e) {
-            Logger.logWarn(logTag, "Failed to create " + linkName + " symlink: " + e.getMessage());
-            // Continue without failing - individual symlink failures shouldn't stop the whole process
+            if (source == null) return;
+            File link = new File(storage, name);
+            if (link.exists()) link.delete();
+            Os.symlink(source.getAbsolutePath(), link.getAbsolutePath());
+        } catch (Throwable t) {
+            Logger.logWarn(tag, "Symlink " + name + " unavailable: " + t.getMessage());
         }
     }
-
-    private static Error ensureDirectoryExists(File directory) {
-        return FileUtils.createDirectoryFile(directory.getAbsolutePath());
-    }
-
-    private static void validateZipEntryName(String zipEntryName) {
-        if (zipEntryName.startsWith("/") || zipEntryName.contains("..")) {
-            throw new RuntimeException("Unsafe zip entry name: " + zipEntryName);
-        }
-    }
-
-    private static void validatePathInStaging(String canonicalStagingPrefix, File path, String label) throws IOException {
-        String canonicalTarget = path.getCanonicalPath();
-        if (!canonicalTarget.startsWith(canonicalStagingPrefix)) {
-            throw new RuntimeException("Unsafe " + label + " outside staging prefix: " + canonicalTarget);
-        }
-    }
-
-    public static byte[] loadZipBytes() {
-        // Only load the shared library when necessary to save memory usage.
-        System.loadLibrary("termux-bootstrap");
-        return getZip();
-    }
-
-    public static native byte[] getZip();
-
-    private static void verifyBootstrapZipIntegrity(byte[] zipBytes) {
-        String expectedHash = BootstrapIntegrityVerifier.expectedHashForCurrentAbi();
-        if (expectedHash == null || expectedHash.isEmpty()) {
-            throw new RuntimeException("Bootstrap integrity is not configured for ABI " +
-                Build.SUPPORTED_ABIS[0] + ". Missing TERMUX_BOOTSTRAP_BLAKE3_* build value.");
-        }
-        String actualHash = BootstrapIntegrityVerifier.blake3Hex(zipBytes);
-        if (!actualHash.equalsIgnoreCase(expectedHash)) {
-            throw new RuntimeException("Bootstrap integrity verification failed (BLAKE3 mismatch). expected=" +
-                expectedHash.toLowerCase(Locale.US) + ", actual=" + actualHash.toLowerCase(Locale.US));
-        }
-        Logger.logInfo(LOG_TAG, "Bootstrap BLAKE3 verified for ABI " + Build.SUPPORTED_ABIS[0] + ": " + actualHash);
-    }
-
-    private static void setPosixMode(File file, int mode, String label) {
-        try {
-            Os.chmod(file.getAbsolutePath(), mode);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to chmod " + label + " \"" + file.getAbsolutePath() +
-                "\" to mode 0" + Integer.toOctalString(mode), e);
-        }
-    }
-
-    private static void verifyRuntimeBinary(String path, String binaryName) {
-        verifyRuntimeBinary(path, binaryName, true);
-    }
-
-    private static void verifyRuntimeBinary(String path, String binaryName, boolean required) {
-        try {
-            if (!FileUtils.fileExists(path, false)) {
-                if (required) throw new RuntimeException("Runtime binary verification failed: missing " + binaryName + " at " + path);
-                Logger.logInfo(LOG_TAG, "Optional runtime binary not present: " + binaryName + " (" + path + ")");
-                return;
-            }
-            StructStat stat = Os.stat(path);
-            if ((stat.st_mode & 0100) == 0) {
-                throw new RuntimeException("Runtime binary verification failed: " + binaryName +
-                    " is not executable by owner. mode=0" + Integer.toOctalString(stat.st_mode));
-            }
-            Logger.logInfo(LOG_TAG, "Runtime binary verified: " + binaryName + " (" + path + ")");
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException("Runtime binary verification failed for " + binaryName + " at " + path, e);
-        }
-    }
-
 }
