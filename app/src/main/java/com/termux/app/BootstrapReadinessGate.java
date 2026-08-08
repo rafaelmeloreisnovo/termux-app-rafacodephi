@@ -1,6 +1,7 @@
 package com.termux.app;
 
 import android.content.Context;
+import android.os.Build;
 
 import com.termux.shared.termux.TermuxRuntimePaths;
 
@@ -8,7 +9,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -18,8 +22,8 @@ import java.util.List;
  *
  * This is the single UI/orchestration contract for deciding whether the installed
  * private filesystem is ready to proceed to runtime evidence collection. It does
- * not install, repair or delete anything. Missing required evidence blocks the
- * dependent action and remains visible instead of being converted to PASS.
+ * not install, repair, chmod, mkdir or delete anything. Missing required evidence
+ * blocks the dependent action and remains visible instead of becoming PASS.
  */
 public final class BootstrapReadinessGate {
 
@@ -28,6 +32,11 @@ public final class BootstrapReadinessGate {
     public static final String STATE_BLOCKED = "BLOCKED";
     public static final String STATE_UNAVAILABLE = "UNAVAILABLE";
     public static final String TOKEN_VAZIO = "TOKEN_VAZIO";
+
+    private static final String PROFILE_SCHEMA = "rafcodephi-bootstrap-profile/v1";
+    private static final String PROFILE_FILE = "BOOTSTRAP_PROFILE.json";
+    private static final int PROFILE_READ_LIMIT = 64 * 1024;
+    private static final int PROFILE_REQUIRED_ENTRIES_LIMIT = 512;
 
     private static final String[] REQUIRED_EXECUTABLES = new String[] {
         "sh",
@@ -48,24 +57,34 @@ public final class BootstrapReadinessGate {
 
         TermuxRuntimePaths.init(context);
         List<Check> checks = new ArrayList<>();
-        boolean pass = true;
+        boolean targetsPass = true;
 
-        pass &= directory(checks, "$PREFIX", TermuxRuntimePaths.prefixDir());
+        File prefix = TermuxRuntimePaths.prefixDir();
+        targetsPass &= directory(checks, "$PREFIX", prefix);
         File bin = new File(TermuxRuntimePaths.binDirPath());
-        pass &= directory(checks, "$PREFIX/bin", bin);
-        pass &= directory(checks, "$HOME", TermuxRuntimePaths.homeDir());
-        pass &= directory(checks, "$HOME/storage", TermuxRuntimePaths.storageHomeDir());
+        targetsPass &= directory(checks, "$PREFIX/bin", bin);
+        targetsPass &= directory(checks, "$HOME", TermuxRuntimePaths.homeDir());
+        targetsPass &= directory(checks, "$HOME/storage", TermuxRuntimePaths.storageHomeDir());
 
         for (String executable : REQUIRED_EXECUTABLES) {
-            pass &= executable(checks, "$PREFIX/bin/" + executable, new File(bin, executable));
+            targetsPass &= executable(checks, "$PREFIX/bin/" + executable, new File(bin, executable));
         }
+
+        // Profile validation is deliberately independent from BootstrapBaremetalGuard's
+        // mutable install-time directory/chmod logic and from debug/release strict flags.
+        boolean profilePass = profileContract(context, checks, prefix);
 
         // Optional real utility binaries are observations, not readiness requirements.
         observeOptionalExecutable(checks, "$PREFIX/bin/busybox", new File(bin, "busybox"));
         observeOptionalExecutable(checks, "$PREFIX/bin/proot", new File(bin, "proot"));
 
+        boolean pass = targetsPass && profilePass;
         String state = pass ? STATE_PASS : STATE_BLOCKED;
-        String reason = pass ? "REQUIRED_BOOTSTRAP_RUNTIME_TARGETS_READY" : "REQUIRED_BOOTSTRAP_RUNTIME_TARGET_MISSING";
+        String reason;
+        if (pass) reason = "REQUIRED_BOOTSTRAP_RUNTIME_AND_PROFILE_READY";
+        else if (!profilePass) reason = "BOOTSTRAP_PROFILE_CONTRACT_BLOCKED";
+        else reason = "REQUIRED_BOOTSTRAP_RUNTIME_TARGET_MISSING";
+
         return new Report(state, reason, TermuxRuntimePaths.layoutState(), TermuxRuntimePaths.prefixDirPath(),
             TermuxRuntimePaths.isCanonicalLayout(), TermuxRuntimePaths.realPkgRelocationClaimAllowed(), checks);
     }
@@ -84,6 +103,115 @@ public final class BootstrapReadinessGate {
             file == null ? "UNAVAILABLE" : file.getAbsolutePath(),
             ok ? "owner_visible_executable" : "required_executable_not_ready"));
         return ok;
+    }
+
+    private static boolean profileContract(Context context, List<Check> checks, File prefix) {
+        File profileFile = prefix == null ? null : new File(prefix, PROFILE_FILE);
+        String path = profileFile == null ? "UNAVAILABLE" : profileFile.getAbsolutePath();
+        if (profileFile == null || !profileFile.isFile()) {
+            checks.add(new Check("$PREFIX/" + PROFILE_FILE, STATE_BLOCKED, path,
+                "required_profile_missing"));
+            return false;
+        }
+        if (profileFile.length() <= 0L || profileFile.length() > PROFILE_READ_LIMIT) {
+            checks.add(new Check("$PREFIX/" + PROFILE_FILE, STATE_BLOCKED, path,
+                "profile_size_out_of_bounds"));
+            return false;
+        }
+
+        try {
+            JSONObject profile = new JSONObject(readBoundedUtf8(profileFile, PROFILE_READ_LIMIT));
+            List<String> violations = new ArrayList<>();
+
+            require(PROFILE_SCHEMA.equals(profile.optString("schema", "")), "schema", violations);
+            String profileName = profile.optString("profile", "");
+            require("bridge".equals(profileName) || "real-pkg".equals(profileName), "profile", violations);
+            require(context.getPackageName().equals(profile.optString("package_name", "")), "package_name", violations);
+            require(prefix.getAbsolutePath().equals(profile.optString("prefix", "")), "prefix", violations);
+            require(expectedBootstrapArch().equals(profile.optString("arch", "")), "arch", violations);
+            require(!profile.optBoolean("claim_allowed", true), "claim_allowed_must_be_false", violations);
+            require(!profile.optBoolean("release_allowed", true), "release_allowed_must_be_false", violations);
+            require(TOKEN_VAZIO.equals(profile.optString("device_validation", "")),
+                "device_validation_must_be_TOKEN_VAZIO", violations);
+
+            JSONArray required = profile.optJSONArray("required_entries");
+            if (required == null || required.length() == 0 || required.length() > PROFILE_REQUIRED_ENTRIES_LIMIT) {
+                violations.add("required_entries_bounds");
+            } else {
+                String canonicalPrefix = prefix.getCanonicalPath() + File.separator;
+                for (int i = 0; i < required.length(); i++) {
+                    String relative = required.optString(i, "");
+                    if (relative.isEmpty() || relative.startsWith("/") || relative.contains("..") || relative.contains("\\")) {
+                        violations.add("unsafe_required_entry_" + i);
+                        continue;
+                    }
+                    File target = new File(prefix, relative);
+                    String canonicalTarget = target.getCanonicalPath();
+                    if (!canonicalTarget.startsWith(canonicalPrefix)) {
+                        violations.add("required_entry_escape_" + i);
+                    } else if (!target.exists()) {
+                        violations.add("missing_required_entry_" + i);
+                    }
+                }
+            }
+
+            if (!violations.isEmpty()) {
+                checks.add(new Check("$PREFIX/" + PROFILE_FILE, STATE_BLOCKED, path,
+                    "profile_contract_violation=" + bounded(join(violations), 256)));
+                return false;
+            }
+
+            checks.add(new Check("$PREFIX/" + PROFILE_FILE, STATE_PASS, path,
+                "schema_package_prefix_arch_claims_required_entries_valid profile=" + profileName));
+            return true;
+        } catch (Throwable error) {
+            checks.add(new Check("$PREFIX/" + PROFILE_FILE, STATE_BLOCKED, path,
+                "profile_read_parse_failure=" + error.getClass().getSimpleName() + ":" + bounded(String.valueOf(error.getMessage()), 160)));
+            return false;
+        }
+    }
+
+    private static void require(boolean condition, String violation, List<String> violations) {
+        if (!condition) violations.add(violation);
+    }
+
+    private static String expectedBootstrapArch() {
+        String abi = Build.SUPPORTED_ABIS != null && Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "";
+        if ("armeabi-v7a".equals(abi)) return "arm";
+        if ("arm64-v8a".equals(abi)) return "aarch64";
+        if ("x86".equals(abi)) return "i686";
+        if ("x86_64".equals(abi)) return "x86_64";
+        return "unknown";
+    }
+
+    private static String readBoundedUtf8(File file, int limit) throws Exception {
+        try (FileInputStream input = new FileInputStream(file);
+             ByteArrayOutputStream output = new ByteArrayOutputStream((int) Math.min(file.length(), 8192L))) {
+            byte[] buffer = new byte[4096];
+            int total = 0;
+            int count;
+            while ((count = input.read(buffer)) >= 0) {
+                if (count == 0) continue;
+                total += count;
+                if (total > limit) throw new IllegalStateException("profile_read_limit_exceeded");
+                output.write(buffer, 0, count);
+            }
+            return new String(output.toByteArray(), StandardCharsets.UTF_8);
+        }
+    }
+
+    private static String join(List<String> values) {
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < values.size(); i++) {
+            if (i > 0) out.append(',');
+            out.append(values.get(i));
+        }
+        return out.toString();
+    }
+
+    private static String bounded(String value, int limit) {
+        if (value == null) return "null";
+        return value.length() <= limit ? value : value.substring(0, limit) + "…";
     }
 
     private static void observeOptionalExecutable(List<Check> checks, String name, File file) {
@@ -150,7 +278,6 @@ public final class BootstrapReadinessGate {
                 for (Check check : checks) rows.put(check.toJson());
                 out.put("checks", rows);
             } catch (JSONException ignored) {
-                // JSONObject values above are bounded primitives/strings; fail closed if platform JSON disagrees.
                 return new JSONObject();
             }
             return out;
