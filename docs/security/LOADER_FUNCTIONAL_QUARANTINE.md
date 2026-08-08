@@ -14,19 +14,20 @@ There is no accepted partial state.
 
 ## Current state
 
-The current `master` loader is intentionally inert:
+The current loader implements the complete source-level security boundary:
 
 ```text
-android:hasCode=false
-business Java sources=false
-bootstrap payload absent
-installer behavior absent
+android:hasCode=true
+loader extraction=false
+HTTPS same-origin acquisition bounded to 128 MiB
+signature-protected entry and read-only provider
+host SHA-256+BLAKE3, bounded ZIP custody and atomic install
 release_allowed=false
-state=STUB_NO_BOOTSTRAP_PAYLOAD
+state=FUNCTIONAL_SECURITY_GATED
 ```
 
-This is safer than importing a functional branch that accepts an arbitrary
-`target_dir`, extracts ZIP content or exposes an unauthenticated Activity.
+Artifact, matching-certificate and physical Android evidence remain separate
+promotion gates; the structural pass does not promote them.
 
 ## Forbidden functional patterns
 
@@ -93,7 +94,8 @@ source validator PASS
 Current promotion boundary:
 
 ```text
-functional_capability=false
+functional_capability=true_at_source_boundary
+apk_and_device_evidence=TOKEN_VAZIO
 release_allowed=false
 claim_allowed=false
 ```

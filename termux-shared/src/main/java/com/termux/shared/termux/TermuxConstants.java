@@ -366,6 +366,8 @@ public final class TermuxConstants {
     public static final String TERMUX_API_APP_NAME = "Termux:API"; // Default: "Termux:API"
     /** Termux:API app package name */
     public static final String TERMUX_API_PACKAGE_NAME = TERMUX_PACKAGE_NAME + ".api"; // Default: "com.termux.api"
+    /** Real Java package where Termux:API component classes are declared. */
+    public static final String TERMUX_API_CODE_PACKAGE_NAME = "com.termux.api"; // Default: "com.termux.api"
     /** Termux:API GitHub repo name */
     public static final String TERMUX_API_GITHUB_REPO_NAME = "termux-api"; // Default: "termux-api"
     /** Termux:API GitHub repo url */
@@ -1202,10 +1204,10 @@ public final class TermuxConstants {
     public static final class TERMUX_API_APP {
 
         /** Termux:API app main activity name. */
-        public static final String TERMUX_API_MAIN_ACTIVITY_NAME = TERMUX_API_PACKAGE_NAME + ".activities.TermuxAPIMainActivity"; // Default: "com.termux.api.activities.TermuxAPIMainActivity"
+        public static final String TERMUX_API_MAIN_ACTIVITY_NAME = TERMUX_API_CODE_PACKAGE_NAME + ".activities.TermuxAPIMainActivity"; // Default: "com.termux.api.activities.TermuxAPIMainActivity"
 
         /** Termux:API app launcher activity name. This is an `activity-alias` for {@link #TERMUX_API_MAIN_ACTIVITY_NAME} used for launchers with {@link Intent#CATEGORY_LAUNCHER}. */
-        public static final String TERMUX_API_LAUNCHER_ACTIVITY_NAME = TERMUX_API_PACKAGE_NAME + ".activities.TermuxAPILauncherActivity"; // Default: "com.termux.api.activities.TermuxAPILauncherActivity"
+        public static final String TERMUX_API_LAUNCHER_ACTIVITY_NAME = TERMUX_API_CODE_PACKAGE_NAME + ".activities.TermuxAPILauncherActivity"; // Default: "com.termux.api.activities.TermuxAPILauncherActivity"
 
     }
 

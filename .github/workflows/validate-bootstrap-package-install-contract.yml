@@ -32,6 +32,7 @@ on:
       - tools/validate_readme_runtime_claim_boundary.py
       - tests/test_bootstrap_package_install_contract.py
       - tests/test_source_built_real_bootstrap.py
+      - tests/test_termux_api_access_contract.py
       - tests/test_device_pkg_smoke_contract.py
       - tests/test_real_arm_bootstrap_core.py
       - tests/test_real_pkg_promotion_contract.py
@@ -69,6 +70,7 @@ on:
       - tools/validate_readme_runtime_claim_boundary.py
       - tests/test_bootstrap_package_install_contract.py
       - tests/test_source_built_real_bootstrap.py
+      - tests/test_termux_api_access_contract.py
       - tests/test_device_pkg_smoke_contract.py
       - tests/test_real_arm_bootstrap_core.py
       - tests/test_real_pkg_promotion_contract.py
@@ -106,6 +108,9 @@ jobs:
 
       - name: Run source-built real bootstrap import tests
         run: python3 -m pytest -q tests/test_source_built_real_bootstrap.py
+
+      - name: Run Termux API access boundary tests
+        run: python3 -m pytest -q tests/test_termux_api_access_contract.py
 
       - name: Run busybox applet wrapper tests
         run: python3 -m pytest -q tests/test_bootstrap_busybox_applet_wrappers.py

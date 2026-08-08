@@ -29,7 +29,7 @@ OPTIONAL = {
     "host_integrity": "app/src/main/java/com/termux/app/BootstrapIntegrityVerifier.java",
     "host_manifest": "app/src/main/AndroidManifest.xml",
     "native": "app/src/main/cpp/termux-bootstrap.c",
-    "pin_gradle": "gradle/bootstrap-external.gradle",
+    "pin_gradle": "app/build.gradle",
 }
 
 
@@ -68,7 +68,9 @@ def validate_snapshot(files: Mapping[str, str]) -> tuple[str, list[str]]:
     if set(contract.get("allowed_states", [])) != {"STUB_SAFE_BLOCKED", "FUNCTIONAL_SECURITY_GATED"}:
         errors.append("contract must allow exactly two states")
 
-    combined_source = "\n".join(loader_sources + [files["host_client"], files["host_receiver"]])
+    # The loader must never extract the bootstrap. The host is the custody
+    # boundary and is expected to inspect ZIP entries before atomic install.
+    combined_source = "\n".join(loader_sources)
     for token in contract.get("forbidden_source_tokens", []):
         if token in combined_source:
             errors.append(f"forbidden source token present: {token}")

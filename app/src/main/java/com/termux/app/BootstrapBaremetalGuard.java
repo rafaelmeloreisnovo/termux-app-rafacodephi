@@ -24,6 +24,10 @@ final class BootstrapBaremetalGuard {
     private static final String PROFILE_SCHEMA = "rafcodephi-bootstrap-profile/v1";
     private static final String PROFILE_FILE = "BOOTSTRAP_PROFILE.json";
     private static final String LEGACY_PREFIX = "/data/data/com.termux/files/usr";
+    private static final String APT_SOURCE_LEGACY = "etc/apt/sources.list";
+    private static final String APT_SOURCE_DEB822 = "etc/apt/sources.list.d/termux.sources";
+    private static final String APT_UPDATE_BLOCK = "etc/apt/apt.conf.d/00rafcodephi-repository-block";
+    private static final String REPOSITORY_BLOCKED = "BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED";
     private static final String[] BRIDGE_MARKERS = new String[] {
         "RAFCODEPHI pkg bridge",
         "RAFCODEPHI apt bridge",
@@ -162,7 +166,7 @@ final class BootstrapBaremetalGuard {
                 rejectBridgeMarker(new File(prefixDir, "bin/apt"), "apt");
                 rejectBridgeMarker(new File(prefixDir, "bin/apt-get"), "apt-get");
                 verifyLibApt(prefixDir);
-                verifySourcesList(new File(prefixDir, "etc/apt/sources.list"));
+                verifyAptRepository(prefixDir, profile);
                 rejectLegacyPrefixInCriticalFiles(prefixDir);
                 Logger.logInfo(LOG_TAG,
                     "bootstrap-guard phase=bootstrapProfile status=real-pkg-structural-candidate " +
@@ -244,9 +248,45 @@ final class BootstrapBaremetalGuard {
         if (!found) throw new RuntimeException("sources.list has no HTTP(S) repository");
     }
 
+    private static void verifyAptRepository(File prefixDir, JSONObject profile) throws IOException {
+        File legacy = new File(prefixDir, APT_SOURCE_LEGACY);
+        File deb822 = new File(prefixDir, APT_SOURCE_DEB822);
+        String state = profile.optString("package_repo_runtime_state", "");
+        if (REPOSITORY_BLOCKED.equals(state)) {
+            if (legacy.exists()) {
+                throw new RuntimeException("blocked custom repository must not expose legacy sources.list");
+            }
+            String sources = readBoundedUtf8(deb822, PROFILE_READ_LIMIT);
+            String[] required = new String[] {
+                "# RAFCODEPHI_PACKAGE_REPOSITORY=BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED",
+                "Enabled: no",
+                "URIs: https://packages.rafcodephi.invalid/termux"
+            };
+            for (String token : required) {
+                if (!sources.contains(token)) {
+                    throw new RuntimeException("blocked custom repository source token missing: " + token);
+                }
+            }
+            if (sources.contains("termux.net")) {
+                throw new RuntimeException("blocked custom repository exposes incompatible upstream URL");
+            }
+            String block = readBoundedUtf8(new File(prefixDir, APT_UPDATE_BLOCK), PROFILE_READ_LIMIT);
+            if (!block.contains("APT::Update::Pre-Invoke") ||
+                !block.contains("RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED") ||
+                !block.contains("exit 100")) {
+                throw new RuntimeException("apt update fail-closed hook missing or invalid");
+            }
+            return;
+        }
+
+        File source = deb822.isFile() ? deb822 : legacy;
+        verifySourcesList(source);
+    }
+
     private static void rejectLegacyPrefixInCriticalFiles(File prefixDir) throws IOException {
         String[] critical = new String[] {
-            "bin/apt", "bin/apt-get", "bin/dpkg", "bin/pkg", "etc/apt/sources.list"
+            "bin/apt", "bin/apt-get", "bin/dpkg", "bin/pkg",
+            APT_SOURCE_LEGACY, APT_SOURCE_DEB822, APT_UPDATE_BLOCK
         };
         for (String relative : critical) {
             File file = new File(prefixDir, relative);

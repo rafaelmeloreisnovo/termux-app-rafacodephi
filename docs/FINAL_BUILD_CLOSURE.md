@@ -31,7 +31,7 @@ Ele **não** afirma:
 - `pkg/apt/dpkg/proot` reais;
 - assinatura de produção disponível;
 - CI remoto observável;
-- loader funcional;
+- execução física do loader e recibo pareado;
 - TLS próprio;
 - compiladores completos;
 - VM completa.
@@ -63,8 +63,8 @@ Além do `safe-core`, exige simultaneamente:
 2. assinatura de produção registrada como evidência, sem expor segredo;
 3. bundle físico ARM32 e bundle físico ARM64 válidos;
 4. matriz `DUAL_ARM_DEVICE_PROOF`;
-5. stack real `pkg/apt/apt-get/dpkg/libapt/proot` recompilada para o prefixo RAFCODEΦ;
-6. certificados, DNS e repositório validados no aparelho;
+5. stack source-built `pkg/apt/apt-get/dpkg/libapt/proot` executada no prefixo RAFCODEΦ;
+6. repositório binário custom publicado/assinado, certificados e DNS validados no aparelho;
 7. `runtime-lock.json` fixado no commit exato de release, com hash externo preenchido.
 
 Estado atual:
@@ -77,7 +77,7 @@ release_allowed=false
 Bloqueadores dominantes:
 
 ```text
-LEGACY_PREFIX_BINARY_RISK
+CUSTOM_BINARY_REPOSITORY_NOT_PUBLISHED
 DEVICE_RECEIPT_COMPLETE_ARM32=TOKEN_VAZIO
 DEVICE_RECEIPT_COMPLETE_ARM64=TOKEN_VAZIO
 PRODUCTION_RELEASE_SIGNING=TOKEN_VAZIO
@@ -119,10 +119,10 @@ research_open=true
 |---|---|---|
 | Núcleo estático, contratos e quarentenas | `SAFE_CORE_IMPLEMENTATION_CLOSED` após o gate | Sim, somente nesse escopo |
 | APK/NDK produzido em CI histórico | `PROVADO`, sujeito ao SHA/artefato correspondente | Não prova release atual |
-| Loader | `STUB_SAFE_BLOCKED` | Sim como stub seguro; não como instalador |
+| Loader | `FUNCTIONAL_SECURITY_GATED` estrutural | Não prova APK pareado nem execução Android |
 | RAFAELIA ZERO | instrumentação `PROVADO ESTRUTURAL` | Não prova aparelho |
 | Prova ARM32 + ARM64 | `TOKEN_VAZIO` | Não |
-| Stack real de pacotes | `BLOCKED` por prefixo legado | Não |
+| Stack real de pacotes | source-build ARM/ARM64 estrutural; repositório/device bloqueados | Não |
 | Release de produção | `BLOCKED` | Não |
 | TLS/compiladores/VM completos | `TOKEN_VAZIO` | Não |
 

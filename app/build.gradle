@@ -165,11 +165,31 @@ android {
         throw new GradleException("Release tasks require TERMUX_BOOTSTRAP_BAREMETAL_STRICT=true. Disable is only allowed for debug/internal tracks.")
     }
 
-    def releaseSigningEnabled = (System.getenv("TERMUX_ENABLE_RELEASE_SIGNING") ?: "false").toBoolean()
-    def releaseKeystoreFilePath = System.getenv("TERMUX_RELEASE_KEYSTORE_FILE") ?: ""
-    def releaseKeystorePassword = System.getenv("TERMUX_RELEASE_KEYSTORE_PASSWORD") ?: ""
-    def releaseKeyAlias = System.getenv("TERMUX_RELEASE_KEY_ALIAS") ?: ""
-    def releaseKeyPassword = System.getenv("TERMUX_RELEASE_KEY_PASSWORD") ?: ""
+    def pairedSigningValues = [
+        System.getenv("RAFCODEPHI_PAIRED_KEYSTORE_FILE") ?: "",
+        System.getenv("RAFCODEPHI_PAIRED_KEYSTORE_PASSWORD") ?: "",
+        System.getenv("RAFCODEPHI_PAIRED_KEY_ALIAS") ?: "",
+        System.getenv("RAFCODEPHI_PAIRED_KEY_PASSWORD") ?: "",
+    ]
+    def hasAnyPairedSigningMaterial = pairedSigningValues.any { !it.isEmpty() }
+    def hasPairedSigningMaterial = pairedSigningValues.every { !it.isEmpty() }
+    if (hasAnyPairedSigningMaterial && !hasPairedSigningMaterial) {
+        throw new GradleException("RAFCODEPHI paired signing requires all RAFCODEPHI_PAIRED_* variables.")
+    }
+    def legacyReleaseSigningValues = [
+        System.getenv("TERMUX_RELEASE_KEYSTORE_FILE") ?: "",
+        System.getenv("TERMUX_RELEASE_KEYSTORE_PASSWORD") ?: "",
+        System.getenv("TERMUX_RELEASE_KEY_ALIAS") ?: "",
+        System.getenv("TERMUX_RELEASE_KEY_PASSWORD") ?: "",
+    ]
+    // A complete paired identity is atomic and takes precedence as a set. Never
+    // combine one credential family with partial values from the other family.
+    def releaseSigningValues = hasPairedSigningMaterial ? pairedSigningValues : legacyReleaseSigningValues
+    def releaseSigningEnabled = (System.getenv("TERMUX_ENABLE_RELEASE_SIGNING") ?: "false").toBoolean() || hasPairedSigningMaterial
+    def releaseKeystoreFilePath = releaseSigningValues[0]
+    def releaseKeystorePassword = releaseSigningValues[1]
+    def releaseKeyAlias = releaseSigningValues[2]
+    def releaseKeyPassword = releaseSigningValues[3]
     def hasReleaseSigningMaterial = releaseKeystoreFilePath && releaseKeystorePassword && releaseKeyAlias && releaseKeyPassword
     def useReleaseSigning = false
 
@@ -211,6 +231,9 @@ android {
 
         debug {
             buildConfigField "boolean", "BOOTSTRAP_BAREMETAL_STRICT", (bootstrapBaremetalStrictOverride != null ? bootstrapBaremetalStrictOverride : false).toString()
+            if (useReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 

@@ -1,11 +1,18 @@
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
-def test_truth_table_marks_bridges_as_empty_tokens():
+def test_truth_table_separates_source_built_payload_from_runtime_proof():
     text = (ROOT / 'docs/RUNTIME_TRUTH_TABLE.md').read_text(encoding='utf-8')
-    for token in ['`pkg` | TOKEN_VAZIO', '`apt` | TOKEN_VAZIO', '`apt-get` | TOKEN_VAZIO', '`proot` | TOKEN_VAZIO']:
+    for token in [
+        '`pkg` real | PROVADO ESTRUTURAL NO PAYLOAD, TOKEN_VAZIO NO DEVICE',
+        '`apt` | PROVADO ESTRUTURAL NO PAYLOAD, TOKEN_VAZIO NO DEVICE',
+        '`apt-get` | PROVADO ESTRUTURAL NO PAYLOAD, TOKEN_VAZIO NO DEVICE',
+        '`proot` | PROVADO ESTRUTURAL NO PAYLOAD, TOKEN_VAZIO NO DEVICE',
+        'BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED',
+    ]:
         assert token in text
-    assert 'não equivale a uma distribuição Termux completa com backend apt real' in text
+    assert '`pkg update` | FUTURO' in text
+    assert '`pkg install` | FUTURO' in text
 
 def test_status_documents_canonical_sdk_abi_and_boundaries():
     text = (ROOT / 'docs/STATUS.md').read_text(encoding='utf-8')

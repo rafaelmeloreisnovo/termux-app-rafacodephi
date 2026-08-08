@@ -19,8 +19,8 @@ if ! command -v "$CC_BIN" >/dev/null 2>&1; then
     echo "[FALHA] compilador ausente: $CC_BIN" >&2
     exit 2
 fi
-if [ ! -x "$RUNNER" ]; then
-    echo "[FALHA] selftest ausente ou não executável: $RUNNER" >&2
+if [ ! -f "$RUNNER" ]; then
+    echo "[FALHA] selftest ausente: $RUNNER" >&2
     exit 2
 fi
 

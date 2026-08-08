@@ -55,7 +55,7 @@ Estado esperado após o gate `safe-core`:
 ```text
 build_metadata=PROVEN_STRUCTURAL
 github_action_references=PROVEN_STRUCTURAL
-loader_quarantine=STUB_SAFE_BLOCKED
+loader_quarantine=FUNCTIONAL_SECURITY_GATED
 rafaelia_zero_instrumentation=PROVEN_STRUCTURAL
 canonical_truth_sources=PROVEN_STRUCTURAL
 state=SAFE_CORE_IMPLEMENTATION_CLOSED
@@ -83,8 +83,8 @@ A distribuição não pode ser liberada enquanto qualquer item abaixo permanecer
 - bundle físico ARM32 ausente;
 - bundle físico ARM64 ausente;
 - matriz dual ARM ausente;
-- `pkg/apt/apt-get/dpkg/libapt/proot` sem rebuild para o prefixo RAFCODEΦ;
-- `LEGACY_PREFIX_BINARY_RISK` no payload candidato;
+- execução física do payload source-built `pkg/apt/apt-get/dpkg/proot` ainda ausente;
+- repositório binário RAFCODEΦ ainda não publicado/assinado;
 - certificados, DNS e repositório sem teste no aparelho;
 - `runtime-lock.json` histórico/incompleto.
 
@@ -97,17 +97,19 @@ release_allowed=false
 
 ## Loader
 
-O loader atual é aceito apenas como:
+O loader atual passa estruturalmente como:
 
 ```text
-state=STUB_SAFE_BLOCKED
-android:hasCode=false
-installer_behavior=false
-bootstrap_payload=false
+state=FUNCTIONAL_SECURITY_GATED
+android:hasCode=true
+loader_extraction=false
+host_custody=SHA256+BLAKE3+BOUNDED_ZIP+ATOMIC_INSTALL
 release_allowed=false
 ```
 
-Uma implementação funcional futura só pode substituir o stub quando toda a fronteira host-loader for aceita pelo contrato de segurança e por provas independentes de APK e Android.
+A promoção continua bloqueada até haver build pareado, certificados iguais e
+provas independentes no Android para caller não autorizado, grant/revogação de
+URI e instalação/rollback.
 
 ## RAFAELIA ZERO e prova física
 
@@ -134,6 +136,10 @@ DEVICE_RECEIPT_COMPLETE=TOKEN_VAZIO
 ```
 
 ## Pesquisa que não bloqueia o safe-core
+
+Fronteiras sem overclaim: ZIPRAF não comprime fisicamente; ele mantém um
+índice lógico sobre bytes existentes. A VCPU atual é uma **RAFAELIA deterministic VCPU state kernel**,
+não uma máquina virtual completa.
 
 - TLS próprio e certificação;
 - compiladores APKC completos;
