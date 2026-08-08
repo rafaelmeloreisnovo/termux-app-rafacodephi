@@ -1,6 +1,6 @@
 # ci_track: internal
 # ci_abis: armeabi-v7a
-name: Bootstrap Real-Pkg ARM32 Candidate
+name: Bootstrap Real-Pkg ARM32 Promotion Gate
 
 on:
   workflow_dispatch:
@@ -14,6 +14,7 @@ on:
       - 'scripts/prepare_bootstrap_env.sh'
       - 'scripts/verify_bootstrap_contract.sh'
       - 'scripts/write_bootstrap_candidate_receipt.py'
+      - 'scripts/write_bootstrap_promotion_gate_receipt.py'
       - 'scripts/audit_github_actions_refs.py'
       - 'tools/raf_bootstrap_profile.py'
       - 'configs/rafcodephi-bootstrap-profile-v1.json'
@@ -29,14 +30,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  real-pkg-arm32-candidate:
+  real-pkg-arm32-promotion-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      RAF_BOOTSTRAP_SOURCE: local
-      RAF_BOOTSTRAP_PROFILE: real-pkg
-      RAFCODEPHI_REAL_PKG_ARCH: arm
-      RAFCODEPHI_REAL_PKG_VALIDATE: 'true'
+      RAFCODEPHI_REAL_PKG_REPO: https://packages.termux.dev/apt/termux-main
       TERMUX_BOOTSTRAP_PACKAGE_NAME: com.termux.rafacodephi
       TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS: '1'
 
@@ -50,61 +48,86 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Validate bootstrap evidence source contract
+      - name: Validate YAML and bootstrap evidence source contracts
         run: |
           python3 -m pip install --disable-pip-version-check pytest
           python3 -m pytest -q tests/test_bootstrap_evidence_contract.py
           python3 scripts/audit_github_actions_refs.py --strict --json /tmp/action-reference-audit.json
 
-      - name: Prepare exact embedded real-pkg bootstrap
+      - name: Build raw ARM32 real-pkg payload without unsafe promotion
+        run: |
+          mkdir -p dist/bootstrap-real-pkg-arm32
+          # First create deterministic bridge siblings. Then replace only ARM32
+          # with the raw upstream package closure. Do not attach a real-pkg
+          # profile until the prefix audit passes.
+          RAFCODEPHI_REAL_PKG_BOOTSTRAP=false bash scripts/build_rafaelia_bootstraps.sh
+          python3 scripts/build_real_arm_bootstrap_core.py \
+            --arch arm \
+            --repo "$RAFCODEPHI_REAL_PKG_REPO"
+          sha256sum app/src/main/cpp/rewritten-bootstrap-arm.zip \
+            > dist/bootstrap-real-pkg-arm32/RAW_BOOTSTRAP_SHA256SUMS.txt
+
+      - name: Audit upstream binary prefix compatibility
+        id: prefix_gate
+        shell: bash
+        run: |
+          set +e
+          python3 scripts/validate_real_arm_bootstrap_core.py \
+            --json dist/bootstrap-real-pkg-arm32/prefix-audit.json \
+            app/src/main/cpp/rewritten-bootstrap-arm.zip
+          rc=$?
+          set -e
+          state=$(python3 - <<'PY'
+          import json
+          print(json.load(open('dist/bootstrap-real-pkg-arm32/prefix-audit.json'))['state'])
+          PY
+          )
+          if [[ "$state" == "PASS" && "$rc" -eq 0 ]]; then
+            echo "promotion_state=PASS" >> "$GITHUB_OUTPUT"
+          elif [[ "$state" == "BLOCKED" && "$rc" -eq 1 ]]; then
+            echo "promotion_state=BLOCKED" >> "$GITHUB_OUTPUT"
+          else
+            echo "Unexpected prefix gate result: state=$state rc=$rc" >&2
+            cat dist/bootstrap-real-pkg-arm32/prefix-audit.json >&2
+            exit 1
+          fi
+          echo "promotion_state=$state"
+
+      - name: Bind prefix audit to raw bootstrap receipt
+        run: |
+          cp /tmp/action-reference-audit.json dist/bootstrap-real-pkg-arm32/action-reference-audit.json
+          python3 scripts/write_bootstrap_promotion_gate_receipt.py \
+            --audit dist/bootstrap-real-pkg-arm32/prefix-audit.json \
+            --bootstrap app/src/main/cpp/rewritten-bootstrap-arm.zip \
+            --out dist/bootstrap-real-pkg-arm32/promotion-gate-receipt.json
+          if [[ -f out/real-arm-bootstrap-core/arm/real_arm_bootstrap_core_arm.md ]]; then
+            cp out/real-arm-bootstrap-core/arm/real_arm_bootstrap_core_arm.md \
+              dist/bootstrap-real-pkg-arm32/
+          fi
+
+      - name: Materialize exact real-pkg profile only after prefix gate PASS
+        if: steps.prefix_gate.outputs.promotion_state == 'PASS'
+        env:
+          RAF_BOOTSTRAP_SOURCE: local
+          RAF_BOOTSTRAP_PROFILE: real-pkg
+          RAFCODEPHI_REAL_PKG_ARCH: arm
+          RAFCODEPHI_REAL_PKG_VALIDATE: 'true'
         run: |
           chmod +x ./scripts/prepare_bootstrap_env.sh ./scripts/verify_bootstrap_contract.sh
           ./scripts/prepare_bootstrap_env.sh --github-env
+          cp build/reports/bootstrap-profile-matrix.json \
+            dist/bootstrap-real-pkg-arm32/bootstrap-profile-matrix.json
 
-      - name: Enforce target-aware profile matrix
+      - name: Build ARM32 APK candidate only after promotion gate PASS
+        if: steps.prefix_gate.outputs.promotion_state == 'PASS'
         run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          p = Path('build/reports/bootstrap-profile-matrix.json')
-          d = json.loads(p.read_text())
-          assert d['schema'] == 'rafcodephi-bootstrap-profile-matrix/v2'
-          assert d['structural_state'] == 'PASS'
-          assert d['requested_profile'] == 'real-pkg'
-          assert d['real_pkg_arch_request'] == 'arm'
-          assert d['embedded_profile_by_arch']['arm'] == 'real-pkg'
-          assert d['embedded_profile_by_arch']['aarch64'] == 'bridge'
-          assert d['embedded_profile_by_arch']['i686'] == 'bridge'
-          assert d['embedded_profile_by_arch']['x86_64'] == 'bridge'
-          assert d['device_validation'] == 'TOKEN_VAZIO'
-          assert d['claim_allowed'] is False
-          assert d['release_allowed'] is False
-          assert any(x.get('id') == 'TV_BOOTSTRAP_DEVICE_INSTALL' for x in d['token_vazio'])
-          print('TARGET_AWARE_BOOTSTRAP_PROFILE_PASS')
-          PY
-
-      - name: Revalidate exact embedded ARM profile
-        run: |
-          python3 tools/raf_bootstrap_profile.py validate \
-            --zip app/src/main/cpp/rewritten-bootstrap-arm.zip \
-            --expected-profile real-pkg \
-            --expected-arch arm \
-            --package-name com.termux.rafacodephi
-
-      - name: Build ARM32-capable debug APK set
-        run: |
-          # Bootstrap hashes exported by the preparation step refer to the same
-          # immutable in-workspace bytes built above. Do not rematerialize here.
           ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon
 
-      - name: Resolve ARM32 APK and write candidate receipt
-        id: candidate
+      - name: Hash-bind APK candidate only after promotion gate PASS
+        if: steps.prefix_gate.outputs.promotion_state == 'PASS'
         run: |
-          mkdir -p dist/bootstrap-real-pkg-arm32
           ARM32_APK=$(find app/build/outputs/apk/debug -type f -name 'termux-rafcodephi-debug-armeabi-v7a.apk' | head -n1)
           test -n "$ARM32_APK" && test -s "$ARM32_APK"
-          cp build/reports/bootstrap-profile-matrix.json dist/bootstrap-real-pkg-arm32/bootstrap-profile-matrix.json
-          cp /tmp/action-reference-audit.json dist/bootstrap-real-pkg-arm32/action-reference-audit.json
           python3 scripts/write_bootstrap_candidate_receipt.py \
             --matrix dist/bootstrap-real-pkg-arm32/bootstrap-profile-matrix.json \
             --apk "$ARM32_APK" \
@@ -113,36 +136,45 @@ jobs:
             --out dist/bootstrap-real-pkg-arm32/candidate-receipt.json
           cp "$ARM32_APK" dist/bootstrap-real-pkg-arm32/
           sha256sum app/src/main/cpp/rewritten-bootstrap-arm.zip "$ARM32_APK" \
-            > dist/bootstrap-real-pkg-arm32/SHA256SUMS.txt
-          echo "apk=$ARM32_APK" >> "$GITHUB_OUTPUT"
+            > dist/bootstrap-real-pkg-arm32/CANDIDATE_SHA256SUMS.txt
 
       - name: Publish fail-closed summary
+        if: always()
         run: |
           python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
           from pathlib import Path
-          d = json.loads(Path('dist/bootstrap-real-pkg-arm32/candidate-receipt.json').read_text())
-          print('## ARM32 real-pkg bootstrap candidate')
+          audit_path = Path('dist/bootstrap-real-pkg-arm32/prefix-audit.json')
+          receipt_path = Path('dist/bootstrap-real-pkg-arm32/promotion-gate-receipt.json')
+          print('## ARM32 real-pkg promotion gate')
           print()
+          if not audit_path.exists() or not receipt_path.exists():
+              print('**FAIL** — promotion evidence was not materialized.')
+              raise SystemExit(1)
+          audit = json.loads(audit_path.read_text())
+          receipt = json.loads(receipt_path.read_text())
           print('| Gate | State |')
           print('|---|---|')
           print('| YAML/action reference policy | PASS |')
           print('| bootstrap evidence source contract | PASS |')
-          print('| structural candidate | PASS |')
-          print('| exact embedded bootstrap hash | OBSERVED |')
-          print('| APK candidate hash | OBSERVED |')
+          print(f"| upstream prefix compatibility | {audit['state']} |")
+          print(f"| binary legacy-prefix entries | {audit.get('binary_risk_entry_count', 0)} |")
+          print(f"| text legacy-prefix entries | {audit.get('text_risk_entry_count', 0)} |")
+          print(f"| APK real-pkg candidate | {'OBSERVED' if Path('dist/bootstrap-real-pkg-arm32/candidate-receipt.json').exists() else 'BLOCKED'} |")
           print('| physical device install | TOKEN_VAZIO |')
           print('| pkg update | NOT_MEASURED |')
           print('| pkg install nano/python/git | NOT_MEASURED |')
-          print('| DNS/TLS repository | NOT_MEASURED |')
           print('| release_allowed | false |')
           print()
-          print('Next natural closure: install this exact hash-bound ARM32 APK on the physical device and execute the real-pkg smoke receipt.')
+          print(f"Next required action: `{receipt.get('next_required_action', 'UNAVAILABLE')}`")
+          print()
+          print('A BLOCKED prefix gate is a valid safety observation; it is not a real-pkg PASS.')
           PY
 
-      - name: Upload candidate evidence
+      - name: Upload promotion evidence
+        if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: bootstrap-real-pkg-arm32-candidate-${{ github.sha }}
+          name: bootstrap-real-pkg-arm32-promotion-${{ github.sha }}
           path: dist/bootstrap-real-pkg-arm32/
           if-no-files-found: error
