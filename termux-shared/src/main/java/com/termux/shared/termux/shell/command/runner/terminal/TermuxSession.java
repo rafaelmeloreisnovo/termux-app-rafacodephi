@@ -11,7 +11,6 @@ import com.termux.shared.R;
 import com.termux.shared.shell.command.ExecutionCommand;
 import com.termux.shared.shell.command.environment.ShellEnvironmentUtils;
 import com.termux.shared.shell.command.environment.UnixShellEnvironment;
-import com.termux.shared.shell.command.result.ResultData;
 import com.termux.shared.errors.Error;
 import com.termux.shared.errors.Errno;
 import com.termux.shared.logger.Logger;
@@ -78,6 +77,8 @@ public class TermuxSession {
                 }
             }
 
+            // Do not hard-gate terminal startup on bash: scan every supported login shell,
+            // then keep /system/bin/sh as the recovery shell when the runtime prefix is incomplete.
             if (!executionCommand.isFailsafe) {
                 StringBuilder foundCandidates = new StringBuilder();
                 for (String shellBinary : UnixShellEnvironment.LOGIN_SHELL_BINARIES) {
