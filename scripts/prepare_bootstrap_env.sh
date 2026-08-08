@@ -56,7 +56,9 @@ case "$BOOTSTRAP_SOURCE" in
     ;;
 esac
 
-log "Verifying source + exact embedded bootstrap contract..."
+# Keep the canonical token consumed by the repository-wide static install
+# contract, while making the strengthened same-observation scope explicit.
+log "Verifying bootstrap contract: source + exact embedded rewritten archives..."
 if ! RAF_BOOTSTRAP_REQUIRE_PROFILE="$PROFILE_REQUIREMENT" ./scripts/verify_bootstrap_contract.sh --check >&2; then
   log "ERROR: Bootstrap contract verification failed"
   exit 1
