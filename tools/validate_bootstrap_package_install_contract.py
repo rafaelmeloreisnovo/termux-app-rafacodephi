@@ -6,7 +6,8 @@ Structural only. This validator intentionally distinguishes:
 - Android-assigned runtime app-private filesDir;
 - wizard-selected bootstrap.zip provenance;
 - relocated bridge runtime from unproven real-pkg relocation;
-- compatibility entry point from the hardened Wizard implementation.
+- compatibility entry point from the hardened Wizard implementation;
+- the read-only, fail-closed runtime/profile readiness gate.
 
 It does not claim device runtime. Physical filesystem + first-shell receipts are
 required before the relocated runtime can be promoted from TOKEN_VAZIO.
@@ -57,6 +58,11 @@ def read(path: Path, errors: list[str]) -> str:
 def require(text: str, token: str, label: str, errors: list[str]) -> None:
     if token not in text:
         errors.append(f"{label}: missing token: {token}")
+
+
+def forbid(text: str, token: str, label: str, errors: list[str]) -> None:
+    if token in text:
+        errors.append(f"{label}: forbidden mutation token present: {token}")
 
 
 def validate() -> list[str]:
@@ -119,7 +125,6 @@ def validate() -> list[str]:
     ):
         require(installer, token, "runtime installer", errors)
 
-    # Compatibility and implementation are intentionally validated separately.
     require(wizard_entry, "extends BetaBootstrapWizardActivity", "wizard compatibility entry", errors)
     for token in (
         "Intent.ACTION_OPEN_DOCUMENT", "Select bootstrap.zip", "BootstrapWizardSource.accept(this, uri)",
@@ -131,11 +136,26 @@ def validate() -> list[str]:
 
     for token in (
         'SCHEMA = "rafcodephi.bootstrap-readiness/v1"',
+        'PROFILE_SCHEMA = "rafcodephi-bootstrap-profile/v1"',
+        'PROFILE_FILE = "BOOTSTRAP_PROFILE.json"',
+        'PROFILE_READ_LIMIT = 64 * 1024',
         '"sh"', '"pkg"', '"apkmanager"', '"shellbash"', '"busybox-safe"', '"proot-safe"',
-        "TermuxRuntimePaths.storageHomeDir()", "realPkgRelocationClaimAllowed()",
-        "device_runtime_proof=", "claim_allowed_release=false",
+        "TermuxRuntimePaths.storageHomeDir()",
+        'context.getPackageName().equals(profile.optString("package_name", ""))',
+        'prefix.getAbsolutePath().equals(profile.optString("prefix", ""))',
+        'expectedBootstrapArch().equals(profile.optString("arch", ""))',
+        '!profile.optBoolean("claim_allowed", true)',
+        '!profile.optBoolean("release_allowed", true)',
+        'TOKEN_VAZIO.equals(profile.optString("device_validation", ""))',
+        'profile.optJSONArray("required_entries")',
+        'canonicalTarget.startsWith(canonicalPrefix)',
+        "realPkgRelocationClaimAllowed()", "device_runtime_proof=", "claim_allowed_release=false",
     ):
         require(readiness_gate, token, "shared bootstrap readiness gate", errors)
+
+    # Readiness is observation-only. Mutation belongs exclusively to installer/repair paths.
+    for token in (".mkdirs()", "Os.chmod", ".delete()", "setupBootstrapIfNeeded"):
+        forbid(readiness_gate, token, "shared bootstrap readiness gate", errors)
 
     for token in (
         "HOST_ACCEPTED_CANONICAL_BOOTSTRAP", "expectedHashForCurrentAbi()", "blake3Hex",
@@ -185,6 +205,7 @@ def main() -> int:
     print("wizard_bootstrap_document_source=fail_closed_b3_abi_profile_bound")
     print("wizard_compatibility_entry=preserved")
     print("wizard_readiness_gate=shared_fail_closed")
+    print("wizard_readiness_profile_contract=read_only_fail_closed")
     print("runtime_filesystem=context_getFilesDir_resolved")
     print("installed_profile=source_prefix_preserved_runtime_prefix_materialized")
     print("relocated_bridge_runtime=structurally_supported_claim_still_closed")
