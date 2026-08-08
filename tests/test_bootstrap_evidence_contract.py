@@ -11,6 +11,9 @@ def test_real_pkg_profile_is_target_aware_and_keeps_debt_explicit() -> None:
     text = read("scripts/build_bootstrap_profile.sh")
     assert "profile_for_arch" in text
     assert "all:aarch64|all:arm|aarch64:aarch64|arm:arm" in text
+    assert 'SKIP_BUILD="${RAF_BOOTSTRAP_SKIP_BUILD:-false}"' in text
+    assert "BOOTSTRAP_PROFILE_REUSE_AUDITED_BYTES=true" in text
+    assert '"reused_audited_bytes"' in text
     assert '"schema": "rafcodephi-bootstrap-profile-matrix/v2"' in text
     assert '"embedded_profile_by_arch"' in text
     assert '"TV_BOOTSTRAP_DEVICE_INSTALL"' in text
@@ -28,6 +31,7 @@ def test_contract_verifies_the_exact_embedded_bootstrap_bytes() -> None:
     assert "RAF_BOOTSTRAP_REQUIRE_PROFILE" in verify
     assert 'PROFILE_REQUIREMENT="required"' in prepare
     assert 'RAF_BOOTSTRAP_REQUIRE_PROFILE="$PROFILE_REQUIREMENT"' in prepare
+    assert "Verifying bootstrap contract" in prepare
     assert "exact embedded rewritten archives" in prepare
 
 
@@ -50,6 +54,7 @@ def test_prefix_audit_promotes_binary_prefix_risk_to_explicit_p0_debt() -> None:
     assert '"priority": "P0"' in text
     assert '"next_required_action"' in text
     assert '"REBUILD_AFFECTED_PACKAGES_FOR_RAFCODEPHI_PREFIX"' in text
+    assert "no binary replacement was performed" in text
     assert '"claim_allowed_device_runtime": False' in text
     assert '"claim_allowed_pkg_runtime": False' in text
     assert '"release_allowed": False' in text
@@ -67,7 +72,7 @@ def test_promotion_gate_receipt_binds_blocker_without_promoting_runtime() -> Non
     assert '"device_validation": "TOKEN_VAZIO"' in text
 
 
-def test_real_pkg_workflow_is_a_fail_closed_promotion_gate() -> None:
+def test_real_pkg_workflow_is_a_fail_closed_same_observation_promotion_gate() -> None:
     text = read(".github/workflows/bootstrap-real-pkg-arm32-candidate.yml")
     assert "# ci_track: internal" in text
     assert "name: Bootstrap Real-Pkg ARM32 Promotion Gate" in text
@@ -80,6 +85,9 @@ def test_real_pkg_workflow_is_a_fail_closed_promotion_gate() -> None:
     assert "Materialize exact real-pkg profile only after prefix gate PASS" in text
     assert "Build ARM32 APK candidate only after promotion gate PASS" in text
     assert "Hash-bind APK candidate only after promotion gate PASS" in text
+    assert "RAF_BOOTSTRAP_SKIP_BUILD: 'true'" in text
+    assert "d['reused_audited_bytes'] is True" in text
+    assert "SAME_OBSERVATION_PROFILE_PROMOTION_PASS" in text
     assert "write_bootstrap_candidate_receipt.py" in text
     assert "A BLOCKED prefix gate is a valid safety observation" in text
 
