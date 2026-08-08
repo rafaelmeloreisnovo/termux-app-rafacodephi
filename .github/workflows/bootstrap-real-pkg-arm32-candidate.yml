@@ -1,4 +1,4 @@
-# ci_track: bootstrap
+# ci_track: internal
 # ci_abis: armeabi-v7a
 name: Bootstrap Real-Pkg ARM32 Candidate
 
