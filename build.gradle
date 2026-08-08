@@ -49,6 +49,23 @@ subprojects { subproject ->
 
             subproject.dependencies.add("testImplementation", "junit:junit:4.13.2")
             subproject.dependencies.add("testImplementation", "org.robolectric:robolectric:4.10")
+
+            // CI contract: rafaelia_pipeline.yml resolves the semantic base version
+            // through :app:printVersionName. Keep the task beside the Android plugin
+            // so it is available in every Gradle invocation without duplicating
+            // version literals in workflow YAML.
+            subproject.tasks.register("printVersionName") {
+                group = "help"
+                description = "Prints the configured app base versionName for CI artifact tagging."
+                doLast {
+                    def androidExtension = subproject.extensions.getByName("android")
+                    def resolvedVersionName = androidExtension.defaultConfig.versionName
+                    if (resolvedVersionName == null || resolvedVersionName.toString().trim().isEmpty()) {
+                        throw new GradleException("Unable to resolve :app versionName")
+                    }
+                    println resolvedVersionName
+                }
+            }
         }
     }
 }
