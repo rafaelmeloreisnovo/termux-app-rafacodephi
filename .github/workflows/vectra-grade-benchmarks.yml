@@ -13,6 +13,7 @@ on:
       - 'rafaelia/**'
       - 'scripts/**'
       - 'tests/test_industrial_benchmark_v3_contract.py'
+      - 'tests/test_beta_orchestrator_contract.py'
       - 'docs/VECTRA_GRADE_BENCHMARKS.md'
       - 'docs/benchmark/**'
       - 'DOCS_L2_TREE.md'
@@ -26,10 +27,15 @@ on:
       - 'rafaelia/**'
       - 'scripts/**'
       - 'tests/test_industrial_benchmark_v3_contract.py'
+      - 'tests/test_beta_orchestrator_contract.py'
       - 'docs/VECTRA_GRADE_BENCHMARKS.md'
       - 'docs/benchmark/**'
       - 'DOCS_L2_TREE.md'
       - '.github/workflows/vectra-grade-benchmarks.yml'
+
+concurrency:
+  group: vectra-grade-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   vectra-grade-benchmarks:
@@ -55,9 +61,11 @@ jobs:
       - name: Install benchmark contract test dependency
         run: python3 -m pip install --disable-pip-version-check pytest
 
-      - name: Validate industrial benchmark V3 contract
+      - name: Validate industrial benchmark V3 + beta orchestrator contracts
         run: |
-          python3 -m pytest -q tests/test_industrial_benchmark_v3_contract.py
+          python3 -m pytest -q \
+            tests/test_industrial_benchmark_v3_contract.py \
+            tests/test_beta_orchestrator_contract.py
 
       - name: Build debug APK
         run: |
