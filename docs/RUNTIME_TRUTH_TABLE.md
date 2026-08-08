@@ -15,7 +15,7 @@
 | wrappers cat/ls/clear/grep | PROVADO ESTRUTURAL | builder e testes | smoke físico |
 | pkg help | PROVADO ESTRUTURAL | bridge mínima | smoke físico |
 | payload ARM real | BLOQUEADO | `LEGACY_PREFIX_BINARY_RISK` | rebuild para o prefixo/runtime realmente usado |
-| `pkg` real | TOKEN_VAZIO | candidato não promovido; `device pkg smoke` ainda ausente | stack prefix-safe + device pkg smoke + receipt |
+| `pkg` real | TOKEN_VAZIO | candidato não promovido; `device pkg smoke` ainda ausente | `DEVICE_REAL_PKG_VALIDATED` permanece ausente até stack prefix-safe + device pkg smoke + receipt |
 | `apt` | TOKEN_VAZIO | candidato bloqueado | rebuild e teste físico |
 | `apt-get` | TOKEN_VAZIO | candidato bloqueado | rebuild e teste físico |
 | `dpkg` | TOKEN_VAZIO | candidato bloqueado | rebuild e teste físico |
