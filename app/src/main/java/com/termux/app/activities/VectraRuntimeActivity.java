@@ -294,8 +294,12 @@ public class VectraRuntimeActivity extends AppCompatActivity {
         else sb.append("• Page size: UNAVAILABLE\n");
         if (profile.cacheLine > 0) sb.append("• Cache line: ").append(profile.cacheLine).append(" bytes\n");
         else sb.append("• Cache line: UNAVAILABLE (detector returned non-positive value)\n");
-        if (profile.cpuClusters > 0) sb.append("• CPU clusters: ").append(profile.cpuClusters).append("\n");
-        else sb.append("• CPU clusters: UNAVAILABLE\n");
+        String clusters = profile.cpuClusters == null ? "" : profile.cpuClusters.trim();
+        if (!clusters.isEmpty() && !"n/a".equalsIgnoreCase(clusters) && !"unknown".equalsIgnoreCase(clusters)) {
+            sb.append("• CPU clusters: ").append(clusters).append("\n");
+        } else {
+            sb.append("• CPU clusters: UNAVAILABLE\n");
+        }
         sb.append("• Device ABI list: ").append(joinStrings(Build.SUPPORTED_ABIS));
         return sb.toString();
     }
