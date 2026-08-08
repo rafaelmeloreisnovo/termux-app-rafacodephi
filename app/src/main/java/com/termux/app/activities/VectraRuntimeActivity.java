@@ -42,8 +42,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class VectraRuntimeActivity extends AppCompatActivity {
 
     private LinearLayout contentLayout;
-    private boolean lowLevelLibraryLoaded;
-    private String lowLevelLibraryError = "";
+    private boolean apiLowLevelLibraryLoaded;
+    private String apiLowLevelLibraryError = "";
     private final AtomicInteger renderEpoch = new AtomicInteger(0);
 
     private interface SectionBuilder {
@@ -61,7 +61,7 @@ public class VectraRuntimeActivity extends AppCompatActivity {
         AppCompatActivityUtils.setToolbar(this, com.termux.shared.R.id.toolbar);
         AppCompatActivityUtils.setShowBackButtonInActionBar(this, true);
 
-        initializeLowLevelLibrary();
+        initializeApiLowLevelLibrary();
     }
 
     @Override
@@ -76,14 +76,14 @@ public class VectraRuntimeActivity extends AppCompatActivity {
         return true;
     }
 
-    private void initializeLowLevelLibrary() {
+    private void initializeApiLowLevelLibrary() {
         try {
             System.loadLibrary("api_lowlevel");
-            lowLevelLibraryLoaded = true;
-            lowLevelLibraryError = "";
+            apiLowLevelLibraryLoaded = true;
+            apiLowLevelLibraryError = "";
         } catch (Throwable error) {
-            lowLevelLibraryLoaded = false;
-            lowLevelLibraryError = error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage());
+            apiLowLevelLibraryLoaded = false;
+            apiLowLevelLibraryError = error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage());
         }
     }
 
@@ -121,8 +121,8 @@ public class VectraRuntimeActivity extends AppCompatActivity {
     private String buildScopeSummary() {
         return "• Component: INTERNAL_TERMUX_RAFCODEPHI_SCREEN\n"
             + "• APK owner: " + getPackageName() + "\n"
-            + "• External Vectras app installed: NOT_REQUIRED\n"
-            + "• External Vectras repository/CI: NOT_REQUIRED\n"
+            + "• External Vectras installation requirement: NOT_REQUIRED\n"
+            + "• External Vectras repository/CI requirement: NOT_REQUIRED\n"
             + "• Purpose: local sensor, hardware, low-level and PA benchmark diagnostics\n"
             + "• Invariant: no claim may exceed evidence observed by this installed APK";
     }
@@ -270,23 +270,24 @@ public class VectraRuntimeActivity extends AppCompatActivity {
     }
 
     private String buildHardwareProfileSummary() {
-        if (!lowLevelLibraryLoaded) {
-            return "• Native library: BLOCKED\n"
-                + "• Error: " + lowLevelLibraryError + "\n"
-                + "• Hardware profile claim: not promoted";
+        if (!BareMetal.isLoaded()) {
+            return "• termux-baremetal library: UNAVAILABLE\n"
+                + "• Hardware profile: UNAVAILABLE\n"
+                + "• api_lowlevel status is reported separately and does not substitute for BareMetal capability evidence";
         }
 
         BareMetal.HardwareProfile profile = BareMetal.readHardwareProfile();
         BareMetal.CapabilitiesDetail caps = BareMetal.getCapabilitiesDetailParsed();
         if (profile == null || caps == null) {
-            return "• State: INVALIDATED\n• Reason: native hardware profile returned null";
+            return "• State: INVALIDATED\n• Reason: termux-baremetal hardware profile returned null";
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("• Native library loaded: yes\n");
+        sb.append("• termux-baremetal library loaded: yes\n");
         sb.append("• ABI: ").append(profile.abi == null ? "UNAVAILABLE" : profile.abi).append("\n");
         sb.append("• Runtime capabilities: 0x").append(Integer.toHexString(caps.runtime)).append("\n");
         sb.append("• Effective capabilities: 0x").append(Integer.toHexString(caps.effective)).append("\n");
+        sb.append("• Runtime capabilities directly valid: ").append(caps.runtimeValid).append("\n");
         sb.append("• Access flags: 0x").append(Integer.toHexString(profile.accessFlags)).append("\n");
         if (profile.cpusOnline > 0) sb.append("• CPUs online: ").append(profile.cpusOnline).append("\n");
         else sb.append("• CPUs online: UNAVAILABLE\n");
@@ -378,8 +379,8 @@ public class VectraRuntimeActivity extends AppCompatActivity {
             sb.append("• Reproducibility claim allowed: false until homogeneous repeated trials exist\n");
         }
 
-        if (!lowLevelLibraryLoaded) {
-            sb.append("\n• Low-level state: BLOCKED (").append(lowLevelLibraryError).append(")");
+        if (!apiLowLevelLibraryLoaded) {
+            sb.append("\n• api_lowlevel state query: BLOCKED (").append(apiLowLevelLibraryError).append(")");
             return sb.toString();
         }
 
@@ -392,10 +393,10 @@ public class VectraRuntimeActivity extends AppCompatActivity {
             int stateEntropy = hiWord & 0xFF;
             int stateEvents = (int)(state & 0xFFFFFFFFL);
             sb.append(String.format(Locale.US,
-                "\n• Low-level state: phase=%d att=%d flags=0x%02x entropy=0x%02x events=%d",
+                "\n• api_lowlevel state: phase=%d att=%d flags=0x%02x entropy=0x%02x events=%d",
                 statePhase, stateAtt, stateFlags, stateEntropy, stateEvents));
         } catch (Throwable error) {
-            sb.append("\n• Low-level state: UNAVAILABLE (")
+            sb.append("\n• api_lowlevel state: UNAVAILABLE (")
                 .append(error.getClass().getSimpleName()).append(")");
         }
         return sb.toString();
@@ -409,7 +410,9 @@ public class VectraRuntimeActivity extends AppCompatActivity {
         sb.append("• External Vectras installation: NOT_REQUIRED — closed by scope invariant\n");
         sb.append("• External Vectras CI: NOT_REQUIRED — closed by scope invariant\n");
         sb.append("• api_lowlevel load: ")
-            .append(lowLevelLibraryLoaded ? "PASS" : "BLOCKED — " + lowLevelLibraryError).append("\n");
+            .append(apiLowLevelLibraryLoaded ? "PASS" : "BLOCKED — " + apiLowLevelLibraryError).append("\n");
+        sb.append("• termux-baremetal load: ")
+            .append(BareMetal.isLoaded() ? "PASS" : "UNAVAILABLE — native library not loaded").append("\n");
 
         if ("NOT_MEASURED".equals(readState)) {
             sb.append("• PA physical execution receipt: TOKEN_VAZIO / NOT_MEASURED\n");
