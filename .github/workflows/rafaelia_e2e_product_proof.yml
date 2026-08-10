@@ -1,5 +1,7 @@
 name: "🧪 RAFCODEPHI E2E Product Proof"
 
+run-name: "TORRE / Termux RAFCODEPHI / ${{ inputs.torre_correlation_id || github.run_id }}"
+
 on:
   pull_request:
     branches: [master]
@@ -12,9 +14,19 @@ on:
       - '.github/workflows/rafaelia_e2e_product_proof.yml'
       - 'reports/device-e2e/**'
   workflow_dispatch:
+    inputs:
+      torre_correlation_id:
+        description: Correlation ID supplied by the TORRE controller
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
+
+concurrency:
+  group: torre-unit-termux-rafcodephi-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   contract:
