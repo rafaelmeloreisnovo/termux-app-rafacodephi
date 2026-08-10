@@ -3,6 +3,13 @@ name: "🧪 RAFCODEPHI E2E Product Proof"
 run-name: "TORRE / Termux RAFCODEPHI / ${{ inputs.torre_correlation_id || github.run_id }}"
 
 on:
+  workflow_call:
+    inputs:
+      torre_correlation_id:
+        description: Correlation ID supplied by the TORRE controller
+        required: false
+        default: ""
+        type: string
   pull_request:
     branches: [master]
     paths:
@@ -35,7 +42,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
 
