@@ -51,7 +51,6 @@ jobs:
       - name: Checkout exact app revision
         uses: actions/checkout@v7
         with:
-          path: app
           persist-credentials: false
           fetch-depth: 1
 
@@ -113,12 +112,15 @@ jobs:
           sha256sum "$MANIFEST" "$ARM" "$ARM64" > build/reports/rafcodephi-v1-bootstrap.sha256
 
       - name: Setup Android build environment
-        uses: ./app/.github/actions/rafaelia-android-setup
+        uses: ./.github/actions/rafaelia-android-setup
         with:
           java-version: '17'
+          prepare-bootstrap: 'false'
+
+      - name: Install focused test dependency
+        run: python3 -m pip install --disable-pip-version-check pytest
 
       - name: Import exact source-built bootstrap pair and build V1 APK
-        working-directory: app
         shell: bash
         run: |
           set -euo pipefail
@@ -140,8 +142,8 @@ jobs:
           export TERMUX_APK_VERSION_TAG="rafcodephi-v1-${GITHUB_SHA::12}"
           ./gradlew assembleDebug --no-daemon --warning-mode all
 
-          APK_DIR_PATH="$(APK_SEARCH_ROOT="$PWD/app/build/outputs/apk" \
-            bash scripts/resolve_apk_output_dir.sh "$TERMUX_APK_VERSION_TAG" arm64-v8a armeabi-v7a)"
+          APK_DIR_PATH="$(bash scripts/resolve_apk_output_dir.sh \
+            "$TERMUX_APK_VERSION_TAG" arm64-v8a armeabi-v7a)"
           printf '%s\n' "$APK_DIR_PATH" > build/reports/rafcodephi-v1-apk-dir.txt
           sha256sum "$APK_DIR_PATH"/*.apk > build/reports/rafcodephi-v1-apk.sha256
 
@@ -149,13 +151,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          APP_SHA="$(git -C app rev-parse HEAD)"
+          APP_SHA="$(git rev-parse HEAD)"
           PKG_SHA="$(git -C termux-packages rev-parse HEAD)"
           MANIFEST=termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
           ARM=termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
           ARM64=termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
-          APP_IMPORT=app/build/reports/rafcodephi-real-bootstrap-import-matrix.json
-          APK_SHA=app/build/reports/rafcodephi-v1-apk.sha256
+          APP_IMPORT=build/reports/rafcodephi-real-bootstrap-import-matrix.json
+          APK_SHA=build/reports/rafcodephi-v1-apk.sha256
           test -s "$APP_IMPORT"
           test -s "$APK_SHA"
           python3 - "$APP_SHA" "$PKG_SHA" "$MANIFEST" "$ARM" "$ARM64" "$APP_IMPORT" "$APK_SHA" <<'PY'
@@ -185,12 +187,12 @@ jobs:
               'claim_allowed': False,
               'sha256': {str(p): sha256(p) for p in paths},
           }
-          out = Path('app/build/reports/rafcodephi-v1-cross-repo-receipt.json')
+          out = Path('build/reports/rafcodephi-v1-cross-repo-receipt.json')
           out.write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n', encoding='utf-8')
           print(out)
           PY
-          sha256sum app/build/reports/rafcodephi-v1-cross-repo-receipt.json \
-            > app/build/reports/rafcodephi-v1-cross-repo-receipt.json.sha256
+          sha256sum build/reports/rafcodephi-v1-cross-repo-receipt.json \
+            > build/reports/rafcodephi-v1-cross-repo-receipt.json.sha256
 
       - name: Upload V1 APK and evidence
         if: always()
@@ -198,10 +200,10 @@ jobs:
         with:
           name: rafcodephi-v1-${{ github.run_id }}
           path: |
-            app/build/reports/rafcodephi-v1-*
-            app/build/reports/rafcodephi-real-bootstrap-import-*.json
-            app/app/build/outputs/apk/**/*.apk
-            app/app/build/outputs/apk/**/output-metadata.json
+            build/reports/rafcodephi-v1-*
+            build/reports/rafcodephi-real-bootstrap-import-*.json
+            app/build/outputs/apk/**/*.apk
+            app/build/outputs/apk/**/output-metadata.json
             termux-packages/build/reports/rafcodephi-v1-*
             termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
           if-no-files-found: error
