@@ -1,0 +1,210 @@
+name: RAFCODEPHI V1 — termux-packages to APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      termux_packages_ref:
+        description: Exact termux-packages commit/ref to consume
+        required: true
+        default: 73ae3978fa97e0ebfe76779388e8b77f1991c395
+        type: string
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/rafcodephi-v1-termux-packages.yml'
+      - 'docs/RAFCODEPHI_V1_TERMUX_PACKAGES.md'
+      - 'tests/test_rafcodephi_v1_termux_packages_contract.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rafcodephi-v1-termux-packages-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CLAIM_ALLOWED: 'false'
+  PHYSICAL_ANDROID: 'TOKEN_VAZIO'
+  TERMUX_PACKAGES_PIN: 73ae3978fa97e0ebfe76779388e8b77f1991c395
+
+jobs:
+  contract:
+    name: V1 contract — fail closed
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout app
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Validate V1 integration contract
+        run: python3 tests/test_rafcodephi_v1_termux_packages_contract.py
+
+  integrated-v1:
+    name: termux-packages → real bootstrap → debug APK
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 210
+    env:
+      SELECTED_TERMUX_PACKAGES_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || '73ae3978fa97e0ebfe76779388e8b77f1991c395' }}
+    steps:
+      - name: Checkout exact app revision
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Checkout pinned termux-packages source
+        uses: actions/checkout@v7
+        with:
+          repository: rafaelmeloreisnovo/termux-packages
+          ref: ${{ env.SELECTED_TERMUX_PACKAGES_REF }}
+          path: termux-packages
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Bind termux-packages identity and provenance
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          test -n "$ACTUAL_SHA"
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            test "$ACTUAL_SHA" = "$TERMUX_PACKAGES_PIN"
+          fi
+          mkdir -p build/reports
+          python3 scripts/apply-rafcodephi-build-properties.py \
+            --properties scripts/properties.sh \
+            --receipt build/reports/rafcodephi-v1-properties.json
+          bash scripts/validate-rafcodephi-build-properties.sh
+          printf '%s\n' "$ACTUAL_SHA" > build/reports/rafcodephi-v1-termux-packages.commit
+          sha256sum scripts/properties.sh > build/reports/rafcodephi-v1-properties.sha256
+
+      - name: Build real ARM and ARM64 bootstrap from termux-packages
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-real-bootstrap.sh
+          ./scripts/run-docker.sh \
+            ./scripts/build-rafcodephi-real-bootstrap.sh \
+            --architectures arm,aarch64
+
+      - name: Gate package/bootstrap output
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          MANIFEST=artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+          ARM=artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
+          ARM64=artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
+          test -s "$MANIFEST"
+          test -s "$ARM"
+          test -s "$ARM64"
+          grep -Fx 'schema=rafcodephi.real-bootstrap-sourcebuild/v1' "$MANIFEST"
+          grep -Fx 'package_name=com.termux.rafacodephi' "$MANIFEST"
+          grep -Fx 'prefix=/data/data/com.termux.rafacodephi/files/usr' "$MANIFEST"
+          grep -Fx 'bridge_allowed=false' "$MANIFEST"
+          grep -Fx 'legacy_prefix_allowed=false' "$MANIFEST"
+          grep -Fx 'claim_allowed_device_runtime=false' "$MANIFEST"
+          grep -Fx 'device_runtime_proof=TOKEN_VAZIO' "$MANIFEST"
+          sha256sum "$MANIFEST" "$ARM" "$ARM64" > build/reports/rafcodephi-v1-bootstrap.sha256
+
+      - name: Setup Android build environment
+        uses: ./.github/actions/rafaelia-android-setup
+        with:
+          java-version: '17'
+          prepare-bootstrap: 'false'
+
+      - name: Install focused test dependency
+        run: python3 -m pip install --disable-pip-version-check pytest
+
+      - name: Import exact source-built bootstrap pair and build V1 APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          export RAF_BOOTSTRAP_SOURCE=source-built-real
+          export RAF_REAL_BOOTSTRAP_ZIP_ARM="$GITHUB_WORKSPACE/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip"
+          export RAF_REAL_BOOTSTRAP_ZIP_AARCH64="$GITHUB_WORKSPACE/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip"
+          export RAF_REAL_BOOTSTRAP_MANIFEST="$GITHUB_WORKSPACE/termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt"
+          bash scripts/prepare_bootstrap_env.sh --print-env --skip-android-preflight \
+            > build/reports/rafcodephi-v1-bootstrap.env
+          set -a
+          # shellcheck disable=SC1091
+          source build/reports/rafcodephi-v1-bootstrap.env
+          set +a
+
+          python3 -m pytest -q tests/test_source_built_real_bootstrap.py
+
+          export TERMUX_APP_VERSION_NAME="0.118.0-rafcodephi-v1"
+          export TERMUX_APK_VERSION_TAG="rafcodephi-v1-${GITHUB_SHA::12}"
+          ./gradlew assembleDebug --no-daemon --warning-mode all
+
+          APK_DIR_PATH="$(bash scripts/resolve_apk_output_dir.sh \
+            "$TERMUX_APK_VERSION_TAG" arm64-v8a armeabi-v7a)"
+          printf '%s\n' "$APK_DIR_PATH" > build/reports/rafcodephi-v1-apk-dir.txt
+          sha256sum "$APK_DIR_PATH"/*.apk > build/reports/rafcodephi-v1-apk.sha256
+
+      - name: Emit cross-repository V1 receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_SHA="$(git rev-parse HEAD)"
+          PKG_SHA="$(git -C termux-packages rev-parse HEAD)"
+          MANIFEST=termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+          ARM=termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
+          ARM64=termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
+          APP_IMPORT=build/reports/rafcodephi-real-bootstrap-import-matrix.json
+          APK_SHA=build/reports/rafcodephi-v1-apk.sha256
+          test -s "$APP_IMPORT"
+          test -s "$APK_SHA"
+          python3 - "$APP_SHA" "$PKG_SHA" "$MANIFEST" "$ARM" "$ARM64" "$APP_IMPORT" "$APK_SHA" <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+
+          app_sha, pkg_sha = sys.argv[1], sys.argv[2]
+          paths = [Path(p) for p in sys.argv[3:]]
+          def sha256(path):
+              h = hashlib.sha256()
+              with path.open('rb') as f:
+                  for block in iter(lambda: f.read(1 << 20), b''):
+                      h.update(block)
+              return h.hexdigest()
+          receipt = {
+              'schema': 'rafcodephi.v1-termux-packages-to-apk/v1',
+              'state': 'BUILD_EVIDENCE_PASS',
+              'app_commit': app_sha,
+              'termux_packages_commit': pkg_sha,
+              'package_name': 'com.termux.rafacodephi',
+              'prefix': '/data/data/com.termux.rafacodephi/files/usr',
+              'source_built_arm_arm64': True,
+              'bridge_allowed': False,
+              'legacy_prefix_allowed': False,
+              'package_repo_runtime_state': 'BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED',
+              'physical_android': 'TOKEN_VAZIO',
+              'claim_allowed': False,
+              'sha256': {str(p): sha256(p) for p in paths},
+          }
+          out = Path('build/reports/rafcodephi-v1-cross-repo-receipt.json')
+          out.write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          print(out)
+          PY
+          sha256sum build/reports/rafcodephi-v1-cross-repo-receipt.json \
+            > build/reports/rafcodephi-v1-cross-repo-receipt.json.sha256
+
+      - name: Upload V1 APK and evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rafcodephi-v1-${{ github.run_id }}
+          path: |
+            build/reports/rafcodephi-v1-*
+            build/reports/rafcodephi-real-bootstrap-import-*.json
+            app/build/outputs/apk/**/*.apk
+            app/build/outputs/apk/**/output-metadata.json
+            termux-packages/build/reports/rafcodephi-v1-*
+            termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+          if-no-files-found: error
+          retention-days: 30
