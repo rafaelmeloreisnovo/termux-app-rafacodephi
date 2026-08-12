@@ -2,7 +2,7 @@
 from pathlib import Path
 
 WORKFLOW = Path('.github/workflows/rafcodephi-v1-termux-packages.yml')
-PIN = '73ae3978fa97e0ebfe76779388e8b77f1991c395'
+PIN = '7b59383c25f7557ba8a29a24f715c5fb5b26cc53'
 
 
 def require(text: str, token: str) -> None:

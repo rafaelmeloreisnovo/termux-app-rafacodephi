@@ -6,7 +6,7 @@ on:
       termux_packages_ref:
         description: Exact termux-packages commit/ref to consume
         required: true
-        default: 73ae3978fa97e0ebfe76779388e8b77f1991c395
+        default: 7b59383c25f7557ba8a29a24f715c5fb5b26cc53
         type: string
   pull_request:
     branches: [master]
@@ -25,7 +25,7 @@ concurrency:
 env:
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
-  TERMUX_PACKAGES_PIN: 73ae3978fa97e0ebfe76779388e8b77f1991c395
+  TERMUX_PACKAGES_PIN: 7b59383c25f7557ba8a29a24f715c5fb5b26cc53
 
 jobs:
   contract:
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 210
     env:
-      SELECTED_TERMUX_PACKAGES_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || '73ae3978fa97e0ebfe76779388e8b77f1991c395' }}
+      SELECTED_TERMUX_PACKAGES_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || '7b59383c25f7557ba8a29a24f715c5fb5b26cc53' }}
     steps:
       - name: Checkout exact app revision
         uses: actions/checkout@v7
