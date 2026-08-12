@@ -22,7 +22,9 @@ termux-packages@SHA
 
 - app: `rafaelmeloreisnovo/termux-app-rafacodephi`
 - packages: `rafaelmeloreisnovo/termux-packages`
-- pin inicial: `73ae3978fa97e0ebfe76779388e8b77f1991c395`
+- pin atual: `7b59383c25f7557ba8a29a24f715c5fb5b26cc53`
+- origem do pin: merge do `termux-packages` PR #75
+- evidência do pin: grafo completo ARM32 `PASS`, ARM64 `PASS`, agregador `PASS`, Phase 9.15 `PASS`
 - package: `com.termux.rafacodephi`
 - prefix: `/data/data/com.termux.rafacodephi/files/usr`
 - arquiteturas: `arm` e `aarch64`
@@ -35,6 +37,17 @@ Em pull requests, o pin é obrigatório. Em execução manual, outro ref pode se
 O artefato consumido é produzido por `scripts/build-rafcodephi-real-bootstrap.sh` no repositório de packages e exige, nas duas arquiteturas, payload real de `bash`, `pkg`, `apt`, `apt-get`, `dpkg`, `busybox`, `proot` e cliente `termux-api`, além do perfil RAFCODEPHI. Bridge e prefixo legado são rejeitados.
 
 O app não aceita apenas o nome do artefato: valida manifesto, SHA-256, arquitetura ELF, package, prefixo, entradas obrigatórias, rota da API e ausência do prefixo `/data/data/com.termux/files/usr` no caminho crítico.
+
+## Evidência de portabilidade do pin atual
+
+O gate `RAFCODEPHI Full ARM Cross Graph` foi corrigido para instalar apenas o toolchain correspondente a cada lane. Antes, cada lane instalava simultaneamente os toolchains ARM32 e AArch64; a ARM32 atingia timeout durante a instalação. Após a correção:
+
+- ARM32: toolchain específico `PASS`; grafo completo `PASS`; ELF/receipt `PASS`;
+- ARM64: toolchain específico `PASS`; grafo completo `PASS`; ELF/receipt `PASS`;
+- transit composto: `PASS`;
+- `PHYSICAL_ANDROID` continua `TOKEN_VAZIO`.
+
+Essa evidência é de cross-build Linux e não substitui execução Android/Bionic física.
 
 ## Limite epistêmico da V1
 
