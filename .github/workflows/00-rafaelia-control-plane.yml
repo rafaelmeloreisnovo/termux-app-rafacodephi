@@ -34,6 +34,7 @@ on:
       - '.github/actions/**'
       - 'scripts/ci/workflow_control_plane.py'
       - 'scripts/validate_ci_workflow_metadata.sh'
+      - 'tests/test_workflow_control_plane_contract.py'
       - 'docs/CI_WORKFLOW_OWNERSHIP.md'
       - 'docs/WORKFLOW_CONTROL_PLANE.md'
   push:
@@ -43,6 +44,7 @@ on:
       - '.github/actions/**'
       - 'scripts/ci/workflow_control_plane.py'
       - 'scripts/validate_ci_workflow_metadata.sh'
+      - 'tests/test_workflow_control_plane_contract.py'
       - 'docs/CI_WORKFLOW_OWNERSHIP.md'
       - 'docs/WORKFLOW_CONTROL_PLANE.md'
 
@@ -94,6 +96,9 @@ jobs:
           fi
           python3 scripts/ci/workflow_control_plane.py "${args[@]}"
           cat reports/workflow-control-plane.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Contratos estáticos do control plane
+        run: python3 tests/test_workflow_control_plane_contract.py
 
       - name: Validar metadados legados em modo compatível
         env:
