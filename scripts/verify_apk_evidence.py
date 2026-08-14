@@ -230,10 +230,88 @@ def load_contract(path):
         return json.load(stream)
 
 
+def verify_build_provenance(contract, build_receipt_path, artifact_sha256):
+    expected = contract.get("build_provenance", {})
+    expected_source = expected.get("source_commit")
+    expected_receipt_sha = expected.get("build_receipt_sha256")
+    required = bool(expected_source or expected_receipt_sha)
+    result = {
+        "required": required,
+        "status": "TOKEN_VAZIO_EXPECTATION" if not required else "FAIL",
+        "receipt_path": str(build_receipt_path) if build_receipt_path else None,
+        "expected_source_commit": expected_source,
+        "expected_receipt_sha256": expected_receipt_sha,
+        "actual_receipt_sha256": None,
+        "receipt_source_commit": None,
+        "artifact_listed": False,
+        "source_tree_clean_before_build": None,
+        "source_tree_clean_after_build": None,
+        "checks": [],
+    }
+    if not required:
+        return result, False, False
+
+    def prov_check(name, observed, expected_value):
+        passed = observed == expected_value
+        result["checks"].append(
+            {
+                "name": name,
+                "status": "PASS" if passed else "FAIL",
+                "observed": observed,
+                "expected": expected_value,
+            }
+        )
+        return passed
+
+    if not expected_source or not expected_receipt_sha:
+        result["status"] = "FAIL_INCOMPLETE_CONTRACT"
+        return result, False, True
+    if not build_receipt_path or not build_receipt_path.is_file():
+        result["status"] = "FAIL_RECEIPT_MISSING"
+        return result, False, True
+
+    try:
+        actual_receipt_sha = sha256_file(build_receipt_path)
+        result["actual_receipt_sha256"] = actual_receipt_sha
+        sha_ok = prov_check(
+            "build_receipt_sha256", actual_receipt_sha, expected_receipt_sha
+        )
+        with build_receipt_path.open(encoding="utf-8") as stream:
+            receipt = json.load(stream)
+    except Exception as exc:
+        result["status"] = f"FAIL_RECEIPT_PARSE:{type(exc).__name__}"
+        return result, False, True
+
+    receipt_source = receipt.get("source_commit")
+    result["receipt_source_commit"] = receipt_source
+    source_ok = prov_check("source_commit", receipt_source, expected_source)
+
+    artifact_hashes = {
+        item.get("sha256")
+        for item in receipt.get("artifacts", [])
+        if isinstance(item, dict) and item.get("sha256")
+    }
+    artifact_listed = artifact_sha256 in artifact_hashes
+    result["artifact_listed"] = artifact_listed
+    artifact_ok = prov_check("artifact_sha256_listed", artifact_listed, True)
+
+    clean_before = receipt.get("source_tree_clean_before_build")
+    clean_after = receipt.get("source_tree_clean_after_build")
+    result["source_tree_clean_before_build"] = clean_before
+    result["source_tree_clean_after_build"] = clean_after
+    clean_before_ok = prov_check("source_tree_clean_before_build", clean_before, True)
+    clean_after_ok = prov_check("source_tree_clean_after_build", clean_after, True)
+
+    passed = all((sha_ok, source_ok, artifact_ok, clean_before_ok, clean_after_ok))
+    result["status"] = "PASS" if passed else "FAIL"
+    return result, passed, True
+
+
 def main():
     parser = argparse.ArgumentParser(description="Fail-closed APK artifact evidence gate")
     parser.add_argument("apk", type=Path)
     parser.add_argument("--contract", type=Path)
+    parser.add_argument("--build-receipt", type=Path)
     parser.add_argument("--apksigner")
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
@@ -317,18 +395,19 @@ def main():
                 True,
             )
 
-    build_provenance = contract.get("build_provenance", {})
-    source_commit = build_provenance.get("source_commit")
-    build_receipt_sha256 = build_provenance.get("build_receipt_sha256")
-    provenance_claim_allowed = bool(
-        required_all and source_commit and build_receipt_sha256
+    provenance, provenance_ok, provenance_required = verify_build_provenance(
+        contract, args.build_receipt, digest
     )
-    status = "PASS" if required_all else "FAIL"
-    if required_all and not provenance_claim_allowed:
+    if provenance_required:
+        required_all &= provenance_ok
+    provenance_claim_allowed = bool(required_all and provenance_required and provenance_ok)
+
+    status = "PASS" if required_all and provenance_claim_allowed else "FAIL"
+    if required_all and not provenance_required:
         status = "VERIFIED_LIMITED"
 
     receipt = {
-        "schema": "rafaelia.apk-evidence-receipt.v1",
+        "schema": "rafaelia.apk-evidence-receipt.v1.1",
         "artifact": {
             "path": str(args.apk),
             "bytes": args.apk.stat().st_size,
@@ -340,6 +419,7 @@ def main():
         "apk_signature": apk_signature,
         "contract": str(args.contract) if args.contract else None,
         "checks": checks,
+        "build_provenance_verification": provenance,
         "status": status,
         "provenance_claim_allowed": provenance_claim_allowed,
         "claim_allowed": False,
@@ -348,10 +428,10 @@ def main():
     }
     if apk_signature["status"] == "TOKEN_VAZIO_TOOL_MISSING":
         receipt["token_vazio"].append("TV-APK-SIGNATURE-V2V3V4-TOOL")
-    if not source_commit:
-        receipt["token_vazio"].append("TV-SOURCE-COMMIT")
-    if not build_receipt_sha256:
-        receipt["token_vazio"].append("TV-BUILD-RECEIPT-SHA256")
+    if not provenance_required:
+        receipt["token_vazio"].extend(["TV-SOURCE-COMMIT", "TV-BUILD-RECEIPT-SHA256"])
+    elif not args.build_receipt or not args.build_receipt.is_file():
+        receipt["token_vazio"].append("TV-BUILD-RECEIPT-FILE")
 
     text = json.dumps(receipt, ensure_ascii=False, indent=2, sort_keys=True)
     if args.out:
