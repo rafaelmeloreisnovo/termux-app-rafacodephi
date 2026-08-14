@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:
-      TERMUX_PACKAGES_SHA: a82963e0cc6cba761c2079fc5a0664f4b23cf3f7
+      TERMUX_PACKAGES_SHA: 6ebaa2e2edaa17685f38fd30ded54cad6877ed90
       RAFCODEPHI_APT_REPOSITORY_URL: https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt-preview/repo
       RAFCODEPHI_APT_TRUST_MODE: development-trusted
       CLAIM_ALLOWED: 'false'
