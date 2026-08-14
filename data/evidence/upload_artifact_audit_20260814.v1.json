@@ -1,0 +1,73 @@
+{
+  "receipt_version": "1.1",
+  "created_at": "2026-08-14T01:00:00-03:00",
+  "updated_at": "2026-08-14T01:08:00-03:00",
+  "status": "VERIFIED_LIMITED_STATIC",
+  "claim_allowed": false,
+  "invariants": [
+    "append_only",
+    "evidence_first",
+    "IDENTITY != PROVENANCE != EXECUTION != EVIDENCE != CLAIM"
+  ],
+  "apk": {
+    "file": "com.termux_1002 (1).apk",
+    "bytes": 113880067,
+    "sha256": "e6265a57eb5ca363808488e3b01955958bed93bc0c8a0d281849b363b11027ec",
+    "package": "com.termux",
+    "version_name": "0.118.3",
+    "jar_v1_signature": "verified",
+    "signer": "FDroid",
+    "abis": ["arm64-v8a", "armeabi-v7a", "x86", "x86_64"],
+    "executed": false,
+    "classification": "BASELINE_REFERENCE_NOT_CURRENT_DEFAULT_RAFCODEPHI_BUILD"
+  },
+  "corpus": {
+    "file": "d6e9db90fbd5ffb1158e68518e6f46005d1c78dbaef56427bb8a934c8f466c0a-2025-10-06-21-49-49-edd15254776a4346b05570a99e6d418f.zip",
+    "bytes": 305843744,
+    "sha256": "53fbfbc52d110d5815024ca851868555d23c3180cd73bb5433dd5f5bade9d93f",
+    "entries": 5,
+    "uncompressed_bytes": 1607970090,
+    "crc_full_pass": true,
+    "historical_scope": "2025-10-06",
+    "raw_personal_data_committed": false,
+    "crosslinks": {
+      "com.termux_1002.apk": 88,
+      "exact_size_113880067": 3,
+      "current_apk_sha256": 0,
+      "fractal_unificado_visual.png": 9
+    }
+  },
+  "images": [
+    {"file":"fractal_unificado_visual.png","width":956,"height":900,"sha256":"34b34fb6db90eb47ff206c013ea1264055af205296f380766749f7c835e14264","software":null},
+    {"file":"RAFAELIA_FRACTAL_Ω_0001_hybrid.png","width":1024,"height":1024,"sha256":"09ce438287465ed76f3b4cc607dac5a5d915096b07a7c1cec5dac419b5d6e185","software":"Matplotlib 3.10.3"},
+    {"file":"RAFAELIA_FRACTAL_Ω_0002_voynich.png","width":900,"height":900,"sha256":"15e9752115e79967066e6409a0b8e0f51265feac963f8970829ac54b8c6778a8","software":"Matplotlib 3.10.3"},
+    {"file":"RAFAELIA_FRACTAL_Ω_0003_fibonacci.png","width":840,"height":840,"sha256":"ab9af9253e1985a02b7731e775c6ea83891c79470a336efca8976eb88939beee","software":"Matplotlib 3.10.3"},
+    {"file":"RAFAELIA_FRACTAL_Ω_0004_delta.png","width":1100,"height":1100,"sha256":"b3cabd090f54da28dab569951238d99013eeb1ca5a6d328726c24333a32ceb5d","software":"Matplotlib 3.10.3"},
+    {"file":"RAFAELIA_FRACTAL_Ω_0005_tag14.png","width":950,"height":950,"sha256":"c6c34c72ecd7cb78e2b3217d1320e98a46f34e039b4b59e067db2dbecb1f5f3a","software":"Matplotlib 3.10.3"},
+    {"file":"RAFAELIA_FRACTAL_Ω_0006_cheio.png","width":1024,"height":1024,"sha256":"b4bbb92f475870d3a673bc45ffa97acc1eb02842e18610a55f2fdb3d9465c033","software":"Matplotlib 3.10.3"}
+  ],
+  "ci_observation": {
+    "pr": 355,
+    "head_sha_before_receipt_update": "42952a43cd948118d13e3e5eb8889e92b183deca",
+    "workflow_runs_observed": 7,
+    "workflow_conclusions": "failure",
+    "representative_jobs": [
+      {"run_id":31768815563,"job_id":94670225638,"name":"ψ Perception - Contract Gate","conclusion":"failure","steps_executed":0,"logs_available":false},
+      {"run_id":31768815182,"job_id":94670224391,"name":"audit-benchmark","conclusion":"failure","steps_executed":0,"logs_available":false},
+      {"run_id":31768815281,"job_id":94670224653,"name":"compatibility-arm32-ndk29","conclusion":"failure","steps_executed":0,"logs_available":false}
+    ],
+    "classification": "RUNNER_OR_STARTUP_FAILURE_BEFORE_STEPS",
+    "content_failure_proven": false,
+    "note": "Representative failed jobs exposed zero executed steps and no job logs; therefore failure is not attributed to audit content."
+  },
+  "token_vazio": [
+    "TV-APK-01 historical_sha256",
+    "TV-APK-02 exact_source_commit",
+    "TV-APK-03 v2_v3_signing_verification",
+    "TV-APK-04 physical_runtime_behavior",
+    "TV-ZIP-01 filename_hash_semantics",
+    "TV-IMG-01 exact_generator_parameters",
+    "TV-IMG-02 historical_png_byte_lineage",
+    "TV-CI-01 runner_startup_cause"
+  ]
+}
