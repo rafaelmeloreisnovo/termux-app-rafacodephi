@@ -31,7 +31,6 @@ permissions:
   contents: read
 
 concurrency:
-  group: loader-secure-handoff-${{ github.ref }}
   group: loader-contract-${{ github.ref }}
   cancel-in-progress: true
 
@@ -111,6 +110,12 @@ jobs:
           name: termux-rafcodephi-host-debug-${{ github.sha }}
           path: dist/loader/host-debug.apk
           if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload loader stub APK
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
           name: termux-rafcodephi-loader-stub-${{ github.sha }}
           path: app/loader/build/dist/loader.apk
           if-no-files-found: warn
