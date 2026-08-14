@@ -6,6 +6,7 @@ OUT_DIR="${ROOT_DIR}/dist/apk-matrix"
 EVIDENCE_DIR="${OUT_DIR}/evidence"
 TEMPLATE="${ROOT_DIR}/data/contracts/apk_rafcodephi_release.v1.json"
 ALLOW_DIRTY_BUILD="${ALLOW_DIRTY_BUILD:-0}"
+EXPECTED_VERSION_NAME="${TERMUX_APP_VERSION_NAME:-0.118.0}-rafacodephi"
 
 info() { printf '\n[build_apk_matrix_with_evidence] %s\n' "$*"; }
 fail() { printf '\n[build_apk_matrix_with_evidence] ERROR: %s\n' "$*" >&2; exit 1; }
@@ -21,7 +22,9 @@ if [[ -n "${PRE_BUILD_DIRTY}" && "${ALLOW_DIRTY_BUILD}" != "1" ]]; then
 fi
 
 info "Pinned source commit: ${SOURCE_COMMIT}"
-./scripts/build_apk_matrix.sh
+# Use an explicit shell invocation so a checkout does not depend on executable-bit
+# preservation for the pre-existing matrix script.
+bash scripts/build_apk_matrix.sh
 
 POST_BUILD_DIRTY="$(git status --porcelain --untracked-files=no)"
 if [[ -n "${POST_BUILD_DIRTY}" && "${ALLOW_DIRTY_BUILD}" != "1" ]]; then
@@ -40,7 +43,7 @@ APKSIGNER="${SDK_DIR}/build-tools/${BUILD_TOOLS_VERSION}/apksigner"
 mkdir -p "${EVIDENCE_DIR}/contracts" "${EVIDENCE_DIR}/receipts"
 
 BUILD_RECEIPT="${EVIDENCE_DIR}/BUILD_PROVENANCE.json"
-python3 - "${OUT_DIR}" "${SOURCE_COMMIT}" "${BUILD_RECEIPT}" <<'PY'
+python3 - "${OUT_DIR}" "${SOURCE_COMMIT}" "${BUILD_RECEIPT}" "${ALLOW_DIRTY_BUILD}" <<'PY'
 import hashlib
 import json
 import os
@@ -50,6 +53,7 @@ from pathlib import Path
 out_dir = Path(sys.argv[1])
 source_commit = sys.argv[2]
 out_path = Path(sys.argv[3])
+allow_dirty = sys.argv[4] == "1"
 artifacts = []
 for apk in sorted((out_dir / "signed").glob("*.apk")):
     h = hashlib.sha256()
@@ -64,10 +68,11 @@ for apk in sorted((out_dir / "signed").glob("*.apk")):
 if not artifacts:
     raise SystemExit("no signed APK artifacts found")
 receipt = {
-    "schema": "rafaelia.apk-build-provenance.v1",
+    "schema": "rafaelia.apk-build-provenance.v1.1",
     "source_commit": source_commit,
     "release_track": os.environ.get("RELEASE_TRACK", "internal"),
-    "source_tree_clean_before_build": os.environ.get("ALLOW_DIRTY_BUILD", "0") != "1",
+    "source_tree_clean_before_build": not allow_dirty,
+    "source_tree_clean_after_build": not allow_dirty,
     "artifacts": artifacts,
     "claim_allowed": False,
     "invariant": "SOURCE_COMMIT + BUILD_PROCESS + ARTIFACT_HASH != PHYSICAL_RUNTIME_EVIDENCE",
@@ -78,7 +83,7 @@ BUILD_RECEIPT_SHA256="$(sha256sum "${BUILD_RECEIPT}" | awk '{print $1}')"
 printf '%s  %s\n' "${BUILD_RECEIPT_SHA256}" "$(basename "${BUILD_RECEIPT}")" > "${EVIDENCE_DIR}/BUILD_PROVENANCE.sha256"
 
 RUN_CONTRACT="${EVIDENCE_DIR}/contracts/RAFCODEPHI_RELEASE_RUN.json"
-python3 - "${TEMPLATE}" "${RUN_CONTRACT}" "${SOURCE_COMMIT}" <<'PY'
+python3 - "${TEMPLATE}" "${RUN_CONTRACT}" "${SOURCE_COMMIT}" "${BUILD_RECEIPT_SHA256}" "${EXPECTED_VERSION_NAME}" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -86,22 +91,24 @@ from pathlib import Path
 template = Path(sys.argv[1])
 out = Path(sys.argv[2])
 source_commit = sys.argv[3]
+build_receipt_sha256 = sys.argv[4]
+expected_version_name = sys.argv[5]
 data = json.loads(template.read_text(encoding="utf-8"))
 data["status"] = "RUN_CONTRACT"
+data["expected"]["version_name"] = expected_version_name
 data["build_provenance"]["source_commit"] = source_commit
-# The receipt is materialized and hashed, but V1 deliberately leaves the
-# contract receipt pin empty so provenance is not promoted by declaration.
-data["build_provenance"]["build_receipt_sha256"] = None
+data["build_provenance"]["build_receipt_sha256"] = build_receipt_sha256
 out.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 
-info "Verifying signed APK identities, CRC and signature schemes"
+info "Verifying signed APK identities, CRC, signatures and build-receipt linkage"
 while IFS= read -r -d '' apk; do
   base="$(basename "${apk%.apk}")"
   receipt="${EVIDENCE_DIR}/receipts/${base}.evidence.json"
   python3 scripts/verify_apk_evidence.py \
     "${apk}" \
     --contract "${RUN_CONTRACT}" \
+    --build-receipt "${BUILD_RECEIPT}" \
     --apksigner "${APKSIGNER}" \
     --out "${receipt}"
 done < <(find "${OUT_DIR}/signed" -maxdepth 1 -type f -name '*.apk' -print0)
@@ -128,8 +135,12 @@ for path in sorted((evidence_dir / "receipts").glob("*.json")):
         "status": data["status"],
         "provenance_claim_allowed": data["provenance_claim_allowed"],
     })
+if not receipts:
+    raise SystemExit("no APK evidence receipts generated")
+if not all(item["status"] == "PASS" and item["provenance_claim_allowed"] for item in receipts):
+    raise SystemExit("one or more APK evidence receipts failed provenance/signature gates")
 index = {
-    "schema": "rafaelia.apk-evidence-index.v1",
+    "schema": "rafaelia.apk-evidence-index.v1.1",
     "source_commit": source_commit,
     "build_provenance_sha256": build_receipt_sha256,
     "receipts": receipts,
