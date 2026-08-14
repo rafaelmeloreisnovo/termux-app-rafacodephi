@@ -1,3 +1,5 @@
+# ci_track: ops
+# ci_abis: n/a
 name: Loader APK Secure Handoff Contract
 
 on:
