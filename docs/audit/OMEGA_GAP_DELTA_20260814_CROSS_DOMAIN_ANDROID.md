@@ -101,3 +101,36 @@ Representar separadamente `system`, `vendor`, `vendor_dlkm`, `APEX/Mainline`, `H
 ## Gate Ω
 
 Uma lacuna só muda para `CLOSED` mediante identidade + fonte + timestamp + classificação `OBSERVED|INFERRED` + proveniência + teste/receipt quando aplicável. O que não satisfaz o gate permanece `OPEN` ou `TOKEN_VAZIO`; nenhum estado histórico é apagado.
+
+## Delta de execução — 2026-08-14 / search pass 1
+
+### C.74 source anchor resolved
+
+`MESSAGES-00018.jsonl.txt` contains a `SOURCE_OBSERVED` message mapped back to:
+
+- `source_path`: `conversations-012.json`
+- `source_pointer`: `conversations-012.json#conversation[9].mapping["bbb21be2-9656-4287-8ba6-ec7970e74e8b"]`
+- `message_id`: `bbb21be2-9656-4287-8ba6-ec7970e74e8b`
+- `create_time`: `1749097001.42102`
+- `claim_allowed`: `false`
+
+The message preserves RMX3834/RE5C9F device information including Android 14/API 34, `RMX3834export_14_C.74`, the Android-14 fingerprint, kernel `5.4.254-android12-9-g46eed20d7a9b-ab708`, T612, Cortex-A75/A55, ABIs, Termux/UserLAnd versions, and Treble support.
+
+Interpretation: **observed C.74 anchor**, not automatically “last C-series ever observed”.
+
+### Negative observations — preserved, not overclaimed
+
+- `INDEX__CODEX-00001.jsonl.txt`: exact `RMX3834export_15_F.94` search produced no match in the inspected resource; `5.15.178` matches were documentation/WIP mentions and did not establish physical runtime.
+- `MESSAGES-00005.jsonl.txt`: inspected pass produced no `F.94` or `Android 15` match.
+- `MESSAGES-00018.jsonl.txt`: physical-style C.74 data was found; an F.94 raw physical receipt was not established in this pass.
+
+No negative result is interpreted as universal nonexistence.
+
+### Gap-state delta
+
+- `GAP-RMX3834-001`: unchanged — `TOKEN_VAZIO_DEVICE_PROVENANCE_F94`.
+- `GAP-RMX3834-002`: `OPEN_P0 -> PARTIAL_SOURCE_ANCHOR`; one C.74 anchor is source-pointer resolved, F-series physical anchor remains missing.
+- `GAP-RMX3834-003`: `ERRATUM_RECORDED` in `rafaelmeloreisnovo/Rafaelia_Private`, branch `audit/rmx3834-provenance-20260814`.
+- `GAP-XDOM-002`: remains `PARTIALLY_CLOSED_THIS_BRANCH`; schema exists, dynamic validation/fixtures/CI remain `TOKEN_VAZIO_RUNTIME`.
+
+No merge, release, promotion or physical-runtime claim was performed.
