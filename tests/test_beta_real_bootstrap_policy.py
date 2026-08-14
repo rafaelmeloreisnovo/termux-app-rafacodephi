@@ -54,6 +54,31 @@ class BetaRealBootstrapPolicyTests(unittest.TestCase):
         self.assertIn("continue;", installer)
         self.assertIn("SYMLINKS_FILE", profile_tool)
 
+    def test_beta_wizard_uses_governed_real_repair_not_weak_setup_skip(self):
+        wizard = self.read("app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java")
+        self.assertIn("BetaRealBootstrapRepair.repair(this, this::updateWizardStep)", wizard)
+        self.assertIn("Install / Repair Real Bootstrap", wizard)
+        method = wizard.split("private void installBootstrapFilesystem()", 1)[1].split("private void openAuditActivity()", 1)[0]
+        self.assertNotIn("TermuxInstaller.setupBootstrapIfNeeded", method)
+
+    def test_repair_preserves_old_prefix_until_real_candidate_is_validated(self):
+        repair = self.read("app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java")
+        validate_pos = repair.index("verifyRealPackageArchive(activity, candidate)")
+        backup_pos = repair.index("prefix.renameTo(backup)")
+        install_pos = repair.index("TermuxInstaller.setupBootstrapIfNeeded")
+        self.assertLess(validate_pos, backup_pos)
+        self.assertLess(backup_pos, install_pos)
+        self.assertIn('BACKUP_NAME = ".usr-before-real-pkg-beta"', repair)
+        self.assertIn("home_preserved=", repair)
+        self.assertIn("restoreBackupAfterRejectedInstall", repair)
+
+    def test_repair_archive_rejects_bridge_profile(self):
+        repair = self.read("app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java")
+        self.assertIn('!"real-pkg".equals(profile.optString("profile", ""))', repair)
+        self.assertIn('!"real-pkg".equals(profile.optString("package_layer", ""))', repair)
+        self.assertIn("BETA_REQUIRES_REAL_PKG_PROFILE", repair)
+        self.assertIn("BOOTSTRAP_PROFILE_CLAIM_BOUNDARY_OPEN", repair)
+
     def test_claim_boundary_remains_closed(self):
         workflow = self.read(".github/workflows/beta-build.yml")
         gate = self.read("app/src/main/java/com/termux/app/BootstrapReadinessGate.java")
