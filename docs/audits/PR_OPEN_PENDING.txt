@@ -1,3 +1,0 @@
-state=PR_OPEN_PENDING
-claim_allowed=false
-device_runtime_proof=TOKEN_VAZIO
