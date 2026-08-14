@@ -61,13 +61,16 @@ class BetaRealBootstrapPolicyTests(unittest.TestCase):
         method = wizard.split("private void installBootstrapFilesystem()", 1)[1].split("private void openAuditActivity()", 1)[0]
         self.assertNotIn("TermuxInstaller.setupBootstrapIfNeeded", method)
 
-    def test_repair_preserves_old_prefix_until_real_candidate_is_validated(self):
+    def test_repair_preserves_old_prefix_until_profile_and_hash_validate(self):
         repair = self.read("app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java")
         validate_pos = repair.index("verifyRealPackageArchive(activity, candidate)")
+        hash_pos = repair.index("verifyCandidateIntegrity(candidate)")
         backup_pos = repair.index("prefix.renameTo(backup)")
         install_pos = repair.index("TermuxInstaller.setupBootstrapIfNeeded")
-        self.assertLess(validate_pos, backup_pos)
+        self.assertLess(validate_pos, hash_pos)
+        self.assertLess(hash_pos, backup_pos)
         self.assertLess(backup_pos, install_pos)
+        self.assertIn("BETA_REAL_BOOTSTRAP_BLAKE3_MISMATCH", repair)
         self.assertIn('BACKUP_NAME = ".usr-before-real-pkg-beta"', repair)
         self.assertIn("home_preserved=", repair)
         self.assertIn("restoreBackupAfterRejectedInstall", repair)
@@ -78,6 +81,22 @@ class BetaRealBootstrapPolicyTests(unittest.TestCase):
         self.assertIn('!"real-pkg".equals(profile.optString("package_layer", ""))', repair)
         self.assertIn("BETA_REQUIRES_REAL_PKG_PROFILE", repair)
         self.assertIn("BOOTSTRAP_PROFILE_CLAIM_BOUNDARY_OPEN", repair)
+
+    def test_repair_cleanup_deletes_symlink_node_without_following_it(self):
+        repair = self.read("app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java")
+        self.assertIn("Os.lstat(file.getAbsolutePath())", repair)
+        self.assertIn("OsConstants.S_IFLNK", repair)
+        symlink_branch = repair.split("if (symlink) {", 1)[1].split("String canonical", 1)[0]
+        self.assertIn("file.delete()", symlink_branch)
+        self.assertNotIn("listFiles()", symlink_branch)
+
+    def test_interrupted_repair_uses_strong_readiness_not_profile_only(self):
+        repair = self.read("app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java")
+        recovery = repair.split("private static void recoverInterruptedBackup", 1)[1].split(
+            "private static void restoreBackupAfterRejectedInstall", 1
+        )[0]
+        self.assertIn("BootstrapReadinessGate.evaluate(activity).isPass()", recovery)
+        self.assertNotIn("runtimeStateFromProfile", recovery)
 
     def test_claim_boundary_remains_closed(self):
         workflow = self.read(".github/workflows/beta-build.yml")
