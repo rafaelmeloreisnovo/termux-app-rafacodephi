@@ -99,8 +99,6 @@ def test_orchestrator_has_process_wide_single_flight_nonempty_plan_watchdog_canc
     for token in required:
         assert token in engine
 
-    # A surviving canonical receipt defaults to NOT_MEASURED before any external mirror
-    # can be promoted, so a crash between writes fails closed rather than inventing export success.
     conservative = engine.index('receipt.put("external_export_state", "NOT_MEASURED")')
     canonical_write = engine.index("atomicWrite(historyFile", conservative)
     external_probe = engine.index("context.getExternalFilesDir(EXPORT_DIRECTORY)", canonical_write)
@@ -114,31 +112,37 @@ def test_orchestrator_has_process_wide_single_flight_nonempty_plan_watchdog_canc
     assert bootstrap < single < series < analysis < export
 
 
-def test_operator_ui_has_comprehensible_checkboxes_exports_lifecycle_and_process_recovery() -> None:
+def test_control_center_is_single_operator_surface_with_run_all_runtime_vectra_and_zip_export() -> None:
     ui = read("app/src/main/java/com/termux/app/activities/BetaOrchestratorActivity.java")
     prefs = read("app/src/main/res/xml/root_preferences.xml")
 
     for token in [
         "CheckBox",
-        "Require Bootstrap/Wizard readiness gate",
+        "RAFCODEΦ · Control Center",
+        "Bootstrap / Package Readiness",
+        "Package Runtime + Vectra Snapshot",
+        "Require bootstrap readiness",
+        "Capture package + Vectra runtime snapshot",
         "Execute one PA observation",
         "Run governed 30-trial series",
         "Analyze governed receipt history",
         "Export industrial V3 methods/gap artifact",
-        "RUN SELECTED PIPELINE",
-        "RUN FULL BETA EVIDENCE PIPELINE",
+        "RUN SELECTED",
+        "RUN EVERYTHING",
         "STOP AFTER CURRENT ATOMIC STAGE",
+        "EXPORT ALL EVIDENCE (.ZIP)…",
+        "REFRESH ALL STATUS",
         "OPEN BOOTSTRAP / PERMISSIONS WIZARD",
-        "OPEN VECTRA EXPERT DIAGNOSTICS",
-        "REFRESH READINESS + PROCESS STATE + LATEST RECEIPT",
-        "EXPORT LATEST RECEIPT…",
+        "OPEN FULL VECTRA DETAILS",
+        "ControlCenterSnapshot.render(this)",
+        "ControlCenterEvidenceBundle.write(this, stream, bootstrap, runtime, latest)",
         "Intent.ACTION_CREATE_DOCUMENT",
-        'intent.setType("application/json")',
+        'intent.setType("application/zip")',
         "Intent.EXTRA_TITLE",
         'getContentResolver().openFileDescriptor(target, "rwt")',
         "stream.getFD().sync()",
-        "USER_SELECTED_EXPORT=PASS",
-        "USER_SELECTED_EXPORT_AUTHORITY=copy_only canonical_receipt_remains_authoritative",
+        "EXPORT_ALL=PASS",
+        "EXPORT_ALL_AUTHORITY=copy_only canonical_receipts_remain_authoritative",
         "PROCESS_WIDE_PIPELINE=RUNNING",
         "SINGLE_FLIGHT_INVARIANT",
         "FINAL_EVIDENCE_STATE=",
@@ -151,12 +155,60 @@ def test_operator_ui_has_comprehensible_checkboxes_exports_lifecycle_and_process
         "protected void onDestroy()",
         "orchestrator.cancelAfterCurrentAtomicStage()",
         "refresh.setEnabled(true)",
-        "exportLatest.setEnabled(!running)",
+        "exportAll.setEnabled(!running)",
     ]:
         assert token in ui
 
-    assert "RAFCODEΦ · First Beta Orchestrator" in prefs
-    assert "optional governed n=30" in prefs
+    assert 'app:key="rafcodephi_control_center"' in prefs
+    assert 'app:title="RAFCODEΦ · Control Center"' in prefs
+    assert 'android:targetClass="com.termux.app.activities.BetaOrchestratorActivity"' in prefs
+
+    # The old operational screen fan-out is intentionally removed from the primary settings surface.
+    for obsolete_key in [
+        'app:key="android15_wizard"',
+        'app:key="system_audit"',
+        'app:key="industrial_diagnostics"',
+        'app:key="pa_freestanding_elf"',
+        'app:key="vectra_runtime"',
+    ]:
+        assert obsolete_key not in prefs
+
+
+def test_control_center_export_is_evidence_scoped_not_an_arbitrary_home_backup() -> None:
+    bundle = read("app/src/main/java/com/termux/app/orchestration/ControlCenterEvidenceBundle.java")
+    snapshot = read("app/src/main/java/com/termux/app/orchestration/ControlCenterSnapshot.java")
+
+    for token in [
+        "rafcodephi.control-center-export/v1",
+        "bootstrap-readiness.txt",
+        "runtime-vectra-snapshot.txt",
+        "latest-orchestrator-receipt.json",
+        'new File(context.getFilesDir(), "rafcodephi-beta-orchestrator")',
+        'context.getExternalFilesDir("beta-evidence")',
+        "unrelated_termux_home_files=NOT_EXPORTED",
+        "evidence_path_escape",
+        "unsafe_zip_entry",
+        "export_authority=copy_only",
+        "claim_allowed_release=false",
+    ]:
+        assert token in bundle
+
+    for token in [
+        'String[] tools = {"sh", "pkg", "apt", "apt-get", "dpkg", "bash", "busybox", "proot"}',
+        '"var/lib/dpkg/status"',
+        '"etc/apt/sources.list.d"',
+        '"BOOTSTRAP_PROFILE.json"',
+        '"package_repo_runtime_state"',
+        '"apt_repository_url"',
+        '"package_runtime_gate="',
+        '"[VECTRA_RUNTIME]"',
+        'Sensor.TYPE_ACCELEROMETER',
+        'Sensor.TYPE_GYROSCOPE',
+        'Sensor.TYPE_MAGNETIC_FIELD',
+        'Sensor.TYPE_LIGHT',
+        'Sensor.TYPE_PROXIMITY',
+    ]:
+        assert token in snapshot
 
 
 def test_full_beta_does_not_self_promote_to_certification_or_release() -> None:
@@ -164,8 +216,8 @@ def test_full_beta_does_not_self_promote_to_certification_or_release() -> None:
     engine = read("app/src/main/java/com/termux/app/orchestration/BetaEvidenceOrchestrator.java")
 
     assert "claim_allowed_release=false" in ui
-    assert "Certification/release/cross-device claims remain blocked" in ui
-    assert "Local execution PASS is reported separately from evidence state" in ui
+    assert "Fail-closed: TOKEN_VAZIO/UNAVAILABLE/BLOCKED never become PASS" in ui
+    assert "Device/release claims remain independent" in ui
     assert 'finish(context, receipt, "OBSERVED_LIMITED"' in engine
     assert 'receipt.put("claim_allowed_release", false)' in engine
     assert 'receipt.put("claim_allowed_certification", false)' in engine
