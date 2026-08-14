@@ -23,35 +23,35 @@ public final class ControlCenterEvidenceBundle {
                             String runtimeSnapshot, JSONObject latestReceipt) throws Exception {
         int[] entries = {0};
         Set<String> emitted = new HashSet<>();
-        try (ZipOutputStream zip = new ZipOutputStream(destination)) {
-            putText(zip, emitted, "00-control-center/README.txt",
-                "RAFCODEPHI CONTROL CENTER EVIDENCE BUNDLE V1\n"
-                    + "scope=bootstrap+package-runtime+vectra+beta-orchestrator\n"
-                    + "unrelated_termux_home_files=NOT_EXPORTED\n"
-                    + "claim_allowed_release=false\n"
-                    + "TOKEN_VAZIO remains a valid evidence state.\n", entries);
-            putText(zip, emitted, "00-control-center/bootstrap-readiness.txt", bootstrapSnapshot, entries);
-            putText(zip, emitted, "00-control-center/runtime-vectra-snapshot.txt", runtimeSnapshot, entries);
-            if (latestReceipt != null) {
-                putText(zip, emitted, "00-control-center/latest-orchestrator-receipt.json",
-                    latestReceipt.toString() + "\n", entries);
-            }
-
-            File canonical = new File(context.getFilesDir(), "rafcodephi-beta-orchestrator");
-            addTree(zip, emitted, canonical, "beta-orchestrator-private", entries);
-
-            File external = context.getExternalFilesDir("beta-evidence");
-            addTree(zip, emitted, external, "beta-evidence-app-specific", entries);
-
-            putText(zip, emitted, "00-control-center/MANIFEST.txt",
-                "schema=rafcodephi.control-center-export/v1\n"
-                    + "entries_before_manifest=" + entries[0] + "\n"
-                    + "canonical_private_root=" + canonical.getAbsolutePath() + "\n"
-                    + "app_specific_external_root=" + (external == null ? "UNAVAILABLE" : external.getAbsolutePath()) + "\n"
-                    + "export_authority=copy_only\n"
-                    + "claim_allowed_release=false\n", entries);
-            zip.finish();
+        ZipOutputStream zip = new ZipOutputStream(destination);
+        putText(zip, emitted, "00-control-center/README.txt",
+            "RAFCODEPHI CONTROL CENTER EVIDENCE BUNDLE V1\n"
+                + "scope=bootstrap+package-runtime+vectra+beta-orchestrator\n"
+                + "unrelated_termux_home_files=NOT_EXPORTED\n"
+                + "claim_allowed_release=false\n"
+                + "TOKEN_VAZIO remains a valid evidence state.\n", entries);
+        putText(zip, emitted, "00-control-center/bootstrap-readiness.txt", bootstrapSnapshot, entries);
+        putText(zip, emitted, "00-control-center/runtime-vectra-snapshot.txt", runtimeSnapshot, entries);
+        if (latestReceipt != null) {
+            putText(zip, emitted, "00-control-center/latest-orchestrator-receipt.json",
+                latestReceipt.toString() + "\n", entries);
         }
+
+        File canonical = new File(context.getFilesDir(), "rafcodephi-beta-orchestrator");
+        addTree(zip, emitted, canonical, "beta-orchestrator-private", entries);
+
+        File external = context.getExternalFilesDir("beta-evidence");
+        addTree(zip, emitted, external, "beta-evidence-app-specific", entries);
+
+        putText(zip, emitted, "00-control-center/MANIFEST.txt",
+            "schema=rafcodephi.control-center-export/v1\n"
+                + "entries_before_manifest=" + entries[0] + "\n"
+                + "canonical_private_root=" + canonical.getAbsolutePath() + "\n"
+                + "app_specific_external_root=" + (external == null ? "UNAVAILABLE" : external.getAbsolutePath()) + "\n"
+                + "export_authority=copy_only\n"
+                + "claim_allowed_release=false\n", entries);
+        zip.finish();
+        zip.flush();
         return entries[0];
     }
 
