@@ -1,0 +1,42 @@
+{
+  "schema": "rafaelia.implementation-receipt.v1",
+  "date": "2026-08-14",
+  "scope": "APK_EVIDENCE_GATE_V1",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "base_commit": "c415143659398793a908272555278e145acf3067",
+  "branch": "impl/apk-evidence-gate-20260814",
+  "status": "IMPLEMENTED_VERIFIED_LIMITED",
+  "local_reference_validation": {
+    "uploaded_apk": {
+      "package": "com.termux",
+      "version_name": "0.118.3",
+      "version_code": 1002,
+      "sha256": "e6265a57eb5ca363808488e3b01955958bed93bc0c8a0d281849b363b11027ec",
+      "zip_crc_full": "PASS",
+      "jar_v1": "PASS",
+      "contract_checks": "5/5 PASS",
+      "apksigner": "TOKEN_VAZIO_TOOL_MISSING"
+    },
+    "parser_tests": "2/2 PASS",
+    "physical_android_execution": false,
+    "repository_ci": "PENDING_PR_OBSERVATION"
+  },
+  "implemented": [
+    "scripts/verify_apk_evidence.py",
+    "scripts/build_apk_matrix_with_evidence.sh",
+    "tests/test_verify_apk_evidence.py",
+    "data/contracts/apk_baseline_com.termux_0.118.3.v1.json",
+    "data/contracts/apk_rafcodephi_release.v1.json",
+    "docs/audits/APK_EVIDENCE_GATE_V1_20260814.md"
+  ],
+  "token_vazio": [
+    "TV-APK-V2V3V4-BASELINE",
+    "TV-BUILD-RECEIPT-LINK",
+    "TV-PHYSICAL-INSTALL-BOOT-ARM32",
+    "TV-PHYSICAL-INSTALL-BOOT-ARM64",
+    "TV-REPRODUCIBLE-SECOND-BUILD",
+    "TV-OFFICIAL-SIGNER-CERT-PIN"
+  ],
+  "claim_allowed": false,
+  "invariant": "SOURCE != BUILD != APK_IDENTITY != SIGNATURE != PHYSICAL_RUNTIME != CLAIM"
+}
