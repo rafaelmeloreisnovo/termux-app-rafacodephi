@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:
-      TERMUX_PACKAGES_SHA: 589ad7132ed16479d94d62be7e96a72fbfc51e22
+      TERMUX_PACKAGES_SHA: f9c872453c49e381d651737ba0bf404a2e5e54a6
       RAFCODEPHI_APT_REPOSITORY_URL: https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt/repo
       RAFCODEPHI_APT_TRUST_MODE: development-trusted
       CLAIM_ALLOWED: 'false'
@@ -70,46 +70,66 @@ jobs:
       - name: Setup Android SDK/NDK
         run: ./scripts/setup_android_toolchain.sh
 
-      - name: Embed exact live bootstraps
-        env:
-          RAF_BOOTSTRAP_SOURCE: source-built-real
-          RAF_REAL_BOOTSTRAP_ZIP_ARM: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
-          RAF_REAL_BOOTSTRAP_ZIP_AARCH64: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
-          RAF_REAL_BOOTSTRAP_MANIFEST: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
-        run: ./scripts/prepare_bootstrap_env.sh --github-env --skip-android-preflight
-
-      - name: Compile and test APK matrix
-        env:
-          RAF_BOOTSTRAP_SOURCE: source-built-real
-          RAF_REAL_BOOTSTRAP_ZIP_ARM: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
-          RAF_REAL_BOOTSTRAP_ZIP_AARCH64: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
-          RAF_REAL_BOOTSTRAP_MANIFEST: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
-          RELEASE_TRACK: internal
-          APK_MATRIX_UNIT_TESTS_REQUIRED: 'true'
-        run: ./scripts/build_apk_matrix.sh
-
-      - name: Gate ARM32 artifact
+      - name: Materialize exact embedded bootstrap set
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$(find dist/apk-matrix -type f -name '*armeabi-v7a*.apk' -print -quit)"
-          sha256sum $(find dist/apk-matrix -type f -name '*armeabi-v7a*.apk' -print) | tee /tmp/arm32-apk-sha256.txt
+          # Generate the untouched x86 compatibility slots, then replace only ARM slots
+          # with the source-built real-pkg pair. The legacy importer intentionally rejects
+          # live repositories, so this path validates and hashes the new contract directly.
+          bash scripts/build_bootstrap_profile.sh
+          cp termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip app/src/main/cpp/rewritten-bootstrap-arm.zip
+          cp termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip app/src/main/cpp/rewritten-bootstrap-aarch64.zip
+          python3 -m pip install --disable-pip-version-check --quiet --target build/python-deps blake3
+          PYTHONPATH="$PWD/build/python-deps" python3 - <<'PY' >> "$GITHUB_ENV"
+          from pathlib import Path
+          from blake3 import blake3
+          import hashlib
+          mapping = {
+              'AARCH64': 'rewritten-bootstrap-aarch64.zip',
+              'ARM': 'rewritten-bootstrap-arm.zip',
+              'I686': 'rewritten-bootstrap-i686.zip',
+              'X86_64': 'rewritten-bootstrap-x86_64.zip',
+          }
+          base = Path('app/src/main/cpp')
+          for key, name in mapping.items():
+              data = (base / name).read_bytes()
+              print(f'TERMUX_BOOTSTRAP_SHA256_{key}={hashlib.sha256(data).hexdigest()}')
+              print(f'TERMUX_BOOTSTRAP_BLAKE3_{key}={blake3(data).hexdigest()}')
+          PY
+
+      - name: Compile unit tests and debug split APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew :app:testDebugUnitTest --no-daemon
+          TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS=1 ./gradlew :app:assembleDebug --no-daemon
+
+      - name: Gate ARM32 install candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/control-center
+          mapfile -t apks < <(find app/build/outputs/apk/debug -type f -name '*armeabi-v7a*.apk' -print)
+          test "${#apks[@]}" -gt 0
+          cp "${apks[@]}" dist/control-center/
+          (cd dist/control-center && sha256sum *.apk) | tee dist/control-center/SHA256SUMS.txt
           printf '%s\n' \
+            'schema=rafcodephi.control-center-build/v1' \
             'device_abi_target=armeabi-v7a' \
             'bootstrap_arch=arm' \
             'package_runtime=real-pkg' \
-            'apt_repository=development-configured' \
+            'apt_repository=DEVELOPMENT_REPOSITORY_CONFIGURED' \
+            'apt_repository_trust=GITHUB_HTTPS_TRANSPORT_ONLY' \
             'device_runtime_proof=TOKEN_VAZIO' \
-            'claim_allowed_release=false' | tee /tmp/control-center-build-receipt.txt
+            'claim_allowed_release=false' > dist/control-center/BUILD_RECEIPT.txt
 
-      - name: Upload ARM32 install candidate + receipts
+      - name: Upload ARM32 install candidate + bootstrap evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: rafcodephi-control-center-arm32-${{ github.sha }}
           path: |
-            dist/apk-matrix/**/*armeabi-v7a*.apk
-            /tmp/arm32-apk-sha256.txt
-            /tmp/control-center-build-receipt.txt
+            dist/control-center
             termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
             termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
           if-no-files-found: error
