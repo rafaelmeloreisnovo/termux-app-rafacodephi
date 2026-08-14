@@ -1,11 +1,12 @@
 {
-  "schema": "rafaelia.implementation-receipt.v1",
+  "schema": "rafaelia.implementation-receipt.v1.1",
   "date": "2026-08-14",
-  "scope": "APK_EVIDENCE_GATE_V1",
+  "scope": "APK_EVIDENCE_GATE_V1_1",
   "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
   "base_commit": "c415143659398793a908272555278e145acf3067",
   "branch": "impl/apk-evidence-gate-20260814",
-  "status": "IMPLEMENTED_VERIFIED_LIMITED",
+  "pr": 356,
+  "status": "IMPLEMENTED_P0_CODE_PATH_REAL_BUILD_PENDING",
   "local_reference_validation": {
     "uploaded_apk": {
       "package": "com.termux",
@@ -17,9 +18,21 @@
       "contract_checks": "5/5 PASS",
       "apksigner": "TOKEN_VAZIO_TOOL_MISSING"
     },
-    "parser_tests": "2/2 PASS",
-    "physical_android_execution": false,
-    "repository_ci": "PENDING_PR_OBSERVATION"
+    "original_parser_reference_tests": "2/2 PASS",
+    "v1_1_repository_test_cases_implemented": 6,
+    "v1_1_repository_test_execution": "PENDING_EXACT_HEAD_CI_OBSERVATION",
+    "physical_android_execution": false
+  },
+  "v1_1_hardening": {
+    "contract_declaration_alone_can_enable_provenance": false,
+    "build_receipt_sha256_recomputed": true,
+    "source_commit_cross_checked": true,
+    "artifact_sha256_membership_required": true,
+    "clean_tree_before_after_required": true,
+    "build_receipt_passed_as_independent_input": true,
+    "final_index_rejects_nonpassing_receipts": true,
+    "test_runner_executes_tests_when_called_directly": true,
+    "canonical_wrapper_invocation": "bash scripts/build_apk_matrix_with_evidence.sh"
   },
   "implemented": [
     "scripts/verify_apk_evidence.py",
@@ -27,15 +40,17 @@
     "tests/test_verify_apk_evidence.py",
     "data/contracts/apk_baseline_com.termux_0.118.3.v1.json",
     "data/contracts/apk_rafcodephi_release.v1.json",
-    "docs/audits/APK_EVIDENCE_GATE_V1_20260814.md"
+    "docs/audits/APK_EVIDENCE_GATE_V1_20260814.md",
+    ".github/workflows/apk-evidence-gate.yml"
   ],
   "token_vazio": [
     "TV-APK-V2V3V4-BASELINE",
-    "TV-BUILD-RECEIPT-LINK",
+    "TV-CURRENT-BUILD-EVIDENCE-RUN",
     "TV-PHYSICAL-INSTALL-BOOT-ARM32",
     "TV-PHYSICAL-INSTALL-BOOT-ARM64",
     "TV-REPRODUCIBLE-SECOND-BUILD",
-    "TV-OFFICIAL-SIGNER-CERT-PIN"
+    "TV-OFFICIAL-SIGNER-CERT-PIN",
+    "TV-ISOLATED-CI-V1.1"
   ],
   "claim_allowed": false,
   "invariant": "SOURCE != BUILD != APK_IDENTITY != SIGNATURE != PHYSICAL_RUNTIME != CLAIM"
