@@ -2,6 +2,9 @@ package com.termux.app;
 
 import android.app.Activity;
 import android.os.Build;
+import android.system.Os;
+import android.system.OsConstants;
+import android.system.StructStat;
 
 import com.termux.shared.logger.Logger;
 import com.termux.shared.termux.TermuxRuntimePaths;
@@ -11,7 +14,6 @@ import org.json.JSONObject;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.zip.ZipEntry;
@@ -43,15 +45,21 @@ public final class BetaRealBootstrapRepair {
                 candidate = TermuxInstaller.loadZipBytes();
                 source = "EMBEDDED";
             }
+
+            // All immutable candidate checks happen before the current prefix is
+            // moved. A profile-shaped but hash-mismatched archive cannot trigger
+            // migration of a working/diagnostic old runtime.
             verifyRealPackageArchive(activity, candidate);
-            Logger.logInfo(LOG_TAG, "beta repair candidate accepted source=" + source);
+            verifyCandidateIntegrity(candidate);
+            Logger.logInfo(LOG_TAG, "beta repair candidate accepted source=" + source
+                + " blake3=" + BootstrapIntegrityVerifier.blake3Hex(candidate));
 
             File filesDir = TermuxRuntimePaths.filesDir();
             File prefix = TermuxRuntimePaths.prefixDir();
             File backup = new File(filesDir, BACKUP_NAME);
             File failed = new File(filesDir, FAILED_NAME);
 
-            recoverInterruptedBackup(prefix, backup, failed);
+            recoverInterruptedBackup(activity, prefix, backup, failed);
 
             BootstrapReadinessGate.Report before = BootstrapReadinessGate.evaluate(activity);
             if (before.isPass()) {
@@ -137,6 +145,17 @@ public final class BetaRealBootstrapRepair {
             throw new IllegalStateException("BOOTSTRAP_PROFILE_CLAIM_BOUNDARY_OPEN");
     }
 
+    private static void verifyCandidateIntegrity(byte[] zipBytes) {
+        String expected = BootstrapIntegrityVerifier.expectedHashForCurrentAbi();
+        if (expected == null || expected.isEmpty())
+            throw new IllegalStateException("BETA_REAL_BOOTSTRAP_BLAKE3_EXPECTATION_MISSING");
+        String actual = BootstrapIntegrityVerifier.blake3Hex(zipBytes);
+        if (!expected.equalsIgnoreCase(actual)) {
+            throw new SecurityException("BETA_REAL_BOOTSTRAP_BLAKE3_MISMATCH expected="
+                + expected.toLowerCase(Locale.US) + " actual=" + actual.toLowerCase(Locale.US));
+        }
+    }
+
     private static String expectedArch() {
         String abi = Build.SUPPORTED_ABIS != null && Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "";
         if ("armeabi-v7a".equals(abi)) return "arm";
@@ -146,55 +165,36 @@ public final class BetaRealBootstrapRepair {
         return abi.toLowerCase(Locale.US);
     }
 
-    private static void recoverInterruptedBackup(File prefix, File backup, File failed) throws Exception {
+    private static void recoverInterruptedBackup(Activity activity, File prefix, File backup, File failed)
+        throws Exception {
         if (!backup.exists()) return;
         if (!prefix.exists()) {
             if (!backup.renameTo(prefix))
                 throw new IllegalStateException("INTERRUPTED_BETA_REPAIR_BACKUP_RESTORE_FAILED");
             return;
         }
-        // If both exist, keep the known pre-repair backup intact. A successful
-        // new prefix is handled by the shared readiness gate; otherwise fail
-        // closed rather than deleting either tree speculatively.
-        if (BootstrapReadinessGate.STATE_PASS.equals(runtimeStateFromProfile(prefix))) return;
+
+        // If both trees exist after an interruption, trust only the same strong
+        // readiness gate used by orchestration. A profile alone is insufficient.
+        if (BootstrapReadinessGate.evaluate(activity).isPass()) {
+            cleanupTreeBestEffort(backup, TermuxRuntimePaths.filesDir());
+            return;
+        }
+
         if (failed.exists()) cleanupTreeBestEffort(failed, TermuxRuntimePaths.filesDir());
+        if (failed.exists())
+            throw new IllegalStateException("INTERRUPTED_BETA_REPAIR_QUARANTINE_NOT_CLEAN");
         if (!prefix.renameTo(failed))
             throw new IllegalStateException("INTERRUPTED_BETA_REPAIR_FAILED_PREFIX_QUARANTINE_FAILED");
         if (!backup.renameTo(prefix))
             throw new IllegalStateException("INTERRUPTED_BETA_REPAIR_BACKUP_RESTORE_FAILED");
     }
 
-    private static String runtimeStateFromProfile(File prefix) {
-        try {
-            File profileFile = new File(prefix, "BOOTSTRAP_PROFILE.json");
-            if (!profileFile.isFile() || profileFile.length() <= 0 || profileFile.length() > PROFILE_LIMIT)
-                return BootstrapReadinessGate.STATE_BLOCKED;
-            byte[] data = new byte[(int) profileFile.length()];
-            try (FileInputStream input = new FileInputStream(profileFile)) {
-                int offset = 0;
-                while (offset < data.length) {
-                    int n = input.read(data, offset, data.length - offset);
-                    if (n < 0) break;
-                    offset += n;
-                }
-                if (offset != data.length) return BootstrapReadinessGate.STATE_BLOCKED;
-            }
-            JSONObject profile = new JSONObject(new String(data, StandardCharsets.UTF_8));
-            boolean real = "real-pkg".equals(profile.optString("profile", ""))
-                && "real-pkg".equals(profile.optString("package_layer", ""))
-                && profile.optBoolean("runtime_materialized", false)
-                && !profile.optBoolean("claim_allowed", true)
-                && !profile.optBoolean("release_allowed", true);
-            return real ? BootstrapReadinessGate.STATE_PASS : BootstrapReadinessGate.STATE_BLOCKED;
-        } catch (Throwable ignored) {
-            return BootstrapReadinessGate.STATE_BLOCKED;
-        }
-    }
-
     private static void restoreBackupAfterRejectedInstall(File prefix, File backup, File failed, boolean hadBackup)
         throws Exception {
         if (!hadBackup || !backup.exists()) return;
         if (failed.exists()) cleanupTreeBestEffort(failed, TermuxRuntimePaths.filesDir());
+        if (failed.exists()) throw new IllegalStateException("REJECTED_PREFIX_QUARANTINE_NOT_CLEAN");
         if (prefix.exists() && !prefix.renameTo(failed))
             throw new IllegalStateException("REJECTED_REAL_PKG_PREFIX_QUARANTINE_FAILED");
         if (!backup.renameTo(prefix))
@@ -214,6 +214,13 @@ public final class BetaRealBootstrapRepair {
     }
 
     private static void deleteNode(File file, String allowedPrefix) throws Exception {
+        StructStat stat = Os.lstat(file.getAbsolutePath());
+        boolean symlink = (stat.st_mode & OsConstants.S_IFMT) == OsConstants.S_IFLNK;
+        if (symlink) {
+            if (!file.delete() && file.exists()) throw new IllegalStateException("symlink delete failed: " + file);
+            return;
+        }
+
         String canonical = file.getCanonicalPath();
         if (!canonical.startsWith(allowedPrefix)) throw new SecurityException("delete outside filesDir: " + canonical);
         if (file.isDirectory()) {
