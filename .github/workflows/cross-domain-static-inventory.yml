@@ -1,0 +1,35 @@
+name: Cross-Domain Static Inventory Gate
+
+on:
+  pull_request:
+    paths:
+      - 'data/evidence/cross_domain_static_inventory_20260814.v1.json'
+      - 'docs/audit/CROSS_DOMAIN_STATIC_INVENTORY_20260814.md'
+      - 'tools/validate_cross_domain_static_inventory.py'
+      - '.github/workflows/cross-domain-static-inventory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-static-inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Validate fail-closed static inventory
+        run: |
+          mkdir -p reports
+          python3 tools/validate_cross_domain_static_inventory.py \
+            data/evidence/cross_domain_static_inventory_20260814.v1.json \
+            --json-report reports/cross-domain-static-inventory.json
+
+      - name: Upload static inventory receipt
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cross-domain-static-inventory-${{ github.sha }}
+          path: reports/cross-domain-static-inventory.json
+          if-no-files-found: error
