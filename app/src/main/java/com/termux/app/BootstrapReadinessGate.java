@@ -35,6 +35,7 @@ public final class BootstrapReadinessGate {
 
     private static final String PROFILE_SCHEMA = "rafcodephi-bootstrap-profile/v1";
     private static final String PROFILE_FILE = "BOOTSTRAP_PROFILE.json";
+    private static final String SOURCE_ONLY_SYMLINKS_FILE = "SYMLINKS.txt";
     private static final int PROFILE_READ_LIMIT = 64 * 1024;
     private static final int PROFILE_REQUIRED_ENTRIES_LIMIT = 512;
 
@@ -139,12 +140,18 @@ public final class BootstrapReadinessGate {
                 violations.add("required_entries_bounds");
             } else {
                 String canonicalPrefix = prefix.getCanonicalPath() + File.separator;
+                boolean runtimeMaterialized = profile.optBoolean("runtime_materialized", false);
                 for (int i = 0; i < required.length(); i++) {
                     String relative = required.optString(i, "");
                     if (relative.isEmpty() || relative.startsWith("/") || relative.contains("..") || relative.contains("\\")) {
                         violations.add("unsafe_required_entry_" + i);
                         continue;
                     }
+                    // TermuxInstaller consumes SYMLINKS.txt while materializing its destinations;
+                    // it is source-archive metadata, not a post-install runtime file. Only a
+                    // profile explicitly marked runtime_materialized may use this exception.
+                    if (runtimeMaterialized && SOURCE_ONLY_SYMLINKS_FILE.equals(relative)) continue;
+
                     File target = new File(prefix, relative);
                     String canonicalTarget = target.getCanonicalPath();
                     if (!canonicalTarget.startsWith(canonicalPrefix)) {
