@@ -1,6 +1,10 @@
+import hashlib
 import importlib.util
+import json
 import struct
 import sys
+import tempfile
+import unittest
 from pathlib import Path
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "scripts" / "verify_apk_evidence.py"
@@ -101,16 +105,109 @@ def _axml():
     return struct.pack("<HHI", 0x0003, 8, size) + string_pool + start
 
 
-def test_parse_manifest_axml_extracts_identity():
-    result = module.parse_manifest_axml(_axml())
-    assert result["package"] == "com.example.app"
-    assert result["version_name"] == "1.2.3"
-    assert result["version_code"] == 42
+def _write_receipt(path, source_commit, artifact_sha256, clean_before=True, clean_after=True):
+    data = {
+        "schema": "rafaelia.apk-build-provenance.v1",
+        "source_commit": source_commit,
+        "source_tree_clean_before_build": clean_before,
+        "source_tree_clean_after_build": clean_after,
+        "artifacts": [{"sha256": artifact_sha256}],
+        "claim_allowed": False,
+    }
+    path.write_text(json.dumps(data, sort_keys=True) + "\n", encoding="utf-8")
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def test_parse_manifest_axml_rejects_invalid_root():
-    try:
-        module.parse_manifest_axml(b"12345678")
-    except Exception:
-        return
-    raise AssertionError("invalid root must fail closed")
+class ApkEvidenceTests(unittest.TestCase):
+    def test_parse_manifest_axml_extracts_identity(self):
+        result = module.parse_manifest_axml(_axml())
+        self.assertEqual(result["package"], "com.example.app")
+        self.assertEqual(result["version_name"], "1.2.3")
+        self.assertEqual(result["version_code"], 42)
+
+    def test_parse_manifest_axml_rejects_invalid_root(self):
+        with self.assertRaises(Exception):
+            module.parse_manifest_axml(b"12345678")
+
+    def test_build_provenance_positive_link(self):
+        artifact_sha = "a" * 64
+        source_commit = "b" * 40
+        with tempfile.TemporaryDirectory() as directory:
+            receipt = Path(directory) / "BUILD_PROVENANCE.json"
+            receipt_sha = _write_receipt(receipt, source_commit, artifact_sha)
+            contract = {
+                "build_provenance": {
+                    "source_commit": source_commit,
+                    "build_receipt_sha256": receipt_sha,
+                }
+            }
+            result, passed, required = module.verify_build_provenance(
+                contract, receipt, artifact_sha
+            )
+            self.assertTrue(required)
+            self.assertTrue(passed)
+            self.assertEqual(result["status"], "PASS")
+            self.assertTrue(result["artifact_listed"])
+
+    def test_build_provenance_rejects_receipt_hash_mismatch(self):
+        artifact_sha = "c" * 64
+        source_commit = "d" * 40
+        with tempfile.TemporaryDirectory() as directory:
+            receipt = Path(directory) / "BUILD_PROVENANCE.json"
+            _write_receipt(receipt, source_commit, artifact_sha)
+            contract = {
+                "build_provenance": {
+                    "source_commit": source_commit,
+                    "build_receipt_sha256": "0" * 64,
+                }
+            }
+            result, passed, required = module.verify_build_provenance(
+                contract, receipt, artifact_sha
+            )
+            self.assertTrue(required)
+            self.assertFalse(passed)
+            self.assertEqual(result["status"], "FAIL")
+
+    def test_build_provenance_rejects_unlisted_artifact(self):
+        source_commit = "e" * 40
+        with tempfile.TemporaryDirectory() as directory:
+            receipt = Path(directory) / "BUILD_PROVENANCE.json"
+            receipt_sha = _write_receipt(receipt, source_commit, "1" * 64)
+            contract = {
+                "build_provenance": {
+                    "source_commit": source_commit,
+                    "build_receipt_sha256": receipt_sha,
+                }
+            }
+            result, passed, required = module.verify_build_provenance(
+                contract, receipt, "2" * 64
+            )
+            self.assertTrue(required)
+            self.assertFalse(passed)
+            self.assertEqual(result["status"], "FAIL")
+            self.assertFalse(result["artifact_listed"])
+
+    def test_build_provenance_rejects_dirty_build(self):
+        artifact_sha = "3" * 64
+        source_commit = "f" * 40
+        with tempfile.TemporaryDirectory() as directory:
+            receipt = Path(directory) / "BUILD_PROVENANCE.json"
+            receipt_sha = _write_receipt(
+                receipt, source_commit, artifact_sha, clean_before=True, clean_after=False
+            )
+            contract = {
+                "build_provenance": {
+                    "source_commit": source_commit,
+                    "build_receipt_sha256": receipt_sha,
+                }
+            }
+            result, passed, required = module.verify_build_provenance(
+                contract, receipt, artifact_sha
+            )
+            self.assertTrue(required)
+            self.assertFalse(passed)
+            self.assertEqual(result["status"], "FAIL")
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
