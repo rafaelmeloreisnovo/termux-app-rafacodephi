@@ -1,0 +1,48 @@
+name: beta-real-bootstrap-contract
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/beta-build.yml'
+      - '.github/workflows/beta-real-bootstrap-contract.yml'
+      - 'scripts/build_apk_matrix.sh'
+      - 'scripts/prepare_bootstrap_env.sh'
+      - 'app/src/main/java/com/termux/app/BootstrapReadinessGate.java'
+      - 'app/src/main/java/com/termux/app/TermuxInstaller.java'
+      - 'tools/raf_bootstrap_profile.py'
+      - 'tests/test_beta_real_bootstrap_policy.py'
+  push:
+    paths:
+      - '.github/workflows/beta-build.yml'
+      - '.github/workflows/beta-real-bootstrap-contract.yml'
+      - 'scripts/build_apk_matrix.sh'
+      - 'app/src/main/java/com/termux/app/BootstrapReadinessGate.java'
+      - 'tests/test_beta_real_bootstrap_policy.py'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Python contract tests
+        run: python3 tests/test_beta_real_bootstrap_policy.py
+      - name: Python syntax
+        run: python3 -m py_compile tests/test_beta_real_bootstrap_policy.py tools/raf_bootstrap_profile.py scripts/import_rafcodephi_real_bootstrap.py
+      - name: Shell syntax
+        run: bash -n scripts/build_apk_matrix.sh scripts/prepare_bootstrap_env.sh
+      - name: Fail if beta build can explicitly select local bridge
+        run: |
+          set -euo pipefail
+          if grep -A8 'Build signed + unsigned APK matrix (real bootstrap' .github/workflows/beta-build.yml \
+             | grep -F 'RAF_BOOTSTRAP_SOURCE: local'; then
+            echo 'beta APK matrix regressed to local bridge bootstrap' >&2
+            exit 1
+          fi
+          grep -F 'RAF_BOOTSTRAP_SOURCE: source-built-real' .github/workflows/beta-build.yml
+          grep -F -- '--architectures arm,aarch64' .github/workflows/beta-build.yml
