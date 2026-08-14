@@ -201,7 +201,7 @@ def test_control_center_export_is_evidence_scoped_not_an_arbitrary_home_backup()
         '"package_repo_runtime_state"',
         '"apt_repository_url"',
         '"package_runtime_gate="',
-        '"[VECTRA_RUNTIME]"',
+        '[VECTRA_RUNTIME]',
         'Sensor.TYPE_ACCELEROMETER',
         'Sensor.TYPE_GYROSCOPE',
         'Sensor.TYPE_MAGNETIC_FIELD',
