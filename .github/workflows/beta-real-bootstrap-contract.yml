@@ -1,11 +1,16 @@
+# ci_track: ops
+# ci_abis: armeabi-v7a,arm64-v8a
 name: beta-real-bootstrap-contract
 
 on:
+  workflow_call:
+  workflow_dispatch:
   pull_request:
     branches: [master]
     paths:
       - '.github/workflows/beta-build.yml'
       - '.github/workflows/beta-real-bootstrap-contract.yml'
+      - '.github/workflows/00-rafaelia-control-plane.yml'
       - 'scripts/build_apk_matrix.sh'
       - 'scripts/prepare_bootstrap_env.sh'
       - 'app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java'
@@ -15,6 +20,7 @@ on:
       - 'tools/raf_bootstrap_profile.py'
       - 'tests/test_beta_real_bootstrap_policy.py'
   push:
+    branches: [master]
     paths:
       - '.github/workflows/beta-build.yml'
       - '.github/workflows/beta-real-bootstrap-contract.yml'
@@ -27,19 +33,34 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: beta-real-bootstrap-contract-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   contract:
+    name: "🧱 Bootstrap real — contrato"
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
+
       - name: Python contract tests
         run: python3 tests/test_beta_real_bootstrap_policy.py
+
       - name: Python syntax
         run: python3 -m py_compile tests/test_beta_real_bootstrap_policy.py tools/raf_bootstrap_profile.py scripts/import_rafcodephi_real_bootstrap.py
+
       - name: Shell syntax
         run: bash -n scripts/build_apk_matrix.sh scripts/prepare_bootstrap_env.sh
+
       - name: Fail if beta build can explicitly select local bridge
         run: |
           set -euo pipefail
@@ -50,3 +71,12 @@ jobs:
           fi
           grep -F 'RAF_BOOTSTRAP_SOURCE: source-built-real' .github/workflows/beta-build.yml
           grep -F -- '--architectures arm,aarch64' .github/workflows/beta-build.yml
+
+      - name: Summary
+        run: |
+          {
+            echo '## 🧱 Bootstrap contract'
+            echo '- structural contract: **PASS**'
+            echo '- device runtime proof: **TOKEN_VAZIO**'
+            echo '- claim_allowed: **false**'
+          } >> "$GITHUB_STEP_SUMMARY"
