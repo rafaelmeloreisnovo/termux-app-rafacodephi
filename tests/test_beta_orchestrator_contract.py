@@ -19,12 +19,7 @@ def test_bootstrap_readiness_gate_is_single_fail_closed_read_only_runtime_and_pr
         'PROFILE_SCHEMA = "rafcodephi-bootstrap-profile/v1"',
         'PROFILE_FILE = "BOOTSTRAP_PROFILE.json"',
         'PROFILE_READ_LIMIT = 64 * 1024',
-        '"sh"',
-        '"pkg"',
-        '"apkmanager"',
-        '"shellbash"',
-        '"busybox-safe"',
-        '"proot-safe"',
+        '"sh"', '"pkg"', '"apkmanager"', '"shellbash"', '"busybox-safe"', '"proot-safe"',
         'TermuxRuntimePaths.storageHomeDir()',
         'context.getPackageName().equals(profile.optString("package_name", ""))',
         'prefix.getAbsolutePath().equals(profile.optString("prefix", ""))',
@@ -41,8 +36,6 @@ def test_bootstrap_readiness_gate_is_single_fail_closed_read_only_runtime_and_pr
 
     assert 'observeRealExecutable(checks, "$PREFIX/bin/busybox"' in gate
     assert 'observeRealExecutable(checks, "$PREFIX/bin/proot"' in gate
-
-    # Readiness must remain observation-only. Mutation belongs to installer/repair paths.
     assert ".mkdirs()" not in gate
     assert "Os.chmod" not in gate
     assert ".delete()" not in gate
@@ -112,7 +105,7 @@ def test_orchestrator_has_process_wide_single_flight_nonempty_plan_watchdog_canc
     assert bootstrap < single < series < analysis < export
 
 
-def test_control_center_is_single_operator_surface_with_run_all_runtime_vectra_and_zip_export() -> None:
+def test_control_center_is_single_operator_surface_with_repair_run_all_vectra_and_zip_export() -> None:
     ui = read("app/src/main/java/com/termux/app/activities/BetaOrchestratorActivity.java")
     prefs = read("app/src/main/res/xml/root_preferences.xml")
 
@@ -121,15 +114,19 @@ def test_control_center_is_single_operator_surface_with_run_all_runtime_vectra_a
         "RAFCODEΦ · Control Center",
         "Bootstrap / Package Readiness",
         "Package Runtime + Vectra Snapshot",
+        "INSTALL / REPAIR REAL RUNTIME NOW",
+        "Repair/install real runtime if blocked",
         "Require bootstrap readiness",
         "Capture package + Vectra runtime snapshot",
         "Execute one PA observation",
         "Run governed 30-trial series",
         "Analyze governed receipt history",
         "Export industrial V3 methods/gap artifact",
-        "RUN SELECTED",
-        "RUN EVERYTHING",
-        "STOP AFTER CURRENT ATOMIC STAGE",
+        "RUN SELECTED", "RUN EVERYTHING", "STOP AFTER CURRENT ATOMIC STAGE",
+        "BetaRealBootstrapRepair.repair(this",
+        "home_policy=PRESERVE",
+        "prefix_policy=BACKUP_INSTALL_VALIDATE_ROLLBACK_ON_FAIL",
+        "BOOTSTRAP_REPAIR=PASS",
         "EXPORT ALL EVIDENCE (.ZIP)…",
         "REFRESH ALL STATUS",
         "OPEN BOOTSTRAP / PERMISSIONS WIZARD",
@@ -143,13 +140,10 @@ def test_control_center_is_single_operator_surface_with_run_all_runtime_vectra_a
         "stream.getFD().sync()",
         "EXPORT_ALL=PASS",
         "EXPORT_ALL_AUTHORITY=copy_only canonical_receipts_remain_authoritative",
-        "PROCESS_WIDE_PIPELINE=RUNNING",
+        "CONTROL_CENTER_OPERATION=RUNNING",
         "SINGLE_FLIGHT_INVARIANT",
-        "FINAL_EVIDENCE_STATE=",
-        "ORCHESTRATION_EXECUTION_STATE=",
-        "CANONICAL_RECEIPT=",
-        "EXTERNAL_EXPORT_STATE=",
-        "EXTERNAL_EXPORT_PATH=",
+        "FINAL_EVIDENCE_STATE=", "ORCHESTRATION_EXECUTION_STATE=", "CANONICAL_RECEIPT=",
+        "EXTERNAL_EXPORT_STATE=", "EXTERNAL_EXPORT_PATH=",
         "BetaEvidenceOrchestrator.readLatest(this)",
         "isFinishing() || isDestroyed()",
         "protected void onDestroy()",
@@ -163,13 +157,9 @@ def test_control_center_is_single_operator_surface_with_run_all_runtime_vectra_a
     assert 'app:title="RAFCODEΦ · Control Center"' in prefs
     assert 'android:targetClass="com.termux.app.activities.BetaOrchestratorActivity"' in prefs
 
-    # The old operational screen fan-out is intentionally removed from the primary settings surface.
     for obsolete_key in [
-        'app:key="android15_wizard"',
-        'app:key="system_audit"',
-        'app:key="industrial_diagnostics"',
-        'app:key="pa_freestanding_elf"',
-        'app:key="vectra_runtime"',
+        'app:key="android15_wizard"', 'app:key="system_audit"', 'app:key="industrial_diagnostics"',
+        'app:key="pa_freestanding_elf"', 'app:key="vectra_runtime"',
     ]:
         assert obsolete_key not in prefs
 
@@ -179,34 +169,19 @@ def test_control_center_export_is_evidence_scoped_not_an_arbitrary_home_backup()
     snapshot = read("app/src/main/java/com/termux/app/orchestration/ControlCenterSnapshot.java")
 
     for token in [
-        "rafcodephi.control-center-export/v1",
-        "bootstrap-readiness.txt",
-        "runtime-vectra-snapshot.txt",
-        "latest-orchestrator-receipt.json",
-        'new File(context.getFilesDir(), "rafcodephi-beta-orchestrator")',
-        'context.getExternalFilesDir("beta-evidence")',
-        "unrelated_termux_home_files=NOT_EXPORTED",
-        "evidence_path_escape",
-        "unsafe_zip_entry",
-        "export_authority=copy_only",
-        "claim_allowed_release=false",
+        "rafcodephi.control-center-export/v1", "bootstrap-readiness.txt", "runtime-vectra-snapshot.txt",
+        "latest-orchestrator-receipt.json", 'new File(context.getFilesDir(), "rafcodephi-beta-orchestrator")',
+        'context.getExternalFilesDir("beta-evidence")', "unrelated_termux_home_files=NOT_EXPORTED",
+        "evidence_path_escape", "unsafe_zip_entry", "export_authority=copy_only", "claim_allowed_release=false",
     ]:
         assert token in bundle
 
     for token in [
         'String[] tools = {"sh", "pkg", "apt", "apt-get", "dpkg", "bash", "busybox", "proot"}',
-        '"var/lib/dpkg/status"',
-        '"etc/apt/sources.list.d"',
-        '"BOOTSTRAP_PROFILE.json"',
-        '"package_repo_runtime_state"',
-        '"apt_repository_url"',
-        '"package_runtime_gate="',
-        '[VECTRA_RUNTIME]',
-        'Sensor.TYPE_ACCELEROMETER',
-        'Sensor.TYPE_GYROSCOPE',
-        'Sensor.TYPE_MAGNETIC_FIELD',
-        'Sensor.TYPE_LIGHT',
-        'Sensor.TYPE_PROXIMITY',
+        '"var/lib/dpkg/status"', '"etc/apt/sources.list.d"', '"BOOTSTRAP_PROFILE.json"',
+        '"package_repo_runtime_state"', '"apt_repository_url"', '"package_runtime_gate="', '[VECTRA_RUNTIME]',
+        'Sensor.TYPE_ACCELEROMETER', 'Sensor.TYPE_GYROSCOPE', 'Sensor.TYPE_MAGNETIC_FIELD',
+        'Sensor.TYPE_LIGHT', 'Sensor.TYPE_PROXIMITY',
     ]:
         assert token in snapshot
 
