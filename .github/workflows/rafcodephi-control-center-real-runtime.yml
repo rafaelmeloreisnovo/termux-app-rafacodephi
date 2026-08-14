@@ -7,6 +7,7 @@ on:
       - 'app/src/main/java/com/termux/app/activities/BetaOrchestratorActivity.java'
       - 'app/src/main/java/com/termux/app/orchestration/ControlCenter*.java'
       - 'app/src/main/res/xml/root_preferences.xml'
+      - 'tests/test_beta_orchestrator_contract.py'
       - '.github/workflows/rafcodephi-control-center-real-runtime.yml'
 
 permissions:
@@ -21,8 +22,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:
-      TERMUX_PACKAGES_SHA: 25c93ca39743de0298177719f6d90f9a3e38c7a0
-      RAFCODEPHI_APT_REPOSITORY_URL: https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt/repo
+      TERMUX_PACKAGES_SHA: a82963e0cc6cba761c2079fc5a0664f4b23cf3f7
+      RAFCODEPHI_APT_REPOSITORY_URL: https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt-preview/repo
       RAFCODEPHI_APT_TRUST_MODE: development-trusted
       CLAIM_ALLOWED: 'false'
       PHYSICAL_ANDROID: TOKEN_VAZIO
@@ -132,6 +133,7 @@ jobs:
             'bootstrap_arch=arm' \
             'package_runtime=real-pkg' \
             'apt_repository=DEVELOPMENT_REPOSITORY_CONFIGURED' \
+            'apt_repository_url=https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt-preview/repo' \
             'apt_repository_trust=GITHUB_HTTPS_TRANSPORT_ONLY' \
             'device_runtime_proof=TOKEN_VAZIO' \
             'claim_allowed_release=false' > dist/control-center/BUILD_RECEIPT.txt
