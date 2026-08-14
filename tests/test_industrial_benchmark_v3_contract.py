@@ -102,7 +102,8 @@ def test_unified_activity_exposes_governed_30_trial_series_without_silent_deleti
     # Human-facing contract remains explicit after the refactor.
     assert "Run governed 30-trial series" in ui
     assert "STOP AFTER CURRENT ATOMIC STAGE" in ui
-    assert "Certification/release/cross-device claims remain blocked" in ui
+    assert "Fail-closed: TOKEN_VAZIO/UNAVAILABLE/BLOCKED never become PASS" in ui
+    assert "Device/release claims remain independent" in ui
 
     # Execution responsibility moved into a reusable fail-closed orchestration layer.
     assert "PaBenchmarkSeriesAnalyzer.MIN_DISTRIBUTION_N" in engine
