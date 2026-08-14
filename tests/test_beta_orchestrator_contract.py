@@ -39,8 +39,8 @@ def test_bootstrap_readiness_gate_is_single_fail_closed_read_only_runtime_and_pr
     ]:
         assert token in gate
 
-    assert 'observeOptionalExecutable(checks, "$PREFIX/bin/busybox"' in gate
-    assert 'observeOptionalExecutable(checks, "$PREFIX/bin/proot"' in gate
+    assert 'observeRealExecutable(checks, "$PREFIX/bin/busybox"' in gate
+    assert 'observeRealExecutable(checks, "$PREFIX/bin/proot"' in gate
 
     # Readiness must remain observation-only. Mutation belongs to installer/repair paths.
     assert ".mkdirs()" not in gate
@@ -56,7 +56,7 @@ def test_wizard_and_benchmark_compatibility_entries_delegate_to_unified_implemen
 
     assert "extends BetaBootstrapWizardActivity" in wizard_entry
     assert "BootstrapReadinessGate.evaluate(this).isPass()" in wizard_impl
-    assert "Install / Repair Bootstrap" in wizard_impl
+    assert "Install / Repair Real Bootstrap" in wizard_impl
     assert "Open Unified Beta Evidence Pipeline" in wizard_impl
     assert "extends BetaOrchestratorActivity" in benchmark_entry
 
