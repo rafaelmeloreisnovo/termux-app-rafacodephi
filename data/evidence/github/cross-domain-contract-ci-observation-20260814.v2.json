@@ -1,0 +1,37 @@
+{
+  "schema": "rafaelia.github_ci_observation.v2",
+  "observed_at": "2026-08-14T04:07:30Z",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "branch": "audit/cross-domain-gap-20260814",
+  "workflow_name": "Cross-Domain Contract Gate",
+  "run_id": 31768839501,
+  "run_number": 1,
+  "attempts": [
+    {
+      "job_id": 94670296247,
+      "status": "completed",
+      "conclusion": "failure",
+      "steps_observed": 0,
+      "logs_available": false,
+      "log_fetch_result": "HTTP_404_BLOB_NOT_FOUND"
+    },
+    {
+      "job_id": 94670370584,
+      "status": "completed",
+      "conclusion": "failure",
+      "steps_observed": 0,
+      "logs_available": false
+    }
+  ],
+  "classification": "REPEATED_CI_STARTUP_OR_RUNNER_FAILURE_BEFORE_OBSERVABLE_STEPS",
+  "content_logic_failure_proven": false,
+  "validator_executed_remotely_proven": false,
+  "claim_allowed": false,
+  "supersedes_by_extension": "data/evidence/github/cross-domain-contract-ci-observation-20260814.v1.json",
+  "invariants": [
+    "ZERO_OBSERVED_STEPS_ON_TWO_ATTEMPTS != VALIDATOR_LOGIC_FAILURE",
+    "NO_REMOTE_VALIDATOR_EXECUTION_EVIDENCE",
+    "PRESERVE_NEGATIVE_CI_RESULT"
+  ],
+  "next_verifiable_action": "Validate the exact branch checkout in an environment with an observable runner, then store exit codes and report hashes. Do not convert these two zero-step failures into a content rejection."
+}

@@ -1,0 +1,34 @@
+{
+  "schema": "rafaelia.github_ci_observation.v1",
+  "observed_at": "2026-08-14T04:06:52Z",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "branch": "audit/cross-domain-gap-20260814",
+  "head_sha": "f74b5d9a2e3609869c05c8c2624b0d1ec582c0dd",
+  "workflow": {
+    "name": "Cross-Domain Contract Gate",
+    "run_id": 31768839501,
+    "run_number": 1,
+    "initial_job_id": 94670296247,
+    "initial_status": "completed",
+    "initial_conclusion": "failure",
+    "initial_steps_observed": 0,
+    "initial_logs_available": false,
+    "log_fetch_result": "HTTP_404_BLOB_NOT_FOUND"
+  },
+  "classification": "CI_STARTUP_OR_RUNNER_FAILURE_BEFORE_OBSERVABLE_STEPS",
+  "content_logic_failure_proven": false,
+  "validator_executed_remotely_proven": false,
+  "claim_allowed": false,
+  "rerun": {
+    "requested": true,
+    "accepted": true,
+    "new_job_id": 94670370584,
+    "state_at_record_time": "queued"
+  },
+  "invariants": [
+    "CI_FAILURE_WITH_ZERO_OBSERVED_STEPS != CONTENT_LOGIC_FAILURE",
+    "QUEUED_RERUN != PASS",
+    "STRUCTURAL_ARTIFACT != EXECUTION_EVIDENCE"
+  ],
+  "next_verifiable_action": "Observe rerun job steps/logs. Promote validator execution state only if at least one validator step is observed and its exit result is available."
+}

@@ -1,0 +1,44 @@
+name: Cross-Domain Contract Gate
+
+on:
+  pull_request:
+    paths:
+      - 'docs/contracts/cross_domain_dependency_graph.schema.json'
+      - 'docs/audit/OMEGA_GAP_DELTA_20260814_CROSS_DOMAIN_ANDROID.md'
+      - 'tools/validate_cross_domain_dependency_graph.py'
+      - 'tests/fixtures/cross_domain_dependency_graph.*.json'
+      - '.github/workflows/cross-domain-contract-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-cross-domain-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Run fail-closed structural self-test
+        run: |
+          mkdir -p reports
+          python3 tools/validate_cross_domain_dependency_graph.py \
+            --self-test \
+            --json-report reports/cross-domain-contract-self-test.json
+
+      - name: Validate canonical fixture directly
+        run: |
+          python3 tools/validate_cross_domain_dependency_graph.py \
+            tests/fixtures/cross_domain_dependency_graph.valid.json \
+            --json-report reports/cross-domain-contract-valid-fixture.json
+
+      - name: Upload structural validation receipts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cross-domain-contract-${{ github.sha }}
+          path: |
+            reports/cross-domain-contract-self-test.json
+            reports/cross-domain-contract-valid-fixture.json
+          if-no-files-found: error
