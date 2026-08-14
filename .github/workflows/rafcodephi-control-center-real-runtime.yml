@@ -1,0 +1,115 @@
+name: RAFCODEPHI Control Center Real Runtime
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/termux/app/activities/BetaOrchestratorActivity.java'
+      - 'app/src/main/java/com/termux/app/orchestration/ControlCenter*.java'
+      - 'app/src/main/res/xml/root_preferences.xml'
+      - '.github/workflows/rafcodephi-control-center-real-runtime.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rafcodephi-control-center-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-real-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      TERMUX_PACKAGES_SHA: 589ad7132ed16479d94d62be7e96a72fbfc51e22
+      RAFCODEPHI_APT_REPOSITORY_URL: https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt/repo
+      RAFCODEPHI_APT_TRUST_MODE: development-trusted
+      CLAIM_ALLOWED: 'false'
+      PHYSICAL_ANDROID: TOKEN_VAZIO
+    steps:
+      - name: Checkout app
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Checkout exact termux-packages implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: rafaelmeloreisnovo/termux-packages
+          ref: ${{ env.TERMUX_PACKAGES_SHA }}
+          path: termux-packages
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Source-build live real-pkg bootstrap pair
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./scripts/run-docker.sh env \
+            RAFCODEPHI_APT_REPOSITORY_URL="$RAFCODEPHI_APT_REPOSITORY_URL" \
+            RAFCODEPHI_APT_TRUST_MODE="$RAFCODEPHI_APT_TRUST_MODE" \
+            bash ./scripts/build-rafcodephi-live-bootstrap.sh --architectures arm,aarch64
+          for arch in arm aarch64; do
+            zip="artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-${arch}.zip"
+            test -s "$zip"
+            unzip -p "$zip" BOOTSTRAP_PROFILE.json | grep -F '"profile":"real-pkg"'
+            unzip -p "$zip" BOOTSTRAP_PROFILE.json | grep -F '"package_repo_runtime_state":"DEVELOPMENT_REPOSITORY_CONFIGURED"'
+            unzip -p "$zip" etc/apt/sources.list.d/termux.sources | grep -Fx 'Enabled: yes'
+            unzip -p "$zip" etc/apt/sources.list.d/termux.sources | grep -Fx "URIs: $RAFCODEPHI_APT_REPOSITORY_URL"
+          done
+
+      - name: Setup Android SDK/NDK
+        run: ./scripts/setup_android_toolchain.sh
+
+      - name: Embed exact live bootstraps
+        env:
+          RAF_BOOTSTRAP_SOURCE: source-built-real
+          RAF_REAL_BOOTSTRAP_ZIP_ARM: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
+          RAF_REAL_BOOTSTRAP_ZIP_AARCH64: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
+          RAF_REAL_BOOTSTRAP_MANIFEST: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+        run: ./scripts/prepare_bootstrap_env.sh --github-env --skip-android-preflight
+
+      - name: Compile and test APK matrix
+        env:
+          RAF_BOOTSTRAP_SOURCE: source-built-real
+          RAF_REAL_BOOTSTRAP_ZIP_ARM: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
+          RAF_REAL_BOOTSTRAP_ZIP_AARCH64: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
+          RAF_REAL_BOOTSTRAP_MANIFEST: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+          RELEASE_TRACK: internal
+          APK_MATRIX_UNIT_TESTS_REQUIRED: 'true'
+        run: ./scripts/build_apk_matrix.sh
+
+      - name: Gate ARM32 artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$(find dist/apk-matrix -type f -name '*armeabi-v7a*.apk' -print -quit)"
+          sha256sum $(find dist/apk-matrix -type f -name '*armeabi-v7a*.apk' -print) | tee /tmp/arm32-apk-sha256.txt
+          printf '%s\n' \
+            'device_abi_target=armeabi-v7a' \
+            'bootstrap_arch=arm' \
+            'package_runtime=real-pkg' \
+            'apt_repository=development-configured' \
+            'device_runtime_proof=TOKEN_VAZIO' \
+            'claim_allowed_release=false' | tee /tmp/control-center-build-receipt.txt
+
+      - name: Upload ARM32 install candidate + receipts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: rafcodephi-control-center-arm32-${{ github.sha }}
+          path: |
+            dist/apk-matrix/**/*armeabi-v7a*.apk
+            /tmp/arm32-apk-sha256.txt
+            /tmp/control-center-build-receipt.txt
+            termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
+            termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+          if-no-files-found: error
