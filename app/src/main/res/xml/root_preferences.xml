@@ -9,38 +9,14 @@
         app:fragment="com.termux.app.fragments.settings.TermuxPreferencesFragment"/>
 
     <Preference
-        app:key="android15_wizard"
-        app:title="@string/android15_wizard_title"
-        app:summary="@string/android15_wizard_summary"
-        app:persistent="false"/>
-
-    <Preference
-        app:key="system_audit"
-        app:title="@string/system_audit_title"
-        app:summary="@string/system_audit_summary"
-        app:persistent="false"/>
-
-    <Preference
-        app:key="industrial_diagnostics"
-        app:title="@string/industrial_diagnostics_title"
-        app:summary="@string/industrial_diagnostics_summary"
-        app:persistent="false"/>
-
-    <Preference
-        app:key="pa_freestanding_elf"
-        app:title="RAFCODEΦ · First Beta Orchestrator"
-        app:summary="Wizard/bootstrap readiness + PA observation + optional governed n=30 + analysis + export in one fail-closed pipeline"
+        app:key="rafcodephi_control_center"
+        app:title="RAFCODEΦ · Control Center"
+        app:summary="Bootstrap + pkg/apt runtime + Vectra + PA pipeline + analysis + Export All in one screen"
         app:persistent="false">
         <intent
             android:targetPackage="com.termux.rafacodephi"
-            android:targetClass="com.termux.app.benchmark.BenchmarkMenuActivity"/>
+            android:targetClass="com.termux.app.activities.BetaOrchestratorActivity"/>
     </Preference>
-
-    <Preference
-        app:key="vectra_runtime"
-        app:title="@string/vectra_runtime_title"
-        app:summary="@string/vectra_runtime_summary"
-        app:persistent="false"/>
 
     <Preference
         app:key="termux_api"
