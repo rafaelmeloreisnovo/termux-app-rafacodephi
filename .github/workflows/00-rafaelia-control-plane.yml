@@ -1,0 +1,235 @@
+# ci_track: ops
+# ci_abis: armeabi-v7a,arm64-v8a
+name: "🧭 RAFAELIA — Executar / Diagnosticar"
+
+on:
+  workflow_dispatch:
+    inputs:
+      mission:
+        description: "O que você quer fazer?"
+        required: true
+        default: arm32-v7
+        type: choice
+        options:
+          - diagnostico
+          - arm32-v7
+          - bootstrap-arm32
+          - completo-seguro
+      ndk_lane:
+        description: "ARM32: toolchain"
+        required: true
+        default: canonical
+        type: choice
+        options:
+          - canonical
+          - ndk29
+      strict_governance:
+        description: "Falhar se workflow antigo ainda estiver sem metadados?"
+        required: true
+        default: false
+        type: boolean
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - 'scripts/ci/workflow_control_plane.py'
+      - 'scripts/validate_ci_workflow_metadata.sh'
+      - 'docs/CI_WORKFLOW_OWNERSHIP.md'
+      - 'docs/WORKFLOW_CONTROL_PLANE.md'
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - 'scripts/ci/workflow_control_plane.py'
+      - 'scripts/validate_ci_workflow_metadata.sh'
+      - 'docs/CI_WORKFLOW_OWNERSHIP.md'
+      - 'docs/WORKFLOW_CONTROL_PLANE.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rafaelia-control-plane-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  inventory:
+    name: "🧭 1/6 Inventariar todos os workflows"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Explicar rota escolhida
+        run: |
+          {
+            echo '## 🧭 RAFAELIA Control Plane'
+            echo
+            echo "**Evento:** $GITHUB_EVENT_NAME"
+            if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+              echo "**Objetivo:** \`${{ inputs.mission }}\`"
+              echo "**ARM32 toolchain:** \`${{ inputs.ndk_lane }}\`"
+              echo "**Governança estrita:** \`${{ inputs.strict_governance }}\`"
+            else
+              echo '**Modo:** governança automática — nenhum build pesado é iniciado por este workflow.'
+            fi
+            echo
+            echo '> Um botão escolhe a intenção; os workflows especialistas continuam auditáveis e isolados.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Inventário governado de todos os YML
+        run: |
+          set -euo pipefail
+          args=()
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "${{ inputs.strict_governance }}" == "true" ]]; then
+            args+=(--strict)
+          fi
+          python3 scripts/ci/workflow_control_plane.py "${args[@]}"
+          cat reports/workflow-control-plane.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validar metadados legados em modo compatível
+        env:
+          CI_METADATA_STRICT: '0'
+        run: ./scripts/validate_ci_workflow_metadata.sh
+
+      - name: Publicar inventário
+        uses: actions/upload-artifact@v7
+        with:
+          name: workflow-control-plane-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            reports/workflow-control-plane.json
+            reports/workflow-control-plane.md
+
+  tests:
+    name: "🧪 2/6 Testes de software"
+    if: github.event_name == 'workflow_dispatch' && (inputs.mission == 'diagnostico' || inputs.mission == 'completo-seguro')
+    needs: inventory
+    uses: ./.github/workflows/run_tests.yml
+    secrets: inherit
+
+  arm32-canonical:
+    name: "📱 3/6 ARM32 v7 canônico"
+    if: github.event_name == 'workflow_dispatch' && inputs.ndk_lane == 'canonical' && (inputs.mission == 'arm32-v7' || inputs.mission == 'bootstrap-arm32' || inputs.mission == 'completo-seguro')
+    needs: inventory
+    uses: ./.github/workflows/compatibility-arm32.yml
+    secrets: inherit
+
+  arm32-ndk29:
+    name: "📱 3/6 ARM32 v7 NDK29"
+    if: github.event_name == 'workflow_dispatch' && inputs.ndk_lane == 'ndk29' && (inputs.mission == 'arm32-v7' || inputs.mission == 'bootstrap-arm32' || inputs.mission == 'completo-seguro')
+    needs: inventory
+    uses: ./.github/workflows/compatibility-arm32-ndk29.yml
+    secrets: inherit
+
+  bootstrap-contract:
+    name: "🧱 4/6 Contrato de bootstrap"
+    if: github.event_name == 'workflow_dispatch' && (inputs.mission == 'bootstrap-arm32' || inputs.mission == 'completo-seguro')
+    needs: inventory
+    uses: ./.github/workflows/beta-real-bootstrap-contract.yml
+    secrets: inherit
+
+  evidence-contract:
+    name: "🧾 5/6 Gate de evidência APK"
+    if: github.event_name == 'workflow_dispatch' && (inputs.mission == 'bootstrap-arm32' || inputs.mission == 'completo-seguro')
+    needs: inventory
+    uses: ./.github/workflows/apk-evidence-gate.yml
+    secrets: inherit
+
+  omega-summary:
+    name: "Ω 6/6 Resultado simples"
+    if: always()
+    needs:
+      - inventory
+      - tests
+      - arm32-canonical
+      - arm32-ndk29
+      - bootstrap-contract
+      - evidence-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Resumo para humano
+        env:
+          INVENTORY: ${{ needs.inventory.result }}
+          TESTS: ${{ needs.tests.result }}
+          ARM32_CANONICAL: ${{ needs.arm32-canonical.result }}
+          ARM32_NDK29: ${{ needs.arm32-ndk29.result }}
+          BOOTSTRAP: ${{ needs.bootstrap-contract.result }}
+          EVIDENCE: ${{ needs.evidence-contract.result }}
+          MISSION: ${{ inputs.mission }}
+          NDK_LANE: ${{ inputs.ndk_lane }}
+        run: |
+          set -euo pipefail
+          mission="${MISSION:-automatic-governance}"
+          ndk="${NDK_LANE:-n/a}"
+          {
+            echo '# Ω Resultado RAFAELIA'
+            echo
+            echo "- Objetivo: \`$mission\`"
+            echo "- Toolchain ARM32: \`$ndk\`"
+            echo "- Inventário: **$INVENTORY**"
+            echo "- Testes: **$TESTS**"
+            echo "- ARM32 canônico: **$ARM32_CANONICAL**"
+            echo "- ARM32 NDK29: **$ARM32_NDK29**"
+            echo "- Bootstrap: **$BOOTSTRAP**"
+            echo "- Evidência APK: **$EVIDENCE**"
+            echo
+            echo '### Como ler'
+            echo '- `success` = a etapa executada passou.'
+            echo '- `skipped` = não fazia parte da opção escolhida.'
+            echo '- `failure` = existe uma pendência real; abra somente a etapa vermelha.'
+            echo
+            echo '> CI PASS não substitui recibo físico Android. `device_runtime_proof` permanece TOKEN_VAZIO até execução no aparelho.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          [[ "$INVENTORY" == "success" ]] || exit 1
+
+          if [[ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]]; then
+            exit 0
+          fi
+
+          case "$mission" in
+            diagnostico)
+              [[ "$TESTS" == "success" ]] || exit 1
+              ;;
+            arm32-v7)
+              if [[ "$ndk" == "canonical" ]]; then
+                [[ "$ARM32_CANONICAL" == "success" ]] || exit 1
+              else
+                [[ "$ARM32_NDK29" == "success" ]] || exit 1
+              fi
+              ;;
+            bootstrap-arm32)
+              if [[ "$ndk" == "canonical" ]]; then
+                [[ "$ARM32_CANONICAL" == "success" ]] || exit 1
+              else
+                [[ "$ARM32_NDK29" == "success" ]] || exit 1
+              fi
+              [[ "$BOOTSTRAP" == "success" ]] || exit 1
+              [[ "$EVIDENCE" == "success" ]] || exit 1
+              ;;
+            completo-seguro)
+              [[ "$TESTS" == "success" ]] || exit 1
+              if [[ "$ndk" == "canonical" ]]; then
+                [[ "$ARM32_CANONICAL" == "success" ]] || exit 1
+              else
+                [[ "$ARM32_NDK29" == "success" ]] || exit 1
+              fi
+              [[ "$BOOTSTRAP" == "success" ]] || exit 1
+              [[ "$EVIDENCE" == "success" ]] || exit 1
+              ;;
+            *)
+              echo "Unsupported mission=$mission" >&2
+              exit 2
+              ;;
+          esac
