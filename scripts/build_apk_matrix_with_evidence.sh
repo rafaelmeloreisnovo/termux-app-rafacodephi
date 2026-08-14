@@ -82,13 +82,6 @@ python3 - "${TEMPLATE}" "${RUN_CONTRACT}" "${SOURCE_COMMIT}" <<'PY'
 import json
 import sys
 from pathlib import Path
-src, dst, source_commit = map(Path, sys.argv[1:3]) + [None] if False else (None, None, None)
-PY
-# Keep contract generation explicit and independent of shell quoting.
-python3 - "${TEMPLATE}" "${RUN_CONTRACT}" "${SOURCE_COMMIT}" <<'PY'
-import json
-import sys
-from pathlib import Path
 
 template = Path(sys.argv[1])
 out = Path(sys.argv[2])
@@ -96,8 +89,8 @@ source_commit = sys.argv[3]
 data = json.loads(template.read_text(encoding="utf-8"))
 data["status"] = "RUN_CONTRACT"
 data["build_provenance"]["source_commit"] = source_commit
-# Receipt exists and is hashed, but this V1 verifier intentionally does not
-# promote source provenance until receipt linkage verification is implemented.
+# The receipt is materialized and hashed, but V1 deliberately leaves the
+# contract receipt pin empty so provenance is not promoted by declaration.
 data["build_provenance"]["build_receipt_sha256"] = None
 out.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
