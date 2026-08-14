@@ -1,0 +1,156 @@
+# ci_track: ops
+# ci_abis: armeabi-v7a
+name: "_reusable — ARM32 v7 compatibility"
+
+on:
+  workflow_call:
+    inputs:
+      ndk_lane:
+        description: 'canonical ou ndk29'
+        required: false
+        default: canonical
+        type: string
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  arm32:
+    name: "📱 ARM32 v7 — ${{ inputs.ndk_lane }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS: '1'
+
+    steps:
+      - name: "📥 Checkout"
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: "🧭 Validar lane"
+        run: |
+          set -euo pipefail
+          case "${{ inputs.ndk_lane }}" in
+            canonical) ;;
+            ndk29) echo 'JITPACK_NDK_VERSION=29.0.14206865' >> "$GITHUB_ENV" ;;
+            *) echo "lane inválida: ${{ inputs.ndk_lane }}" >&2; exit 2 ;;
+          esac
+
+      - name: "☕ Java 21"
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: "🤖 Android SDK / NDK"
+        run: ./scripts/setup_android_toolchain.sh
+
+      - name: "🧰 Resolver build-tools"
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n1)
+          echo "$ANDROID_HOME/build-tools/$BUILD_TOOLS" >> "$GITHUB_PATH"
+          APKSIGNER=$(find "${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}/build-tools" \
+            -name apksigner -type f 2>/dev/null | sort -rV | head -1)
+          if [[ -z "$APKSIGNER" ]]; then
+            sdkmanager --install 'build-tools;35.0.1' >/dev/null 2>&1 || true
+            APKSIGNER=$(find "${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}/build-tools" \
+              -name apksigner -type f 2>/dev/null | sort -rV | head -1)
+          fi
+          [[ -n "$APKSIGNER" ]] || { echo 'apksigner não encontrado' >&2; exit 1; }
+          echo "APKSIGNER=$APKSIGNER" >> "$GITHUB_ENV"
+
+      - name: "🔨 Build debug APKs"
+        run: ./gradlew clean :app:assembleDebug --no-daemon
+
+      - name: "🔐 Contrato SDK / NDK"
+        run: |
+          set -euo pipefail
+          test "$(awk -F= '/^minSdkVersion=/{print $2}' gradle.properties)" = '21'
+          test "$(awk -F= '/^targetSdkVersion=/{print $2}' gradle.properties)" = '28'
+          test "$(awk -F= '/^compileSdkVersion=/{print $2}' gradle.properties)" = '35'
+          if [[ "${{ inputs.ndk_lane }}" == 'canonical' ]]; then
+            test "$(awk -F= '/^ndkVersion=/{print $2}' gradle.properties)" = '26.3.11579264'
+          else
+            test "${JITPACK_NDK_VERSION:-}" = '29.0.14206865'
+          fi
+
+      - name: "📦 Coletar APKs e gerar relatório"
+        run: |
+          set -euo pipefail
+          lane='${{ inputs.ndk_lane }}'
+          report="dist/arm32-compatibility/$lane"
+          mkdir -p "$report/apks"
+
+          ARM32_APK=$(find app/build/outputs/apk/debug -name 'termux-rafcodephi-debug-armeabi-v7a.apk' | head -n1)
+          ARM64_APK=$(find app/build/outputs/apk/debug -name 'termux-rafcodephi-debug-arm64-v8a.apk' | head -n1)
+          UNIVERSAL_APK=$(find app/build/outputs/apk/debug -name 'termux-rafcodephi-debug-universal.apk' | head -n1)
+          test -n "$ARM32_APK" && test -n "$ARM64_APK" && test -n "$UNIVERSAL_APK"
+
+          cp "$ARM32_APK" "$report/apks/"
+          cp "$ARM64_APK" "$report/apks/"
+          cp "$UNIVERSAL_APK" "$report/apks/"
+
+          aapt dump badging "$ARM32_APK" | tee "$report/apk-badging.txt"
+          unzip -l "$ARM32_APK" | tee "$report/native-libs.txt"
+          unzip -l "$UNIVERSAL_APK" > "$report/universal-libs.txt"
+
+          lib_path=$(unzip -Z1 "$ARM32_APK" | grep '^lib/armeabi-v7a/.*\.so$' | head -n1)
+          test -n "$lib_path"
+          unzip -p "$ARM32_APK" "$lib_path" > /tmp/arm32-lib.so
+          readelf -h /tmp/arm32-lib.so > "$report/readelf-arm32.txt"
+          readelf -A /tmp/arm32-lib.so >> "$report/readelf-arm32.txt"
+          "$APKSIGNER" verify --verbose "$ARM32_APK" | tee "$report/apk-signature.txt"
+
+          grep -q "package: name='com.termux.rafacodephi'" "$report/apk-badging.txt"
+          grep -q "sdkVersion:'21'" "$report/apk-badging.txt"
+          grep -q "targetSdkVersion:'28'" "$report/apk-badging.txt"
+          grep -q 'native-code:.*armeabi-v7a' "$report/apk-badging.txt"
+          grep -q 'lib/armeabi-v7a/' "$report/native-libs.txt"
+          grep -q 'lib/armeabi-v7a/' "$report/universal-libs.txt"
+
+          test -f app/src/main/cpp/bootstrap-arm.zip
+          stat app/src/main/cpp/bootstrap-arm.zip > "$report/bootstrap-arm.txt"
+          cp INSTALL_ARM32.md "$report/install-notes-arm32.md"
+
+          if find dist -name '*release*unsigned*.apk' | grep -q .; then
+            echo 'Unsigned release artifact found in principal output path.' >&2
+            exit 1
+          fi
+
+          sha256sum "$report"/apks/*.apk > "$report/apk-sha256.txt"
+          {
+            echo "schema=rafaelia.arm32-compatibility/v1"
+            echo "lane=$lane"
+            echo 'abi=armeabi-v7a'
+            echo "commit=$GITHUB_SHA"
+            echo 'device_runtime_proof=TOKEN_VAZIO'
+            echo 'claim_allowed=false'
+          } > "$report/receipt.env"
+
+      - name: "📦 Artefatos ARM32"
+        uses: actions/upload-artifact@v7
+        with:
+          name: arm32-v7-${{ inputs.ndk_lane }}-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: dist/arm32-compatibility/${{ inputs.ndk_lane }}/
+
+      - name: "Ω Resumo"
+        run: |
+          {
+            echo '## 📱 ARM32 v7'
+            echo
+            echo "- ABI: \`armeabi-v7a\`"
+            echo "- lane: \`${{ inputs.ndk_lane }}\`"
+            echo '- build/contratos estáticos: **PASS**'
+            echo '- prova física do Android: **TOKEN_VAZIO**'
+            echo
+            echo '> Próximo gate físico: instalar o APK no aparelho e gerar novo receipt do Bootstrap Wizard.'
+          } >> "$GITHUB_STEP_SUMMARY"
