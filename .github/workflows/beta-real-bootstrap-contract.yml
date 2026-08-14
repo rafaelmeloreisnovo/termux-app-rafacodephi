@@ -8,8 +8,10 @@ on:
       - '.github/workflows/beta-real-bootstrap-contract.yml'
       - 'scripts/build_apk_matrix.sh'
       - 'scripts/prepare_bootstrap_env.sh'
+      - 'app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java'
       - 'app/src/main/java/com/termux/app/BootstrapReadinessGate.java'
       - 'app/src/main/java/com/termux/app/TermuxInstaller.java'
+      - 'app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java'
       - 'tools/raf_bootstrap_profile.py'
       - 'tests/test_beta_real_bootstrap_policy.py'
   push:
@@ -17,7 +19,9 @@ on:
       - '.github/workflows/beta-build.yml'
       - '.github/workflows/beta-real-bootstrap-contract.yml'
       - 'scripts/build_apk_matrix.sh'
+      - 'app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java'
       - 'app/src/main/java/com/termux/app/BootstrapReadinessGate.java'
+      - 'app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java'
       - 'tests/test_beta_real_bootstrap_policy.py'
 
 permissions:
