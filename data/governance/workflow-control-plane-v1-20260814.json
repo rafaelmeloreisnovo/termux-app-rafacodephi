@@ -1,0 +1,41 @@
+{
+  "schema": "rafaelia.workflow-control-plane-change/v1",
+  "date": "2026-08-14",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "branch": "refactor/workflow-control-plane-v1-20260814",
+  "base_ref": "master",
+  "intent": "centralize human operation while preserving specialist workflows and fail-closed evidence boundaries",
+  "scope": {
+    "workflow_directory": ".github/workflows",
+    "discovered_workflows_before_refactor": 50,
+    "control_plane_added": true,
+    "reusable_arm32_pillar_added": true,
+    "canonical_arm32_wrappers_refactored": [
+      ".github/workflows/compatibility-arm32.yml",
+      ".github/workflows/compatibility-arm32-ndk29.yml"
+    ],
+    "reusable_gates_exposed": [
+      ".github/workflows/run_tests.yml",
+      ".github/workflows/beta-real-bootstrap-contract.yml",
+      ".github/workflows/apk-evidence-gate.yml"
+    ]
+  },
+  "invariants": [
+    "workflow_discovered != workflow_executed",
+    "workflow_executed != build_proof",
+    "build_proof != apk_proof",
+    "apk_proof != device_proof",
+    "device_proof != release_certification",
+    "missing_metadata == TOKEN_VAZIO_or_warning_until_verified",
+    "device_runtime_proof remains TOKEN_VAZIO until physical Android receipt"
+  ],
+  "claim_allowed": false,
+  "device_runtime_proof": "TOKEN_VAZIO",
+  "validation": {
+    "static_compare": "OBSERVED",
+    "github_actions_pr_run": "TOKEN_VAZIO",
+    "arm32_artifact": "TOKEN_VAZIO",
+    "physical_android_receipt": "TOKEN_VAZIO"
+  },
+  "next_gate": "open draft PR, observe workflow syntax and CI, then run ARM32/bootstrap mission from the operator control plane"
+}
