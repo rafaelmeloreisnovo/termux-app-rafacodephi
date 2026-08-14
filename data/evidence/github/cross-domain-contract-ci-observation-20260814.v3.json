@@ -1,0 +1,28 @@
+{
+  "schema": "rafaelia.github_ci_observation.v3",
+  "observed_at": "2026-08-14T04:10:00Z",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "branch": "audit/cross-domain-gap-20260814",
+  "observed_head_sha": "b9a2a1e59cfeb26e03a79db5dce4e46c17009b97",
+  "workflow_name": "Cross-Domain Contract Gate",
+  "run_id": 31768915722,
+  "run_number": 4,
+  "job_id": 94670521969,
+  "status": "completed",
+  "conclusion": "failure",
+  "steps_observed": 0,
+  "classification": "LATEST_HEAD_CI_STARTUP_OR_RUNNER_FAILURE_BEFORE_OBSERVABLE_STEPS",
+  "content_logic_failure_proven": false,
+  "validator_executed_remotely_proven": false,
+  "claim_allowed": false,
+  "extends": [
+    "data/evidence/github/cross-domain-contract-ci-observation-20260814.v1.json",
+    "data/evidence/github/cross-domain-contract-ci-observation-20260814.v2.json"
+  ],
+  "invariants": [
+    "ZERO_OBSERVED_STEPS != VALIDATOR_LOGIC_FAILURE",
+    "LATEST_HEAD_FAILURE_WITH_ZERO_STEPS != CONTENT_REJECTION",
+    "REMOTE_VALIDATOR_EXECUTION_REMAINS_TOKEN_VAZIO"
+  ],
+  "next_verifiable_action": "Run the validator on an observable runner or local checkout and preserve exact head, exit codes, stdout/stderr hashes and JSON report hashes."
+}
