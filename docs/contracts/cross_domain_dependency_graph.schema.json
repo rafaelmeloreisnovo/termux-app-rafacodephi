@@ -1,0 +1,228 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rafaelia.cross_domain_dependency_graph.v1",
+  "title": "CrossDomainDependencyGraph",
+  "description": "Append-only evidence-first graph for OS, app, package, library, toolchain, runtime, license, security and upstream relationships. The graph artifact never promotes a broader claim by itself.",
+  "type": "object",
+  "required": [
+    "graph_id",
+    "schema_version",
+    "generated_at",
+    "claim_allowed",
+    "nodes",
+    "edges",
+    "gaps"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "graph_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9._:-]{8,128}$"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "claim_allowed": {
+      "type": "boolean",
+      "const": false,
+      "description": "Inventory/graph materialization is not execution evidence and cannot promote broader claims."
+    },
+    "nodes": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/node"}
+    },
+    "edges": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/edge"}
+    },
+    "gaps": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/gap"}
+    }
+  },
+  "definitions": {
+    "tokenOrString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256OrToken": {
+      "type": "string",
+      "anyOf": [
+        {"pattern": "^[a-f0-9]{64}$"},
+        {"pattern": "^TOKEN_VAZIO(?:_[A-Z0-9_]+)?$"}
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["source_type", "source_pointer", "evidence_class"],
+      "additionalProperties": false,
+      "properties": {
+        "source_type": {
+          "type": "string",
+          "enum": ["DEVICE_RECEIPT", "FILE", "GIT", "DRIVE", "SBOM", "PACKAGE_METADATA", "LICENSE_NOTICE", "UPSTREAM", "ADVISORY", "TEST", "DOCUMENTATION", "OTHER"]
+        },
+        "source_pointer": {"$ref": "#/definitions/tokenOrString"},
+        "revision": {"$ref": "#/definitions/tokenOrString"},
+        "sha256": {"$ref": "#/definitions/sha256OrToken"},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "evidence_class": {
+          "type": "string",
+          "enum": ["OBSERVED_RUNTIME", "OBSERVED_STATIC", "DECLARED_REPOSITORY", "DOCUMENTED", "INFERRED", "TOKEN_VAZIO"]
+        }
+      }
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "os_family": {"$ref": "#/definitions/tokenOrString"},
+        "os_version": {"$ref": "#/definitions/tokenOrString"},
+        "api_level": {"type": ["integer", "null"]},
+        "abi": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        },
+        "kernel": {"$ref": "#/definitions/tokenOrString"},
+        "device_model": {"$ref": "#/definitions/tokenOrString"}
+      }
+    },
+    "license": {
+      "type": "object",
+      "required": ["state"],
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": ["VERIFIED", "DECLARED", "CONFLICT", "TOKEN_VAZIO"]
+        },
+        "spdx_id": {"$ref": "#/definitions/tokenOrString"},
+        "license_ref": {"$ref": "#/definitions/tokenOrString"},
+        "obligations": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": [
+        "component_id",
+        "name",
+        "domain",
+        "lifecycle_state",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "component_id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9._:@/+-]{2,200}$"
+        },
+        "name": {"type": "string", "minLength": 1},
+        "domain": {
+          "type": "string",
+          "enum": ["OS_SYSTEM", "OS_VENDOR", "VENDOR_DLKM", "APEX_MAINLINE", "HAL", "ANDROID_APP", "TERMUX_PACKAGE", "NATIVE_LIBRARY", "JNI", "TOOLCHAIN", "COMPILER", "RUNTIME", "FIRMWARE", "KERNEL", "DATASET", "OTHER"]
+        },
+        "version": {"$ref": "#/definitions/tokenOrString"},
+        "lifecycle_state": {
+          "type": "string",
+          "enum": ["INVENTORIED", "INSTALLED", "LOADED", "RUNTIME_REACHABLE", "EXECUTED", "MEASURED", "REPRODUCED", "TOKEN_VAZIO"]
+        },
+        "platform": {"$ref": "#/definitions/platform"},
+        "license": {"$ref": "#/definitions/license"},
+        "provenance": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/definitions/provenance"}
+        }
+      }
+    },
+    "promotionGate": {
+      "type": "object",
+      "required": [
+        "compatibility",
+        "tests",
+        "license",
+        "security",
+        "provenance",
+        "runtime_evidence",
+        "promote_allowed"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "compatibility": {"$ref": "#/definitions/gateState"},
+        "tests": {"$ref": "#/definitions/gateState"},
+        "license": {"$ref": "#/definitions/gateState"},
+        "security": {"$ref": "#/definitions/gateState"},
+        "provenance": {"$ref": "#/definitions/gateState"},
+        "runtime_evidence": {"$ref": "#/definitions/gateState"},
+        "promote_allowed": {"type": "boolean"}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"promote_allowed": {"const": true}},
+            "required": ["promote_allowed"]
+          },
+          "then": {
+            "properties": {
+              "compatibility": {"const": "PASS"},
+              "tests": {"const": "PASS"},
+              "license": {"const": "PASS"},
+              "security": {"const": "PASS"},
+              "provenance": {"const": "PASS"},
+              "runtime_evidence": {"const": "PASS"}
+            }
+          }
+        }
+      ]
+    },
+    "gateState": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "TOKEN_VAZIO", "NOT_APPLICABLE"]
+    },
+    "edge": {
+      "type": "object",
+      "required": ["edge_id", "from", "to", "relation", "evidence_state", "promotion_gate", "provenance"],
+      "additionalProperties": false,
+      "properties": {
+        "edge_id": {"type": "string", "pattern": "^[a-zA-Z0-9._:-]{4,160}$"},
+        "from": {"type": "string"},
+        "to": {"type": "string"},
+        "relation": {
+          "type": "string",
+          "enum": ["DEPENDS_ON", "ABI", "API", "LICENSE", "RUNTIME", "VERSION", "SECURITY", "PROVENANCE", "UPSTREAM", "COMPATIBILITY"]
+        },
+        "evidence_state": {
+          "type": "string",
+          "enum": ["VERIFIED", "PARTIAL", "DECLARED", "INFERRED", "TOKEN_VAZIO"]
+        },
+        "promotion_gate": {"$ref": "#/definitions/promotionGate"},
+        "provenance": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/definitions/provenance"}
+        }
+      }
+    },
+    "gap": {
+      "type": "object",
+      "required": ["gap_id", "priority", "state", "description", "next_verifiable_action"],
+      "additionalProperties": false,
+      "properties": {
+        "gap_id": {"type": "string", "pattern": "^[A-Z0-9._:-]{4,160}$"},
+        "priority": {"type": "string", "enum": ["P0", "P1", "P2", "P3"]},
+        "state": {"type": "string", "enum": ["OPEN", "TOKEN_VAZIO", "PARTIAL", "CLOSED", "ERRATUM_REQUIRED"]},
+        "description": {"type": "string", "minLength": 1},
+        "next_verifiable_action": {"type": "string", "minLength": 1},
+        "closed_by": {"$ref": "#/definitions/tokenOrString"}
+      }
+    }
+  }
+}
