@@ -1,0 +1,59 @@
+{
+  "graph_id": "rmx3834.cross-domain.invalid-promotion.v1",
+  "schema_version": "1.0.0",
+  "generated_at": "2026-08-14T03:53:00Z",
+  "claim_allowed": false,
+  "nodes": [
+    {
+      "component_id": "target:rmx3834:f94",
+      "name": "Invalidly promoted F.94 target",
+      "domain": "OS_SYSTEM",
+      "version": "RMX3834export_15_F.94",
+      "lifecycle_state": "EXECUTED",
+      "platform": {
+        "os_family": "Android",
+        "os_version": "15",
+        "api_level": 35,
+        "abi": ["arm64-v8a"],
+        "kernel": "5.15.178-android13-8-gabf75819a85e-ab569",
+        "device_model": "RMX3834"
+      },
+      "provenance": [
+        {
+          "source_type": "GIT",
+          "source_pointer": "rafaelmeloreisnovo/Rafaelia_Private/Low-level/README.md",
+          "revision": "e34b80d939c8f38a7a10850f2a15697b1b37f760",
+          "sha256": "TOKEN_VAZIO_GIT_BLOB_SHA256",
+          "evidence_class": "DECLARED_REPOSITORY"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": "invalid:runtime-promotion",
+      "from": "target:rmx3834:f94",
+      "to": "target:rmx3834:f94",
+      "relation": "RUNTIME",
+      "evidence_state": "DECLARED",
+      "promotion_gate": {
+        "compatibility": "PASS",
+        "tests": "PASS",
+        "license": "PASS",
+        "security": "PASS",
+        "provenance": "PASS",
+        "runtime_evidence": "TOKEN_VAZIO",
+        "promote_allowed": true
+      },
+      "provenance": [
+        {
+          "source_type": "DOCUMENTATION",
+          "source_pointer": "negative-test-fixture",
+          "sha256": "TOKEN_VAZIO_NEGATIVE_FIXTURE",
+          "evidence_class": "DOCUMENTED"
+        }
+      ]
+    }
+  ],
+  "gaps": []
+}
