@@ -1,6 +1,10 @@
+# ci_track: ops
+# ci_abis: armeabi-v7a,arm64-v8a
 name: apk-evidence-gate
 
 on:
+  workflow_call:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'scripts/verify_apk_evidence.py'
@@ -8,18 +12,29 @@ on:
       - 'tests/test_verify_apk_evidence.py'
       - 'data/contracts/apk_*.json'
       - '.github/workflows/apk-evidence-gate.yml'
-  workflow_dispatch:
+      - '.github/workflows/00-rafaelia-control-plane.yml'
 
 permissions:
   contents: read
 
+concurrency:
+  group: apk-evidence-gate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   static-and-unit:
+    name: "🧾 APK evidence — parser + contracts"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Python syntax
         run: python3 -m py_compile scripts/verify_apk_evidence.py tests/test_verify_apk_evidence.py
@@ -48,3 +63,13 @@ jobs:
               assert data['expected']['package']
           print('contract sanity: PASS')
           PY
+
+      - name: Summary
+        run: |
+          {
+            echo '## 🧾 APK evidence gate'
+            echo '- evidence parser: **PASS**'
+            echo '- contract schema: **PASS**'
+            echo '- physical APK/device evidence: **TOKEN_VAZIO until supplied**'
+            echo '- claim_allowed: **false**'
+          } >> "$GITHUB_STEP_SUMMARY"
