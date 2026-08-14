@@ -1,6 +1,7 @@
 {
-  "receipt_version": "1.0",
+  "receipt_version": "1.1",
   "created_at": "2026-08-14T01:00:00-03:00",
+  "updated_at": "2026-08-14T01:08:00-03:00",
   "status": "VERIFIED_LIMITED_STATIC",
   "claim_allowed": false,
   "invariants": [
@@ -45,6 +46,20 @@
     {"file":"RAFAELIA_FRACTAL_Ω_0005_tag14.png","width":950,"height":950,"sha256":"c6c34c72ecd7cb78e2b3217d1320e98a46f34e039b4b59e067db2dbecb1f5f3a","software":"Matplotlib 3.10.3"},
     {"file":"RAFAELIA_FRACTAL_Ω_0006_cheio.png","width":1024,"height":1024,"sha256":"b4bbb92f475870d3a673bc45ffa97acc1eb02842e18610a55f2fdb3d9465c033","software":"Matplotlib 3.10.3"}
   ],
+  "ci_observation": {
+    "pr": 355,
+    "head_sha_before_receipt_update": "42952a43cd948118d13e3e5eb8889e92b183deca",
+    "workflow_runs_observed": 7,
+    "workflow_conclusions": "failure",
+    "representative_jobs": [
+      {"run_id":31768815563,"job_id":94670225638,"name":"ψ Perception - Contract Gate","conclusion":"failure","steps_executed":0,"logs_available":false},
+      {"run_id":31768815182,"job_id":94670224391,"name":"audit-benchmark","conclusion":"failure","steps_executed":0,"logs_available":false},
+      {"run_id":31768815281,"job_id":94670224653,"name":"compatibility-arm32-ndk29","conclusion":"failure","steps_executed":0,"logs_available":false}
+    ],
+    "classification": "RUNNER_OR_STARTUP_FAILURE_BEFORE_STEPS",
+    "content_failure_proven": false,
+    "note": "Representative failed jobs exposed zero executed steps and no job logs; therefore failure is not attributed to audit content."
+  },
   "token_vazio": [
     "TV-APK-01 historical_sha256",
     "TV-APK-02 exact_source_commit",
@@ -52,6 +67,7 @@
     "TV-APK-04 physical_runtime_behavior",
     "TV-ZIP-01 filename_hash_semantics",
     "TV-IMG-01 exact_generator_parameters",
-    "TV-IMG-02 historical_png_byte_lineage"
+    "TV-IMG-02 historical_png_byte_lineage",
+    "TV-CI-01 runner_startup_cause"
   ]
 }
