@@ -154,6 +154,7 @@ public final class BootstrapReadinessGate {
                 violations.add("required_entries_bounds");
             } else {
                 String canonicalPrefix = prefix.getCanonicalPath() + File.separator;
+                boolean runtimeMaterialized = profile.optBoolean("runtime_materialized", false);
                 for (int i = 0; i < required.length(); i++) {
                     String relative = required.optString(i, "");
                     if (relative.isEmpty() || relative.startsWith("/") || relative.contains("..") || relative.contains("\\")) {
