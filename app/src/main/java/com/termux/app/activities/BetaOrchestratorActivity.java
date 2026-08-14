@@ -15,8 +15,11 @@ import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.termux.app.BetaRealBootstrapRepair;
 import com.termux.app.BootstrapReadinessGate;
 import com.termux.app.orchestration.BetaEvidenceOrchestrator;
+import com.termux.app.orchestration.ControlCenterEvidenceBundle;
+import com.termux.app.orchestration.ControlCenterSnapshot;
 import com.termux.shared.activity.media.AppCompatActivityUtils;
 import com.termux.shared.theme.NightMode;
 
@@ -24,38 +27,42 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.nio.charset.StandardCharsets;
 
 /**
- * Unified operator surface for first-beta bootstrap readiness + PA evidence work.
- * Expert screens remain available, but normal operation starts here.
+ * Single operator surface for RAFCODEΦ bootstrap, package runtime, Vectra and evidence work.
+ * Expert screens remain reachable from here, but normal operation no longer requires screen hopping.
  */
 public class BetaOrchestratorActivity extends AppCompatActivity {
 
-    private static final int REQUEST_EXPORT_LATEST_RECEIPT = 4301;
+    private static final int REQUEST_EXPORT_ALL_EVIDENCE = 4301;
 
     private final BetaEvidenceOrchestrator orchestrator = new BetaEvidenceOrchestrator();
 
+    private CheckBox repairRuntimeStage;
     private CheckBox bootstrapGate;
+    private CheckBox runtimeSnapshotStage;
     private CheckBox singleObservation;
     private CheckBox governedSeries;
     private CheckBox analyzeHistory;
     private CheckBox exportMethods;
     private TextView bootstrapStatus;
+    private TextView runtimeStatus;
     private TextView output;
+    private Button repairNow;
     private Button runSelected;
     private Button runFull;
     private Button cancel;
     private Button openWizard;
     private Button openVectra;
     private Button refresh;
-    private Button exportLatest;
+    private Button exportAll;
+    private boolean repairInProgress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         AppCompatActivityUtils.setNightMode(this, NightMode.getAppNightMode().getName(), true);
-        setTitle("RAFCODEΦ · Beta Orchestrator");
+        setTitle("RAFCODEΦ · Control Center");
         setContentView(buildLayout());
         if (getSupportActionBar() != null) getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         refreshOperatorState(true);
@@ -69,86 +76,108 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
         root.setPadding(pad, pad, pad, pad);
 
         TextView title = new TextView(this);
-        title.setText("First Beta · Evidence Pipeline");
-        title.setTextSize(22f);
+        title.setText("RAFCODEΦ · Control Center");
+        title.setTextSize(24f);
         root.addView(title);
 
         TextView contract = new TextView(this);
         contract.setText(
-            "One operator surface; independent evidence gates.\n" +
-            "Bootstrap readiness → PA observation → optional governed n=30 → analysis → methods export.\n" +
-            "Fail-closed: TOKEN_VAZIO/UNAVAILABLE/BLOCKED are never promoted to PASS.\n" +
-            "Single-flight: only one evidence pipeline may run in the Android app process.\n" +
-            "Rollback boundary: measurements are non-destructive and receipt publication is atomic.\n" +
-            "Watchdog: each PA trial retains the runner's bounded 60 s process timeout.\n" +
-            "Results: canonical private receipt + app-specific mirror + optional user-selected SAF copy.\n" +
-            "Local execution PASS is reported separately from evidence state; publication stays BLOCKED.\n" +
-            "Certification/release/cross-device claims remain blocked until their own evidence exists.");
+            "One screen: repair/install + bootstrap + real package runtime + internal Vectra + PA evidence + analysis + export.\n" +
+            "RUN EVERYTHING repairs an unready persisted prefix first, preserves $HOME, then executes the governed pipeline.\n" +
+            "Export All produces one ZIP with the complete control-center evidence set.\n" +
+            "Fail-closed: TOKEN_VAZIO/UNAVAILABLE/BLOCKED never become PASS. Device/release claims remain independent.");
         contract.setPadding(0, dp(10), 0, dp(14));
         root.addView(contract);
 
-        bootstrapStatus = new TextView(this);
-        bootstrapStatus.setTextIsSelectable(true);
-        bootstrapStatus.setPadding(0, 0, 0, dp(12));
+        TextView bootstrapTitle = sectionTitle("Bootstrap / Package Readiness");
+        root.addView(bootstrapTitle);
+        bootstrapStatus = selectableText();
         root.addView(bootstrapStatus);
+        repairNow = addButton(root, "INSTALL / REPAIR REAL RUNTIME NOW", v -> repairThen(null));
+
+        TextView runtimeTitle = sectionTitle("Package Runtime + Vectra Snapshot");
+        root.addView(runtimeTitle);
+        runtimeStatus = selectableText();
+        root.addView(runtimeStatus);
+
+        TextView pipelineTitle = sectionTitle("Run Selected Pipeline");
+        root.addView(pipelineTitle);
+
+        repairRuntimeStage = addCheck(root,
+            "1 · Repair/install real runtime if blocked",
+            "Uses the embedded hash-bound bootstrap, preserves $HOME, backs up the old prefix and rolls back if readiness still fails.", true);
 
         bootstrapGate = addCheck(root,
-            "1 · Require Bootstrap/Wizard readiness gate",
-            "Mandatory. Checks runtime-resolved prefix, shell/package tools, safe utility shims, profile contract and $HOME/storage.",
-            true);
+            "2 · Require bootstrap readiness",
+            "Mandatory gate for canonical prefix, real-pkg profile and package runtime surface.", true);
         bootstrapGate.setEnabled(false);
 
+        runtimeSnapshotStage = addCheck(root,
+            "3 · Capture package + Vectra runtime snapshot",
+            "Reads real ELF/package state, ABI and supported Android sensors before the evidence pipeline.", true);
+
         singleObservation = addCheck(root,
-            "2 · Execute one PA observation",
-            "Physical packaged ELF observation; runtime + protocol-v2 timing must pass.",
-            true);
+            "4 · Execute one PA observation",
+            "Physical packaged ELF observation; runtime + protocol-v2 timing must pass.", true);
 
         governedSeries = addCheck(root,
-            "3 · Run governed 30-trial series",
-            "Optional for fast smoke; required before a new n≥30 distribution summary can be produced.",
-            false);
+            "5 · Run governed 30-trial series",
+            "Optional for fast smoke; required before a new n≥30 distribution summary can be produced.", false);
 
         analyzeHistory = addCheck(root,
-            "4 · Analyze governed receipt history",
-            "Keeps workloads/series separate and preserves thermal/interference evidence.",
-            true);
+            "6 · Analyze governed receipt history",
+            "Keeps workloads/series separate and preserves thermal/interference evidence.", true);
 
         exportMethods = addCheck(root,
-            "5 · Export industrial V3 methods/gap artifact",
-            "Exports the local evidence boundary and TOKEN_VAZIO ledger for review.",
-            true);
+            "7 · Export industrial V3 methods/gap artifact",
+            "Preserves the local evidence boundary and TOKEN_VAZIO ledger.", true);
 
-        runSelected = addButton(root, "RUN SELECTED PIPELINE", v -> startSelected(false));
-        runFull = addButton(root, "RUN FULL BETA EVIDENCE PIPELINE", v -> startSelected(true));
+        runSelected = addButton(root, "RUN SELECTED", v -> startSelected(false));
+        runFull = addButton(root, "RUN EVERYTHING", v -> startSelected(true));
         cancel = addButton(root, "STOP AFTER CURRENT ATOMIC STAGE", v -> {
-            orchestrator.cancelAfterCurrentAtomicStage();
-            append("CANCEL_REQUESTED: current PA trial/stage is retained; next stage will not start.\n");
+            if (orchestrator.isRunning()) {
+                orchestrator.cancelAfterCurrentAtomicStage();
+                append("CANCEL_REQUESTED: current atomic stage retained; next stage will not start.\n");
+            } else if (repairInProgress) {
+                append("CANCEL_REQUESTED=DEFERRED reason=BOOTSTRAP_REPAIR_IS_ATOMIC_WITH_ROLLBACK\n");
+            }
         });
         cancel.setEnabled(false);
 
+        exportAll = addButton(root, "EXPORT ALL EVIDENCE (.ZIP)…", v -> requestAllEvidenceExport());
+        refresh = addButton(root, "REFRESH ALL STATUS", v -> refreshOperatorState(false));
+
+        TextView expertTitle = sectionTitle("Expert / Recovery");
+        root.addView(expertTitle);
         openWizard = addButton(root, "OPEN BOOTSTRAP / PERMISSIONS WIZARD", v ->
             startActivity(new Intent(this, Android15WizardActivity.class)));
-        openVectra = addButton(root, "OPEN VECTRA EXPERT DIAGNOSTICS", v ->
+        openVectra = addButton(root, "OPEN FULL VECTRA DETAILS", v ->
             startActivity(new Intent(this, VectraRuntimeActivity.class)));
-        refresh = addButton(root, "REFRESH READINESS + PROCESS STATE + LATEST RECEIPT", v ->
-            refreshOperatorState(false));
-        exportLatest = addButton(root, "EXPORT LATEST RECEIPT…", v -> requestUserSelectedReceiptExport());
 
-        TextView resultTitle = new TextView(this);
-        resultTitle.setText("Execution / Receipt Log");
-        resultTitle.setTextSize(18f);
-        resultTitle.setPadding(0, dp(18), 0, dp(6));
+        TextView resultTitle = sectionTitle("Execution / Receipt Log");
         root.addView(resultTitle);
-
-        output = new TextView(this);
-        output.setTextIsSelectable(true);
+        output = selectableText();
         output.setText("IDLE\nclaim_allowed_release=false\npublication_gate=BLOCKED until independently evidenced");
         root.addView(output, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT));
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         scroll.addView(root);
         return scroll;
+    }
+
+    private TextView sectionTitle(String text) {
+        TextView view = new TextView(this);
+        view.setText(text);
+        view.setTextSize(18f);
+        view.setPadding(0, dp(16), 0, dp(6));
+        return view;
+    }
+
+    private TextView selectableText() {
+        TextView view = new TextView(this);
+        view.setTextIsSelectable(true);
+        view.setPadding(0, 0, 0, dp(10));
+        return view;
     }
 
     private CheckBox addCheck(LinearLayout root, String title, String detail, boolean checked) {
@@ -165,8 +194,7 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
         button.setText(label);
         button.setOnClickListener(listener);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT);
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         params.setMargins(0, dp(5), 0, dp(5));
         button.setLayoutParams(params);
         root.addView(button);
@@ -174,12 +202,14 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
     }
 
     private void startSelected(boolean full) {
-        if (orchestrator.isRunning()) {
-            output.setText("PROCESS_WIDE_PIPELINE=RUNNING\nnew_start=BLOCKED\nreason=SINGLE_FLIGHT_INVARIANT");
+        if (orchestrator.isRunning() || repairInProgress) {
+            output.setText("CONTROL_CENTER_OPERATION=RUNNING\nnew_start=BLOCKED\nreason=SINGLE_FLIGHT_INVARIANT");
             setRunningUi(true);
             return;
         }
         if (full) {
+            repairRuntimeStage.setChecked(true);
+            runtimeSnapshotStage.setChecked(true);
             singleObservation.setChecked(true);
             governedSeries.setChecked(true);
             analyzeHistory.setChecked(true);
@@ -187,12 +217,72 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
         }
 
         BetaEvidenceOrchestrator.Plan plan = new BetaEvidenceOrchestrator.Plan(
-            singleObservation.isChecked(),
-            governedSeries.isChecked(),
-            analyzeHistory.isChecked(),
-            exportMethods.isChecked());
+            singleObservation.isChecked(), governedSeries.isChecked(),
+            analyzeHistory.isChecked(), exportMethods.isChecked());
 
-        output.setText("PIPELINE_START\nbootstrap_preflight_required=true\nsingle_flight_scope=ANDROID_APP_PROCESS\n");
+        output.setText("CONTROL_CENTER_RUN_START\nbootstrap_repair_selected=" + repairRuntimeStage.isChecked()
+            + "\nbootstrap_preflight_required=true\nsingle_flight_scope=ANDROID_APP_PROCESS\n");
+
+        BootstrapReadinessGate.Report readiness = BootstrapReadinessGate.evaluate(this);
+        if (repairRuntimeStage.isChecked() && !readiness.isPass()) {
+            repairThen(() -> startEvidencePlan(plan));
+            return;
+        }
+        if (repairRuntimeStage.isChecked()) append("BOOTSTRAP_REPAIR=SKIPPED_ALREADY_READY\n");
+        startEvidencePlan(plan);
+    }
+
+    private void repairThen(@Nullable Runnable whenReady) {
+        if (orchestrator.isRunning() || repairInProgress) {
+            append("BOOTSTRAP_REPAIR=BLOCKED reason=SINGLE_FLIGHT_INVARIANT\n");
+            return;
+        }
+
+        BootstrapReadinessGate.Report before = BootstrapReadinessGate.evaluate(this);
+        if (before.isPass()) {
+            append("BOOTSTRAP_REPAIR=SKIPPED_ALREADY_READY\n");
+            if (whenReady != null) whenReady.run();
+            return;
+        }
+
+        repairInProgress = true;
+        setRunningUi(true);
+        append("BOOTSTRAP_REPAIR=START\nhome_policy=PRESERVE\nprefix_policy=BACKUP_INSTALL_VALIDATE_ROLLBACK_ON_FAIL\n");
+        try {
+            BetaRealBootstrapRepair.repair(this, () -> runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                repairInProgress = false;
+                refreshBootstrapStatus();
+                refreshRuntimeStatus();
+                BootstrapReadinessGate.Report after = BootstrapReadinessGate.evaluate(this);
+                if (!after.isPass()) {
+                    append("BOOTSTRAP_REPAIR=BLOCKED_AFTER_INSTALL\n" + after.render() + "\n");
+                    setRunningUi(false);
+                    return;
+                }
+                append("BOOTSTRAP_REPAIR=PASS\npackage_runtime_gate=READY_FOR_ORCHESTRATION\n");
+                if (whenReady != null) {
+                    whenReady.run();
+                } else {
+                    setRunningUi(false);
+                }
+            }));
+        } catch (Throwable error) {
+            repairInProgress = false;
+            append("BOOTSTRAP_REPAIR=FAIL reason=" + error.getClass().getSimpleName()
+                + ":" + String.valueOf(error.getMessage()) + "\n");
+            refreshBootstrapStatus();
+            refreshRuntimeStatus();
+            setRunningUi(false);
+        }
+    }
+
+    private void startEvidencePlan(BetaEvidenceOrchestrator.Plan plan) {
+        if (runtimeSnapshotStage.isChecked()) {
+            runtimeStatus.setText(ControlCenterSnapshot.render(this));
+        }
+
+        append("PIPELINE_START\n");
         setRunningUi(true);
         boolean started = orchestrator.executeAsync(this, plan, new BetaEvidenceOrchestrator.Listener() {
             @Override
@@ -216,81 +306,69 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
                     append("EXTERNAL_EXPORT_STATE=" + receipt.optString("external_export_state", "NOT_MEASURED") + "\n");
                     append("EXTERNAL_EXPORT_PATH=" + receipt.optString("external_export_path", "UNAVAILABLE") + "\n");
                     append("claim_allowed_release=" + receipt.optBoolean("claim_allowed_release", false) + "\n");
-                    append("claim_allowed_certification=" + receipt.optBoolean("claim_allowed_certification", false) + "\n");
                     setRunningUi(false);
                     refreshBootstrapStatus();
+                    refreshRuntimeStatus();
                 });
             }
         });
 
         if (!started) {
-            output.setText("ORCHESTRATOR_START=BLOCKED\nreason=EMPTY_PLAN_OR_PROCESS_WIDE_PIPELINE_ALREADY_RUNNING\nclaim_allowed_release=false");
-            setRunningUi(orchestrator.isRunning());
+            append("ORCHESTRATOR_START=BLOCKED\nreason=EMPTY_PLAN_OR_PROCESS_WIDE_PIPELINE_ALREADY_RUNNING\nclaim_allowed_release=false\n");
+            setRunningUi(orchestrator.isRunning() || repairInProgress);
         }
     }
 
-    private void requestUserSelectedReceiptExport() {
-        if (orchestrator.isRunning()) {
-            append("USER_SELECTED_EXPORT=BLOCKED reason=PIPELINE_RUNNING\n");
+    private void requestAllEvidenceExport() {
+        if (orchestrator.isRunning() || repairInProgress) {
+            append("EXPORT_ALL=BLOCKED reason=CONTROL_CENTER_OPERATION_RUNNING\n");
             return;
         }
-        JSONObject latest = BetaEvidenceOrchestrator.readLatest(this);
-        if (latest == null) {
-            append("USER_SELECTED_EXPORT=NOT_MEASURED reason=NO_CANONICAL_LATEST_RECEIPT\n");
-            return;
-        }
-        String runId = latest.optString("run_id", "unknown").replaceAll("[^A-Za-z0-9._-]", "_");
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("application/json");
-        intent.putExtra(Intent.EXTRA_TITLE, "rafcodephi-beta-evidence-" + runId + ".json");
-        startActivityForResult(intent, REQUEST_EXPORT_LATEST_RECEIPT);
+        intent.setType("application/zip");
+        intent.putExtra(Intent.EXTRA_TITLE, "rafcodephi-control-center-evidence-" + System.currentTimeMillis() + ".zip");
+        startActivityForResult(intent, REQUEST_EXPORT_ALL_EVIDENCE);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != REQUEST_EXPORT_LATEST_RECEIPT) return;
+        if (requestCode != REQUEST_EXPORT_ALL_EVIDENCE) return;
         if (resultCode != RESULT_OK || data == null || data.getData() == null) {
-            append("USER_SELECTED_EXPORT=BLOCKED reason=USER_CANCELLED_OR_NO_DESTINATION\n");
-            return;
-        }
-
-        JSONObject latest = BetaEvidenceOrchestrator.readLatest(this);
-        if (latest == null) {
-            append("USER_SELECTED_EXPORT=FAIL reason=CANONICAL_RECEIPT_BECAME_UNAVAILABLE\n");
+            append("EXPORT_ALL=BLOCKED reason=USER_CANCELLED_OR_NO_DESTINATION\n");
             return;
         }
 
         Uri target = data.getData();
-        byte[] payload = (latest.toString() + "\n").getBytes(StandardCharsets.UTF_8);
+        BootstrapReadinessGate.Report report = BootstrapReadinessGate.evaluate(this);
+        String bootstrap = "Bootstrap shared gate\n" + report.render();
+        String runtime = ControlCenterSnapshot.render(this);
+        JSONObject latest = BetaEvidenceOrchestrator.readLatest(this);
         try (ParcelFileDescriptor descriptor = getContentResolver().openFileDescriptor(target, "rwt")) {
             if (descriptor == null) throw new IllegalStateException("destination_file_descriptor_unavailable");
+            int entries;
             try (FileOutputStream stream = new FileOutputStream(descriptor.getFileDescriptor())) {
-                stream.write(payload);
+                entries = ControlCenterEvidenceBundle.write(this, stream, bootstrap, runtime, latest);
                 stream.flush();
                 stream.getFD().sync();
             }
-            append("USER_SELECTED_EXPORT=PASS bytes=" + payload.length + " destination=" + target + "\n");
-            append("USER_SELECTED_EXPORT_AUTHORITY=copy_only canonical_receipt_remains_authoritative\n");
+            append("EXPORT_ALL=PASS entries=" + entries + " destination=" + target + "\n");
+            append("EXPORT_ALL_AUTHORITY=copy_only canonical_receipts_remain_authoritative\n");
         } catch (Throwable error) {
-            append("USER_SELECTED_EXPORT=FAIL reason=" + error.getClass().getSimpleName()
+            append("EXPORT_ALL=FAIL reason=" + error.getClass().getSimpleName()
                 + ":" + String.valueOf(error.getMessage()) + "\n");
         }
     }
 
     private void refreshOperatorState(boolean initial) {
         refreshBootstrapStatus();
-        boolean running = orchestrator.isRunning();
+        refreshRuntimeStatus();
+        boolean running = orchestrator.isRunning() || repairInProgress;
         setRunningUi(running);
         if (running) {
-            if (initial || output == null || !output.getText().toString().contains("PIPELINE_START")) {
-                output.setText(
-                    "PROCESS_WIDE_PIPELINE=RUNNING\n" +
-                    "new_start=BLOCKED\n" +
-                    "reason=SINGLE_FLIGHT_INVARIANT\n" +
-                    "lifecycle_note=if_previous_activity_was_destroyed_cancellation_may_complete_after_current_atomic_trial\n" +
-                    "claim_allowed_release=false");
+            if (initial || output == null || !output.getText().toString().contains("CONTROL_CENTER_RUN_START")) {
+                output.setText("CONTROL_CENTER_OPERATION=RUNNING\nnew_start=BLOCKED\nreason=SINGLE_FLIGHT_INVARIANT\nclaim_allowed_release=false");
             }
         } else {
             renderLatestReceiptIfIdle();
@@ -300,11 +378,15 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
     private void refreshBootstrapStatus() {
         BootstrapReadinessGate.Report report = BootstrapReadinessGate.evaluate(this);
         bootstrapStatus.setText("Bootstrap shared gate\n" + report.render());
-        if (!report.isPass()) openWizard.setEnabled(!orchestrator.isRunning());
+        if (openWizard != null) openWizard.setEnabled(!orchestrator.isRunning() && !repairInProgress);
+    }
+
+    private void refreshRuntimeStatus() {
+        if (runtimeStatus != null) runtimeStatus.setText(ControlCenterSnapshot.render(this));
     }
 
     private void renderLatestReceiptIfIdle() {
-        if (orchestrator.isRunning() || output == null) return;
+        if (orchestrator.isRunning() || repairInProgress || output == null) return;
         JSONObject latest = BetaEvidenceOrchestrator.readLatest(this);
         if (latest == null) {
             output.setText("IDLE\nlatest_orchestrator_receipt=NOT_MEASURED\nclaim_allowed_release=false\npublication_gate=BLOCKED");
@@ -316,7 +398,6 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
             "evidence_state=" + latest.optString("state", "INVALIDATED") + "\n" +
             "orchestration_execution_state=" + latest.optString("orchestration_execution_state", "INVALIDATED") + "\n" +
             "reason=" + latest.optString("reason", "UNKNOWN") + "\n" +
-            "analysis_observation_state=" + latest.optString("analysis_observation_state", "NOT_SELECTED") + "\n" +
             "canonical_receipt=" + latest.optString("canonical_receipt", "UNAVAILABLE") + "\n" +
             "external_export_state=" + latest.optString("external_export_state", "NOT_MEASURED") + "\n" +
             "external_export_path=" + latest.optString("external_export_path", "UNAVAILABLE") + "\n" +
@@ -326,18 +407,20 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
     }
 
     private void setRunningUi(boolean running) {
+        repairRuntimeStage.setEnabled(!running);
+        runtimeSnapshotStage.setEnabled(!running);
         singleObservation.setEnabled(!running);
         governedSeries.setEnabled(!running);
         analyzeHistory.setEnabled(!running);
         exportMethods.setEnabled(!running);
+        repairNow.setEnabled(!running);
         runSelected.setEnabled(!running);
         runFull.setEnabled(!running);
         openWizard.setEnabled(!running);
         openVectra.setEnabled(!running);
-        exportLatest.setEnabled(!running);
-        // Refresh remains enabled so a recreated Activity can recover a process-wide run.
+        exportAll.setEnabled(!running);
         refresh.setEnabled(true);
-        cancel.setEnabled(running);
+        cancel.setEnabled(orchestrator.isRunning() || repairInProgress);
     }
 
     private void append(String text) {
@@ -356,8 +439,6 @@ public class BetaOrchestratorActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        // Fail-safe lifecycle rule: never leave a UI-owned series intentionally orphaned.
-        // The current atomic PA trial is retained; cancellation is observed before the next trial/stage.
         if (orchestrator.isRunning()) orchestrator.cancelAfterCurrentAtomicStage();
         super.onDestroy();
     }

@@ -1,0 +1,149 @@
+name: RAFCODEPHI Control Center Real Runtime
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/termux/app/activities/BetaOrchestratorActivity.java'
+      - 'app/src/main/java/com/termux/app/orchestration/ControlCenter*.java'
+      - 'app/src/main/res/xml/root_preferences.xml'
+      - 'tests/test_beta_orchestrator_contract.py'
+      - '.github/workflows/rafcodephi-control-center-real-runtime.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rafcodephi-control-center-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-real-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      TERMUX_PACKAGES_SHA: 6ebaa2e2edaa17685f38fd30ded54cad6877ed90
+      RAFCODEPHI_APT_REPOSITORY_URL: https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt-preview/repo
+      RAFCODEPHI_APT_TRUST_MODE: development-trusted
+      CLAIM_ALLOWED: 'false'
+      PHYSICAL_ANDROID: TOKEN_VAZIO
+    steps:
+      - name: Checkout app
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Checkout exact termux-packages implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: rafaelmeloreisnovo/termux-packages
+          ref: ${{ env.TERMUX_PACKAGES_SHA }}
+          path: termux-packages
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Bind RAFCODEPHI package and prefix
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          python3 scripts/apply-rafcodephi-build-properties.py \
+            --properties scripts/properties.sh \
+            --receipt build/reports/control-center-properties.json
+          bash scripts/validate-rafcodephi-build-properties.sh
+          grep -Fx 'TERMUX_APP__PACKAGE_NAME="com.termux.rafacodephi"' scripts/properties.sh
+
+      - name: Source-build live real-pkg bootstrap pair
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./scripts/run-docker.sh env \
+            RAFCODEPHI_APT_REPOSITORY_URL="$RAFCODEPHI_APT_REPOSITORY_URL" \
+            RAFCODEPHI_APT_TRUST_MODE="$RAFCODEPHI_APT_TRUST_MODE" \
+            bash ./scripts/build-rafcodephi-live-bootstrap.sh --architectures arm,aarch64
+          for arch in arm aarch64; do
+            zip="artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-${arch}.zip"
+            test -s "$zip"
+            unzip -p "$zip" BOOTSTRAP_PROFILE.json | grep -F '"profile":"real-pkg"'
+            unzip -p "$zip" BOOTSTRAP_PROFILE.json | grep -F '"package_repo_runtime_state":"DEVELOPMENT_REPOSITORY_CONFIGURED"'
+            unzip -p "$zip" etc/apt/sources.list.d/termux.sources | grep -Fx 'Enabled: yes'
+            unzip -p "$zip" etc/apt/sources.list.d/termux.sources | grep -Fx "URIs: $RAFCODEPHI_APT_REPOSITORY_URL"
+          done
+
+      - name: Setup Android SDK/NDK
+        run: ./scripts/setup_android_toolchain.sh
+
+      - name: Materialize exact embedded bootstrap set
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Generate untouched x86 compatibility slots, then replace only ARM slots
+          # with the source-built real-pkg pair. The legacy importer intentionally
+          # models the old blocked repository, so this beta path hashes the live contract directly.
+          bash scripts/build_bootstrap_profile.sh
+          cp termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip app/src/main/cpp/rewritten-bootstrap-arm.zip
+          cp termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip app/src/main/cpp/rewritten-bootstrap-aarch64.zip
+          python3 -m pip install --disable-pip-version-check --quiet --target build/python-deps blake3
+          PYTHONPATH="$PWD/build/python-deps" python3 - <<'PY' >> "$GITHUB_ENV"
+          from pathlib import Path
+          from blake3 import blake3
+          import hashlib
+          mapping = {
+              'AARCH64': 'rewritten-bootstrap-aarch64.zip',
+              'ARM': 'rewritten-bootstrap-arm.zip',
+              'I686': 'rewritten-bootstrap-i686.zip',
+              'X86_64': 'rewritten-bootstrap-x86_64.zip',
+          }
+          base = Path('app/src/main/cpp')
+          for key, name in mapping.items():
+              data = (base / name).read_bytes()
+              print(f'TERMUX_BOOTSTRAP_SHA256_{key}={hashlib.sha256(data).hexdigest()}')
+              print(f'TERMUX_BOOTSTRAP_BLAKE3_{key}={blake3(data).hexdigest()}')
+          PY
+
+      - name: Compile unit tests and debug split APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew :app:testDebugUnitTest --no-daemon
+          TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS=1 ./gradlew :app:assembleDebug --no-daemon
+
+      - name: Gate ARM32 install candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/control-center
+          mapfile -t apks < <(find app/build/outputs/apk/debug -type f -name '*armeabi-v7a*.apk' -print)
+          test "${#apks[@]}" -gt 0
+          cp "${apks[@]}" dist/control-center/
+          (cd dist/control-center && sha256sum *.apk) | tee dist/control-center/SHA256SUMS.txt
+          printf '%s\n' \
+            'schema=rafcodephi.control-center-build/v1' \
+            'device_abi_target=armeabi-v7a' \
+            'bootstrap_arch=arm' \
+            'package_runtime=real-pkg' \
+            'apt_repository=DEVELOPMENT_REPOSITORY_CONFIGURED' \
+            'apt_repository_url=https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt-preview/repo' \
+            'apt_repository_trust=GITHUB_HTTPS_TRANSPORT_ONLY' \
+            'device_runtime_proof=TOKEN_VAZIO' \
+            'claim_allowed_release=false' > dist/control-center/BUILD_RECEIPT.txt
+
+      - name: Upload ARM32 install candidate + bootstrap evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: rafcodephi-control-center-arm32-${{ github.sha }}
+          path: |
+            dist/control-center
+            termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
+            termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+          if-no-files-found: error
