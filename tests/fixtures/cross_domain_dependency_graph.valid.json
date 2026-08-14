@@ -1,0 +1,106 @@
+{
+  "graph_id": "rmx3834.cross-domain.20260814.v1",
+  "schema_version": "1.0.0",
+  "generated_at": "2026-08-14T03:53:00Z",
+  "claim_allowed": false,
+  "nodes": [
+    {
+      "component_id": "device:rmx3834:c74",
+      "name": "RMX3834 observed C.74 anchor",
+      "domain": "OS_SYSTEM",
+      "version": "RMX3834export_14_C.74",
+      "lifecycle_state": "INVENTORIED",
+      "platform": {
+        "os_family": "Android",
+        "os_version": "14",
+        "api_level": 34,
+        "abi": ["arm64-v8a", "armeabi-v7a", "armeabi"],
+        "kernel": "5.4.254-android12-9-g46eed20d7a9b-ab708",
+        "device_model": "RMX3834/RE5C9F"
+      },
+      "provenance": [
+        {
+          "source_type": "DRIVE",
+          "source_pointer": "conversations-012.json#conversation[9].mapping[\"bbb21be2-9656-4287-8ba6-ec7970e74e8b\"]",
+          "revision": "MESSAGES-00018.jsonl.txt",
+          "sha256": "TOKEN_VAZIO_SOURCE_HASH_UNRESOLVED",
+          "evidence_class": "OBSERVED_STATIC"
+        }
+      ]
+    },
+    {
+      "component_id": "target:rmx3834:f94",
+      "name": "RMX3834 F.94 repository target declaration",
+      "domain": "OS_SYSTEM",
+      "version": "RMX3834export_15_F.94",
+      "lifecycle_state": "INVENTORIED",
+      "platform": {
+        "os_family": "Android",
+        "os_version": "15",
+        "api_level": 35,
+        "abi": ["arm64-v8a"],
+        "kernel": "5.15.178-android13-8-gabf75819a85e-ab569",
+        "device_model": "RMX3834"
+      },
+      "provenance": [
+        {
+          "source_type": "GIT",
+          "source_pointer": "rafaelmeloreisnovo/Rafaelia_Private/Low-level/README.md",
+          "revision": "e34b80d939c8f38a7a10850f2a15697b1b37f760",
+          "sha256": "TOKEN_VAZIO_GIT_BLOB_SHA256",
+          "evidence_class": "DECLARED_REPOSITORY"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": "epoch:c74-to-f94",
+      "from": "device:rmx3834:c74",
+      "to": "target:rmx3834:f94",
+      "relation": "VERSION",
+      "evidence_state": "PARTIAL",
+      "promotion_gate": {
+        "compatibility": "TOKEN_VAZIO",
+        "tests": "TOKEN_VAZIO",
+        "license": "NOT_APPLICABLE",
+        "security": "TOKEN_VAZIO",
+        "provenance": "FAIL",
+        "runtime_evidence": "TOKEN_VAZIO",
+        "promote_allowed": false
+      },
+      "provenance": [
+        {
+          "source_type": "DOCUMENTATION",
+          "source_pointer": "docs/audit/OMEGA_GAP_DELTA_20260814_CROSS_DOMAIN_ANDROID.md",
+          "revision": "audit/cross-domain-gap-20260814",
+          "sha256": "TOKEN_VAZIO_AUDIT_FILE_SHA256",
+          "evidence_class": "DOCUMENTED"
+        }
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "gap_id": "GAP-RMX3834-001",
+      "priority": "P0",
+      "state": "TOKEN_VAZIO",
+      "description": "Physical F.94 provenance for the exact destroyed RMX3834 is not established.",
+      "next_verifiable_action": "Locate a raw device-linked fingerprint/build/kernel/OTA receipt with source pointer and timestamp."
+    },
+    {
+      "gap_id": "GAP-RMX3834-002",
+      "priority": "P0",
+      "state": "PARTIAL",
+      "description": "A C.74 source anchor is resolved; the first physical F-series anchor remains unresolved.",
+      "next_verifiable_action": "Continue longitudinal shard search for the first source-observed F-series device artifact."
+    },
+    {
+      "gap_id": "GAP-XDOM-002",
+      "priority": "P1",
+      "state": "PARTIAL",
+      "description": "Typed schema and fixture exist; executable validation evidence is still required.",
+      "next_verifiable_action": "Run the fail-closed validator and preserve its CI/local receipt."
+    }
+  ]
+}
