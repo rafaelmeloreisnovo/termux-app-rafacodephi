@@ -1,3 +1,5 @@
+# ci_track: ops
+# ci_abis: n/a
 name: Cross-Domain Contract Gate
 
 on:
@@ -13,12 +15,19 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: cross-domain-contract-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate-cross-domain-contract:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Run fail-closed structural self-test
         run: |

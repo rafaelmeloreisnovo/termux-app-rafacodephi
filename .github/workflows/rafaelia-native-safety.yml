@@ -1,3 +1,5 @@
+# ci_track: ops
+# ci_abis: n/a
 name: Rafaelia Native Safety
 
 on:
@@ -7,12 +9,22 @@ on:
       - master
       - next-evolution-native-safety
 
+permissions:
+  contents: read
+
+concurrency:
+  group: rafaelia-native-safety-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   native-safety:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Verify Rafaelia native safety contracts
         run: python3 scripts/verify_rafaelia_native_safety.py

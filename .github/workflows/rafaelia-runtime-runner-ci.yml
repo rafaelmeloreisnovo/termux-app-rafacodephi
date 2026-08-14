@@ -1,3 +1,5 @@
+# ci_track: ops
+# ci_abis: n/a
 name: RAFAELIA Runtime Runner CI
 
 # Validation branch exercises the integrated runner through pull_request.
@@ -15,12 +17,18 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: rafaelia-runtime-runner-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   runner-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Prepare fixture and scanner stub
         run: |
           mkdir -p /tmp/raf-runner/out

@@ -1,3 +1,5 @@
+# ci_track: ops
+# ci_abis: n/a
 name: GitHub Actions Reference Audit
 
 on:
@@ -11,12 +13,19 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: action-reference-audit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   audit-action-references:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Audit action references against dated policy
         run: |

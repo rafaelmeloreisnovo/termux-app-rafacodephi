@@ -1,3 +1,5 @@
+# ci_track: ops
+# ci_abis: n/a
 name: B7 Selftest Receipt
 
 on:
@@ -27,6 +29,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Syntax checks
         run: |
