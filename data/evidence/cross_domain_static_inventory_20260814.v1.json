@@ -1,0 +1,173 @@
+{
+  "inventory_id": "RAFAELIA_XDOM_STATIC_INVENTORY_20260814_V1",
+  "generated_at": "2026-08-14T10:49:00-03:00",
+  "base_commit": "1f9b7e7abc76cf0d19d9bd497949b3efbe05d3c5",
+  "evidence_class": "OBSERVED_STATIC",
+  "scope": "DIRECT_DECLARATIONS_ONLY",
+  "claim_allowed": false,
+  "runtime_claim_promoted": false,
+  "lifecycle_policy": {
+    "current_state": "INVENTORIED",
+    "not_implied": ["INSTALLED", "LOADED", "RUNTIME_REACHABLE", "EXECUTED", "MEASURED", "REPRODUCED"]
+  },
+  "android_build": {
+    "agp": "8.13.2",
+    "compile_sdk": 35,
+    "target_sdk": 28,
+    "min_sdk": 21,
+    "ndk": "26.3.11579264",
+    "required_abis": ["armeabi-v7a", "arm64-v8a"],
+    "optional_abis": [],
+    "universal_apk": true,
+    "source": [
+      {"path": "build.gradle", "blob_sha": "3a3888455713693e4de35ae790723f84305b6032"},
+      {"path": "gradle.properties", "blob_sha": "69412de2e0edf6ed4f9d41a0cf9ea720d487fffd"},
+      {"path": "app/build.gradle", "blob_sha": "98a18d9531a8626e76368a67f74d8b9c09c863ea"}
+    ]
+  },
+  "modules": [
+    {
+      "id": ":app",
+      "type": "android_application",
+      "version": "0.118.0-rafacodephi",
+      "direct_project_dependencies": [":terminal-view", ":termux-shared"],
+      "direct_external_dependencies": [
+        "com.android.tools:desugar_jdk_libs:2.1.2", "androidx.annotation:annotation:1.9.0", "androidx.core:core:1.13.1",
+        "androidx.drawerlayout:drawerlayout:1.2.0", "androidx.preference:preference:1.2.1", "androidx.viewpager:viewpager:1.0.0",
+        "com.google.android.material:material:1.12.0", "com.google.guava:guava:24.1-jre", "org.bouncycastle:bcprov-jdk18on:1.84",
+        "io.noties.markwon:core:4.6.2", "io.noties.markwon:ext-strikethrough:4.6.2", "io.noties.markwon:linkify:4.6.2",
+        "io.noties.markwon:recycler:4.6.2", "com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava",
+        "junit:junit:4.13.2", "org.robolectric:robolectric:4.10"
+      ],
+      "source": [
+        {"path": "build.gradle", "blob_sha": "3a3888455713693e4de35ae790723f84305b6032"},
+        {"path": "app/build.gradle", "blob_sha": "98a18d9531a8626e76368a67f74d8b9c09c863ea"}
+      ]
+    },
+    {
+      "id": ":termux-shared",
+      "type": "android_library",
+      "version": "0.118.0",
+      "direct_project_dependencies": [":terminal-view"],
+      "direct_external_dependencies": [
+        "androidx.appcompat:appcompat:1.6.1", "androidx.annotation:annotation:1.9.0", "androidx.core:core:1.13.1",
+        "com.google.android.material:material:1.12.0", "com.google.guava:guava:32.1.3-jre", "io.noties.markwon:core:4.6.2",
+        "io.noties.markwon:ext-strikethrough:4.6.2", "io.noties.markwon:linkify:4.6.2", "io.noties.markwon:recycler:4.6.2",
+        "org.lsposed.hiddenapibypass:hiddenapibypass:6.1", "androidx.window:window:1.1.0", "commons-io:commons-io:2.5",
+        "com.termux:termux-am-library:v2.0.0", "junit:junit:4.13.2", "androidx.test.ext:junit:1.1.5",
+        "com.android.tools:desugar_jdk_libs:2.1.2"
+      ],
+      "source": [{"path": "termux-shared/build.gradle", "blob_sha": "3a8c9d58e213df38b7f844ee2807f0ef6daad344"}]
+    },
+    {
+      "id": ":terminal-view",
+      "type": "android_library",
+      "version": "0.118.0",
+      "direct_project_dependencies": [":terminal-emulator"],
+      "direct_external_dependencies": ["androidx.annotation:annotation:1.9.0", "junit:junit:4.13.2", "androidx.test.ext:junit:1.1.5"],
+      "source": [{"path": "terminal-view/build.gradle", "blob_sha": "d1f93b06903aea9baa8d6f67d48dde508e982fb1"}]
+    },
+    {
+      "id": ":terminal-emulator",
+      "type": "android_library",
+      "version": "0.118.0",
+      "direct_project_dependencies": [],
+      "direct_external_dependencies": ["androidx.annotation:annotation:1.9.0", "junit:junit:4.13.2"],
+      "source": [{"path": "terminal-emulator/build.gradle", "blob_sha": "17794d40ff1a65611c4c905af62abf17fb1c03ec"}]
+    },
+    {
+      "id": ":rafaelia",
+      "type": "android_library",
+      "version": "TOKEN_VAZIO_VERSION",
+      "direct_project_dependencies": [],
+      "direct_external_dependencies": ["androidx.annotation:annotation:1.8.2", "androidx.work:work-runtime:2.9.1", "junit:junit:4.13.2", "org.json:json:20240303"],
+      "source": [{"path": "rafaelia/build.gradle", "blob_sha": "d2bc2c236e01019e39846bb887bfe1cd26295dd9"}]
+    },
+    {
+      "id": ":rmr",
+      "type": "android_library",
+      "version": "TOKEN_VAZIO_VERSION",
+      "direct_project_dependencies": [],
+      "direct_external_dependencies": ["junit:junit:4.13.2"],
+      "source": [{"path": "rmr/build.gradle", "blob_sha": "8d0841f5e9d94e2c9fea64ec5ef5b74b374640a8"}]
+    },
+    {
+      "id": ":loader",
+      "type": "android_application",
+      "version": "0.3.0",
+      "direct_project_dependencies": [],
+      "direct_external_dependencies": [],
+      "source": [{"path": "app/loader/build.gradle", "blob_sha": "0ef260c83a03c2864cb129172caf25f5af97fb16"}]
+    }
+  ],
+  "native_declarations": [
+    {
+      "owner": ":app",
+      "modules": ["libtermux-bootstrap", "termux-baremetal", "termux_rafaelia_direct", "api_lowlevel", "raf_pa_core", "termux_rafaelia_zero_runtime"],
+      "canonical_abis": ["armeabi-v7a", "arm64-v8a"],
+      "source": {"path": "app/src/main/cpp/Android.mk", "blob_sha": "b283b9e24476a16c1785bba1dc0a2da490af8fe4"}
+    },
+    {
+      "owner": ":rmr",
+      "modules": ["rmr"],
+      "canonical_abis": ["armeabi-v7a", "arm64-v8a"],
+      "source": {"path": "rmr/src/main/cpp/Android.mk", "blob_sha": "3dae52f0a8c16c021a139d724ba6f39e457e3998"}
+    },
+    {
+      "owner": ":rafaelia",
+      "modules": ["termux-rafaelia", "termux_rafaelia_zero"],
+      "canonical_abis": ["armeabi-v7a", "arm64-v8a"],
+      "source": {"path": "rafaelia/src/main/cpp/Android.mk", "blob_sha": "12e4f7740b2df9ccb31da065ea600e06779ee1f7"}
+    }
+  ],
+  "license_state": {
+    "main_app": {
+      "state": "DECLARED",
+      "declared": "GPL-3.0-only",
+      "source": {"path": "LICENSE.md", "blob_sha": "b09de820ba6bfc28dbd3b59ea5691827216cf925"}
+    },
+    "termux_shared": {
+      "state": "DECLARED_WITH_FILE_EXCEPTIONS",
+      "declared": ["MIT", "GPL-3.0-only", "GPL-2.0-only WITH Classpath-exception-2.0", "Apache-2.0"],
+      "source": {"path": "termux-shared/LICENSE.md", "blob_sha": "fb22a386c707baacbdd8669f1966623d2a487bb9"}
+    },
+    "rafaelia_rmr": {
+      "state": "CONFLICT",
+      "authority_a": {
+        "path": "LICENSE.md", "blob_sha": "b09de820ba6bfc28dbd3b59ea5691827216cf925",
+        "statement": "RAFAELIA modifications/components GPLv3-compatible"
+      },
+      "authority_b": {
+        "path": "rmr/docs/LICENCIAMENTO_RAFAELIA.md", "blob_sha": "419271ffdcb9f53f5816c820ac0cf7f276ce3c75",
+        "statement": "MIT infrastructure + separate non-commercial RAFAELIA Core layer"
+      },
+      "promotion": "BLOCKED_UNTIL_AUTHORITY_MAP"
+    },
+    "external_coordinates": {
+      "state": "TOKEN_VAZIO_LICENSE_METADATA",
+      "note": "No authoritative POM/module license metadata was independently fetched in this pass."
+    }
+  },
+  "document_drift": [
+    {
+      "id": "DRIFT-DEP-001",
+      "state": "ERRATUM_REQUIRED",
+      "document": {"path": "docs/DEPENDENCIAS_TOTAIS.md", "blob_sha": "a414872565eeeeec1e1b6ecda13fa356005309fb"},
+      "observed": [
+        "document says termux-shared Guava 24.1-jre; build declares 32.1.3-jre",
+        "document omits current :rafaelia dependencies androidx.annotation 1.8.2, work-runtime 2.9.1 and org.json test runtime",
+        "document module list omits :loader",
+        "document lists :rafaelia and :rmr as app dependencies; current root dependency injection declares only :terminal-view and :termux-shared"
+      ],
+      "rule": "append dated erratum/snapshot; do not silently rewrite historical evidence"
+    }
+  ],
+  "gaps": [
+    {"id": "GAP-XDOM-LICENSE-AUTHORITY-001", "priority": "P0", "state": "OPEN", "next": "produce file-level normative license authority map before release/commercial licensing claims"},
+    {"id": "GAP-XDOM-RUNTIME-STATE-001", "priority": "P0", "state": "TOKEN_VAZIO", "next": "collect per-component device/runtime receipts; INVENTORIED must not advance without OBSERVED_RUNTIME evidence"},
+    {"id": "GAP-XDOM-TRANSITIVE-001", "priority": "P1", "state": "TOKEN_VAZIO", "next": "resolve deterministic Gradle transitive graph in pinned environment and append outputs/hashes"},
+    {"id": "GAP-XDOM-EXTERNAL-LICENSES-001", "priority": "P1", "state": "TOKEN_VAZIO", "next": "bind each external coordinate to authoritative license/POM metadata and obligations"},
+    {"id": "GAP-XDOM-UPSTREAM-ADVISORY-001", "priority": "P1", "state": "TOKEN_VAZIO", "next": "bind direct coordinates to authoritative upstream releases and dated advisory state"},
+    {"id": "GAP-XDOM-ABI-DORMANT-001", "priority": "P1", "state": "PARTIAL", "next": "keep x86/x86_64 source branches non-canonical until build matrix and runtime receipts explicitly restore support"}
+  ]
+}
