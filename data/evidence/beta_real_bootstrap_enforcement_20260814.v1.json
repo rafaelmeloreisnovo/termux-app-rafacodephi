@@ -1,0 +1,73 @@
+{
+  "schema": "rafaelia.beta-real-bootstrap-enforcement-receipt.v1",
+  "date": "2026-08-14",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "base_commit": "c8b805861a40ff895756d7a46b088a0add46988c",
+  "branch": "fix/beta-real-bootstrap-20260814",
+  "state": "IMPLEMENTED_BRANCH_BUILD_EVIDENCE_PENDING",
+  "negative_baseline": {
+    "artifact_bundle_sha256": "917832ff345d4f8b621451d8db0442b6fcf410e769dcbb5952db8287c4dd37cb",
+    "device_evidence_json_sha256": "44e14b5c2c8de5f893c78f9a78f77068be0b1925576c986bac54f3fb2f23d499",
+    "screenshot_sha256": "86b0938cb822c2f814b7b1d41811ece575f778579b3f48faf71f7c4787156e0e",
+    "signed_arm32_apk_sha256": "07d7643820d00c03d04663a051a3d595a073e8dd92c13c86255fcc57a4bb957e",
+    "embedded_arm_bootstrap_sha256": "7c808bd77bb163baa4f6618340878651bd3d0560d328c4f34f86870222f1cf29",
+    "bootstrap_source": "local",
+    "profile": "bridge",
+    "package_layer": "bridge",
+    "real_binary_observation": {
+      "bin/pkg": "SCRIPT",
+      "bin/apt": "SCRIPT",
+      "bin/apt-get": "SCRIPT",
+      "bin/dpkg": "MISSING",
+      "bin/bash": "MISSING",
+      "bin/busybox": "SCRIPT",
+      "bin/proot": "SCRIPT"
+    },
+    "promotion_allowed": false
+  },
+  "device_observation": {
+    "bootstrap_readiness_state": "BLOCKED",
+    "reason": "BOOTSTRAP_PROFILE_CONTRACT_BLOCKED",
+    "profile_violation": "missing_required_entry_1",
+    "runtime_layout": "CANONICAL",
+    "device_runtime_proof": "TOKEN_VAZIO",
+    "claim_allowed_release": false
+  },
+  "implemented": [
+    ".github/workflows/beta-build.yml",
+    ".github/workflows/beta-real-bootstrap-contract.yml",
+    "scripts/build_apk_matrix.sh",
+    "app/src/main/java/com/termux/app/BootstrapReadinessGate.java",
+    "app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java",
+    "app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java",
+    "tests/test_beta_real_bootstrap_policy.py",
+    "docs/audits/BETA_REAL_BOOTSTRAP_ENFORCEMENT_20260814.md"
+  ],
+  "required_beta_policy": {
+    "bootstrap_source": "source-built-real",
+    "required_architectures": ["arm", "aarch64"],
+    "profile": "real-pkg",
+    "package_layer": "real-pkg",
+    "bridge_allowed": false,
+    "runtime_required_elf": ["apt", "apt-get", "dpkg", "bash", "busybox", "proot"],
+    "preserve_home_during_bridge_to_real_migration": true,
+    "fail_closed": true
+  },
+  "ci_observation": {
+    "workflow": "beta-real-bootstrap-contract",
+    "run_id": 31790767729,
+    "conclusion": "success",
+    "scope": "structural_policy_python_syntax_shell_syntax_no_local_bridge_regression",
+    "heavy_real_beta_build": "PENDING_SEPARATE_RUN"
+  },
+  "token_vazio": [
+    "TV-BETA-REAL-BUILD-ARTIFACT",
+    "TV-BETA-REAL-BUILD-RECEIPTS",
+    "TV-BETA-PHYSICAL-MIGRATION",
+    "TV-BETA-PHYSICAL-PKG",
+    "TV-BETA-REPOSITORY-CONNECTIVITY",
+    "TV-BETA-ARM64-PHYSICAL"
+  ],
+  "claim_allowed": false,
+  "invariant": "BRIDGE_BOOTSTRAP != REAL_PKG_BOOTSTRAP != INSTALLED_RUNTIME != PHYSICAL_RUNTIME_PROOF != RELEASE_CLAIM"
+}

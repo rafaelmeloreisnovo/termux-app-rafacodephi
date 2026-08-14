@@ -63,22 +63,20 @@ info "Validating RAFCODEPHI packages source contract"
 record_diag "- packages_source_contract: success"
 
 info "Preparing bootstrap environment and BLAKE3 vars"
-# `validate_rafcodephi_packages_source.sh` validates the pinned package source
-# contract. `prepare_bootstrap_env.sh` only accepts bootstrap payload sources
-# (`local` or `upstream`).  A previous beta path used the package-source
-# contract marker as RAF_BOOTSTRAP_SOURCE, which made the APK matrix fail
-# before Gradle could generate any APKs.  Normalize that legacy value back to
-# local bootstrap generation while preserving explicit `upstream` requests.
+# The APK matrix accepts the three bootstrap payload routes implemented by
+# prepare_bootstrap_env.sh. source-built-real is intentionally first-class here:
+# beta/release callers may pin a source-built ARM + AArch64 pair and must not be
+# silently normalized back to the local bridge payload.
 BOOTSTRAP_SOURCE_REQUESTED="${RAF_BOOTSTRAP_SOURCE:-local}"
 case "${BOOTSTRAP_SOURCE_REQUESTED}" in
-  local|upstream)
+  local|upstream|source-built-real)
     ;;
   termux-packagesRafcodephi-source-contract)
     info "RAF_BOOTSTRAP_SOURCE=${BOOTSTRAP_SOURCE_REQUESTED} is a package-source contract marker; using local bootstrap payload generation"
     BOOTSTRAP_SOURCE_REQUESTED="local"
     ;;
   *)
-    fail "RAF_BOOTSTRAP_SOURCE must be local or upstream, got ${BOOTSTRAP_SOURCE_REQUESTED}"
+    fail "RAF_BOOTSTRAP_SOURCE must be local, upstream, or source-built-real, got ${BOOTSTRAP_SOURCE_REQUESTED}"
     ;;
 esac
 export RAF_BOOTSTRAP_SOURCE="${BOOTSTRAP_SOURCE_REQUESTED}"

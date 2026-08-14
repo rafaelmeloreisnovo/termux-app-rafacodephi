@@ -18,12 +18,13 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Read-only, runtime-resolved bootstrap readiness gate.
+ * Read-only, runtime-resolved beta bootstrap readiness gate.
  *
- * This is the single UI/orchestration contract for deciding whether the installed
- * private filesystem is ready to proceed to runtime evidence collection. It does
- * not install, repair, chmod, mkdir or delete anything. Missing required evidence
- * blocks the dependent action and remains visible instead of becoming PASS.
+ * The beta contract is intentionally stronger than "some shell files exist".
+ * It requires a materialized real-pkg bootstrap and architecture-matched ELF
+ * package/runtime backends. Source-archive installation metadata such as
+ * SYMLINKS.txt is preserved as provenance but is not misclassified as a file
+ * that must remain in the installed prefix after TermuxInstaller consumed it.
  */
 public final class BootstrapReadinessGate {
 
@@ -35,7 +36,8 @@ public final class BootstrapReadinessGate {
 
     private static final String PROFILE_SCHEMA = "rafcodephi-bootstrap-profile/v1";
     private static final String PROFILE_FILE = "BOOTSTRAP_PROFILE.json";
-    private static final String SOURCE_ONLY_SYMLINKS_FILE = "SYMLINKS.txt";
+    private static final String REQUIRED_BETA_PROFILE = "real-pkg";
+    private static final String SOURCE_ONLY_SYMLINK_MANIFEST = "SYMLINKS.txt";
     private static final int PROFILE_READ_LIMIT = 64 * 1024;
     private static final int PROFILE_REQUIRED_ENTRIES_LIMIT = 512;
 
@@ -46,6 +48,15 @@ public final class BootstrapReadinessGate {
         "shellbash",
         "busybox-safe",
         "proot-safe"
+    };
+
+    private static final String[] REQUIRED_REAL_ELFS = new String[] {
+        "apt",
+        "apt-get",
+        "dpkg",
+        "bash",
+        "busybox",
+        "proot"
     };
 
     private BootstrapReadinessGate() {}
@@ -71,19 +82,18 @@ public final class BootstrapReadinessGate {
             targetsPass &= executable(checks, "$PREFIX/bin/" + executable, new File(bin, executable));
         }
 
-        // Profile validation is deliberately independent from BootstrapBaremetalGuard's
-        // mutable install-time directory/chmod logic and from debug/release strict flags.
         boolean profilePass = profileContract(context, checks, prefix);
 
-        // Optional real utility binaries are observations, not readiness requirements.
-        observeOptionalExecutable(checks, "$PREFIX/bin/busybox", new File(bin, "busybox"));
-        observeOptionalExecutable(checks, "$PREFIX/bin/proot", new File(bin, "proot"));
+        // Expose the real utility files separately so the UI never conflates a
+        // safe wrapper with the native backend that the beta contract requires.
+        observeRealExecutable(checks, "$PREFIX/bin/busybox", new File(bin, "busybox"));
+        observeRealExecutable(checks, "$PREFIX/bin/proot", new File(bin, "proot"));
 
         boolean pass = targetsPass && profilePass;
         String state = pass ? STATE_PASS : STATE_BLOCKED;
         String reason;
-        if (pass) reason = "REQUIRED_BOOTSTRAP_RUNTIME_AND_PROFILE_READY";
-        else if (!profilePass) reason = "BOOTSTRAP_PROFILE_CONTRACT_BLOCKED";
+        if (pass) reason = "REAL_BOOTSTRAP_RUNTIME_AND_PROFILE_READY";
+        else if (!profilePass) reason = "BOOTSTRAP_REAL_PROFILE_CONTRACT_BLOCKED";
         else reason = "REQUIRED_BOOTSTRAP_RUNTIME_TARGET_MISSING";
 
         return new Report(state, reason, TermuxRuntimePaths.layoutState(), TermuxRuntimePaths.prefixDirPath(),
@@ -126,16 +136,20 @@ public final class BootstrapReadinessGate {
 
             require(PROFILE_SCHEMA.equals(profile.optString("schema", "")), "schema", violations);
             String profileName = profile.optString("profile", "");
-            require("bridge".equals(profileName) || "real-pkg".equals(profileName), "profile", violations);
+            String packageLayer = profile.optString("package_layer", "");
+            require(REQUIRED_BETA_PROFILE.equals(profileName), "beta_profile_must_be_real_pkg", violations);
+            require(REQUIRED_BETA_PROFILE.equals(packageLayer), "package_layer_must_be_real_pkg", violations);
             require(context.getPackageName().equals(profile.optString("package_name", "")), "package_name", violations);
             require(prefix.getAbsolutePath().equals(profile.optString("prefix", "")), "prefix", violations);
             require(expectedBootstrapArch().equals(profile.optString("arch", "")), "arch", violations);
+            require(profile.optBoolean("runtime_materialized", false), "runtime_materialized", violations);
             require(!profile.optBoolean("claim_allowed", true), "claim_allowed_must_be_false", violations);
             require(!profile.optBoolean("release_allowed", true), "release_allowed_must_be_false", violations);
             require(TOKEN_VAZIO.equals(profile.optString("device_validation", "")),
                 "device_validation_must_be_TOKEN_VAZIO", violations);
 
             JSONArray required = profile.optJSONArray("required_entries");
+            boolean sourceSymlinkManifestDeclared = false;
             if (required == null || required.length() == 0 || required.length() > PROFILE_REQUIRED_ENTRIES_LIMIT) {
                 violations.add("required_entries_bounds");
             } else {
@@ -147,33 +161,79 @@ public final class BootstrapReadinessGate {
                         violations.add("unsafe_required_entry_" + i);
                         continue;
                     }
-                    // TermuxInstaller consumes SYMLINKS.txt while materializing its destinations;
-                    // it is source-archive metadata, not a post-install runtime file. Only a
-                    // profile explicitly marked runtime_materialized may use this exception.
-                    if (runtimeMaterialized && SOURCE_ONLY_SYMLINKS_FILE.equals(relative)) continue;
+
+                    // SYMLINKS.txt is an archive installation instruction. The
+                    // installer consumes it to materialize links and deliberately
+                    // does not leave the source manifest in $PREFIX. Treating it
+                    // as a runtime file caused the observed missing_required_entry_1.
+                    if (SOURCE_ONLY_SYMLINK_MANIFEST.equals(relative)) {
+                        sourceSymlinkManifestDeclared = true;
+                        continue;
+                    }
 
                     File target = new File(prefix, relative);
                     String canonicalTarget = target.getCanonicalPath();
                     if (!canonicalTarget.startsWith(canonicalPrefix)) {
                         violations.add("required_entry_escape_" + i);
                     } else if (!target.exists()) {
-                        violations.add("missing_required_entry_" + i);
+                        violations.add("missing_required_entry_" + i + "_" + relative);
                     }
                 }
             }
 
+            if (sourceSymlinkManifestDeclared) {
+                checks.add(new Check("$SOURCE_BOOTSTRAP/" + SOURCE_ONLY_SYMLINK_MANIFEST,
+                    "OBSERVED", "SOURCE_ARCHIVE_ONLY",
+                    "declared_install_manifest_consumed_by_TermuxInstaller_not_runtime_file"));
+            }
+
+            File bin = new File(prefix, "bin");
+            for (String name : REQUIRED_REAL_ELFS) {
+                File target = new File(bin, name);
+                if (!target.isFile() || !target.canExecute()) {
+                    violations.add("real_executable_missing_" + name);
+                } else if (!isElf(target)) {
+                    violations.add("real_executable_not_elf_" + name);
+                }
+            }
+
+            File dpkgStatus = new File(prefix, "var/lib/dpkg/status");
+            require(dpkgStatus.isFile() && dpkgStatus.canRead() && dpkgStatus.length() > 0L,
+                "dpkg_status_missing_or_empty", violations);
+
+            File deb822 = new File(prefix, "etc/apt/sources.list.d/termux.sources");
+            File legacySource = new File(prefix, "etc/apt/sources.list");
+            require((deb822.isFile() && deb822.canRead()) || (legacySource.isFile() && legacySource.canRead()),
+                "apt_source_definition_missing", violations);
+
             if (!violations.isEmpty()) {
                 checks.add(new Check("$PREFIX/" + PROFILE_FILE, STATE_BLOCKED, path,
-                    "profile_contract_violation=" + bounded(join(violations), 256)));
+                    "profile_contract_violation=" + bounded(join(violations), 512)));
                 return false;
             }
 
             checks.add(new Check("$PREFIX/" + PROFILE_FILE, STATE_PASS, path,
-                "schema_package_prefix_arch_claims_required_entries_valid profile=" + profileName));
+                "schema_package_prefix_arch_runtime_real_pkg_elf_claims_required_entries_valid profile=" + profileName));
             return true;
         } catch (Throwable error) {
             checks.add(new Check("$PREFIX/" + PROFILE_FILE, STATE_BLOCKED, path,
                 "profile_read_parse_failure=" + error.getClass().getSimpleName() + ":" + bounded(String.valueOf(error.getMessage()), 160)));
+            return false;
+        }
+    }
+
+    private static boolean isElf(File file) {
+        try (FileInputStream input = new FileInputStream(file)) {
+            byte[] magic = new byte[4];
+            int offset = 0;
+            while (offset < magic.length) {
+                int read = input.read(magic, offset, magic.length - offset);
+                if (read < 0) return false;
+                if (read == 0) continue;
+                offset += read;
+            }
+            return (magic[0] & 0xff) == 0x7f && magic[1] == 'E' && magic[2] == 'L' && magic[3] == 'F';
+        } catch (Throwable ignored) {
             return false;
         }
     }
@@ -221,11 +281,12 @@ public final class BootstrapReadinessGate {
         return value.length() <= limit ? value : value.substring(0, limit) + "…";
     }
 
-    private static void observeOptionalExecutable(List<Check> checks, String name, File file) {
+    private static void observeRealExecutable(List<Check> checks, String name, File file) {
         boolean available = file != null && file.isFile() && file.canExecute();
-        checks.add(new Check(name, available ? "OBSERVED" : STATE_UNAVAILABLE,
+        boolean elf = available && isElf(file);
+        checks.add(new Check(name, elf ? "OBSERVED_REAL_ELF" : (available ? STATE_BLOCKED : STATE_UNAVAILABLE),
             file == null ? "UNAVAILABLE" : file.getAbsolutePath(),
-            available ? "optional_real_binary_present" : "optional_real_binary_absent_safe_shim_is_contract"));
+            elf ? "native_elf_executable_present" : (available ? "executable_present_but_not_elf" : "native_executable_absent")));
     }
 
     public static final class Report {
@@ -256,6 +317,7 @@ public final class BootstrapReadinessGate {
             StringBuilder out = new StringBuilder();
             out.append("bootstrap_readiness_state=").append(state).append('\n');
             out.append("bootstrap_readiness_reason=").append(reason).append('\n');
+            out.append("bootstrap_profile_requirement=").append(REQUIRED_BETA_PROFILE).append('\n');
             out.append("runtime_layout=").append(runtimeLayout).append('\n');
             out.append("runtime_prefix=").append(runtimePrefix).append('\n');
             out.append("canonical_layout=").append(canonicalLayout).append('\n');
@@ -275,6 +337,7 @@ public final class BootstrapReadinessGate {
                 out.put("schema", SCHEMA);
                 out.put("state", state);
                 out.put("reason", reason);
+                out.put("bootstrap_profile_requirement", REQUIRED_BETA_PROFILE);
                 out.put("runtime_layout", runtimeLayout);
                 out.put("runtime_prefix", runtimePrefix);
                 out.put("canonical_layout", canonicalLayout);

@@ -24,6 +24,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.termux.app.BetaRealBootstrapRepair;
 import com.termux.app.BootstrapReadinessGate;
 import com.termux.app.BootstrapWizardSource;
 import com.termux.app.TermuxInstaller;
@@ -103,11 +104,11 @@ public class BetaBootstrapWizardActivity extends AppCompatActivity {
             this::checkBatteryOptimization));
         wizardChecks.add(new WizardCheck(
             "Bootstrap Filesystem",
-            "Import or install bootstrap, then satisfy the shared runtime readiness gate used by the beta orchestrator.",
+            "Install or import a real-pkg bootstrap, then satisfy the shared runtime readiness gate used by the beta orchestrator.",
             this::checkBootstrapInstallation));
         wizardChecks.add(new WizardCheck(
             "System / Readiness Audit",
-            "Verify supported architecture, private filesystem capability and the same bootstrap targets used by orchestration.",
+            "Verify supported architecture, private filesystem capability and the same real bootstrap targets used by orchestration.",
             this::checkSystemCompatibilityAndBootstrap));
         wizardChecks.add(new WizardCheck(
             "Wizard Complete",
@@ -168,15 +169,15 @@ public class BetaBootstrapWizardActivity extends AppCompatActivity {
         }
         if (step == 3) {
             addFilesystemEvidenceView();
-            addButton("Select bootstrap.zip", v -> chooseBootstrapZip());
+            addButton("Select real bootstrap.zip", v -> chooseBootstrapZip());
             if (!"NOT_SELECTED".equals(BootstrapWizardSource.status(this))) {
                 addButton("Clear selected bootstrap.zip", v -> {
                     BootstrapWizardSource.clear(this);
-                    Toast.makeText(this, "Selected bootstrap cleared; embedded bootstrap remains fallback.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Selected bootstrap cleared; embedded real-pkg bootstrap remains fallback for a compliant beta.", Toast.LENGTH_SHORT).show();
                     updateWizardStep();
                 });
             }
-            if (!passed) addButton("Install / Repair Bootstrap", v -> installBootstrapFilesystem());
+            if (!passed) addButton("Install / Repair Real Bootstrap", v -> installBootstrapFilesystem());
             else addButton("Re-check Shared Readiness Gate", v -> updateWizardStep());
             return;
         }
@@ -356,7 +357,16 @@ public class BetaBootstrapWizardActivity extends AppCompatActivity {
     }
 
     private void installBootstrapFilesystem() {
-        TermuxInstaller.setupBootstrapIfNeeded(this, this::updateWizardStep);
+        try {
+            BetaRealBootstrapRepair.repair(this, this::updateWizardStep);
+        } catch (Throwable error) {
+            new AlertDialog.Builder(this)
+                .setTitle("Real bootstrap repair blocked")
+                .setMessage(error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage()))
+                .setPositiveButton("OK", null)
+                .show();
+            updateWizardStep();
+        }
     }
 
     private void openAuditActivity() {

@@ -1,11 +1,16 @@
 # ci_track: ops
-# ci_abis: n/a
+# ci_abis: arm32,arm64
 name: RafCodePhi Beta Build
 
 on:
   push:
   workflow_dispatch:
     inputs:
+      termux_packages_ref:
+        description: Exact termux-packages commit/ref used to source-build the real bootstrap pair
+        required: true
+        type: string
+        default: 7b59383c25f7557ba8a29a24f715c5fb5b26cc53
       build_apk_matrix:
         description: Build signed + unsigned APK matrix (arm32 + arm64)
         required: false
@@ -37,12 +42,30 @@ on:
         type: boolean
         default: true
 
+permissions:
+  contents: read
+
+concurrency:
+  group: rafcodephi-beta-real-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TERMUX_PACKAGES_PIN: 7b59383c25f7557ba8a29a24f715c5fb5b26cc53
+  CLAIM_ALLOWED: 'false'
+  PHYSICAL_ANDROID: 'TOKEN_VAZIO'
+
 jobs:
   beta-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      SELECTED_TERMUX_PACKAGES_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || '7b59383c25f7557ba8a29a24f715c5fb5b26cc53' }}
     steps:
-      - name: Checkout
+      - name: Checkout app
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 1
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -55,8 +78,9 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           echo "## Beta build manual choices" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Option | Enabled |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Option | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| termux_packages_ref | ${{ inputs.termux_packages_ref }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| build_apk_matrix | ${{ inputs.build_apk_matrix }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| run_bootstrap_baremetal_guard | ${{ inputs.run_bootstrap_baremetal_guard }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| run_pss3_failure_audit | ${{ inputs.run_pss3_failure_audit }} |" >> "$GITHUB_STEP_SUMMARY"
@@ -64,24 +88,126 @@ jobs:
           echo "| publish_matrix_summary | ${{ inputs.publish_matrix_summary }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| upload_beta_artifacts | ${{ inputs.upload_beta_artifacts }} |" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Checkout pinned termux-packages source
+        id: checkout_packages
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
+        continue-on-error: true
+        uses: actions/checkout@v7
+        with:
+          repository: rafaelmeloreisnovo/termux-packages
+          ref: ${{ env.SELECTED_TERMUX_PACKAGES_REF }}
+          path: termux-packages
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Bind termux-packages identity and RAFCODEPhi build properties
+        id: bind_packages
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
+        continue-on-error: true
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          test -n "$ACTUAL_SHA"
+          if [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]]; then
+            test "$ACTUAL_SHA" = "$TERMUX_PACKAGES_PIN"
+          fi
+          mkdir -p build/reports
+          python3 scripts/apply-rafcodephi-build-properties.py \
+            --properties scripts/properties.sh \
+            --receipt build/reports/rafcodephi-beta-properties.json
+          bash scripts/validate-rafcodephi-build-properties.sh
+          printf '%s\n' "$ACTUAL_SHA" > build/reports/rafcodephi-beta-termux-packages.commit
+          sha256sum scripts/properties.sh > build/reports/rafcodephi-beta-properties.sha256
+
+      - name: Source-build real ARM32 + ARM64 bootstrap pair
+        id: build_real_bootstrap
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
+        continue-on-error: true
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-real-bootstrap.sh
+          ./scripts/run-docker.sh \
+            ./scripts/build-rafcodephi-real-bootstrap.sh \
+            --architectures arm,aarch64
+
+      - name: Fail-closed gate real bootstrap pair
+        id: gate_real_bootstrap
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
+        continue-on-error: true
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          MANIFEST=artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+          ARM=artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
+          ARM64=artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
+          test -s "$MANIFEST"
+          test -s "$ARM"
+          test -s "$ARM64"
+          grep -Fx 'schema=rafcodephi.real-bootstrap-sourcebuild/v1' "$MANIFEST"
+          grep -Fx 'package_name=com.termux.rafacodephi' "$MANIFEST"
+          grep -Fx 'prefix=/data/data/com.termux.rafacodephi/files/usr' "$MANIFEST"
+          grep -Fx 'bridge_allowed=false' "$MANIFEST"
+          grep -Fx 'legacy_prefix_allowed=false' "$MANIFEST"
+          grep -Fx 'claim_allowed_device_runtime=false' "$MANIFEST"
+          grep -Fx 'device_runtime_proof=TOKEN_VAZIO' "$MANIFEST"
+          sha256sum "$MANIFEST" "$ARM" "$ARM64" > build/reports/rafcodephi-beta-real-bootstrap.sha256
+
       - name: Setup Android SDK/NDK
         id: setup_android
         if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
         continue-on-error: true
         run: ./scripts/setup_android_toolchain.sh
 
-      - name: Prepare bootstrap hashes (BLAKE3 + SHA256)
+      - name: Prepare exact source-built real bootstrap hashes
         id: prepare_bootstrap
         if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
         continue-on-error: true
-        run: ./scripts/prepare_bootstrap_env.sh --github-env
+        env:
+          RAF_BOOTSTRAP_SOURCE: source-built-real
+          RAF_REAL_BOOTSTRAP_ZIP_ARM: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
+          RAF_REAL_BOOTSTRAP_ZIP_AARCH64: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
+          RAF_REAL_BOOTSTRAP_MANIFEST: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+        run: ./scripts/prepare_bootstrap_env.sh --github-env --skip-android-preflight
 
-      - name: Build signed + unsigned APK matrix (arm32 + arm64)
+      - name: Assert embedded ARM profiles are real-pkg before APK build
+        id: real_profile_gate
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          python3 tools/raf_bootstrap_profile.py inspect --zip app/src/main/cpp/rewritten-bootstrap-arm.zip > build/reports/beta-embedded-arm.json
+          python3 tools/raf_bootstrap_profile.py inspect --zip app/src/main/cpp/rewritten-bootstrap-aarch64.zip > build/reports/beta-embedded-aarch64.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for arch in ('arm', 'aarch64'):
+              doc = json.loads(Path(f'build/reports/beta-embedded-{arch}.json').read_text())
+              profile = doc.get('profile_manifest') or {}
+              if profile.get('profile') != 'real-pkg' or profile.get('package_layer') != 'real-pkg':
+                  raise SystemExit(f'{arch}: beta requires real-pkg profile, got {profile}')
+              classifications = doc.get('classifications') or {}
+              for name in ('bin/apt', 'bin/apt-get'):
+                  if classifications.get(name) != 'ELF':
+                      raise SystemExit(f'{arch}: {name} is not ELF: {classifications.get(name)}')
+          print('BETA_REAL_BOOTSTRAP_PROFILE_GATE=PASS')
+          PY
+
+      - name: Build signed + unsigned APK matrix (real bootstrap, arm32 + arm64)
         id: apk_matrix
         if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
         continue-on-error: true
         env:
-          RAF_BOOTSTRAP_SOURCE: local
+          RAF_BOOTSTRAP_SOURCE: source-built-real
+          RAF_REAL_BOOTSTRAP_ZIP_ARM: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
+          RAF_REAL_BOOTSTRAP_ZIP_AARCH64: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
+          RAF_REAL_BOOTSTRAP_MANIFEST: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
           RELEASE_TRACK: internal
           APK_MATRIX_UNIT_TESTS_REQUIRED: "true"
         run: ./scripts/build_apk_matrix.sh
@@ -113,8 +239,7 @@ jobs:
         id: build_pss3
         if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.run_pss3_failure_audit) }}
         continue-on-error: true
-        run: |
-          cc -O2 -Wall -Wextra -o tools/pss3_failure_lab tools/pss3_failure_lab.c
+        run: cc -O2 -Wall -Wextra -o tools/pss3_failure_lab tools/pss3_failure_lab.c
 
       - name: Run optional PSS3 failure audit
         id: run_pss3
@@ -157,16 +282,30 @@ jobs:
           UPLOAD_ARTIFACTS_OUTCOME: pending
         run: |
           python3 scripts/render_beta_dashboard.py --out out/beta-dashboard.md --summary "$GITHUB_STEP_SUMMARY"
+          {
+            echo
+            echo '## Real bootstrap beta contract'
+            echo '- beta_bootstrap_source: source-built-real'
+            echo '- required_architectures: arm,aarch64'
+            echo '- bridge_allowed: false'
+            echo '- physical_android: TOKEN_VAZIO'
+            echo '- claim_allowed: false'
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload beta artifacts
+      - name: Upload beta artifacts and bootstrap provenance
         id: upload_artifacts
         if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.upload_beta_artifacts) }}
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
-          name: rafcodephi-beta-artifacts-${{ github.sha }}
+          name: rafcodephi-beta-real-artifacts-${{ github.sha }}
           path: |
             dist/apk-matrix/**
+            build/reports/beta-embedded-*.json
+            build/reports/rafcodephi-real-bootstrap-import-*.json
+            build/reports/rafcodephi-real-bootstrap-import-matrix.json
+            termux-packages/build/reports/rafcodephi-beta-*
+            termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
             docs/BETA_BUILD_REPORT.md
             docs/BETA_READINESS_REPORT.md
             out/beta-dashboard.md
@@ -179,8 +318,13 @@ jobs:
       - name: Final beta diagnostic gate
         if: ${{ always() }}
         env:
+          CHECKOUT_PACKAGES_OUTCOME: ${{ steps.checkout_packages.outcome }}
+          BIND_PACKAGES_OUTCOME: ${{ steps.bind_packages.outcome }}
+          BUILD_REAL_BOOTSTRAP_OUTCOME: ${{ steps.build_real_bootstrap.outcome }}
+          GATE_REAL_BOOTSTRAP_OUTCOME: ${{ steps.gate_real_bootstrap.outcome }}
           SETUP_ANDROID_OUTCOME: ${{ steps.setup_android.outcome }}
           PREPARE_BOOTSTRAP_OUTCOME: ${{ steps.prepare_bootstrap.outcome }}
+          REAL_PROFILE_GATE_OUTCOME: ${{ steps.real_profile_gate.outcome }}
           APK_MATRIX_OUTCOME: ${{ steps.apk_matrix.outcome }}
           BUILD_GUARD_OUTCOME: ${{ steps.build_guard.outcome }}
           RUN_GUARD_OUTCOME: ${{ steps.run_guard.outcome }}
@@ -202,16 +346,22 @@ jobs:
             echo "| ${name} | ${required} | ${outcome:-not-run} |" >> "$GITHUB_STEP_SUMMARY"
             if [ "$required" = "required" ]; then
               case "${outcome:-not-run}" in
-                failure|cancelled)
-                  status=1
-                  ;;
+                success) ;;
+                *) status=1 ;;
               esac
             fi
           }
 
-          check_step "setup_android" "$SETUP_ANDROID_OUTCOME" "required"
-          check_step "prepare_bootstrap" "$PREPARE_BOOTSTRAP_OUTCOME" "required"
-          check_step "apk_matrix" "$APK_MATRIX_OUTCOME" "required"
+          if [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" || "${{ inputs.build_apk_matrix }}" == "true" ]]; then
+            check_step "checkout_packages" "$CHECKOUT_PACKAGES_OUTCOME" "required"
+            check_step "bind_packages" "$BIND_PACKAGES_OUTCOME" "required"
+            check_step "build_real_bootstrap" "$BUILD_REAL_BOOTSTRAP_OUTCOME" "required"
+            check_step "gate_real_bootstrap" "$GATE_REAL_BOOTSTRAP_OUTCOME" "required"
+            check_step "setup_android" "$SETUP_ANDROID_OUTCOME" "required"
+            check_step "prepare_bootstrap" "$PREPARE_BOOTSTRAP_OUTCOME" "required"
+            check_step "real_profile_gate" "$REAL_PROFILE_GATE_OUTCOME" "required"
+            check_step "apk_matrix" "$APK_MATRIX_OUTCOME" "required"
+          fi
           check_step "build_guard" "$BUILD_GUARD_OUTCOME" "required"
           check_step "run_guard" "$RUN_GUARD_OUTCOME" "optional"
           check_step "build_pss3" "$BUILD_PSS3_OUTCOME" "required"
@@ -221,8 +371,8 @@ jobs:
           check_step "upload_artifacts" "$UPLOAD_ARTIFACTS_OUTCOME" "optional"
 
           if [ "$status" -ne 0 ]; then
-            echo "One or more required beta diagnostic steps failed after all diagnostics ran."
+            echo "Beta build is BLOCKED: a required real-bootstrap or diagnostic gate did not pass."
             exit 1
           fi
 
-          echo "Operational decision: beta pipeline is green."
+          echo "Operational decision: beta pipeline is green with source-built real ARM32 + ARM64 bootstrap provenance."
