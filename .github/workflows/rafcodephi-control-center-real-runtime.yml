@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:
-      TERMUX_PACKAGES_SHA: f9c872453c49e381d651737ba0bf404a2e5e54a6
+      TERMUX_PACKAGES_SHA: 25c93ca39743de0298177719f6d90f9a3e38c7a0
       RAFCODEPHI_APT_REPOSITORY_URL: https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt/repo
       RAFCODEPHI_APT_TRUST_MODE: development-trusted
       CLAIM_ALLOWED: 'false'
@@ -49,6 +49,18 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
+      - name: Bind RAFCODEPHI package and prefix
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          python3 scripts/apply-rafcodephi-build-properties.py \
+            --properties scripts/properties.sh \
+            --receipt build/reports/control-center-properties.json
+          bash scripts/validate-rafcodephi-build-properties.sh
+          grep -Fx 'TERMUX_APP__PACKAGE_NAME="com.termux.rafacodephi"' scripts/properties.sh
+
       - name: Source-build live real-pkg bootstrap pair
         working-directory: termux-packages
         shell: bash
@@ -74,9 +86,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Generate the untouched x86 compatibility slots, then replace only ARM slots
-          # with the source-built real-pkg pair. The legacy importer intentionally rejects
-          # live repositories, so this path validates and hashes the new contract directly.
+          # Generate untouched x86 compatibility slots, then replace only ARM slots
+          # with the source-built real-pkg pair. The legacy importer intentionally
+          # models the old blocked repository, so this beta path hashes the live contract directly.
           bash scripts/build_bootstrap_profile.sh
           cp termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip app/src/main/cpp/rewritten-bootstrap-arm.zip
           cp termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip app/src/main/cpp/rewritten-bootstrap-aarch64.zip
