@@ -1,0 +1,50 @@
+name: apk-evidence-gate
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/verify_apk_evidence.py'
+      - 'scripts/build_apk_matrix_with_evidence.sh'
+      - 'tests/test_verify_apk_evidence.py'
+      - 'data/contracts/apk_*.json'
+      - '.github/workflows/apk-evidence-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-and-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python syntax
+        run: python3 -m py_compile scripts/verify_apk_evidence.py tests/test_verify_apk_evidence.py
+
+      - name: APK evidence parser tests
+        run: python3 tests/test_verify_apk_evidence.py
+
+      - name: Wrapper shell syntax
+        run: bash -n scripts/build_apk_matrix_with_evidence.sh
+
+      - name: Contract schema sanity
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          required = {
+              'data/contracts/apk_baseline_com.termux_0.118.3.v1.json',
+              'data/contracts/apk_rafcodephi_release.v1.json',
+          }
+          for name in sorted(required):
+              data = json.loads(Path(name).read_text(encoding='utf-8'))
+              assert data['schema'] == 'rafaelia.apk-evidence-contract.v1'
+              assert data['claim_allowed'] is False
+              assert 'expected' in data and 'requirements' in data
+              assert data['expected']['package']
+          print('contract sanity: PASS')
+          PY

@@ -1,0 +1,30 @@
+{
+  "schema": "rafaelia.apk-evidence-contract.v1",
+  "status": "TEMPLATE_DYNAMIC_BUILD_PROVENANCE",
+  "expected": {
+    "package": "com.termux.rafacodephi",
+    "version_name": null,
+    "sha256": null
+  },
+  "requirements": {
+    "jar_v1": true,
+    "apk_signature_v1": true,
+    "apk_signature_v2": true,
+    "apk_signature_v3": false,
+    "apk_signature_v3_1": false,
+    "apk_signature_v4": false
+  },
+  "build_provenance": {
+    "source_commit": null,
+    "build_receipt_sha256": null
+  },
+  "runtime": {
+    "required_abis": ["armeabi-v7a", "arm64-v8a"],
+    "physical_install_boot": "TOKEN_VAZIO"
+  },
+  "boundaries": [
+    "SIGNED_APK != PHYSICAL_RUNTIME_EVIDENCE",
+    "ARTIFACT_IDENTITY != BUILD_PROVENANCE != RUNTIME_EVIDENCE != CLAIM"
+  ],
+  "claim_allowed": false
+}
