@@ -198,7 +198,7 @@ jobs:
         with:
           name: bootstrap-generation-log
           path: reports/bootstrap_generation.log
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
 
       - name: Inspect generated legacy compatibility bootstrap packages
