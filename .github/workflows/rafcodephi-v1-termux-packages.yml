@@ -6,7 +6,7 @@ on:
       termux_packages_ref:
         description: Exact termux-packages commit/ref to consume
         required: true
-        default: 7b59383c25f7557ba8a29a24f715c5fb5b26cc53
+        default: 7a26629938452c6d6fd80cf3fccce8c2056aabac
         type: string
   pull_request:
     branches: [master]
@@ -14,6 +14,15 @@ on:
       - '.github/workflows/rafcodephi-v1-termux-packages.yml'
       - 'docs/RAFCODEPHI_V1_TERMUX_PACKAGES.md'
       - 'tests/test_rafcodephi_v1_termux_packages_contract.py'
+      - 'app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java'
+      - 'app/src/main/java/com/termux/app/BootstrapBaremetalGuard.java'
+      - 'app/src/main/java/com/termux/app/BootstrapReadinessGate.java'
+      - 'app/src/main/java/com/termux/app/BootstrapWizardSource.java'
+      - 'app/src/main/java/com/termux/app/TermuxInstaller.java'
+      - 'app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java'
+      - 'app/src/main/java/com/termux/app/activities/SettingsActivity.java'
+      - 'app/src/main/res/xml/root_preferences.xml'
+      - 'tests/test_rafcodephi_startup_and_settings_contract.py'
 
 permissions:
   contents: read
@@ -25,7 +34,7 @@ concurrency:
 env:
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
-  TERMUX_PACKAGES_PIN: 7b59383c25f7557ba8a29a24f715c5fb5b26cc53
+  TERMUX_PACKAGES_PIN: 7a26629938452c6d6fd80cf3fccce8c2056aabac
 
 jobs:
   contract:
@@ -46,7 +55,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 210
     env:
-      SELECTED_TERMUX_PACKAGES_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || '7b59383c25f7557ba8a29a24f715c5fb5b26cc53' }}
+      SELECTED_TERMUX_PACKAGES_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || '7a26629938452c6d6fd80cf3fccce8c2056aabac' }}
     steps:
       - name: Checkout exact app revision
         uses: actions/checkout@v7
@@ -86,10 +95,32 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p build/reports
           chmod +x scripts/run-docker.sh scripts/build-rafcodephi-real-bootstrap.sh
+          set +e
           ./scripts/run-docker.sh \
             ./scripts/build-rafcodephi-real-bootstrap.sh \
-            --architectures arm,aarch64
+            --architectures arm,aarch64 \
+            2>&1 | tee build/reports/rafcodephi-v1-real-bootstrap.log
+          build_status="${PIPESTATUS[0]}"
+          set -e
+          python3 - "$build_status" > build/reports/rafcodephi-v1-real-bootstrap-status.json <<'PY'
+          import json
+          import sys
+
+          status = int(sys.argv[1])
+          print(json.dumps({
+              "schema": "rafcodephi.v1-real-bootstrap-source-build/v1",
+              "state": "PASS" if status == 0 else "BLOCKED",
+              "exit_code": status,
+              "claim_allowed_release": False,
+              "device_runtime_proof": "TOKEN_VAZIO",
+          }, sort_keys=True))
+          PY
+          if [[ "$build_status" -ne 0 ]]; then
+            echo "RAFCODEPHI_V1_REAL_BOOTSTRAP=BLOCKED exit_code=$build_status" >&2
+            exit "$build_status"
+          fi
 
       - name: Gate package/bootstrap output
         working-directory: termux-packages
@@ -205,6 +236,8 @@ jobs:
             app/build/outputs/apk/**/*.apk
             app/build/outputs/apk/**/output-metadata.json
             termux-packages/build/reports/rafcodephi-v1-*
+            termux-packages/build/reports/rafcodephi-v1-real-bootstrap.log
+            termux-packages/build/reports/rafcodephi-v1-real-bootstrap-status.json
             termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
           if-no-files-found: error
           retention-days: 30
