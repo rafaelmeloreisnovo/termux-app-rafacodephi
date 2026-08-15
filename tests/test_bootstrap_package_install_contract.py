@@ -199,5 +199,10 @@ def test_validator_is_claim_bounded_and_checks_read_only_profile_gate() -> None:
         "relocated_bridge_runtime=structurally_supported_claim_still_closed",
         "real_pkg_relocation=BLOCKED",
         'for token in (".mkdirs()", "Os.chmod", ".delete()", "setupBootstrapIfNeeded")',
+        '"bin/busybox"), "busybox", false',
+        '"bin/proot"), "proot", false',
+        '"Select real bootstrap.zip"',
+        '"Install / Repair Real Bootstrap + APT"',
+        '"BootstrapReadinessGate.evaluateStartup(this).isPass()"',
     ]:
         assert token in validator
