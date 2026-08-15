@@ -233,9 +233,12 @@ public final class BootstrapWizardSource {
         boolean pkg = pkgDirect || symlinkDestinations.contains("bin/pkg");
         boolean busybox = busyboxDirect || symlinkDestinations.contains("bin/busybox");
         boolean proot = prootDirect || symlinkDestinations.contains("bin/proot");
-        if (!symlinks || !sh || !pkg || !busybox || !proot) {
+        // The accepted archive must be able to start a real shell and expose
+        // pkg recovery. Busybox/proot belong to the later full package-runtime
+        // gate and cannot block first-boot recovery.
+        if (!symlinks || !sh || !pkg) {
             throw new IllegalArgumentException("BOOTSTRAP_REQUIRED_INSTALLED_ENTRIES_MISSING symlinks=" + symlinks
-                + " sh=" + sh + " pkg=" + pkg + " busybox=" + busybox + " proot=" + proot);
+                + " sh=" + sh + " pkg=" + pkg + " busybox_observed=" + busybox + " proot_observed=" + proot);
         }
 
         String profile = "MISSING";
