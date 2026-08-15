@@ -11,7 +11,14 @@ on:
       - app/build.gradle
       - app/src/main/cpp/termux-bootstrap-zip.S
       - app/src/main/java/com/termux/app/TermuxApplication.java
+      - app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java
+      - app/src/main/java/com/termux/app/BootstrapBaremetalGuard.java
+      - app/src/main/java/com/termux/app/BootstrapReadinessGate.java
       - app/src/main/java/com/termux/app/BootstrapWizardSource.java
+      - app/src/main/java/com/termux/app/TermuxInstaller.java
+      - app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java
+      - app/src/main/java/com/termux/app/activities/SettingsActivity.java
+      - app/src/main/res/xml/root_preferences.xml
       - scripts/build_rafaelia_bootstraps.sh
       - scripts/bootstrap_zip_builder.c
       - scripts/build_real_arm_bootstrap_core.py
@@ -41,6 +48,7 @@ on:
       - tests/test_bootstrap_fullengine_contract.py
       - tests/test_bootstrap_no_recursive_command_bridges.py
       - tests/test_bootstrap_busybox_applet_wrappers.py
+      - tests/test_rafcodephi_startup_and_settings_contract.py
       - .github/workflows/validate-bootstrap-package-install-contract.yml
   pull_request:
     paths:
@@ -49,7 +57,14 @@ on:
       - app/build.gradle
       - app/src/main/cpp/termux-bootstrap-zip.S
       - app/src/main/java/com/termux/app/TermuxApplication.java
+      - app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java
+      - app/src/main/java/com/termux/app/BootstrapBaremetalGuard.java
+      - app/src/main/java/com/termux/app/BootstrapReadinessGate.java
       - app/src/main/java/com/termux/app/BootstrapWizardSource.java
+      - app/src/main/java/com/termux/app/TermuxInstaller.java
+      - app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java
+      - app/src/main/java/com/termux/app/activities/SettingsActivity.java
+      - app/src/main/res/xml/root_preferences.xml
       - scripts/build_rafaelia_bootstraps.sh
       - scripts/bootstrap_zip_builder.c
       - scripts/build_real_arm_bootstrap_core.py
@@ -79,6 +94,7 @@ on:
       - tests/test_bootstrap_fullengine_contract.py
       - tests/test_bootstrap_no_recursive_command_bridges.py
       - tests/test_bootstrap_busybox_applet_wrappers.py
+      - tests/test_rafcodephi_startup_and_settings_contract.py
       - .github/workflows/validate-bootstrap-package-install-contract.yml
   workflow_dispatch:
 
@@ -105,6 +121,9 @@ jobs:
 
       - name: Run focused bootstrap package tests
         run: python3 -m pytest -q tests/test_bootstrap_package_install_contract.py
+
+      - name: Run first-boot, APT gate, and Settings route contracts
+        run: python3 tests/test_rafcodephi_startup_and_settings_contract.py
 
       - name: Run source-built real bootstrap import tests
         run: python3 -m pytest -q tests/test_source_built_real_bootstrap.py
