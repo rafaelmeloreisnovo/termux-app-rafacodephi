@@ -24,8 +24,10 @@ import java.util.zip.ZipInputStream;
  * prefix with the real-pkg bootstrap carried by the new beta.
  *
  * The old prefix is renamed to a sibling backup before TermuxInstaller is
- * invoked. $HOME is not touched. The backup is removed only after the shared
- * BootstrapReadinessGate proves the new runtime is real-pkg ready.
+ * invoked. $HOME is not touched. The backup is removed once the shared
+ * startup gate proves that the new {@code sh}/{@code pkg} runtime can boot.
+ * The stricter APT/package gate remains visible and fail-closed, but it must
+ * not force a rollback of a usable first-boot shell.
  */
 public final class BetaRealBootstrapRepair {
 
@@ -81,16 +83,25 @@ public final class BetaRealBootstrapRepair {
                 + " home_preserved=" + TermuxRuntimePaths.homeDirPath());
 
             TermuxInstaller.setupBootstrapIfNeeded(activity, () -> {
-                BootstrapReadinessGate.Report after = BootstrapReadinessGate.evaluate(activity);
-                if (after.isPass()) {
+                BootstrapReadinessGate.Report afterStartup = BootstrapReadinessGate.evaluateStartup(activity);
+                BootstrapReadinessGate.Report afterPackageRuntime = BootstrapReadinessGate.evaluate(activity);
+                if (afterStartup.isPass()) {
                     cleanupTreeBestEffort(backup, filesDir);
                     cleanupTreeBestEffort(failed, filesDir);
-                    Logger.logInfo(LOG_TAG, "real-pkg beta repair PASS; previous prefix backup retired");
+                    if (afterPackageRuntime.isPass()) {
+                        Logger.logInfo(LOG_TAG, "real-pkg beta repair PASS; previous prefix backup retired");
+                    } else {
+                        Logger.logWarn(LOG_TAG,
+                            "real-pkg beta repair STARTUP_PASS_PACKAGE_RUNTIME_BLOCKED reason="
+                                + afterPackageRuntime.reason
+                                + "; previous prefix backup retired to preserve first boot");
+                    }
                     whenDone.run();
                     return;
                 }
 
-                Logger.logError(LOG_TAG, "installer returned but shared real-pkg gate is still BLOCKED: " + after.reason);
+                Logger.logError(LOG_TAG,
+                    "installer returned but first-boot shell/pkg gate is still BLOCKED: " + afterStartup.reason);
                 try {
                     restoreBackupAfterRejectedInstall(prefix, backup, failed, hadBackup);
                 } catch (Throwable restoreError) {
@@ -174,9 +185,10 @@ public final class BetaRealBootstrapRepair {
             return;
         }
 
-        // If both trees exist after an interruption, trust only the same strong
-        // readiness gate used by orchestration. A profile alone is insufficient.
-        if (BootstrapReadinessGate.evaluate(activity).isPass()) {
+        // If both trees exist after an interruption, retain the new tree only
+        // when its minimum shell/pkg runtime is genuinely usable. Full APT
+        // readiness is evaluated separately and must not erase that recovery.
+        if (BootstrapReadinessGate.evaluateStartup(activity).isPass()) {
             cleanupTreeBestEffort(backup, TermuxRuntimePaths.filesDir());
             return;
         }
