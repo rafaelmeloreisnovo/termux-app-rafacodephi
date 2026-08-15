@@ -2,7 +2,7 @@
 from pathlib import Path
 
 WORKFLOW = Path('.github/workflows/rafcodephi-v1-termux-packages.yml')
-PIN = '7b59383c25f7557ba8a29a24f715c5fb5b26cc53'
+PIN = '7a26629938452c6d6fd80cf3fccce8c2056aabac'
 
 
 def require(text: str, token: str) -> None:
@@ -16,6 +16,8 @@ def main() -> int:
     for token in (
         'repository: rafaelmeloreisnovo/termux-packages',
         f'TERMUX_PACKAGES_PIN: {PIN}',
+        f'default: {PIN}',
+        f"|| '{PIN}'",
         'scripts/apply-rafcodephi-build-properties.py',
         'scripts/validate-rafcodephi-build-properties.sh',
         'scripts/build-rafcodephi-real-bootstrap.sh',
@@ -36,6 +38,7 @@ def main() -> int:
         require(text, token)
 
     forbidden = (
+        '7b59383c25f7557ba8a29a24f715c5fb5b26cc53',
         'physical_android: PASS',
         "'physical_android': 'PASS'",
         'claim_allowed: true',
