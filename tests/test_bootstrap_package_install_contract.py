@@ -68,14 +68,15 @@ def test_wizard_exposes_real_bootstrap_zip_document_route_through_compatibility_
 
     for token in [
         "Intent.ACTION_OPEN_DOCUMENT",
-        "Select bootstrap.zip",
+        "Select real bootstrap.zip",
         "BootstrapWizardSource.accept(this, uri)",
         "TermuxRuntimePaths.filesDirPath()",
         "TermuxRuntimePaths.prefixDirPath()",
         "compiled PREFIX",
         "isBlockingStep",
-        "Install / Repair Bootstrap",
+        "Install / Repair Real Bootstrap + APT",
         "BootstrapReadinessGate.evaluate(this).isPass()",
+        "BootstrapReadinessGate.evaluateStartup(this).isPass()",
     ]:
         assert token in wizard
 
@@ -90,6 +91,10 @@ def test_wizard_exposes_real_bootstrap_zip_document_route_through_compatibility_
         '"shellbash"',
         '"busybox-safe"',
         '"proot-safe"',
+        "STARTUP_REQUIRED_EXECUTABLES",
+        "OPTIONAL_COMPATIBILITY_WRAPPERS",
+        "FIRST_BOOT_SHELL_AND_PKG_READY",
+        "FULL_PACKAGE_RUNTIME",
         "TermuxRuntimePaths.storageHomeDir()",
         'context.getPackageName().equals(profile.optString("package_name", ""))',
         'prefix.getAbsolutePath().equals(profile.optString("prefix", ""))',
@@ -136,8 +141,8 @@ def test_installer_uses_runtime_prefix_and_keeps_real_pkg_claim_closed() -> None
         "staging.renameTo(prefix)",
         "verifyRuntimeBinary(new File(staging, \"bin/sh\"), \"sh\", true)",
         "verifyRuntimeBinary(new File(staging, \"bin/pkg\"), \"pkg\", true)",
-        "verifyRuntimeBinary(new File(staging, \"bin/busybox\"), \"busybox\", true)",
-        "verifyRuntimeBinary(new File(staging, \"bin/proot\"), \"proot\", true)",
+        "verifyRuntimeBinary(new File(staging, \"bin/busybox\"), \"busybox\", false)",
+        "verifyRuntimeBinary(new File(staging, \"bin/proot\"), \"proot\", false)",
         "RELOCATED_RUNTIME_BLOCKED_FOR_REAL_OR_UNPROVEN_PACKAGE_LAYER",
         "rollbackFailedBootstrapInstall",
     ]:
