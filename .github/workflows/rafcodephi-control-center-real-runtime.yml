@@ -10,6 +10,7 @@ on:
         type: string
   pull_request:
     paths:
+      - 'app/src/main/AndroidManifest.xml'
       - 'app/src/main/java/com/termux/app/activities/BetaOrchestratorActivity.java'
       - 'app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java'
       - 'app/src/main/java/com/termux/app/activities/SettingsActivity.java'
@@ -22,10 +23,12 @@ on:
       - 'app/src/main/res/xml/root_preferences.xml'
       - 'tests/test_beta_orchestrator_contract.py'
       - 'tests/test_rafcodephi_startup_and_settings_contract.py'
+      - 'tests/test_settings_manifest_activity_contract.py'
       - '.github/workflows/rafcodephi-control-center-real-runtime.yml'
   push:
     branches: [master]
     paths:
+      - 'app/src/main/AndroidManifest.xml'
       - 'app/src/main/java/com/termux/app/activities/BetaOrchestratorActivity.java'
       - 'app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java'
       - 'app/src/main/java/com/termux/app/activities/SettingsActivity.java'
@@ -38,6 +41,7 @@ on:
       - 'app/src/main/res/xml/root_preferences.xml'
       - 'tests/test_beta_orchestrator_contract.py'
       - 'tests/test_rafcodephi_startup_and_settings_contract.py'
+      - 'tests/test_settings_manifest_activity_contract.py'
       - '.github/workflows/rafcodephi-control-center-real-runtime.yml'
 
 permissions:
@@ -94,7 +98,10 @@ jobs:
 
       - name: Validate first-boot and Settings contracts
         shell: bash
-        run: python3 tests/test_rafcodephi_startup_and_settings_contract.py
+        run: |
+          set -euo pipefail
+          python3 tests/test_rafcodephi_startup_and_settings_contract.py
+          python3 -m pytest -q tests/test_settings_manifest_activity_contract.py
 
       - name: Source-build live real-pkg bootstrap pair
         working-directory: termux-packages
