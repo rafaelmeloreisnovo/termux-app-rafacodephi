@@ -97,7 +97,7 @@ ZIPRAF não comprime fisicamente; cria endereçamento lógico multirresolução 
 ### B) Alterações RAFCODEΦ
 - Identidade side-by-side própria: `com.termux.rafacodephi`.
 - Pipeline RAFAELIA com preparação explícita de bootstrap e validações de contrato.
-- Fonte de pacotes/bootstrap RAFCODEΦ: `https://github.com/exacordex-crypto/termux-packagesRafcodephi`, consumida por CI como fonte de código/metadata com commit fixado, nunca como binário versionado neste repo.
+- Fonte canônica de pacotes/bootstrap RAFCODEΦ: `https://github.com/rafaelmeloreisnovo/termux-packages`, consumida por CI com SHA de commit fixado. O CI constrói os artefatos a partir do código e guarda o log/receipt; este app não versiona binários de bootstrap.
 
 ### C) Módulo low-level RMR
 - Módulo nativo C/ASM com JNI fino, fallback C e dispatch runtime por capacidades.
