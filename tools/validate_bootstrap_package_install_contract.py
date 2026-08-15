@@ -117,8 +117,8 @@ def validate() -> list[str]:
         "staging.renameTo(prefix)",
         "verifyRuntimeBinary(new File(staging, \"bin/sh\"), \"sh\", true)",
         "verifyRuntimeBinary(new File(staging, \"bin/pkg\"), \"pkg\", true)",
-        "verifyRuntimeBinary(new File(staging, \"bin/busybox\"), \"busybox\", true)",
-        "verifyRuntimeBinary(new File(staging, \"bin/proot\"), \"proot\", true)",
+        'verifyRuntimeBinary(new File(staging, "bin/busybox"), "busybox", false)',
+        'verifyRuntimeBinary(new File(staging, "bin/proot"), "proot", false)',
         "BootstrapBaremetalGuard.validateAfterBootstrap(prefix.getAbsolutePath())",
         "TermuxShellEnvironment.writeEnvironmentToFile(activity)",
         "rollbackFailedBootstrapInstall", "RELOCATED_RUNTIME_BLOCKED_FOR_REAL_OR_UNPROVEN_PACKAGE_LAYER",
@@ -127,9 +127,10 @@ def validate() -> list[str]:
 
     require(wizard_entry, "extends BetaBootstrapWizardActivity", "wizard compatibility entry", errors)
     for token in (
-        "Intent.ACTION_OPEN_DOCUMENT", "Select bootstrap.zip", "BootstrapWizardSource.accept(this, uri)",
+        "Intent.ACTION_OPEN_DOCUMENT", "Select real bootstrap.zip", "BootstrapWizardSource.accept(this, uri)",
         "TermuxRuntimePaths.filesDirPath()", "TermuxRuntimePaths.prefixDirPath()",
-        "compiled PREFIX", "isBlockingStep", "Install / Repair Bootstrap",
+        "compiled PREFIX", "isBlockingStep", "Install / Repair Real Bootstrap + APT",
+        "BootstrapReadinessGate.evaluateStartup(this).isPass()",
         "BootstrapReadinessGate.evaluate(this).isPass()",
     ):
         require(wizard_impl, token, "wizard filesystem route", errors)
