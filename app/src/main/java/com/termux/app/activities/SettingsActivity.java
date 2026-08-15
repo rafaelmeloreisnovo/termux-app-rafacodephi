@@ -61,21 +61,31 @@ public class SettingsActivity extends AppCompatActivity {
 
             setPreferencesFromResource(R.xml.root_preferences, rootKey);
 
-            new Thread() {
-                @Override
-                public void run() {
-                    configureAndroid15WizardPreference(context);
-                    configureSystemAuditPreference(context);
-                    configureIndustrialDiagnosticsPreference(context);
-                    configureVectraRuntimePreference(context);
-                    configureTermuxAPIPreference(context);
-                    configureTermuxFloatPreference(context);
-                    configureTermuxTaskerPreference(context);
-                    configureTermuxWidgetPreference(context);
-                    configureAboutPreference(context);
-                    configureDonatePreference(context);
-                }
-            }.start();
+            // Preference lookup, visibility and click-listener mutations must
+            // stay on the Fragment/UI thread. Running this block in a raw
+            // background Thread made the Settings screen race with its own
+            // adapter and left RAFCODEPHI entries intermittently unconfigured.
+            configureRafcodephiControlCenterPreference(context);
+            configureAndroid15WizardPreference(context);
+            configureSystemAuditPreference(context);
+            configureIndustrialDiagnosticsPreference(context);
+            configureVectraRuntimePreference(context);
+            configureTermuxAPIPreference(context);
+            configureTermuxFloatPreference(context);
+            configureTermuxTaskerPreference(context);
+            configureTermuxWidgetPreference(context);
+            configureAboutPreference(context);
+            configureDonatePreference(context);
+        }
+
+        private void configureRafcodephiControlCenterPreference(@NonNull Context context) {
+            Preference controlCenterPreference = findPreference("rafcodephi_control_center");
+            if (controlCenterPreference != null) {
+                controlCenterPreference.setOnPreferenceClickListener(preference -> {
+                    startActivity(new Intent(context, BetaOrchestratorActivity.class));
+                    return true;
+                });
+            }
         }
 
         private void configureAndroid15WizardPreference(@NonNull Context context) {
@@ -163,28 +173,27 @@ public class SettingsActivity extends AppCompatActivity {
             Preference aboutPreference = findPreference("about");
             if (aboutPreference != null) {
                 aboutPreference.setOnPreferenceClickListener(preference -> {
-                    new Thread() {
-                        @Override
-                        public void run() {
-                            String title = "About";
+                    new Thread(() -> {
+                        String title = "About";
 
-                            StringBuilder aboutString = new StringBuilder();
-                            aboutString.append(TermuxUtils.getAppInfoMarkdownString(context, TermuxUtils.AppInfoMode.TERMUX_AND_PLUGIN_PACKAGES));
-                            aboutString.append("\n\n").append(AndroidUtils.getDeviceInfoMarkdownString(context, true));
-                            aboutString.append("\n\n").append(TermuxUtils.getImportantLinksMarkdownString(context));
+                        StringBuilder aboutString = new StringBuilder();
+                        aboutString.append(TermuxUtils.getAppInfoMarkdownString(context, TermuxUtils.AppInfoMode.TERMUX_AND_PLUGIN_PACKAGES));
+                        aboutString.append("\n\n").append(AndroidUtils.getDeviceInfoMarkdownString(context, true));
+                        aboutString.append("\n\n").append(TermuxUtils.getImportantLinksMarkdownString(context));
 
-                            String userActionName = UserAction.ABOUT.getName();
+                        String userActionName = UserAction.ABOUT.getName();
+                        ReportInfo reportInfo = new ReportInfo(userActionName,
+                            TermuxConstants.TERMUX_APP.TERMUX_SETTINGS_ACTIVITY_NAME, title);
+                        reportInfo.setReportString(aboutString.toString());
+                        reportInfo.setReportSaveFileLabelAndPath(userActionName,
+                            Environment.getExternalStorageDirectory() + "/" +
+                                FileUtils.sanitizeFileName(TermuxConstants.TERMUX_APP_NAME + "-" + userActionName + ".log", true, true));
 
-                            ReportInfo reportInfo = new ReportInfo(userActionName,
-                                TermuxConstants.TERMUX_APP.TERMUX_SETTINGS_ACTIVITY_NAME, title);
-                            reportInfo.setReportString(aboutString.toString());
-                            reportInfo.setReportSaveFileLabelAndPath(userActionName,
-                                Environment.getExternalStorageDirectory() + "/" +
-                                    FileUtils.sanitizeFileName(TermuxConstants.TERMUX_APP_NAME + "-" + userActionName + ".log", true, true));
-
-                            ReportActivity.startReportActivity(context, reportInfo);
-                        }
-                    }.start();
+                        if (!isAdded()) return;
+                        requireActivity().runOnUiThread(() -> {
+                            if (isAdded()) ReportActivity.startReportActivity(context, reportInfo);
+                        });
+                    }, "rafcodephi-about-report").start();
 
                     return true;
                 });
