@@ -34,8 +34,8 @@ def test_bootstrap_readiness_gate_is_single_fail_closed_read_only_runtime_and_pr
     ]:
         assert token in gate
 
-    assert 'observeRealExecutable(checks, "$PREFIX/bin/busybox"' in gate
-    assert 'observeRealExecutable(checks, "$PREFIX/bin/proot"' in gate
+    assert 'for (String name : REQUIRED_REAL_ELFS)' in gate
+    assert 'observeRealExecutable(checks, "$PREFIX/bin/" + name' in gate
     assert ".mkdirs()" not in gate
     assert "Os.chmod" not in gate
     assert ".delete()" not in gate
@@ -156,10 +156,14 @@ def test_control_center_is_single_operator_surface_with_repair_run_all_vectra_an
     assert 'app:key="rafcodephi_control_center"' in prefs
     assert 'app:title="RAFCODEΦ · Control Center"' in prefs
     assert 'android:targetClass="com.termux.app.activities.BetaOrchestratorActivity"' in prefs
+    # The unified flow is the normal entrypoint, while the direct Vectra route
+    # remains intentionally available as an expert recovery/diagnostics path.
+    assert 'app:key="vectra_runtime"' in prefs
+    assert 'Vectra Runtime (diagnóstico)' in prefs
 
     for obsolete_key in [
         'app:key="android15_wizard"', 'app:key="system_audit"', 'app:key="industrial_diagnostics"',
-        'app:key="pa_freestanding_elf"', 'app:key="vectra_runtime"',
+        'app:key="pa_freestanding_elf"',
     ]:
         assert obsolete_key not in prefs
 
