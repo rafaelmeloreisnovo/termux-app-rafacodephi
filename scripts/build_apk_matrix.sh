@@ -71,8 +71,8 @@ BOOTSTRAP_SOURCE_REQUESTED="${RAF_BOOTSTRAP_SOURCE:-local}"
 case "${BOOTSTRAP_SOURCE_REQUESTED}" in
   local|upstream|source-built-real)
     ;;
-  termux-packagesRafcodephi-source-contract)
-    info "RAF_BOOTSTRAP_SOURCE=${BOOTSTRAP_SOURCE_REQUESTED} is a package-source contract marker; using local bootstrap payload generation"
+  termux-packages-source-contract)
+    info "RAF_BOOTSTRAP_SOURCE=${BOOTSTRAP_SOURCE_REQUESTED} is a canonical package-source contract marker; using local bootstrap payload generation"
     BOOTSTRAP_SOURCE_REQUESTED="local"
     ;;
   *)
