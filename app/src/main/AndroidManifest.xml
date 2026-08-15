@@ -140,6 +140,12 @@
             android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
 
         <activity
+            android:name="com.termux.app.activities.BetaOrchestratorActivity"
+            android:exported="false"
+            android:label="RAFCODEΦ · Control Center"
+            android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
+
+        <activity
             android:name="com.termux.app.activities.Android15WizardActivity"
             android:exported="false"
             android:label="@string/title_activity_android15_wizard"
