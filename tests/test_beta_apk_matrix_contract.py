@@ -8,8 +8,8 @@ BETA_WORKFLOW = ROOT / '.github/workflows/beta-build.yml'
 def test_build_apk_matrix_uses_valid_bootstrap_payload_source_default():
     text = BUILD_MATRIX.read_text(encoding='utf-8')
     assert 'BOOTSTRAP_SOURCE_REQUESTED="${RAF_BOOTSTRAP_SOURCE:-local}"' in text
-    assert 'RAF_BOOTSTRAP_SOURCE must be local or upstream' in text
-    assert 'termux-packagesRafcodephi-source-contract' in text
+    assert 'RAF_BOOTSTRAP_SOURCE must be local, upstream, or source-built-real' in text
+    assert 'termux-packages-source-contract' in text
     assert 'using local bootstrap payload generation' in text
 
 
@@ -33,7 +33,7 @@ def test_build_apk_matrix_records_diagnostics_but_keeps_strict_default():
 def test_beta_workflow_keeps_apk_matrix_strict():
     text = BETA_WORKFLOW.read_text(encoding='utf-8')
     assert 'id: apk_matrix' in text
-    assert 'RAF_BOOTSTRAP_SOURCE: local' in text
+    assert 'RAF_BOOTSTRAP_SOURCE: source-built-real' in text
     assert 'RELEASE_TRACK: internal' in text
     assert 'APK_MATRIX_UNIT_TESTS_REQUIRED: "true"' in text
     assert 'APK_MATRIX_UNIT_TESTS_REQUIRED: "false"' not in text

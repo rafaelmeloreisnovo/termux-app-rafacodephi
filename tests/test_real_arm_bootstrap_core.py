@@ -148,9 +148,11 @@ def test_validator_rejects_binary_zip_entry_with_legacy_prefix(tmp_path):
     assert 'legacy_prefix=/data/data/com.termux/files/usr' in result.stderr
 
 
-def test_bridge_now_targets_arm_core_only_and_ca_certificates():
+def test_bridge_targets_the_pinned_arm_core_package_set_including_termux_api():
     text = BRIDGE.read_text(encoding='utf-8')
-    assert 'REQUIRED_PACKAGES=(apt bash busybox proot dpkg ca-certificates coreutils termux-tools)' in text
+    assert 'rafaelmeloreisnovo/termux-packages.git' in text
+    assert 'PACKAGES_REF="${RAFCODEPHI_PACKAGES_REF:-7a26629938452c6d6fd80cf3fccce8c2056aabac}"' in text
+    assert 'REQUIRED_PACKAGES=(apt bash busybox proot dpkg ca-certificates coreutils termux-tools termux-api)' in text
     assert 'REQUIRED_ARCHES=(aarch64 arm)' in text
 
 

@@ -14,11 +14,16 @@ on:
       - 'scripts/build_apk_matrix.sh'
       - 'scripts/prepare_bootstrap_env.sh'
       - 'app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java'
+      - 'app/src/main/java/com/termux/app/BootstrapBaremetalGuard.java'
       - 'app/src/main/java/com/termux/app/BootstrapReadinessGate.java'
+      - 'app/src/main/java/com/termux/app/BootstrapWizardSource.java'
       - 'app/src/main/java/com/termux/app/TermuxInstaller.java'
       - 'app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java'
+      - 'app/src/main/java/com/termux/app/activities/SettingsActivity.java'
+      - 'app/src/main/res/xml/root_preferences.xml'
       - 'tools/raf_bootstrap_profile.py'
       - 'tests/test_beta_real_bootstrap_policy.py'
+      - 'tests/test_rafcodephi_startup_and_settings_contract.py'
   push:
     branches: [master]
     paths:
@@ -26,9 +31,14 @@ on:
       - '.github/workflows/beta-real-bootstrap-contract.yml'
       - 'scripts/build_apk_matrix.sh'
       - 'app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java'
+      - 'app/src/main/java/com/termux/app/BootstrapBaremetalGuard.java'
       - 'app/src/main/java/com/termux/app/BootstrapReadinessGate.java'
+      - 'app/src/main/java/com/termux/app/BootstrapWizardSource.java'
       - 'app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java'
+      - 'app/src/main/java/com/termux/app/activities/SettingsActivity.java'
+      - 'app/src/main/res/xml/root_preferences.xml'
       - 'tests/test_beta_real_bootstrap_policy.py'
+      - 'tests/test_rafcodephi_startup_and_settings_contract.py'
 
 permissions:
   contents: read
@@ -53,10 +63,12 @@ jobs:
           persist-credentials: false
 
       - name: Python contract tests
-        run: python3 tests/test_beta_real_bootstrap_policy.py
+        run: |
+          python3 tests/test_beta_real_bootstrap_policy.py
+          python3 tests/test_rafcodephi_startup_and_settings_contract.py
 
       - name: Python syntax
-        run: python3 -m py_compile tests/test_beta_real_bootstrap_policy.py tools/raf_bootstrap_profile.py scripts/import_rafcodephi_real_bootstrap.py
+        run: python3 -m py_compile tests/test_beta_real_bootstrap_policy.py tests/test_rafcodephi_startup_and_settings_contract.py tools/raf_bootstrap_profile.py scripts/import_rafcodephi_real_bootstrap.py
 
       - name: Shell syntax
         run: bash -n scripts/build_apk_matrix.sh scripts/prepare_bootstrap_env.sh

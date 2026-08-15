@@ -2,27 +2,57 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PACKAGES_REPO_URL="${RAFCODEPHI_PACKAGES_REPO_URL:-https://github.com/exacordex-crypto/termux-packagesRafcodephi.git}"
-PACKAGES_DIR="${RAFCODEPHI_PACKAGES_DIR:-${ROOT_DIR}/out/termux-packagesRafcodephi}"
+PACKAGES_REPO_URL="${RAFCODEPHI_PACKAGES_REPO_URL:-https://github.com/rafaelmeloreisnovo/termux-packages.git}"
+PACKAGES_REF="${RAFCODEPHI_PACKAGES_REF:-7a26629938452c6d6fd80cf3fccce8c2056aabac}"
+PACKAGES_DIR="${RAFCODEPHI_PACKAGES_DIR:-${ROOT_DIR}/out/termux-packages}"
 OUT_DIR="${ROOT_DIR}/out/rafcodephi-packages-bridge"
-REQUIRED_PACKAGES=(apt bash busybox proot dpkg ca-certificates coreutils termux-tools)
+REQUIRED_PACKAGES=(apt bash busybox proot dpkg ca-certificates coreutils termux-tools termux-api)
 REQUIRED_ARCHES=(aarch64 arm)
 
 info() { printf '[rafcodephi-packages-bridge] %s\n' "$*"; }
 fail() { printf '[rafcodephi-packages-bridge][ERROR] %s\n' "$*" >&2; exit 1; }
 
+validate_source_identity() {
+  case "$PACKAGES_REPO_URL" in
+    https://github.com/rafaelmeloreisnovo/termux-packages|https://github.com/rafaelmeloreisnovo/termux-packages.git)
+      ;;
+    *)
+      fail "RAFCODEPHI_PACKAGES_REPO_URL must point to rafaelmeloreisnovo/termux-packages, got: ${PACKAGES_REPO_URL}"
+      ;;
+  esac
+  [[ "$PACKAGES_REF" =~ ^[0-9a-f]{40}$ ]] \
+    || fail "RAFCODEPHI_PACKAGES_REF must be a pinned 40-char commit, got: ${PACKAGES_REF}"
+}
+
+checkout_pinned_ref() {
+  git -C "$PACKAGES_DIR" fetch --depth 1 origin "$PACKAGES_REF" >/dev/null
+  git -C "$PACKAGES_DIR" checkout --detach -q FETCH_HEAD
+  local actual
+  actual="$(git -C "$PACKAGES_DIR" rev-parse HEAD)"
+  [[ "$actual" == "$PACKAGES_REF" ]] \
+    || fail "resolved packages commit ${actual} does not match required ${PACKAGES_REF}"
+}
+
 ensure_repo() {
+  validate_source_identity
   mkdir -p "$(dirname "$PACKAGES_DIR")" "$OUT_DIR"
   if [[ -d "${PACKAGES_DIR}/.git" ]]; then
     info "using existing packages repo: ${PACKAGES_DIR}"
-    git -C "$PACKAGES_DIR" fetch --depth 1 origin master >/dev/null 2>&1 || true
-    git -C "$PACKAGES_DIR" checkout -q master || true
-    git -C "$PACKAGES_DIR" pull --ff-only --depth 1 origin master >/dev/null 2>&1 || true
+    local existing_url
+    existing_url="$(git -C "$PACKAGES_DIR" remote get-url origin 2>/dev/null || true)"
+    case "$existing_url" in
+      https://github.com/rafaelmeloreisnovo/termux-packages|https://github.com/rafaelmeloreisnovo/termux-packages.git)
+        ;;
+      *)
+        fail "existing packages repo has unexpected origin: ${existing_url:-missing}"
+        ;;
+    esac
   else
+    [[ ! -e "$PACKAGES_DIR" ]] || fail "packages directory exists but is not a git repository: ${PACKAGES_DIR}"
     info "cloning packages repo: ${PACKAGES_REPO_URL}"
-    rm -rf "$PACKAGES_DIR"
-    git clone --depth 1 "$PACKAGES_REPO_URL" "$PACKAGES_DIR"
+    git clone --depth 1 "$PACKAGES_REPO_URL" "$PACKAGES_DIR" >/dev/null
   fi
+  checkout_pinned_ref
 }
 
 validate_recipe() {
@@ -45,6 +75,7 @@ validate_contract() {
   printf '%s\n' "${REQUIRED_PACKAGES[@]}" > "${OUT_DIR}/required-packages.txt"
   printf '%s\n' "${REQUIRED_ARCHES[@]}" > "${OUT_DIR}/required-arches.txt"
   git -C "$PACKAGES_DIR" rev-parse HEAD > "${OUT_DIR}/packages-repo-head.txt"
+  printf '%s\n' "$PACKAGES_REF" > "${OUT_DIR}/packages-repo-required-ref.txt"
   info "contract=PASS"
 }
 
@@ -55,6 +86,7 @@ packages: ${REQUIRED_PACKAGES[*]}
 free-space: false
 workflow: Packages
 repository: ${PACKAGES_REPO_URL}
+ref: ${PACKAGES_REF}
 EOF
   info "dispatch plan: ${OUT_DIR}/workflow-dispatch-packages.txt"
 }

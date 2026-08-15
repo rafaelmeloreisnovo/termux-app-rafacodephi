@@ -23,6 +23,7 @@ final class BootstrapBaremetalGuard {
     private static final int PROFILE_READ_LIMIT = 64 * 1024;
     private static final String PROFILE_SCHEMA = "rafcodephi-bootstrap-profile/v1";
     private static final String PROFILE_FILE = "BOOTSTRAP_PROFILE.json";
+    private static final String SOURCE_ONLY_SYMLINKS_FILE = "SYMLINKS.txt";
     private static final String LEGACY_PREFIX = "/data/data/com.termux/files/usr";
     private static final String APT_SOURCE_LEGACY = "etc/apt/sources.list";
     private static final String APT_SOURCE_DEB822 = "etc/apt/sources.list.d/termux.sources";
@@ -136,6 +137,9 @@ final class BootstrapBaremetalGuard {
             requireEquals(BuildConfig.APPLICATION_ID, profile.optString("package_name", ""), "profile package");
             requireEquals(prefix, profile.optString("prefix", ""), "profile prefix");
             requireEquals(expectedBootstrapArch(), profile.optString("arch", ""), "profile arch");
+            if (!profile.optBoolean("runtime_materialized", false)) {
+                throw new RuntimeException("installed bootstrap profile must set runtime_materialized=true");
+            }
 
             if (profile.optBoolean("claim_allowed", true)) {
                 throw new RuntimeException("bootstrap profile must keep claim_allowed=false");
@@ -150,7 +154,12 @@ final class BootstrapBaremetalGuard {
                 throw new RuntimeException("bootstrap profile has no required_entries");
             }
             for (int i = 0; i < required.length(); i++) {
-                verifyRequiredProfileEntry(prefixDir, required.optString(i, ""));
+                String relative = required.optString(i, "");
+                // This manifest is consumed while extracting the archive and
+                // intentionally is not persisted in $PREFIX. It is source
+                // provenance, not an installed runtime target.
+                if (SOURCE_ONLY_SYMLINKS_FILE.equals(relative)) continue;
+                verifyRequiredProfileEntry(prefixDir, relative);
             }
 
             if ("bridge".equals(profileName)) {

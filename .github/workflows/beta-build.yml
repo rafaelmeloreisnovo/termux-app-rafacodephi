@@ -10,7 +10,7 @@ on:
         description: Exact termux-packages commit/ref used to source-build the real bootstrap pair
         required: true
         type: string
-        default: 7b59383c25f7557ba8a29a24f715c5fb5b26cc53
+        default: 7a26629938452c6d6fd80cf3fccce8c2056aabac
       build_apk_matrix:
         description: Build signed + unsigned APK matrix (arm32 + arm64)
         required: false
@@ -50,7 +50,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_PIN: 7b59383c25f7557ba8a29a24f715c5fb5b26cc53
+  TERMUX_PACKAGES_PIN: 7a26629938452c6d6fd80cf3fccce8c2056aabac
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
 
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:
-      SELECTED_TERMUX_PACKAGES_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || '7b59383c25f7557ba8a29a24f715c5fb5b26cc53' }}
+      SELECTED_TERMUX_PACKAGES_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || '7a26629938452c6d6fd80cf3fccce8c2056aabac' }}
     steps:
       - name: Checkout app
         uses: actions/checkout@v7
@@ -129,10 +129,32 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p build/reports
           chmod +x scripts/run-docker.sh scripts/build-rafcodephi-real-bootstrap.sh
+          set +e
           ./scripts/run-docker.sh \
             ./scripts/build-rafcodephi-real-bootstrap.sh \
-            --architectures arm,aarch64
+            --architectures arm,aarch64 \
+            2>&1 | tee build/reports/rafcodephi-beta-real-bootstrap.log
+          build_status="${PIPESTATUS[0]}"
+          set -e
+          python3 - "$build_status" > build/reports/rafcodephi-beta-real-bootstrap-status.json <<'PY'
+          import json
+          import sys
+
+          status = int(sys.argv[1])
+          print(json.dumps({
+              "schema": "rafcodephi.beta-real-bootstrap-source-build/v1",
+              "state": "PASS" if status == 0 else "BLOCKED",
+              "exit_code": status,
+              "claim_allowed_release": False,
+              "device_runtime_proof": "TOKEN_VAZIO",
+          }, sort_keys=True))
+          PY
+          if [[ "$build_status" -ne 0 ]]; then
+            echo "RAFCODEPHI_BETA_REAL_BOOTSTRAP=BLOCKED exit_code=$build_status" >&2
+            exit "$build_status"
+          fi
 
       - name: Fail-closed gate real bootstrap pair
         id: gate_real_bootstrap
@@ -305,6 +327,8 @@ jobs:
             build/reports/rafcodephi-real-bootstrap-import-*.json
             build/reports/rafcodephi-real-bootstrap-import-matrix.json
             termux-packages/build/reports/rafcodephi-beta-*
+            termux-packages/build/reports/rafcodephi-beta-real-bootstrap.log
+            termux-packages/build/reports/rafcodephi-beta-real-bootstrap-status.json
             termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
             docs/BETA_BUILD_REPORT.md
             docs/BETA_READINESS_REPORT.md

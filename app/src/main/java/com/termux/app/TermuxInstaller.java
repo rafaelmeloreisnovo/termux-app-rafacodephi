@@ -197,10 +197,13 @@ public final class TermuxInstaller {
         // post-install guard validates the observation that really exists.
         materializeRuntimeBootstrapProfile(staging, prefix.getAbsolutePath());
 
+        // A first boot must be able to open the canonical shell and expose
+        // pkg recovery. Full APT tooling is verified by the full package gate;
+        // it cannot make this install reject an otherwise usable shell.
         verifyRuntimeBinary(new File(staging, "bin/sh"), "sh", true);
         verifyRuntimeBinary(new File(staging, "bin/pkg"), "pkg", true);
-        verifyRuntimeBinary(new File(staging, "bin/busybox"), "busybox", true);
-        verifyRuntimeBinary(new File(staging, "bin/proot"), "proot", true);
+        verifyRuntimeBinary(new File(staging, "bin/busybox"), "busybox", false);
+        verifyRuntimeBinary(new File(staging, "bin/proot"), "proot", false);
 
         if (prefix.exists()) deleteTreeInsideRuntime(prefix);
         if (!staging.renameTo(prefix)) {
@@ -318,12 +321,8 @@ public final class TermuxInstaller {
     private static boolean runtimePrefixReady(File prefix) {
         File sh = new File(prefix, "bin/sh");
         File pkg = new File(prefix, "bin/pkg");
-        File busybox = new File(prefix, "bin/busybox");
-        File proot = new File(prefix, "bin/proot");
         return prefix.isDirectory() && sh.isFile() && sh.canExecute()
-            && pkg.isFile() && pkg.canExecute()
-            && busybox.isFile() && busybox.canExecute()
-            && proot.isFile() && proot.canExecute();
+            && pkg.isFile() && pkg.canExecute();
     }
 
     /**

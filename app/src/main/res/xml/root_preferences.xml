@@ -19,6 +19,12 @@
     </Preference>
 
     <Preference
+        app:key="vectra_runtime"
+        app:title="RAFCODEΦ · Vectra Runtime (diagnóstico)"
+        app:summary="Sensores e diagnóstico detalhado do runtime; rota de recuperação para suporte técnico"
+        app:persistent="false"/>
+
+    <Preference
         app:key="termux_api"
         app:title="@string/termux_api_preferences_title"
         app:summary="@string/termux_api_preferences_summary"

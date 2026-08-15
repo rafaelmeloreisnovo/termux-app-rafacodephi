@@ -48,7 +48,7 @@ class BetaRealBootstrapPolicyTests(unittest.TestCase):
         gate = self.read("app/src/main/java/com/termux/app/BootstrapReadinessGate.java")
         installer = self.read("app/src/main/java/com/termux/app/TermuxInstaller.java")
         profile_tool = self.read("tools/raf_bootstrap_profile.py")
-        self.assertIn('SOURCE_ONLY_SYMLINK_MANIFEST = "SYMLINKS.txt"', gate)
+        self.assertIn('SOURCE_ONLY_SYMLINKS_FILE = "SYMLINKS.txt"', gate)
         self.assertIn("declared_install_manifest_consumed_by_TermuxInstaller_not_runtime_file", gate)
         self.assertIn('if ("SYMLINKS.txt".equals(name))', installer)
         self.assertIn("continue;", installer)
@@ -90,13 +90,20 @@ class BetaRealBootstrapPolicyTests(unittest.TestCase):
         self.assertIn("file.delete()", symlink_branch)
         self.assertNotIn("listFiles()", symlink_branch)
 
-    def test_interrupted_repair_uses_strong_readiness_not_profile_only(self):
+    def test_interrupted_repair_keeps_a_usable_first_boot_without_claiming_full_apt(self):
         repair = self.read("app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java")
         recovery = repair.split("private static void recoverInterruptedBackup", 1)[1].split(
             "private static void restoreBackupAfterRejectedInstall", 1
         )[0]
-        self.assertIn("BootstrapReadinessGate.evaluate(activity).isPass()", recovery)
+        self.assertIn("BootstrapReadinessGate.evaluateStartup(activity).isPass()", recovery)
         self.assertNotIn("runtimeStateFromProfile", recovery)
+
+        post_install = repair.split("TermuxInstaller.setupBootstrapIfNeeded(activity, () -> {", 1)[1].split(
+            "Logger.logError", 1
+        )[0]
+        self.assertIn("afterStartup.isPass()", post_install)
+        self.assertIn("afterPackageRuntime.isPass()", post_install)
+        self.assertIn("STARTUP_PASS_PACKAGE_RUNTIME_BLOCKED", post_install)
 
     def test_claim_boundary_remains_closed(self):
         workflow = self.read(".github/workflows/beta-build.yml")

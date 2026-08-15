@@ -104,11 +104,11 @@ public class BetaBootstrapWizardActivity extends AppCompatActivity {
             this::checkBatteryOptimization));
         wizardChecks.add(new WizardCheck(
             "Bootstrap Filesystem",
-            "Install or import a real-pkg bootstrap, then satisfy the shared runtime readiness gate used by the beta orchestrator.",
+            "Install or import a real-pkg bootstrap. This first-boot gate requires only a usable sh/pkg runtime; the full APT gate is checked next.",
             this::checkBootstrapInstallation));
         wizardChecks.add(new WizardCheck(
             "System / Readiness Audit",
-            "Verify supported architecture, private filesystem capability and the same real bootstrap targets used by orchestration.",
+            "Verify supported architecture, private filesystem capability and the full real-pkg APT runtime used by orchestration.",
             this::checkSystemCompatibilityAndBootstrap));
         wizardChecks.add(new WizardCheck(
             "Wizard Complete",
@@ -177,7 +177,8 @@ public class BetaBootstrapWizardActivity extends AppCompatActivity {
                     updateWizardStep();
                 });
             }
-            if (!passed) addButton("Install / Repair Real Bootstrap", v -> installBootstrapFilesystem());
+            boolean fullPackageRuntimeReady = BootstrapReadinessGate.evaluate(this).isPass();
+            if (!fullPackageRuntimeReady) addButton("Install / Repair Real Bootstrap + APT", v -> installBootstrapFilesystem());
             else addButton("Re-check Shared Readiness Gate", v -> updateWizardStep());
             return;
         }
@@ -208,11 +209,13 @@ public class BetaBootstrapWizardActivity extends AppCompatActivity {
     }
 
     private void addFilesystemEvidenceView() {
-        BootstrapReadinessGate.Report report = BootstrapReadinessGate.evaluate(this);
+        BootstrapReadinessGate.Report startup = BootstrapReadinessGate.evaluateStartup(this);
+        BootstrapReadinessGate.Report packageRuntime = BootstrapReadinessGate.evaluate(this);
         TextView evidence = new TextView(this);
         evidence.setText(
             "bootstrap.zip source=" + BootstrapWizardSource.status(this) + "\n" +
-            report.render());
+            "[FIRST_BOOT_STARTUP]\n" + startup.render() + "\n\n" +
+            "[FULL_APT_PACKAGE_RUNTIME]\n" + packageRuntime.render());
         evidence.setTextIsSelectable(true);
         evidence.setPadding(16, 8, 16, 8);
         stepContent.addView(evidence);
@@ -290,7 +293,7 @@ public class BetaBootstrapWizardActivity extends AppCompatActivity {
     }
 
     private boolean checkBootstrapInstallation() {
-        return BootstrapReadinessGate.evaluate(this).isPass();
+        return BootstrapReadinessGate.evaluateStartup(this).isPass();
     }
 
     private boolean checkSystemCompatibility() {
@@ -302,7 +305,7 @@ public class BetaBootstrapWizardActivity extends AppCompatActivity {
     }
 
     private boolean checkSystemCompatibilityAndBootstrap() {
-        return checkSystemCompatibility() && checkBootstrapInstallation();
+        return checkSystemCompatibility() && BootstrapReadinessGate.evaluate(this).isPass();
     }
 
     private boolean checkFinalGate() {

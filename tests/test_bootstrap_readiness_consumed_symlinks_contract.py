@@ -23,12 +23,12 @@ class BootstrapReadinessConsumedSymlinksContractTests(unittest.TestCase):
         self.assertIn('SOURCE_ONLY_SYMLINKS_FILE = "SYMLINKS.txt"', self.readiness)
         self.assertIn('profile.optBoolean("runtime_materialized", false)', self.readiness)
         self.assertIn(
-            "if (runtimeMaterialized && SOURCE_ONLY_SYMLINKS_FILE.equals(relative)) continue;",
+            "if (runtimeMaterialized && SOURCE_ONLY_SYMLINKS_FILE.equals(relative))",
             self.readiness,
         )
 
     def test_missing_other_required_entries_remain_fail_closed(self) -> None:
-        self.assertIn('violations.add("missing_required_entry_" + i)', self.readiness)
+        self.assertIn('violations.add("missing_required_entry_" + i + "_" + relative)', self.readiness)
         self.assertIn('violations.add("unsafe_required_entry_" + i)', self.readiness)
         self.assertIn('violations.add("required_entry_escape_" + i)', self.readiness)
 
