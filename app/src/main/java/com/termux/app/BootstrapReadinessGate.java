@@ -20,11 +20,16 @@ import java.util.List;
 /**
  * Read-only, runtime-resolved beta bootstrap readiness gate.
  *
- * The beta contract is intentionally stronger than "some shell files exist".
- * It requires a materialized real-pkg bootstrap and architecture-matched ELF
- * package/runtime backends. Source-archive installation metadata such as
- * SYMLINKS.txt is preserved as provenance but is not misclassified as a file
- * that must remain in the installed prefix after TermuxInstaller consumed it.
+ * The application has two deliberately separate contracts: a minimum first
+ * boot (real {@code sh} and {@code pkg}) and a full package runtime (the
+ * materialized real-pkg profile plus native APT backends). Missing APT tooling,
+ * storage links, or historical compatibility wrappers must not make the app
+ * roll a usable shell back to an older prefix. The full package gate remains
+ * fail-closed for APT operations and evidence orchestration.
+ *
+ * Source-archive installation metadata such as SYMLINKS.txt is preserved as
+ * provenance but is not misclassified as a file that must remain in the
+ * installed prefix after TermuxInstaller consumed it.
  */
 public final class BootstrapReadinessGate {
 
@@ -37,13 +42,18 @@ public final class BootstrapReadinessGate {
     private static final String PROFILE_SCHEMA = "rafcodephi-bootstrap-profile/v1";
     private static final String PROFILE_FILE = "BOOTSTRAP_PROFILE.json";
     private static final String REQUIRED_BETA_PROFILE = "real-pkg";
-    private static final String SOURCE_ONLY_SYMLINK_MANIFEST = "SYMLINKS.txt";
+    private static final String SOURCE_ONLY_SYMLINKS_FILE = "SYMLINKS.txt";
     private static final int PROFILE_READ_LIMIT = 64 * 1024;
     private static final int PROFILE_REQUIRED_ENTRIES_LIMIT = 512;
 
-    private static final String[] REQUIRED_EXECUTABLES = new String[] {
+    private static final String[] STARTUP_REQUIRED_EXECUTABLES = new String[] {
         "sh",
-        "pkg",
+        "pkg"
+    };
+
+    // These are diagnostics/compatibility helpers only. Observing their
+    // absence is useful for support, but it cannot block basic startup.
+    private static final String[] OPTIONAL_COMPATIBILITY_WRAPPERS = new String[] {
         "apkmanager",
         "shellbash",
         "busybox-safe",
@@ -61,10 +71,14 @@ public final class BootstrapReadinessGate {
 
     private BootstrapReadinessGate() {}
 
-    public static Report evaluate(Context context) {
+    /**
+     * Minimal first-boot gate. It intentionally does not require bash, APT,
+     * dpkg, storage links, busybox/proot or compatibility wrapper names.
+     */
+    public static Report evaluateStartup(Context context) {
         if (context == null) {
-            return new Report(STATE_UNAVAILABLE, "CONTEXT_UNAVAILABLE", "UNAVAILABLE", "UNAVAILABLE",
-                false, false, Collections.emptyList());
+            return new Report(STATE_UNAVAILABLE, "CONTEXT_UNAVAILABLE", "STARTUP",
+                "UNAVAILABLE", "UNAVAILABLE", false, false, Collections.emptyList());
         }
 
         TermuxRuntimePaths.init(context);
@@ -76,27 +90,54 @@ public final class BootstrapReadinessGate {
         File bin = new File(TermuxRuntimePaths.binDirPath());
         targetsPass &= directory(checks, "$PREFIX/bin", bin);
         targetsPass &= directory(checks, "$HOME", TermuxRuntimePaths.homeDir());
-        targetsPass &= directory(checks, "$HOME/storage", TermuxRuntimePaths.storageHomeDir());
 
-        for (String executable : REQUIRED_EXECUTABLES) {
+        for (String executable : STARTUP_REQUIRED_EXECUTABLES) {
             targetsPass &= executable(checks, "$PREFIX/bin/" + executable, new File(bin, executable));
         }
 
+        observeDirectory(checks, "$HOME/storage", TermuxRuntimePaths.storageHomeDir(),
+            "optional_storage_link_not_a_startup_gate");
+        for (String wrapper : OPTIONAL_COMPATIBILITY_WRAPPERS) {
+            observeExecutable(checks, "$PREFIX/bin/" + wrapper, new File(bin, wrapper),
+                "optional_compatibility_wrapper_not_a_startup_gate");
+        }
+
+        return new Report(targetsPass ? STATE_PASS : STATE_BLOCKED,
+            targetsPass ? "FIRST_BOOT_SHELL_AND_PKG_READY" : "FIRST_BOOT_SHELL_OR_PKG_MISSING",
+            "STARTUP", TermuxRuntimePaths.layoutState(), TermuxRuntimePaths.prefixDirPath(),
+            TermuxRuntimePaths.isCanonicalLayout(), TermuxRuntimePaths.realPkgRelocationClaimAllowed(), checks);
+    }
+
+    /**
+     * Full APT/pkg gate. This is the only result accepted by package-runtime
+     * actions and evidence orchestration.
+     */
+    public static Report evaluate(Context context) {
+        if (context == null) {
+            return new Report(STATE_UNAVAILABLE, "CONTEXT_UNAVAILABLE", "FULL_PACKAGE_RUNTIME",
+                "UNAVAILABLE", "UNAVAILABLE", false, false, Collections.emptyList());
+        }
+
+        Report startup = evaluateStartup(context);
+        List<Check> checks = new ArrayList<>(startup.checks);
+        File prefix = TermuxRuntimePaths.prefixDir();
+        File bin = new File(TermuxRuntimePaths.binDirPath());
         boolean profilePass = profileContract(context, checks, prefix);
 
-        // Expose the real utility files separately so the UI never conflates a
-        // safe wrapper with the native backend that the beta contract requires.
-        observeRealExecutable(checks, "$PREFIX/bin/busybox", new File(bin, "busybox"));
-        observeRealExecutable(checks, "$PREFIX/bin/proot", new File(bin, "proot"));
+        // Expose every native backend separately so the UI never conflates a
+        // compatibility wrapper with the real package runtime it may require.
+        for (String name : REQUIRED_REAL_ELFS) {
+            observeRealExecutable(checks, "$PREFIX/bin/" + name, new File(bin, name));
+        }
 
-        boolean pass = targetsPass && profilePass;
+        boolean pass = startup.isPass() && profilePass;
         String state = pass ? STATE_PASS : STATE_BLOCKED;
         String reason;
         if (pass) reason = "REAL_BOOTSTRAP_RUNTIME_AND_PROFILE_READY";
         else if (!profilePass) reason = "BOOTSTRAP_REAL_PROFILE_CONTRACT_BLOCKED";
-        else reason = "REQUIRED_BOOTSTRAP_RUNTIME_TARGET_MISSING";
+        else reason = "FIRST_BOOT_SHELL_OR_PKG_MISSING";
 
-        return new Report(state, reason, TermuxRuntimePaths.layoutState(), TermuxRuntimePaths.prefixDirPath(),
+        return new Report(state, reason, "FULL_PACKAGE_RUNTIME", TermuxRuntimePaths.layoutState(), TermuxRuntimePaths.prefixDirPath(),
             TermuxRuntimePaths.isCanonicalLayout(), TermuxRuntimePaths.realPkgRelocationClaimAllowed(), checks);
     }
 
@@ -114,6 +155,20 @@ public final class BootstrapReadinessGate {
             file == null ? "UNAVAILABLE" : file.getAbsolutePath(),
             ok ? "owner_visible_executable" : "required_executable_not_ready"));
         return ok;
+    }
+
+    private static void observeDirectory(List<Check> checks, String name, File file, String unavailableDetail) {
+        boolean available = file != null && file.isDirectory() && file.canRead() && file.canWrite() && file.canExecute();
+        checks.add(new Check(name, available ? "OBSERVED" : STATE_UNAVAILABLE,
+            file == null ? "UNAVAILABLE" : file.getAbsolutePath(),
+            available ? "read_write_execute_directory" : unavailableDetail));
+    }
+
+    private static void observeExecutable(List<Check> checks, String name, File file, String unavailableDetail) {
+        boolean available = file != null && file.isFile() && file.canExecute();
+        checks.add(new Check(name, available ? "OBSERVED" : STATE_UNAVAILABLE,
+            file == null ? "UNAVAILABLE" : file.getAbsolutePath(),
+            available ? "owner_visible_executable" : unavailableDetail));
     }
 
     private static boolean profileContract(Context context, List<Check> checks, File prefix) {
@@ -166,7 +221,7 @@ public final class BootstrapReadinessGate {
                     // installer consumes it to materialize links and deliberately
                     // does not leave the source manifest in $PREFIX. Treating it
                     // as a runtime file caused the observed missing_required_entry_1.
-                    if (SOURCE_ONLY_SYMLINK_MANIFEST.equals(relative)) {
+                    if (runtimeMaterialized && SOURCE_ONLY_SYMLINKS_FILE.equals(relative)) {
                         sourceSymlinkManifestDeclared = true;
                         continue;
                     }
@@ -182,7 +237,7 @@ public final class BootstrapReadinessGate {
             }
 
             if (sourceSymlinkManifestDeclared) {
-                checks.add(new Check("$SOURCE_BOOTSTRAP/" + SOURCE_ONLY_SYMLINK_MANIFEST,
+                checks.add(new Check("$SOURCE_BOOTSTRAP/" + SOURCE_ONLY_SYMLINKS_FILE,
                     "OBSERVED", "SOURCE_ARCHIVE_ONLY",
                     "declared_install_manifest_consumed_by_TermuxInstaller_not_runtime_file"));
             }
@@ -292,16 +347,18 @@ public final class BootstrapReadinessGate {
     public static final class Report {
         public final String state;
         public final String reason;
+        public final String scope;
         public final String runtimeLayout;
         public final String runtimePrefix;
         public final boolean canonicalLayout;
         public final boolean realPkgRelocationClaimAllowed;
         public final List<Check> checks;
 
-        Report(String state, String reason, String runtimeLayout, String runtimePrefix,
+        Report(String state, String reason, String scope, String runtimeLayout, String runtimePrefix,
                boolean canonicalLayout, boolean realPkgRelocationClaimAllowed, List<Check> checks) {
             this.state = state;
             this.reason = reason;
+            this.scope = scope;
             this.runtimeLayout = runtimeLayout;
             this.runtimePrefix = runtimePrefix;
             this.canonicalLayout = canonicalLayout;
@@ -317,6 +374,7 @@ public final class BootstrapReadinessGate {
             StringBuilder out = new StringBuilder();
             out.append("bootstrap_readiness_state=").append(state).append('\n');
             out.append("bootstrap_readiness_reason=").append(reason).append('\n');
+            out.append("bootstrap_readiness_scope=").append(scope).append('\n');
             out.append("bootstrap_profile_requirement=").append(REQUIRED_BETA_PROFILE).append('\n');
             out.append("runtime_layout=").append(runtimeLayout).append('\n');
             out.append("runtime_prefix=").append(runtimePrefix).append('\n');
@@ -337,6 +395,7 @@ public final class BootstrapReadinessGate {
                 out.put("schema", SCHEMA);
                 out.put("state", state);
                 out.put("reason", reason);
+                out.put("scope", scope);
                 out.put("bootstrap_profile_requirement", REQUIRED_BETA_PROFILE);
                 out.put("runtime_layout", runtimeLayout);
                 out.put("runtime_prefix", runtimePrefix);
