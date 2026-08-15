@@ -2,12 +2,42 @@ name: RAFCODEPHI Control Center Real Runtime
 
 on:
   workflow_dispatch:
+    inputs:
+      termux_packages_ref:
+        description: Exact termux-packages commit/ref that produces the live bootstrap
+        required: true
+        default: 7a26629938452c6d6fd80cf3fccce8c2056aabac
+        type: string
   pull_request:
     paths:
       - 'app/src/main/java/com/termux/app/activities/BetaOrchestratorActivity.java'
+      - 'app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java'
+      - 'app/src/main/java/com/termux/app/activities/SettingsActivity.java'
+      - 'app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java'
+      - 'app/src/main/java/com/termux/app/BootstrapBaremetalGuard.java'
+      - 'app/src/main/java/com/termux/app/BootstrapReadinessGate.java'
+      - 'app/src/main/java/com/termux/app/BootstrapWizardSource.java'
+      - 'app/src/main/java/com/termux/app/TermuxInstaller.java'
       - 'app/src/main/java/com/termux/app/orchestration/ControlCenter*.java'
       - 'app/src/main/res/xml/root_preferences.xml'
       - 'tests/test_beta_orchestrator_contract.py'
+      - 'tests/test_rafcodephi_startup_and_settings_contract.py'
+      - '.github/workflows/rafcodephi-control-center-real-runtime.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'app/src/main/java/com/termux/app/activities/BetaOrchestratorActivity.java'
+      - 'app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java'
+      - 'app/src/main/java/com/termux/app/activities/SettingsActivity.java'
+      - 'app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java'
+      - 'app/src/main/java/com/termux/app/BootstrapBaremetalGuard.java'
+      - 'app/src/main/java/com/termux/app/BootstrapReadinessGate.java'
+      - 'app/src/main/java/com/termux/app/BootstrapWizardSource.java'
+      - 'app/src/main/java/com/termux/app/TermuxInstaller.java'
+      - 'app/src/main/java/com/termux/app/orchestration/ControlCenter*.java'
+      - 'app/src/main/res/xml/root_preferences.xml'
+      - 'tests/test_beta_orchestrator_contract.py'
+      - 'tests/test_rafcodephi_startup_and_settings_contract.py'
       - '.github/workflows/rafcodephi-control-center-real-runtime.yml'
 
 permissions:
@@ -22,7 +52,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:
-      TERMUX_PACKAGES_SHA: 6ebaa2e2edaa17685f38fd30ded54cad6877ed90
+      TERMUX_PACKAGES_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || '7a26629938452c6d6fd80cf3fccce8c2056aabac' }}
       RAFCODEPHI_APT_REPOSITORY_URL: https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt-preview/repo
       RAFCODEPHI_APT_TRUST_MODE: development-trusted
       CLAIM_ALLOWED: 'false'
@@ -62,23 +92,63 @@ jobs:
           bash scripts/validate-rafcodephi-build-properties.sh
           grep -Fx 'TERMUX_APP__PACKAGE_NAME="com.termux.rafacodephi"' scripts/properties.sh
 
+      - name: Validate first-boot and Settings contracts
+        shell: bash
+        run: python3 tests/test_rafcodephi_startup_and_settings_contract.py
+
       - name: Source-build live real-pkg bootstrap pair
         working-directory: termux-packages
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p build/reports
+          set +e
           ./scripts/run-docker.sh env \
             RAFCODEPHI_APT_REPOSITORY_URL="$RAFCODEPHI_APT_REPOSITORY_URL" \
             RAFCODEPHI_APT_TRUST_MODE="$RAFCODEPHI_APT_TRUST_MODE" \
-            bash ./scripts/build-rafcodephi-live-bootstrap.sh --architectures arm,aarch64
+            bash ./scripts/build-rafcodephi-live-bootstrap.sh --architectures arm,aarch64 \
+            2>&1 | tee build/reports/rafcodephi-control-center-live-bootstrap.log
+          build_status="${PIPESTATUS[0]}"
+          set -e
+          python3 - "$build_status" > build/reports/rafcodephi-control-center-live-bootstrap-status.json <<'PY'
+          import json
+          import sys
+
+          status = int(sys.argv[1])
+          print(json.dumps({
+              "schema": "rafcodephi.control-center-live-bootstrap/v1",
+              "state": "PASS" if status == 0 else "BLOCKED",
+              "exit_code": status,
+              "claim_allowed_release": False,
+              "device_runtime_proof": "TOKEN_VAZIO",
+          }, sort_keys=True))
+          PY
+          if [[ "$build_status" -ne 0 ]]; then
+            echo "RAFCODEPHI_CONTROL_CENTER_BOOTSTRAP=BLOCKED exit_code=$build_status" >&2
+            exit "$build_status"
+          fi
           for arch in arm aarch64; do
             zip="artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-${arch}.zip"
             test -s "$zip"
             unzip -p "$zip" BOOTSTRAP_PROFILE.json | grep -F '"profile":"real-pkg"'
             unzip -p "$zip" BOOTSTRAP_PROFILE.json | grep -F '"package_repo_runtime_state":"DEVELOPMENT_REPOSITORY_CONFIGURED"'
+            unzip -p "$zip" BOOTSTRAP_PROFILE.json | grep -F '"runtime_materialized":false'
             unzip -p "$zip" etc/apt/sources.list.d/termux.sources | grep -Fx 'Enabled: yes'
             unzip -p "$zip" etc/apt/sources.list.d/termux.sources | grep -Fx "URIs: $RAFCODEPHI_APT_REPOSITORY_URL"
           done
+
+      - name: Upload source-build evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: rafcodephi-control-center-source-build-${{ github.sha }}
+          if-no-files-found: warn
+          path: |
+            termux-packages/build/reports/rafcodephi-control-center-live-bootstrap.log
+            termux-packages/build/reports/rafcodephi-control-center-live-bootstrap-status.json
+            termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
+            termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
+            termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
 
       - name: Setup Android SDK/NDK
         run: ./scripts/setup_android_toolchain.sh
@@ -139,6 +209,7 @@ jobs:
             'claim_allowed_release=false' > dist/control-center/BUILD_RECEIPT.txt
 
       - name: Upload ARM32 install candidate + bootstrap evidence
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: rafcodephi-control-center-arm32-${{ github.sha }}
@@ -146,4 +217,4 @@ jobs:
             dist/control-center
             termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
             termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
-          if-no-files-found: error
+          if-no-files-found: warn
