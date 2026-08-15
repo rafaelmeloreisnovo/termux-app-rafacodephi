@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-REPO_URL="${TERMUX_PACKAGES_RAF_REPO:-https://github.com/exacordex-crypto/termux-packagesRafcodephi.git}"
-REPO_REF="${TERMUX_PACKAGES_RAF_REF:-dfd7ce0791bbdacbff61f4b67933ef608d6d180c}"
+REPO_URL="${TERMUX_PACKAGES_RAF_REPO:-https://github.com/rafaelmeloreisnovo/termux-packages.git}"
+REPO_REF="${TERMUX_PACKAGES_RAF_REF:-7a26629938452c6d6fd80cf3fccce8c2056aabac}"
 OUT_DIR="${TERMUX_PACKAGES_RAF_MANIFEST_DIR:-dist/source-contract}"
 REQUIRE_PINNED="${TERMUX_PACKAGES_RAF_REQUIRE_PINNED:-true}"
 
@@ -13,8 +13,8 @@ fail() { printf '[raf-packages-source] ERROR: %s\n' "$*" >&2; exit 1; }
 info() { printf '[raf-packages-source] %s\n' "$*"; }
 
 case "$REPO_URL" in
-  https://github.com/exacordex-crypto/termux-packagesRafcodephi|https://github.com/exacordex-crypto/termux-packagesRafcodephi.git) ;;
-  *) fail "TERMUX_PACKAGES_RAF_REPO must point to exacordex-crypto/termux-packagesRafcodephi, got: ${REPO_URL}" ;;
+  https://github.com/rafaelmeloreisnovo/termux-packages|https://github.com/rafaelmeloreisnovo/termux-packages.git) ;;
+  *) fail "TERMUX_PACKAGES_RAF_REPO must point to rafaelmeloreisnovo/termux-packages, got: ${REPO_URL}" ;;
 esac
 
 if [[ "$REQUIRE_PINNED" == "true" && ! "$REPO_REF" =~ ^[0-9a-f]{40}$ ]]; then
@@ -80,7 +80,8 @@ TERMUX_PACKAGES_RAF_REPO=${REPO_URL}
 TERMUX_PACKAGES_RAF_REF=${REPO_REF}
 TERMUX_PACKAGES_RAF_RESOLVED_COMMIT=${resolved}
 TERMUX_PACKAGES_RAF_ABIS=armeabi-v7a,arm64-v8a
-TERMUX_PACKAGES_RAF_ROLE=source-only-packages-and-bootstrap
+TERMUX_PACKAGES_RAF_ROLE=source-built-packages-bootstrap-and-apt
+TERMUX_PACKAGES_RAF_SOURCE_KIND=rafaelmeloreisnovo-termux-packages
 TERMUX_PACKAGES_RAF_BINARIES_CREATED_BY_CI_ONLY=1
 MANIFEST
 
