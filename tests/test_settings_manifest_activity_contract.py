@@ -30,3 +30,8 @@ def test_explicit_settings_activity_targets_are_declared_in_manifest() -> None:
         if activity.get(ANDROID + "name") == "com.termux.app.activities.BetaOrchestratorActivity"
     )
     assert beta.get(ANDROID + "exported") == "false"
+
+
+if __name__ == "__main__":
+    test_explicit_settings_activity_targets_are_declared_in_manifest()
+    print("SETTINGS_MANIFEST_ACTIVITY_CONTRACT=PASS")
