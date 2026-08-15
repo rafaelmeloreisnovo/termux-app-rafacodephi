@@ -101,7 +101,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tests/test_rafcodephi_startup_and_settings_contract.py
-          python3 -m pytest -q tests/test_settings_manifest_activity_contract.py
+          python3 tests/test_settings_manifest_activity_contract.py
 
       - name: Source-build live real-pkg bootstrap pair
         working-directory: termux-packages
