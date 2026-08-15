@@ -22,9 +22,9 @@ termux-packages@SHA
 
 - app: `rafaelmeloreisnovo/termux-app-rafacodephi`
 - packages: `rafaelmeloreisnovo/termux-packages`
-- pin atual: `7b59383c25f7557ba8a29a24f715c5fb5b26cc53`
-- origem do pin: merge do `termux-packages` PR #75
-- evidência do pin: grafo completo ARM32 `PASS`, ARM64 `PASS`, agregador `PASS`, Phase 9.15 `PASS`
+- pin atual: `7a26629938452c6d6fd80cf3fccce8c2056aabac`
+- origem do pin: hotfix de build/APT RAFCODEPHI no `termux-packages` (PR #80 em rascunho)
+- evidência do pin: contrato de fonte resolve exatamente para esse SHA; o source-build ARM32/ARM64, o APT isolado e o APK ficam pendentes do GitHub Actions desta revisão
 - package: `com.termux.rafacodephi`
 - prefix: `/data/data/com.termux.rafacodephi/files/usr`
 - arquiteturas: `arm` e `aarch64`
@@ -38,16 +38,11 @@ O artefato consumido é produzido por `scripts/build-rafcodephi-real-bootstrap.s
 
 O app não aceita apenas o nome do artefato: valida manifesto, SHA-256, arquitetura ELF, package, prefixo, entradas obrigatórias, rota da API e ausência do prefixo `/data/data/com.termux/files/usr` no caminho crítico.
 
-## Evidência de portabilidade do pin atual
+## Evidência do pin atual
 
-O gate `RAFCODEPHI Full ARM Cross Graph` foi corrigido para instalar apenas o toolchain correspondente a cada lane. Antes, cada lane instalava simultaneamente os toolchains ARM32 e AArch64; a ARM32 atingia timeout durante a instalação. Após a correção:
+O contrato resolve `7a26629938452c6d6fd80cf3fccce8c2056aabac` no repositório canônico e verifica receitas para `apt`, `dpkg`, `busybox`, `proot`, `termux-tools` e `termux-api`. A PR de packages executa source-build ARM32/ARM64, metadata APT e download APT isolado; a PR do app importa o par de bootstraps e monta o APK. Resultados de um pin anterior não são promovidos automaticamente para este SHA.
 
-- ARM32: toolchain específico `PASS`; grafo completo `PASS`; ELF/receipt `PASS`;
-- ARM64: toolchain específico `PASS`; grafo completo `PASS`; ELF/receipt `PASS`;
-- transit composto: `PASS`;
-- `PHYSICAL_ANDROID` continua `TOKEN_VAZIO`.
-
-Essa evidência é de cross-build Linux e não substitui execução Android/Bionic física.
+Essa evidência de CI/Linux não substitui execução Android/Bionic física; `PHYSICAL_ANDROID` permanece `TOKEN_VAZIO` até receipt de dispositivo.
 
 ## Limite epistêmico da V1
 
