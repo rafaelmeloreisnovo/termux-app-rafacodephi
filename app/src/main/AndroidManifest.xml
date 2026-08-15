@@ -80,6 +80,12 @@
             android:theme="@style/Theme.TermuxApp.DayNight.DarkActionBar" />
 
         <activity
+            android:name="com.termux.app.activities.BetaOrchestratorActivity"
+            android:exported="false"
+            android:label="RAFCODEΦ · Control Center"
+            android:theme="@style/Theme.TermuxApp.DayNight.DarkActionBar" />
+
+        <activity
             android:name="com.termux.app.BootstrapGateActivity"
             android:exported="true"
             android:launchMode="singleTask"
