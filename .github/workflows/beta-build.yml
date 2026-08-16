@@ -253,9 +253,9 @@ jobs:
           if [ -x tools/bootstrap_baremetal_guard_smoke ]; then
             tools/bootstrap_baremetal_guard_smoke | tee out/bootstrap_baremetal_guard_smoke.txt
           else
-            echo 'bootstrap_baremetal_guard_smoke binary absent; selftest skipped' | tee out/bootstrap_baremetal_guard_smoke.txt
+            echo 'TOKEN_VAZIO: bootstrap_baremetal_guard_smoke binary absent; selftest not executed' | tee out/bootstrap_baremetal_guard_smoke.txt
+            exit 2
           fi
-          exit 0
 
       - name: Build PSS3 failure lab tool
         id: build_pss3
@@ -270,19 +270,30 @@ jobs:
         run: |
           mkdir -p out
           if [ ! -x tools/pss3_failure_lab ]; then
-            echo 'pss3_failure_lab binary absent; skipping PSS3 audit' | tee out/pss3_failure_report.txt
+            echo 'TOKEN_VAZIO: pss3_failure_lab binary absent; audit not executed' | tee out/pss3_failure_report.txt
+            exit 2
           elif [ -f out/failure_trace.csv ]; then
             printf '1\n2\n3\n5\n0\n' | tools/pss3_failure_lab out/failure_trace.csv | tee out/pss3_failure_report.txt
           else
-            echo 'failure_trace.csv absent; skipping PSS3 audit' | tee out/pss3_failure_report.txt
+            echo 'TOKEN_VAZIO: failure_trace.csv absent; PSS3 audit not executed' | tee out/pss3_failure_report.txt
+            exit 3
           fi
 
-      - name: Enforce BLOCKER_BETA gate only when report exists
+      - name: Enforce PSS3 evidence + BLOCKER_BETA gate
         id: blocker_gate
         if: ${{ always() && (github.event_name != 'workflow_dispatch' || (inputs.run_pss3_failure_audit && inputs.enforce_blocker_beta_gate)) }}
         continue-on-error: true
         run: |
-          if [ -f out/pss3_failure_report.txt ] && grep -q 'BLOCKER_BETA' out/pss3_failure_report.txt; then
+          report=out/pss3_failure_report.txt
+          if [ ! -s "$report" ]; then
+            echo 'TOKEN_VAZIO: PSS3 report absent; BLOCKER_BETA cannot be evaluated'
+            exit 2
+          fi
+          if grep -q 'TOKEN_VAZIO:' "$report"; then
+            echo 'TOKEN_VAZIO: PSS3 evidence incomplete; refusing false-green BLOCKER_BETA gate'
+            exit 3
+          fi
+          if grep -q 'BLOCKER_BETA' "$report"; then
             echo 'BLOCKER_BETA detected in PSS3 report'
             exit 1
           fi
@@ -292,8 +303,13 @@ jobs:
         if: ${{ always() && (github.event_name != 'workflow_dispatch' || (inputs.build_apk_matrix && inputs.publish_matrix_summary)) }}
         continue-on-error: true
         env:
+          CHECKOUT_PACKAGES_OUTCOME: ${{ steps.checkout_packages.outcome }}
+          BIND_PACKAGES_OUTCOME: ${{ steps.bind_packages.outcome }}
+          BUILD_REAL_BOOTSTRAP_OUTCOME: ${{ steps.build_real_bootstrap.outcome }}
+          GATE_REAL_BOOTSTRAP_OUTCOME: ${{ steps.gate_real_bootstrap.outcome }}
           SETUP_ANDROID_OUTCOME: ${{ steps.setup_android.outcome }}
           PREPARE_BOOTSTRAP_OUTCOME: ${{ steps.prepare_bootstrap.outcome }}
+          REAL_PROFILE_GATE_OUTCOME: ${{ steps.real_profile_gate.outcome }}
           APK_MATRIX_OUTCOME: ${{ steps.apk_matrix.outcome }}
           BUILD_GUARD_OUTCOME: ${{ steps.build_guard.outcome }}
           RUN_GUARD_OUTCOME: ${{ steps.run_guard.outcome }}
