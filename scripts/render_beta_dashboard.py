@@ -18,8 +18,13 @@ OUT_DIR = ROOT / "dist" / "apk-matrix"
 RUNTIME_OUT = ROOT / "out"
 
 REQUIRED_STEPS = {
+    "checkout_packages": True,
+    "bind_packages": True,
+    "build_real_bootstrap": True,
+    "gate_real_bootstrap": True,
     "setup_android": True,
     "prepare_bootstrap": True,
+    "real_profile_gate": True,
     "apk_matrix": True,
     "build_guard": True,
     "run_guard": False,
@@ -31,8 +36,13 @@ REQUIRED_STEPS = {
 }
 
 STEP_LABELS = {
+    "checkout_packages": "termux-packages checkout",
+    "bind_packages": "RAFCODEΦ package binding",
+    "build_real_bootstrap": "Real ARM32 + ARM64 bootstrap source-build",
+    "gate_real_bootstrap": "Real bootstrap provenance gate",
     "setup_android": "Android toolchain",
     "prepare_bootstrap": "Bootstrap hashes",
+    "real_profile_gate": "Embedded real-pkg profile gate",
     "apk_matrix": "APK matrix",
     "build_guard": "Baremetal guard build",
     "run_guard": "Baremetal guard selftest",
@@ -94,10 +104,10 @@ def step_outcomes() -> Dict[str, str]:
 
 
 def required_failed(outcomes: Dict[str, str]) -> bool:
-    for key, required in REQUIRED_STEPS.items():
-        if required and outcomes.get(key, "not-run") in {"failure", "cancelled", "timed_out", "timed-out"}:
-            return True
-    return False
+    return any(
+        required and (outcomes.get(key, "not-run") or "not-run").lower() != "success"
+        for key, required in REQUIRED_STEPS.items()
+    )
 
 
 def release_diff_rows() -> List[Dict[str, str]]:
@@ -190,11 +200,11 @@ def render() -> str:
     lines.append("")
     lines.append("```mermaid")
     lines.append("flowchart LR")
-    lines.append("  A[Toolchain] --> B[Bootstrap hashes]")
-    lines.append("  B --> C[Unit tests]")
-    lines.append("  C --> D[Debug + Release APKs]")
-    lines.append("  D --> E[Local signing]")
-    lines.append("  E --> F[Size + SHA reports]")
+    lines.append("  A[termux-packages pin] --> B[Real bootstrap source-build]")
+    lines.append("  B --> C[Provenance + real-pkg profile gates]")
+    lines.append("  C --> D[Bootstrap hashes]")
+    lines.append("  D --> E[Debug + Release APKs]")
+    lines.append("  E --> F[Local signing + reports]")
     lines.append("  F --> G[Guard + PSS3 diagnostics]")
     lines.append("  G --> H[Artifacts + final gate]")
     lines.append("```")
@@ -262,9 +272,9 @@ def render() -> str:
     lines.append("## Operator readout")
     lines.append("")
     if failed:
-        lines.append("- 🚨 A required diagnostic failed. Inspect the failed stage first, then rerun the beta build.")
+        lines.append("- 🚨 A required diagnostic failed or did not run. Inspect the first non-success required stage before trusting downstream stages.")
     else:
-        lines.append("- ✅ APK matrix, signing, reports and diagnostics are operational.")
+        lines.append("- ✅ All required source-build, provenance, APK and diagnostic gates reported success.")
     lines.append("- 📦 Publishable artifacts live under `dist/apk-matrix/` and are uploaded by the workflow.")
     lines.append("- 🔐 Local validation signing is internal-only; official signing still requires explicit release secrets.")
     lines.append("")
