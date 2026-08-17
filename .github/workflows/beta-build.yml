@@ -78,6 +78,8 @@ jobs:
         id: pair_transaction_selftest
         run: python3 scripts/test_bootstrap_pair_transaction.py
 
+      # IMPORTANT: this path is immutable until all app-side bootstrap/APK gates
+      # have consumed it. It is the independent failover source for this run.
       - name: Restore last-known-good bootstrap pair
         id: restore_lkg_cache
         uses: actions/cache/restore@v4
@@ -217,31 +219,6 @@ jobs:
           grep -Fx 'claim_allowed_device_runtime=false' "$MANIFEST"
           grep -Fx 'device_runtime_proof=TOKEN_VAZIO' "$MANIFEST"
           sha256sum "$MANIFEST" "$ARM" "$ARM64" > build/reports/rafcodephi-beta-real-bootstrap.sha256
-
-      - name: Stage validated primary pair as next LKG
-        id: stage_lkg
-        if: ${{ always() && steps.gate_real_bootstrap.outcome == 'success' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          src="$GITHUB_WORKSPACE/termux-packages/artifacts/rafcodephi-bootstrap"
-          dst="$GITHUB_WORKSPACE/.ci-lkg/rafcodephi-bootstrap"
-          rm -rf "$dst"
-          mkdir -p "$dst"
-          cp "$src/rafcodephi-bootstrap-arm.zip" "$dst/"
-          cp "$src/rafcodephi-bootstrap-aarch64.zip" "$dst/"
-          cp "$src/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt" "$dst/"
-          python3 scripts/import_rafcodephi_real_bootstrap.py --arch arm --zip "$dst/rafcodephi-bootstrap-arm.zip" --manifest "$dst/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt" --validate-only
-          python3 scripts/import_rafcodephi_real_bootstrap.py --arch aarch64 --zip "$dst/rafcodephi-bootstrap-aarch64.zip" --manifest "$dst/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt" --validate-only
-          sha256sum "$dst"/* > "$dst/SHA256SUMS"
-
-      - name: Save validated primary pair as LKG cache
-        id: save_lkg_cache
-        if: ${{ always() && steps.stage_lkg.outcome == 'success' }}
-        uses: actions/cache/save@v4
-        with:
-          path: .ci-lkg/rafcodephi-bootstrap
-          key: ${{ runner.os }}-rafcodephi-bootstrap-lkg-${{ github.sha }}
 
       - name: Resolve primary or validated LKG bootstrap pair
         id: resolve_bootstrap
@@ -383,6 +360,7 @@ jobs:
         if: ${{ always() && (github.event_name != 'workflow_dispatch' || (inputs.run_pss3_failure_audit && inputs.enforce_blocker_beta_gate)) }}
         continue-on-error: true
         run: |
+          set -euo pipefail
           report=out/pss3_failure_report.txt
           if [ ! -s "$report" ]; then
             echo 'NO_PSS3_REPORT: optional audit produced no report; no BLOCKER_BETA evidence exists'
@@ -397,6 +375,47 @@ jobs:
             exit 1
           fi
           echo 'PSS3_BLOCKER_BETA_GATE=PASS'
+
+      # Only now, after the exact resolved pair has passed app-side transaction,
+      # real-pkg inspection and APK matrix, may it replace the previous LKG.
+      - name: Promote consumed bootstrap pair to next LKG
+        id: promote_lkg
+        if: ${{ always() && steps.prepare_bootstrap.outcome == 'success' && steps.real_profile_gate.outcome == 'success' && steps.apk_matrix.outcome == 'success' }}
+        shell: bash
+        env:
+          RESOLVED_ARM: ${{ steps.resolve_bootstrap.outputs.arm }}
+          RESOLVED_AARCH64: ${{ steps.resolve_bootstrap.outputs.aarch64 }}
+          RESOLVED_MANIFEST: ${{ steps.resolve_bootstrap.outputs.manifest }}
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/.ci-lkg/rafcodephi-bootstrap"
+          stage="$GITHUB_WORKSPACE/.ci-lkg/rafcodephi-bootstrap.stage"
+          rm -rf "$stage"
+          mkdir -p "$stage"
+          cp "$RESOLVED_ARM" "$stage/rafcodephi-bootstrap-arm.zip"
+          cp "$RESOLVED_AARCH64" "$stage/rafcodephi-bootstrap-aarch64.zip"
+          cp "$RESOLVED_MANIFEST" "$stage/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt"
+          python3 scripts/import_rafcodephi_real_bootstrap.py --arch arm \
+            --zip "$stage/rafcodephi-bootstrap-arm.zip" \
+            --manifest "$stage/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt" --validate-only
+          python3 scripts/import_rafcodephi_real_bootstrap.py --arch aarch64 \
+            --zip "$stage/rafcodephi-bootstrap-aarch64.zip" \
+            --manifest "$stage/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt" --validate-only
+          sha256sum \
+            "$stage/rafcodephi-bootstrap-arm.zip" \
+            "$stage/rafcodephi-bootstrap-aarch64.zip" \
+            "$stage/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt" > "$stage/SHA256SUMS"
+          rm -rf "$root"
+          mv "$stage" "$root"
+          echo "PROMOTED_LKG_SOURCE=${{ steps.resolve_bootstrap.outputs.state }}"
+
+      - name: Save next LKG cache
+        id: save_lkg_cache
+        if: ${{ always() && steps.promote_lkg.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .ci-lkg/rafcodephi-bootstrap
+          key: ${{ runner.os }}-rafcodephi-bootstrap-lkg-${{ github.sha }}
 
       - name: Render beta operations dashboard
         id: publish_summary
@@ -423,6 +442,7 @@ jobs:
             echo "- bootstrap_resolution: ${{ steps.resolve_bootstrap.outputs.state }}"
             echo '- required_architectures: arm,aarch64'
             echo '- pair_transaction: rollback + validated-LKG-failover'
+            echo '- lkg_replacement_order: after app transaction + real-pkg + APK matrix'
             echo '- bridge_allowed: false'
             echo '- physical_android: TOKEN_VAZIO'
             echo '- claim_allowed: false'
@@ -476,6 +496,8 @@ jobs:
           BUILD_PSS3_OUTCOME: ${{ steps.build_pss3.outcome }}
           RUN_PSS3_OUTCOME: ${{ steps.run_pss3.outcome }}
           BLOCKER_GATE_OUTCOME: ${{ steps.blocker_gate.outcome }}
+          PROMOTE_LKG_OUTCOME: ${{ steps.promote_lkg.outcome }}
+          SAVE_LKG_OUTCOME: ${{ steps.save_lkg_cache.outcome }}
           PUBLISH_SUMMARY_OUTCOME: ${{ steps.publish_summary.outcome }}
           UPLOAD_ARTIFACTS_OUTCOME: ${{ steps.upload_artifacts.outcome }}
         run: |
@@ -513,7 +535,7 @@ jobs:
                 check_step "bind_packages" "$BIND_PACKAGES_OUTCOME" "degraded-optional"
                 check_step "build_real_bootstrap" "$BUILD_REAL_BOOTSTRAP_OUTCOME" "degraded-optional"
                 check_step "gate_real_bootstrap" "$GATE_REAL_BOOTSTRAP_OUTCOME" "degraded-optional"
-                echo 'Bootstrap source-build degraded; validated LKG failover is active.' >> "$GITHUB_STEP_SUMMARY"
+                echo 'Bootstrap source-build degraded; independently validated LKG failover is active.' >> "$GITHUB_STEP_SUMMARY"
                 ;;
               *)
                 echo "| bootstrap_resolution_state | required | ${BOOTSTRAP_RESOLUTION_STATE:-not-run} |" >> "$GITHUB_STEP_SUMMARY"
@@ -524,6 +546,8 @@ jobs:
             check_step "prepare_bootstrap" "$PREPARE_BOOTSTRAP_OUTCOME" "required"
             check_step "real_profile_gate" "$REAL_PROFILE_GATE_OUTCOME" "required"
             check_step "apk_matrix" "$APK_MATRIX_OUTCOME" "required"
+            check_step "promote_lkg" "$PROMOTE_LKG_OUTCOME" "required"
+            check_step "save_lkg_cache" "$SAVE_LKG_OUTCOME" "optional"
           fi
 
           if [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" || "${{ inputs.run_bootstrap_baremetal_guard }}" == "true" ]]; then
