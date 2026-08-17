@@ -42,6 +42,7 @@ fi
 BOOTSTRAP_SOURCE="${RAF_BOOTSTRAP_SOURCE:-local}"
 PROFILE_REQUIREMENT="auto"
 SOURCE_BUILT_RECEIPT_MATRIX=""
+BOOTSTRAP_PAIR_TRANSACTION_REPORT=""
 log "Bootstrap source: $BOOTSTRAP_SOURCE"
 case "$BOOTSTRAP_SOURCE" in
   local)
@@ -60,7 +61,7 @@ case "$BOOTSTRAP_SOURCE" in
     [[ -f "$RAF_REAL_BOOTSTRAP_ZIP_AARCH64" ]] || { log "ERROR: Missing source-built AArch64 bootstrap: $RAF_REAL_BOOTSTRAP_ZIP_AARCH64"; exit 1; }
     [[ -f "$RAF_REAL_BOOTSTRAP_MANIFEST" ]] || { log "ERROR: Missing source-built bootstrap manifest: $RAF_REAL_BOOTSTRAP_MANIFEST"; exit 1; }
 
-    # Validate the complete pair before changing any embedded archive.
+    # Fail before mutation unless BOTH primary members satisfy the strict real-pkg contract.
     python3 scripts/import_rafcodephi_real_bootstrap.py \
       --arch arm \
       --zip "$RAF_REAL_BOOTSTRAP_ZIP_ARM" \
@@ -72,26 +73,54 @@ case "$BOOTSTRAP_SOURCE" in
       --manifest "$RAF_REAL_BOOTSTRAP_MANIFEST" \
       --validate-only >&2
 
-    # A clean checkout has no generated rewritten archives. After both source
-    # inputs pass, materialize the compatibility matrix, then atomically replace
-    # the two ARM slots with the validated source-built pair.
+    # Materialize all four compatibility slots. The ARM pair is only a pre-state;
+    # no downstream build may consume it until the pair transaction below commits
+    # primary or an independently validated LKG pair.
     bash scripts/build_bootstrap_profile.sh >&2
 
-    python3 scripts/import_rafcodephi_real_bootstrap.py \
-      --arch arm \
-      --zip "$RAF_REAL_BOOTSTRAP_ZIP_ARM" \
-      --manifest "$RAF_REAL_BOOTSTRAP_MANIFEST" \
-      --dest app/src/main/cpp/rewritten-bootstrap-arm.zip \
-      --receipt build/reports/rafcodephi-real-bootstrap-import-arm.json >&2
-    python3 scripts/import_rafcodephi_real_bootstrap.py \
-      --arch aarch64 \
-      --zip "$RAF_REAL_BOOTSTRAP_ZIP_AARCH64" \
-      --manifest "$RAF_REAL_BOOTSTRAP_MANIFEST" \
-      --dest app/src/main/cpp/rewritten-bootstrap-aarch64.zip \
-      --receipt build/reports/rafcodephi-real-bootstrap-import-aarch64.json >&2
+    BOOTSTRAP_PAIR_TRANSACTION_REPORT="build/reports/bootstrap-pair-transaction.json"
+    tx_args=(
+      --arm "$RAF_REAL_BOOTSTRAP_ZIP_ARM"
+      --aarch64 "$RAF_REAL_BOOTSTRAP_ZIP_AARCH64"
+      --manifest "$RAF_REAL_BOOTSTRAP_MANIFEST"
+      --dest-arm app/src/main/cpp/rewritten-bootstrap-arm.zip
+      --dest-aarch64 app/src/main/cpp/rewritten-bootstrap-aarch64.zip
+      --receipt-dir build/reports
+      --state-report "$BOOTSTRAP_PAIR_TRANSACTION_REPORT"
+    )
+
+    lkg_values=(
+      "${RAF_BOOTSTRAP_LKG_ZIP_ARM:-}"
+      "${RAF_BOOTSTRAP_LKG_ZIP_AARCH64:-}"
+      "${RAF_BOOTSTRAP_LKG_MANIFEST:-}"
+    )
+    lkg_set=0
+    for value in "${lkg_values[@]}"; do
+      [[ -n "$value" ]] && ((lkg_set+=1))
+    done
+    if (( lkg_set != 0 && lkg_set != 3 )); then
+      log "ERROR: LKG failover is an indivisible ARM32+AArch64+manifest set"
+      exit 1
+    fi
+    if (( lkg_set == 3 )); then
+      [[ -f "${RAF_BOOTSTRAP_LKG_ZIP_ARM}" ]] || { log "ERROR: LKG ARM bootstrap missing"; exit 1; }
+      [[ -f "${RAF_BOOTSTRAP_LKG_ZIP_AARCH64}" ]] || { log "ERROR: LKG AArch64 bootstrap missing"; exit 1; }
+      [[ -f "${RAF_BOOTSTRAP_LKG_MANIFEST}" ]] || { log "ERROR: LKG manifest missing"; exit 1; }
+      tx_args+=(
+        --lkg-arm "$RAF_BOOTSTRAP_LKG_ZIP_ARM"
+        --lkg-aarch64 "$RAF_BOOTSTRAP_LKG_ZIP_AARCH64"
+        --lkg-manifest "$RAF_BOOTSTRAP_LKG_MANIFEST"
+        --allow-lkg-failover
+      )
+      log "Validated LKG failover inputs configured"
+    else
+      log "LKG pair unavailable: TOKEN_VAZIO; rollback remains fail-closed"
+    fi
+
+    python3 scripts/bootstrap_pair_transaction.py "${tx_args[@]}" >&2
 
     SOURCE_BUILT_RECEIPT_MATRIX="build/reports/rafcodephi-real-bootstrap-import-matrix.json"
-    python3 - "$RAF_REAL_BOOTSTRAP_MANIFEST" "$SOURCE_BUILT_RECEIPT_MATRIX" <<'PY'
+    python3 - "$RAF_REAL_BOOTSTRAP_MANIFEST" "$SOURCE_BUILT_RECEIPT_MATRIX" "$BOOTSTRAP_PAIR_TRANSACTION_REPORT" <<'PY'
 from __future__ import annotations
 import hashlib
 import json
@@ -100,6 +129,11 @@ from pathlib import Path
 
 manifest_path = Path(sys.argv[1])
 matrix_path = Path(sys.argv[2])
+transaction_path = Path(sys.argv[3])
+transaction = json.loads(transaction_path.read_text(encoding="utf-8"))
+transaction_state = transaction.get("state")
+if transaction_state not in {"PRIMARY_COMMITTED", "FAILOVER_LKG"}:
+    raise SystemExit(f"bootstrap pair transaction did not reach a consumable state: {transaction_state}")
 receipts = {}
 for arch in ("arm", "aarch64"):
     path = Path(f"build/reports/rafcodephi-real-bootstrap-import-{arch}.json")
@@ -112,10 +146,14 @@ for arch in ("arm", "aarch64"):
         "bootstrap_sha256": doc.get("sha256"),
         "package_repo_runtime_state": doc.get("package_repo_runtime_state"),
         "apt_update_guard": doc.get("apt_update_guard"),
+        "transaction_source": doc.get("transaction_source"),
     }
 matrix = {
-    "schema": "rafcodephi.real-bootstrap-import-matrix/v1",
+    "schema": "rafcodephi.real-bootstrap-import-matrix/v2",
     "structural_state": "PASS",
+    "operational_state": transaction_state,
+    "failover_used": bool(transaction.get("failover_used")),
+    "rollback_performed": bool(transaction.get("rollback_performed")),
     "package_name": "com.termux.rafacodephi",
     "api_package": "com.termux.rafacodephi.api",
     "api_receiver_component": "com.termux.rafacodephi.api/com.termux.api.TermuxApiReceiver",
@@ -125,6 +163,8 @@ matrix = {
     "architectures": receipts,
     "source_manifest": str(manifest_path),
     "source_manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+    "transaction_report": str(transaction_path),
+    "transaction_report_sha256": hashlib.sha256(transaction_path.read_bytes()).hexdigest(),
     "paired_architectures_complete": True,
     "claim_allowed_device_runtime": False,
     "device_runtime_proof": "TOKEN_VAZIO",
@@ -133,7 +173,7 @@ matrix_path.parent.mkdir(parents=True, exist_ok=True)
 matrix_path.write_text(json.dumps(matrix, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
     PROFILE_REQUIREMENT="required"
-    log "Source-built real ARM/AArch64 bootstrap pair imported fail-closed"
+    log "Source-built real ARM/AArch64 bootstrap pair reached a transactional consumable state"
     ;;
   *)
     echo "Unsupported RAF_BOOTSTRAP_SOURCE=$BOOTSTRAP_SOURCE (allowed: local, upstream, source-built-real)" >&2
@@ -141,8 +181,6 @@ PY
     ;;
 esac
 
-# Keep the canonical token consumed by the repository-wide static install
-# contract, while making the strengthened same-observation scope explicit.
 log "Verifying bootstrap contract: source + exact embedded rewritten archives..."
 if ! RAF_BOOTSTRAP_REQUIRE_PROFILE="$PROFILE_REQUIREMENT" ./scripts/verify_bootstrap_contract.sh --check >&2; then
   log "ERROR: Bootstrap contract verification failed"
@@ -187,8 +225,6 @@ from blake3 import blake3
 import hashlib
 import re
 
-# termux-bootstrap-zip.S embeds rewritten-bootstrap-*.zip. Hash the exact bytes
-# returned by TermuxInstaller.getZip(), not the pre-rewrite source archives.
 base = Path('app/src/main/cpp')
 mapping = {
     'TERMUX_BOOTSTRAP_SHA256_AARCH64': 'rewritten-bootstrap-aarch64.zip',
