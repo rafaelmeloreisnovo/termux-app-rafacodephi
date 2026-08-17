@@ -5,6 +5,8 @@ GRADLE_PROPERTIES_FILE="${1:-gradle.properties}"
 LOCAL_PROPERTIES_FILE="${2:-local.properties}"
 SDK_ROOT_OVERRIDE="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 CMDLINE_TOOLS_VERSION="${CMDLINE_TOOLS_VERSION:-13114758}"
+CMDLINE_TOOLS_SHA256_LINUX="${CMDLINE_TOOLS_SHA256_LINUX:-7ec965280a073311c339e571cd5de778b9975026cfcbe79f2b1cdcb1e15317ee}"
+CMDLINE_TOOLS_SHA256_MAC="${CMDLINE_TOOLS_SHA256_MAC:-5673201e6f3869f418eeed3b5cb6c4be7401502bd0aae1b12a29d164d647a54e}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -38,6 +40,25 @@ resolve_sdk_root() {
   return 1
 }
 
+verify_sha256() {
+  local file="$1"
+  local expected="$2"
+  local actual
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual="$(sha256sum "$file" | awk '{print $1}')"
+  elif command -v shasum >/dev/null 2>&1; then
+    actual="$(shasum -a 256 "$file" | awk '{print $1}')"
+  else
+    echo "❌ No SHA-256 tool available to verify Android command-line tools."
+    return 1
+  fi
+  if [[ "$actual" != "$expected" ]]; then
+    echo "❌ CMDLINE_TOOLS_SHA256_MISMATCH expected=$expected actual=$actual" >&2
+    return 1
+  fi
+  echo "✅ Android command-line tools SHA-256 verified: $actual"
+}
+
 ensure_cmdline_tools() {
   local sdk_root="$1"
   local tools_bin="${sdk_root}/cmdline-tools/latest/bin"
@@ -51,9 +72,16 @@ ensure_cmdline_tools() {
   mkdir -p "${sdk_root}/cmdline-tools"
 
   local os_id=""
+  local expected_sha=""
   case "$(uname -s)" in
-    Linux) os_id="linux" ;;
-    Darwin) os_id="mac" ;;
+    Linux)
+      os_id="linux"
+      expected_sha="$CMDLINE_TOOLS_SHA256_LINUX"
+      ;;
+    Darwin)
+      os_id="mac"
+      expected_sha="$CMDLINE_TOOLS_SHA256_MAC"
+      ;;
     *)
       echo "❌ Unsupported host OS for automatic cmdline-tools bootstrap: $(uname -s)"
       return 1
@@ -71,9 +99,10 @@ ensure_cmdline_tools() {
     wget -qO "${tmp_zip}" "${url}"
   else
     echo "❌ Neither curl nor wget found to download Android cmdline-tools."
-    rm -f "${tmp_zip}"
     return 1
   fi
+
+  verify_sha256 "$tmp_zip" "$expected_sha"
 
   rm -rf "${sdk_root}/cmdline-tools/latest"
   mkdir -p "${sdk_root}/cmdline-tools/latest"
@@ -104,14 +133,10 @@ TARGET_SDK_VERSION="$(read_prop targetSdkVersion)"
 NDK_VERSION="$(read_prop ndkVersion)"
 BUILD_TOOLS_VERSION="$(read_prop buildToolsVersion)"
 
-if [[ -z "$COMPILE_SDK_VERSION" || -z "$TARGET_SDK_VERSION" || -z "$NDK_VERSION" ]]; then
+if [[ -z "$COMPILE_SDK_VERSION" || -z "$TARGET_SDK_VERSION" || -z "$NDK_VERSION" || -z "$BUILD_TOOLS_VERSION" ]]; then
   echo "❌ Missing required Android toolchain keys in $GRADLE_PROPERTIES_FILE"
-  echo "Required: compileSdkVersion, targetSdkVersion, ndkVersion"
+  echo "Required: compileSdkVersion, targetSdkVersion, ndkVersion, buildToolsVersion"
   exit 1
-fi
-
-if [[ -z "$BUILD_TOOLS_VERSION" ]]; then
-  BUILD_TOOLS_VERSION="${COMPILE_SDK_VERSION}.0.0"
 fi
 
 echo "📦 Android toolchain source of truth: $GRADLE_PROPERTIES_FILE"
@@ -119,6 +144,7 @@ echo "compileSdkVersion=$COMPILE_SDK_VERSION"
 echo "targetSdkVersion=$TARGET_SDK_VERSION"
 echo "ndkVersion=$NDK_VERSION"
 echo "buildToolsVersion=$BUILD_TOOLS_VERSION"
+echo "cmdlineToolsVersion=$CMDLINE_TOOLS_VERSION"
 
 ANDROID_SDK_PATH="$(resolve_sdk_root || true)"
 if [[ -z "$ANDROID_SDK_PATH" && -n "${SDK_ROOT_OVERRIDE}" ]]; then
@@ -143,7 +169,6 @@ if [[ -n "$ANDROID_SDK_PATH" ]]; then
   fi
 fi
 
-# Keep `pipefail` globally but avoid false failure from `yes` receiving SIGPIPE.
 set +e
 yes | sdkmanager --licenses > /dev/null
 sdkmanager_license_status=${PIPESTATUS[1]}
@@ -160,11 +185,6 @@ sdkmanager \
   "ndk;${NDK_VERSION}" \
   "cmake;3.22.1"
 
-# GitHub Actions that use this legacy/general toolchain helper and then invoke
-# Gradle must materialize the same rewritten bootstraps as the canonical
-# RAFAELIA setup action. This closes the .incbin divergence without changing
-# local developer semantics. Set TERMUX_SKIP_BOOTSTRAP_PREPARE=1 only for jobs
-# that provably do not build the app/native bootstrap target.
 if [[ "${GITHUB_ACTIONS:-false}" == "true" && "${TERMUX_SKIP_BOOTSTRAP_PREPARE:-0}" != "1" ]]; then
   BOOTSTRAP_PREPARE_SCRIPT="${ROOT_DIR}/scripts/prepare_bootstrap_env.sh"
   if [[ ! -x "$BOOTSTRAP_PREPARE_SCRIPT" ]]; then

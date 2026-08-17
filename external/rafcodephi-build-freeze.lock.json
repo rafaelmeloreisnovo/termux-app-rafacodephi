@@ -1,0 +1,66 @@
+{
+  "schema": "rafcodephi.build-freeze/v1",
+  "frozen_at": "2026-08-17",
+  "policy": {
+    "automatic_drift_allowed": false,
+    "unknown_promotes_release": false,
+    "bridge_allowed": false,
+    "legacy_prefix_allowed": false,
+    "bootstrap_pair_atomic_policy": "PRIMARY->ROLLBACK_PAIR->VALIDATED_LKG->BLOCKED",
+    "network_is_transport_not_authority": true
+  },
+  "termux_packages": {
+    "repository": "rafaelmeloreisnovo/termux-packages",
+    "commit": "ada8f3ca1ae261ae0293a9f0666a605c0847496c",
+    "base_commit": "2538114ca05a7f9c0849d9a1e6bf764702f038a0",
+    "libxml2_host_docs_fix": true
+  },
+  "builder": {
+    "image": "ghcr.io/termux-play-store/package-builder",
+    "digest": "sha256:386c6a80a6b40c22a716db0dff31edb0a9169a5335059aba28c65812bd5d121a",
+    "reference": "ghcr.io/termux-play-store/package-builder@sha256:386c6a80a6b40c22a716db0dff31edb0a9169a5335059aba28c65812bd5d121a"
+  },
+  "github_actions": {
+    "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "actions/setup-java": "b6effb05e454b25005698d916606bdc6ffcbf961",
+    "actions/cache": "0057852bfaa89a56745cba8c7296529d2fc39830",
+    "actions/upload-artifact": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+  },
+  "java": {
+    "distribution": "temurin",
+    "version": "21.0.12+8"
+  },
+  "gradle": {
+    "version": "8.14.3",
+    "distribution_url": "https://services.gradle.org/distributions/gradle-8.14.3-bin.zip",
+    "distribution_sha256": "bd71102213493060956ec229d946beee57158dbd89d0e62b91bca0fa2c5f3531",
+    "repositories": [
+      "google",
+      "mavenCentral"
+    ],
+    "dependency_verification": "TOKEN_VAZIO_REQUIRES_RESOLUTION_RECEIPT"
+  },
+  "android": {
+    "cmdline_tools_version": "13114758",
+    "cmdline_tools_linux_sha256": "7ec965280a073311c339e571cd5de778b9975026cfcbe79f2b1cdcb1e15317ee",
+    "cmdline_tools_mac_sha256": "5673201e6f3869f418eeed3b5cb6c4be7401502bd0aae1b12a29d164d647a54e",
+    "compile_sdk": 35,
+    "target_sdk": 28,
+    "build_tools": "35.0.0",
+    "ndk": "26.3.11579264",
+    "cmake": "3.22.1"
+  },
+  "lkg": {
+    "cache_restore": true,
+    "actions_artifact_restore": true,
+    "strict_pair_validation": true,
+    "artifact_retention_is_not_immutable_storage": true
+  },
+  "runtime": {
+    "package_name": "com.termux.rafacodephi",
+    "prefix": "/data/data/com.termux.rafacodephi/files/usr",
+    "apt_external_runtime": "BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED",
+    "physical_android": "TOKEN_VAZIO",
+    "claim_allowed": false
+  }
+}

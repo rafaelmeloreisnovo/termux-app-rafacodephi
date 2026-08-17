@@ -10,7 +10,7 @@ on:
         description: Exact termux-packages commit/ref used to source-build the real bootstrap pair
         required: true
         type: string
-        default: 2538114ca05a7f9c0849d9a1e6bf764702f038a0
+        default: ada8f3ca1ae261ae0293a9f0666a605c0847496c
       build_apk_matrix:
         description: Build signed + unsigned APK matrix (arm32 + arm64)
         required: false
@@ -44,13 +44,15 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: rafcodephi-beta-real-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_PIN: 2538114ca05a7f9c0849d9a1e6bf764702f038a0
+  TERMUX_PACKAGES_PIN: ada8f3ca1ae261ae0293a9f0666a605c0847496c
+  TERMUX_BUILDER_IMAGE_NAME: ghcr.io/termux-play-store/package-builder@sha256:386c6a80a6b40c22a716db0dff31edb0a9169a5335059aba28c65812bd5d121a
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
 
@@ -59,19 +61,23 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:
-      SELECTED_TERMUX_PACKAGES_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || '2538114ca05a7f9c0849d9a1e6bf764702f038a0' }}
+      SELECTED_TERMUX_PACKAGES_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || 'ada8f3ca1ae261ae0293a9f0666a605c0847496c' }}
     steps:
       - name: Checkout app
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
           fetch-depth: 1
 
+      - name: Audit frozen external dependency contract
+        id: freeze_audit
+        run: python3 scripts/audit_external_dependency_freeze.py
+
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '21.0.12+8'
           cache: gradle
 
       - name: Bootstrap pair transaction regression selftest
@@ -80,7 +86,7 @@ jobs:
 
       - name: Restore last-known-good bootstrap pair
         id: restore_lkg_cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: .ci-lkg/rafcodephi-bootstrap
           key: ${{ runner.os }}-rafcodephi-bootstrap-lkg-${{ github.sha }}
@@ -98,12 +104,13 @@ jobs:
           manifest="$root/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt"
           if [[ ! -s "$arm" || ! -s "$arm64" || ! -s "$manifest" ]]; then
             echo 'state=TOKEN_VAZIO' >> "$GITHUB_OUTPUT"
-            echo 'LKG bootstrap pair not available yet; primary path remains authoritative.'
+            echo 'LKG cache pair not available yet; artifact/primary paths remain authoritative.'
             exit 0
           fi
           if python3 scripts/import_rafcodephi_real_bootstrap.py --arch arm --zip "$arm" --manifest "$manifest" --validate-only \
             && python3 scripts/import_rafcodephi_real_bootstrap.py --arch aarch64 --zip "$arm64" --manifest "$manifest" --validate-only; then
             echo 'state=READY' >> "$GITHUB_OUTPUT"
+            echo 'source=CACHE' >> "$GITHUB_OUTPUT"
             echo "arm=$arm" >> "$GITHUB_OUTPUT"
             echo "aarch64=$arm64" >> "$GITHUB_OUTPUT"
             echo "manifest=$manifest" >> "$GITHUB_OUTPUT"
@@ -111,8 +118,16 @@ jobs:
           else
             rm -rf "$root"
             echo 'state=INVALID_REJECTED' >> "$GITHUB_OUTPUT"
-            echo 'Restored LKG failed strict validation and was rejected.'
+            echo 'source=CACHE_REJECTED' >> "$GITHUB_OUTPUT"
+            echo 'Restored LKG cache failed strict validation and was rejected.'
           fi
+
+      - name: Restore validated LKG from successful workflow artifact
+        id: validate_lkg_artifact
+        if: ${{ always() && steps.validate_lkg.outputs.state != 'READY' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/restore_beta_lkg_artifact.sh
 
       - name: Record manual beta build choices
         if: github.event_name == 'workflow_dispatch'
@@ -132,7 +147,7 @@ jobs:
         id: checkout_packages
         if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
         continue-on-error: true
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: rafaelmeloreisnovo/termux-packages
           ref: ${{ env.SELECTED_TERMUX_PACKAGES_REF }}
@@ -142,7 +157,7 @@ jobs:
 
       - name: Bind termux-packages identity and RAFCODEPhi build properties
         id: bind_packages
-        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
+        if: ${{ always() && steps.checkout_packages.outcome == 'success' && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
         continue-on-error: true
         working-directory: termux-packages
         shell: bash
@@ -163,7 +178,7 @@ jobs:
 
       - name: Source-build real ARM32 + ARM64 bootstrap pair
         id: build_real_bootstrap
-        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
+        if: ${{ always() && steps.bind_packages.outcome == 'success' && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
         continue-on-error: true
         working-directory: termux-packages
         shell: bash
@@ -197,7 +212,7 @@ jobs:
 
       - name: Fail-closed gate real bootstrap pair
         id: gate_real_bootstrap
-        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
+        if: ${{ always() && steps.build_real_bootstrap.outcome == 'success' && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
         continue-on-error: true
         working-directory: termux-packages
         shell: bash
@@ -238,7 +253,7 @@ jobs:
       - name: Save validated primary pair as LKG cache
         id: save_lkg_cache
         if: ${{ always() && steps.stage_lkg.outcome == 'success' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: .ci-lkg/rafcodephi-bootstrap
           key: ${{ runner.os }}-rafcodephi-bootstrap-lkg-${{ github.sha }}
@@ -255,6 +270,7 @@ jobs:
                 && -s "$primary/rafcodephi-bootstrap-aarch64.zip" \
                 && -s "$primary/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt" ]]; then
             echo 'state=PRIMARY' >> "$GITHUB_OUTPUT"
+            echo 'source=SOURCE_BUILD' >> "$GITHUB_OUTPUT"
             echo "arm=$primary/rafcodephi-bootstrap-arm.zip" >> "$GITHUB_OUTPUT"
             echo "aarch64=$primary/rafcodephi-bootstrap-aarch64.zip" >> "$GITHUB_OUTPUT"
             echo "manifest=$primary/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt" >> "$GITHUB_OUTPUT"
@@ -263,25 +279,36 @@ jobs:
           fi
           if [[ "${{ steps.validate_lkg.outputs.state }}" == READY ]]; then
             echo 'state=FAILOVER_LKG' >> "$GITHUB_OUTPUT"
+            echo 'source=CACHE' >> "$GITHUB_OUTPUT"
             echo "arm=${{ steps.validate_lkg.outputs.arm }}" >> "$GITHUB_OUTPUT"
             echo "aarch64=${{ steps.validate_lkg.outputs.aarch64 }}" >> "$GITHUB_OUTPUT"
             echo "manifest=${{ steps.validate_lkg.outputs.manifest }}" >> "$GITHUB_OUTPUT"
-            echo 'Primary source build unavailable; resolved independently validated LKG pair.'
+            echo 'Primary source build unavailable; resolved strictly validated cache LKG.'
+            exit 0
+          fi
+          if [[ "${{ steps.validate_lkg_artifact.outputs.state }}" == READY ]]; then
+            echo 'state=FAILOVER_LKG' >> "$GITHUB_OUTPUT"
+            echo 'source=ACTIONS_ARTIFACT' >> "$GITHUB_OUTPUT"
+            echo "arm=${{ steps.validate_lkg_artifact.outputs.arm }}" >> "$GITHUB_OUTPUT"
+            echo "aarch64=${{ steps.validate_lkg_artifact.outputs.aarch64 }}" >> "$GITHUB_OUTPUT"
+            echo "manifest=${{ steps.validate_lkg_artifact.outputs.manifest }}" >> "$GITHUB_OUTPUT"
+            echo 'Primary source build unavailable; resolved strictly validated historical artifact LKG.'
             exit 0
           fi
           echo 'state=BLOCKED' >> "$GITHUB_OUTPUT"
-          echo 'No consumable primary or validated LKG bootstrap pair exists.' >&2
+          echo 'source=NONE' >> "$GITHUB_OUTPUT"
+          echo 'No consumable primary, cache LKG or historical artifact LKG pair exists.' >&2
           exit 1
 
       - name: Setup Android SDK/NDK
         id: setup_android
-        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
+        if: ${{ always() && steps.resolve_bootstrap.outcome == 'success' && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
         continue-on-error: true
         run: ./scripts/setup_android_toolchain.sh
 
       - name: Prepare exact source-built real bootstrap hashes
         id: prepare_bootstrap
-        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
+        if: ${{ always() && steps.resolve_bootstrap.outcome == 'success' && steps.setup_android.outcome == 'success' && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
         continue-on-error: true
         env:
           RAF_BOOTSTRAP_SOURCE: source-built-real
@@ -295,7 +322,7 @@ jobs:
 
       - name: Assert embedded ARM profiles are real-pkg before APK build
         id: real_profile_gate
-        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
+        if: ${{ always() && steps.resolve_bootstrap.outcome == 'success' && steps.prepare_bootstrap.outcome == 'success' && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
         continue-on-error: true
         shell: bash
         run: |
@@ -320,7 +347,7 @@ jobs:
 
       - name: Build signed + unsigned APK matrix (real bootstrap, arm32 + arm64)
         id: apk_matrix
-        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
+        if: ${{ always() && steps.resolve_bootstrap.outcome == 'success' && steps.real_profile_gate.outcome == 'success' && (github.event_name != 'workflow_dispatch' || inputs.build_apk_matrix) }}
         continue-on-error: true
         env:
           RAF_BOOTSTRAP_SOURCE: source-built-real
@@ -421,8 +448,10 @@ jobs:
             echo '## Real bootstrap beta contract'
             echo '- beta_bootstrap_source: source-built-real'
             echo "- bootstrap_resolution: ${{ steps.resolve_bootstrap.outputs.state }}"
+            echo "- bootstrap_resolution_source: ${{ steps.resolve_bootstrap.outputs.source }}"
             echo '- required_architectures: arm,aarch64'
             echo '- pair_transaction: rollback + validated-LKG-failover'
+            echo '- external_dependency_freeze: enforced'
             echo '- bridge_allowed: false'
             echo '- physical_android: TOKEN_VAZIO'
             echo '- claim_allowed: false'
@@ -432,13 +461,14 @@ jobs:
         id: upload_artifacts
         if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.upload_beta_artifacts) }}
         continue-on-error: true
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: rafcodephi-beta-real-artifacts-${{ github.sha }}
           path: |
             dist/apk-matrix/**
             build/reports/beta-embedded-*.json
             build/reports/bootstrap-pair-transaction.json
+            build/reports/external-dependency-freeze.json
             build/reports/rafcodephi-real-bootstrap-import-*.json
             build/reports/rafcodephi-real-bootstrap-import-matrix.json
             termux-packages/build/reports/rafcodephi-beta-*
@@ -448,6 +478,8 @@ jobs:
             termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
             termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
             .ci-lkg/rafcodephi-bootstrap/**
+            .ci-artifact-lkg/rafcodephi-bootstrap/**
+            external/rafcodephi-build-freeze.lock.json
             docs/BETA_BUILD_REPORT.md
             docs/BETA_READINESS_REPORT.md
             out/beta-dashboard.md
@@ -460,6 +492,7 @@ jobs:
       - name: Final beta diagnostic gate
         if: ${{ always() }}
         env:
+          FREEZE_AUDIT_OUTCOME: ${{ steps.freeze_audit.outcome }}
           PAIR_TRANSACTION_SELFTEST_OUTCOME: ${{ steps.pair_transaction_selftest.outcome }}
           CHECKOUT_PACKAGES_OUTCOME: ${{ steps.checkout_packages.outcome }}
           BIND_PACKAGES_OUTCOME: ${{ steps.bind_packages.outcome }}
@@ -497,6 +530,7 @@ jobs:
             fi
           }
 
+          check_step "external_dependency_freeze" "$FREEZE_AUDIT_OUTCOME" "required"
           check_step "pair_transaction_selftest" "$PAIR_TRANSACTION_SELFTEST_OUTCOME" "required"
 
           if [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" || "${{ inputs.build_apk_matrix }}" == "true" ]]; then
@@ -513,7 +547,7 @@ jobs:
                 check_step "bind_packages" "$BIND_PACKAGES_OUTCOME" "degraded-optional"
                 check_step "build_real_bootstrap" "$BUILD_REAL_BOOTSTRAP_OUTCOME" "degraded-optional"
                 check_step "gate_real_bootstrap" "$GATE_REAL_BOOTSTRAP_OUTCOME" "degraded-optional"
-                echo 'Bootstrap source-build degraded; validated LKG failover is active.' >> "$GITHUB_STEP_SUMMARY"
+                echo 'Bootstrap source-build degraded; strictly validated LKG failover is active.' >> "$GITHUB_STEP_SUMMARY"
                 ;;
               *)
                 echo "| bootstrap_resolution_state | required | ${BOOTSTRAP_RESOLUTION_STATE:-not-run} |" >> "$GITHUB_STEP_SUMMARY"
@@ -552,7 +586,7 @@ jobs:
           check_step "upload_artifacts" "$UPLOAD_ARTIFACTS_OUTCOME" "optional"
 
           if [ "$status" -ne 0 ]; then
-            echo "Beta build is BLOCKED: a required primary/LKG bootstrap or diagnostic gate did not pass."
+            echo "Beta build is BLOCKED: a required primary/LKG bootstrap, freeze or diagnostic gate did not pass."
             exit 1
           fi
 
