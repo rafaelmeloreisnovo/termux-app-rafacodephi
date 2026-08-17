@@ -78,8 +78,8 @@ jobs:
         id: pair_transaction_selftest
         run: python3 scripts/test_bootstrap_pair_transaction.py
 
-      # IMPORTANT: this path is immutable until all app-side bootstrap/APK gates
-      # have consumed it. It is the independent failover source for this run.
+      # Immutable failover source for this run. It must not be overwritten until
+      # the exact bootstrap consumed by the APK matrix has passed every core gate.
       - name: Restore last-known-good bootstrap pair
         id: restore_lkg_cache
         uses: actions/cache/restore@v4
@@ -376,25 +376,75 @@ jobs:
           fi
           echo 'PSS3_BLOCKER_BETA_GATE=PASS'
 
-      # Only now, after the exact resolved pair has passed app-side transaction,
-      # real-pkg inspection and APK matrix, may it replace the previous LKG.
-      - name: Promote consumed bootstrap pair to next LKG
+      # Derive the LKG from the final transaction produced by build_apk_matrix.sh,
+      # because that script runs prepare_bootstrap_env.sh again immediately before
+      # tests/assemble. This binds promotion to the bytes actually consumed by APK.
+      - name: Promote bootstrap actually consumed by APK matrix
         id: promote_lkg
         if: ${{ always() && steps.prepare_bootstrap.outcome == 'success' && steps.real_profile_gate.outcome == 'success' && steps.apk_matrix.outcome == 'success' }}
         shell: bash
         env:
+          RESOLUTION_STATE: ${{ steps.resolve_bootstrap.outputs.state }}
           RESOLVED_ARM: ${{ steps.resolve_bootstrap.outputs.arm }}
           RESOLVED_AARCH64: ${{ steps.resolve_bootstrap.outputs.aarch64 }}
           RESOLVED_MANIFEST: ${{ steps.resolve_bootstrap.outputs.manifest }}
+          LKG_STATE: ${{ steps.validate_lkg.outputs.state }}
+          LKG_ARM: ${{ steps.validate_lkg.outputs.arm }}
+          LKG_AARCH64: ${{ steps.validate_lkg.outputs.aarch64 }}
+          LKG_MANIFEST: ${{ steps.validate_lkg.outputs.manifest }}
         run: |
           set -euo pipefail
+          report="$GITHUB_WORKSPACE/build/reports/bootstrap-pair-transaction.json"
+          test -s "$report"
+          tx_state="$(python3 - "$report" <<'PY'
+          import json, sys
+          state = json.load(open(sys.argv[1], encoding='utf-8')).get('state', '')
+          if state not in {'PRIMARY_COMMITTED', 'FAILOVER_LKG'}:
+              raise SystemExit(f'non-consumable transaction state: {state}')
+          print(state)
+          PY
+          )"
+
+          actual_mode=BLOCKED
+          src_arm=''
+          src_arm64=''
+          src_manifest=''
+          case "${RESOLUTION_STATE}:${tx_state}" in
+            PRIMARY:PRIMARY_COMMITTED)
+              actual_mode=PRIMARY
+              src_arm="$RESOLVED_ARM"
+              src_arm64="$RESOLVED_AARCH64"
+              src_manifest="$RESOLVED_MANIFEST"
+              ;;
+            PRIMARY:FAILOVER_LKG)
+              test "$LKG_STATE" = READY
+              actual_mode=FAILOVER_LKG
+              src_arm="$LKG_ARM"
+              src_arm64="$LKG_AARCH64"
+              src_manifest="$LKG_MANIFEST"
+              ;;
+            FAILOVER_LKG:PRIMARY_COMMITTED|FAILOVER_LKG:FAILOVER_LKG)
+              actual_mode=FAILOVER_LKG
+              src_arm="$RESOLVED_ARM"
+              src_arm64="$RESOLVED_AARCH64"
+              src_manifest="$RESOLVED_MANIFEST"
+              ;;
+            *)
+              echo "Unsupported resolution/transaction combination: ${RESOLUTION_STATE}:${tx_state}" >&2
+              exit 1
+              ;;
+          esac
+
+          test -s "$src_arm"
+          test -s "$src_arm64"
+          test -s "$src_manifest"
           root="$GITHUB_WORKSPACE/.ci-lkg/rafcodephi-bootstrap"
           stage="$GITHUB_WORKSPACE/.ci-lkg/rafcodephi-bootstrap.stage"
           rm -rf "$stage"
           mkdir -p "$stage"
-          cp "$RESOLVED_ARM" "$stage/rafcodephi-bootstrap-arm.zip"
-          cp "$RESOLVED_AARCH64" "$stage/rafcodephi-bootstrap-aarch64.zip"
-          cp "$RESOLVED_MANIFEST" "$stage/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt"
+          cp "$src_arm" "$stage/rafcodephi-bootstrap-arm.zip"
+          cp "$src_arm64" "$stage/rafcodephi-bootstrap-aarch64.zip"
+          cp "$src_manifest" "$stage/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt"
           python3 scripts/import_rafcodephi_real_bootstrap.py --arch arm \
             --zip "$stage/rafcodephi-bootstrap-arm.zip" \
             --manifest "$stage/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt" --validate-only
@@ -407,7 +457,9 @@ jobs:
             "$stage/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt" > "$stage/SHA256SUMS"
           rm -rf "$root"
           mv "$stage" "$root"
-          echo "PROMOTED_LKG_SOURCE=${{ steps.resolve_bootstrap.outputs.state }}"
+          echo "mode=$actual_mode" >> "$GITHUB_OUTPUT"
+          echo "transaction_state=$tx_state" >> "$GITHUB_OUTPUT"
+          echo "PROMOTED_LKG_MODE=$actual_mode transaction=$tx_state"
 
       - name: Save next LKG cache
         id: save_lkg_cache
@@ -422,7 +474,7 @@ jobs:
         if: ${{ always() && (github.event_name != 'workflow_dispatch' || (inputs.build_apk_matrix && inputs.publish_matrix_summary)) }}
         continue-on-error: true
         env:
-          BOOTSTRAP_RESOLUTION_STATE: ${{ steps.resolve_bootstrap.outputs.state }}
+          BOOTSTRAP_RESOLUTION_STATE: ${{ steps.promote_lkg.outputs.mode || steps.resolve_bootstrap.outputs.state }}
           SETUP_ANDROID_OUTCOME: ${{ steps.setup_android.outcome }}
           PREPARE_BOOTSTRAP_OUTCOME: ${{ steps.prepare_bootstrap.outcome }}
           APK_MATRIX_OUTCOME: ${{ steps.apk_matrix.outcome }}
@@ -439,10 +491,12 @@ jobs:
             echo
             echo '## Real bootstrap beta contract'
             echo '- beta_bootstrap_source: source-built-real'
-            echo "- bootstrap_resolution: ${{ steps.resolve_bootstrap.outputs.state }}"
+            echo "- pre_transaction_resolution: ${{ steps.resolve_bootstrap.outputs.state }}"
+            echo "- apk_consumed_bootstrap_mode: ${{ steps.promote_lkg.outputs.mode }}"
+            echo "- final_transaction_state: ${{ steps.promote_lkg.outputs.transaction_state }}"
             echo '- required_architectures: arm,aarch64'
             echo '- pair_transaction: rollback + validated-LKG-failover'
-            echo '- lkg_replacement_order: after app transaction + real-pkg + APK matrix'
+            echo '- lkg_replacement_order: after final APK-consumed transaction + real-pkg + APK matrix'
             echo '- bridge_allowed: false'
             echo '- physical_android: TOKEN_VAZIO'
             echo '- claim_allowed: false'
@@ -486,7 +540,9 @@ jobs:
           BUILD_REAL_BOOTSTRAP_OUTCOME: ${{ steps.build_real_bootstrap.outcome }}
           GATE_REAL_BOOTSTRAP_OUTCOME: ${{ steps.gate_real_bootstrap.outcome }}
           RESOLVE_BOOTSTRAP_OUTCOME: ${{ steps.resolve_bootstrap.outcome }}
-          BOOTSTRAP_RESOLUTION_STATE: ${{ steps.resolve_bootstrap.outputs.state }}
+          PRE_TRANSACTION_RESOLUTION_STATE: ${{ steps.resolve_bootstrap.outputs.state }}
+          ACTUAL_BOOTSTRAP_MODE: ${{ steps.promote_lkg.outputs.mode }}
+          FINAL_TRANSACTION_STATE: ${{ steps.promote_lkg.outputs.transaction_state }}
           SETUP_ANDROID_OUTCOME: ${{ steps.setup_android.outcome }}
           PREPARE_BOOTSTRAP_OUTCOME: ${{ steps.prepare_bootstrap.outcome }}
           REAL_PROFILE_GATE_OUTCOME: ${{ steps.real_profile_gate.outcome }}
@@ -523,7 +579,7 @@ jobs:
 
           if [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" || "${{ inputs.build_apk_matrix }}" == "true" ]]; then
             check_step "resolve_bootstrap" "$RESOLVE_BOOTSTRAP_OUTCOME" "required"
-            case "$BOOTSTRAP_RESOLUTION_STATE" in
+            case "$PRE_TRANSACTION_RESOLUTION_STATE" in
               PRIMARY)
                 check_step "checkout_packages" "$CHECKOUT_PACKAGES_OUTCOME" "required"
                 check_step "bind_packages" "$BIND_PACKAGES_OUTCOME" "required"
@@ -535,10 +591,9 @@ jobs:
                 check_step "bind_packages" "$BIND_PACKAGES_OUTCOME" "degraded-optional"
                 check_step "build_real_bootstrap" "$BUILD_REAL_BOOTSTRAP_OUTCOME" "degraded-optional"
                 check_step "gate_real_bootstrap" "$GATE_REAL_BOOTSTRAP_OUTCOME" "degraded-optional"
-                echo 'Bootstrap source-build degraded; independently validated LKG failover is active.' >> "$GITHUB_STEP_SUMMARY"
                 ;;
               *)
-                echo "| bootstrap_resolution_state | required | ${BOOTSTRAP_RESOLUTION_STATE:-not-run} |" >> "$GITHUB_STEP_SUMMARY"
+                echo "| pre_transaction_resolution_state | required | ${PRE_TRANSACTION_RESOLUTION_STATE:-not-run} |" >> "$GITHUB_STEP_SUMMARY"
                 status=1
                 ;;
             esac
@@ -548,6 +603,13 @@ jobs:
             check_step "apk_matrix" "$APK_MATRIX_OUTCOME" "required"
             check_step "promote_lkg" "$PROMOTE_LKG_OUTCOME" "required"
             check_step "save_lkg_cache" "$SAVE_LKG_OUTCOME" "optional"
+            case "$ACTUAL_BOOTSTRAP_MODE" in
+              PRIMARY|FAILOVER_LKG) ;;
+              *)
+                echo "| apk_consumed_bootstrap_mode | required | ${ACTUAL_BOOTSTRAP_MODE:-not-run} |" >> "$GITHUB_STEP_SUMMARY"
+                status=1
+                ;;
+            esac
           fi
 
           if [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" || "${{ inputs.run_bootstrap_baremetal_guard }}" == "true" ]]; then
@@ -580,8 +642,8 @@ jobs:
             exit 1
           fi
 
-          if [[ "$BOOTSTRAP_RESOLUTION_STATE" == "FAILOVER_LKG" ]]; then
-            echo "Operational decision: beta pipeline is GREEN_DEGRADED with independently validated LKG ARM32 + ARM64 failover provenance."
+          if [[ "$ACTUAL_BOOTSTRAP_MODE" == "FAILOVER_LKG" ]]; then
+            echo "Operational decision: beta pipeline is GREEN_DEGRADED with the LKG pair actually consumed by APK matrix."
           else
-            echo "Operational decision: beta pipeline is GREEN_PRIMARY with source-built real ARM32 + ARM64 bootstrap provenance."
+            echo "Operational decision: beta pipeline is GREEN_PRIMARY with the source-built real pair actually consumed by APK matrix."
           fi
