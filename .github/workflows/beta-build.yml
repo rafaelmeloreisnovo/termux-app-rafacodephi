@@ -82,7 +82,7 @@ jobs:
       # the exact bootstrap consumed by the APK matrix has passed every core gate.
       - name: Restore last-known-good bootstrap pair
         id: restore_lkg_cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .ci-lkg/rafcodephi-bootstrap
           key: ${{ runner.os }}-rafcodephi-bootstrap-lkg-${{ github.sha }}
@@ -464,7 +464,7 @@ jobs:
       - name: Save next LKG cache
         id: save_lkg_cache
         if: ${{ always() && steps.promote_lkg.outcome == 'success' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .ci-lkg/rafcodephi-bootstrap
           key: ${{ runner.os }}-rafcodephi-bootstrap-lkg-${{ github.sha }}
