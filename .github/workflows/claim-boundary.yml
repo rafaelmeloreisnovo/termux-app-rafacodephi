@@ -1,0 +1,37 @@
+name: Claim Boundary Gate
+
+on:
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'configs/claim-boundary-debt.v1.json'
+      - 'scripts/validate_claim_language.py'
+      - 'tests/test_claim_language.py'
+  push:
+    paths:
+      - 'README.md'
+      - 'configs/claim-boundary-debt.v1.json'
+      - 'scripts/validate_claim_language.py'
+      - 'tests/test_claim_language.py'
+
+permissions:
+  contents: read
+
+jobs:
+  claim-language:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Unit tests
+        run: python3 -m unittest -v tests.test_claim_language
+      - name: Validate README claim boundary
+        run: |
+          python3 scripts/validate_claim_language.py \
+            --readme README.md \
+            --debt configs/claim-boundary-debt.v1.json \
+            --write-report build/claim-boundary/report.json
