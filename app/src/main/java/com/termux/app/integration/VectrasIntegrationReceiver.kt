@@ -111,6 +111,7 @@ class VectrasIntegrationReceiver : BroadcastReceiver() {
             "qemu-system-aarch64",
             "qemu-system-aarch64-rafaelia",
             "qemu-system-i386",
+            "qemu-system-arm",
         )
     }
 }
