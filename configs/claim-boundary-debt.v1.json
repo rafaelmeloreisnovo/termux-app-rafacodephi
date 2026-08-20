@@ -1,0 +1,37 @@
+{
+  "schema": "rafacodephi.claim-boundary-debt/v1",
+  "observed_ref": "b6d516cda1c0780c0a06f1891aee7225726cceb3",
+  "source_path": "README.md",
+  "claim_allowed": false,
+  "policy": "Known debt may decrease but must not increase. New absolute compatibility or production guarantees fail closed.",
+  "items": [
+    {
+      "rule_id": "fully_compatible",
+      "max_count": 1,
+      "state": "KNOWN_DEBT",
+      "claim_allowed": false,
+      "safe_direction": "Replace universal compatibility wording with VERIFIED_LIMITED plus device-matrix scope."
+    },
+    {
+      "rule_id": "no_crash_guarantee",
+      "max_count": 1,
+      "state": "KNOWN_DEBT",
+      "claim_allowed": false,
+      "safe_direction": "Replace crash guarantee with measured device/kernel/page-size receipts and explicit untested TOKEN_VAZIO combinations."
+    },
+    {
+      "rule_id": "production_ready",
+      "max_count": 1,
+      "state": "KNOWN_DEBT",
+      "claim_allowed": false,
+      "safe_direction": "Require signed release, install/launch receipts and declared production gate before production wording."
+    },
+    {
+      "rule_id": "zero_collisions",
+      "max_count": 1,
+      "state": "KNOWN_DEBT",
+      "claim_allowed": false,
+      "safe_direction": "Use distinct package/authority configuration language until collision-free installation is tested across the declared matrix."
+    }
+  ]
+}
