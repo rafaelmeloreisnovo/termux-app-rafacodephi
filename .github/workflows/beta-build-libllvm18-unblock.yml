@@ -1,0 +1,172 @@
+# ci_track: ops
+# ci_abis: arm32,arm64
+name: RafCodePhi Beta Build - libLLVM18 Unblock
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/beta-build-libllvm18-unblock.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rafcodephi-beta-libllvm18-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TERMUX_PACKAGES_FIX_SHA: cd4b2aa019f0f33502e7c79264facac2d810f1cb
+  CLAIM_ALLOWED: 'false'
+  PHYSICAL_ANDROID: 'TOKEN_VAZIO'
+
+jobs:
+  build-usable-beta:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - name: Checkout RafCodePhi app
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Checkout patched termux-packages
+        uses: actions/checkout@v7
+        with:
+          repository: rafaelmeloreisnovo/termux-packages
+          ref: ${{ env.TERMUX_PACKAGES_FIX_SHA }}
+          path: termux-packages
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Bind RAFCODEPhi package identity
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TERMUX_PACKAGES_FIX_SHA"
+          mkdir -p build/reports
+          python3 scripts/apply-rafcodephi-build-properties.py \
+            --properties scripts/properties.sh \
+            --receipt build/reports/rafcodephi-beta-properties.json
+          bash scripts/validate-rafcodephi-build-properties.sh
+          grep -F 'libllvm18' packages/libxml2/build.sh
+
+      - name: Source-build real ARM32 + ARM64 bootstrap pair
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-real-bootstrap.sh
+          ./scripts/run-docker.sh \
+            ./scripts/build-rafcodephi-real-bootstrap.sh \
+            --architectures arm,aarch64 \
+            2>&1 | tee build/reports/rafcodephi-beta-real-bootstrap.log
+
+      - name: Gate source-built bootstrap pair
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=artifacts/rafcodephi-bootstrap
+          manifest="$root/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt"
+          arm="$root/rafcodephi-bootstrap-arm.zip"
+          arm64="$root/rafcodephi-bootstrap-aarch64.zip"
+          test -s "$manifest"
+          test -s "$arm"
+          test -s "$arm64"
+          grep -Fx 'schema=rafcodephi.real-bootstrap-sourcebuild/v1' "$manifest"
+          grep -Fx 'package_name=com.termux.rafacodephi' "$manifest"
+          grep -Fx 'prefix=/data/data/com.termux.rafacodephi/files/usr' "$manifest"
+          grep -Fx 'bridge_allowed=false' "$manifest"
+          grep -Fx 'legacy_prefix_allowed=false' "$manifest"
+          sha256sum "$manifest" "$arm" "$arm64" | tee build/reports/rafcodephi-beta-real-bootstrap.sha256
+
+      - name: Prepare exact source-built bootstrap environment
+        env:
+          RAF_BOOTSTRAP_SOURCE: source-built-real
+          RAF_REAL_BOOTSTRAP_ZIP_ARM: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
+          RAF_REAL_BOOTSTRAP_ZIP_AARCH64: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
+          RAF_REAL_BOOTSTRAP_MANIFEST: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+        run: ./scripts/prepare_bootstrap_env.sh --github-env --skip-android-preflight
+
+      - name: Inspect embedded real-pkg profiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          python3 tools/raf_bootstrap_profile.py inspect --zip app/src/main/cpp/rewritten-bootstrap-arm.zip > build/reports/beta-embedded-arm.json
+          python3 tools/raf_bootstrap_profile.py inspect --zip app/src/main/cpp/rewritten-bootstrap-aarch64.zip > build/reports/beta-embedded-aarch64.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for arch in ('arm', 'aarch64'):
+              doc = json.loads(Path(f'build/reports/beta-embedded-{arch}.json').read_text())
+              profile = doc.get('profile_manifest') or {}
+              if profile.get('profile') != 'real-pkg' or profile.get('package_layer') != 'real-pkg':
+                  raise SystemExit(f'{arch}: expected real-pkg profile, got {profile}')
+              classifications = doc.get('classifications') or {}
+              for name in ('bin/apt', 'bin/apt-get'):
+                  if classifications.get(name) != 'ELF':
+                      raise SystemExit(f'{arch}: {name} is not ELF: {classifications.get(name)}')
+          print('BETA_REAL_BOOTSTRAP_PROFILE_GATE=PASS')
+          PY
+
+      - name: Build signed + unsigned APK matrix
+        env:
+          RAF_BOOTSTRAP_SOURCE: source-built-real
+          RAF_REAL_BOOTSTRAP_ZIP_ARM: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
+          RAF_REAL_BOOTSTRAP_ZIP_AARCH64: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
+          RAF_REAL_BOOTSTRAP_MANIFEST: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+          RELEASE_TRACK: internal
+          APK_MATRIX_UNIT_TESTS_REQUIRED: 'true'
+        run: ./scripts/build_apk_matrix.sh
+
+      - name: Generate usable-artifact receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root = Path('dist/apk-matrix')
+          apks = []
+          if root.exists():
+              for p in sorted(root.rglob('*.apk')):
+                  h = hashlib.sha256(p.read_bytes()).hexdigest()
+                  apks.append({'path': str(p), 'bytes': p.stat().st_size, 'sha256': h})
+          doc = {
+              'schema': 'rafcodephi.usable-beta-build/v1',
+              'termux_packages_fix_sha': 'cd4b2aa019f0f33502e7c79264facac2d810f1cb',
+              'apk_count': len(apks),
+              'apks': apks,
+              'claim_allowed_device_runtime': False,
+              'device_runtime_proof': 'TOKEN_VAZIO',
+          }
+          Path('build/reports/usable-beta-receipt.json').write_text(json.dumps(doc, indent=2, sort_keys=True) + '\n')
+          print(json.dumps(doc, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload usable beta artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rafcodephi-beta-libllvm18-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            dist/apk-matrix/
+            build/reports/
+            termux-packages/build/reports/
+            termux-packages/artifacts/rafcodephi-bootstrap/
