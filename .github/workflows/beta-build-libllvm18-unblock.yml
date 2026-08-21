@@ -1,6 +1,6 @@
 # ci_track: ops
 # ci_abis: arm32,arm64
-# trigger_generation: 4
+# trigger_generation: 5
 name: RafCodePhi Beta Build - libLLVM18 Unblock
 
 on:
@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_FIX_SHA: cd4b2aa019f0f33502e7c79264facac2d810f1cb
+  TERMUX_PACKAGES_FIX_SHA: 5ec6309bc09240b5fd59433cc9d38dfbf7ae4988
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
 
@@ -152,7 +152,7 @@ jobs:
                   apks.append({'path': str(p), 'bytes': p.stat().st_size, 'sha256': h})
           doc = {
               'schema': 'rafcodephi.usable-beta-build/v1',
-              'termux_packages_fix_sha': 'cd4b2aa019f0f33502e7c79264facac2d810f1cb',
+              'termux_packages_fix_sha': '5ec6309bc09240b5fd59433cc9d38dfbf7ae4988',
               'apk_count': len(apks),
               'apks': apks,
               'claim_allowed_device_runtime': False,
