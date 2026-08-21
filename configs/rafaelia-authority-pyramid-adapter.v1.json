@@ -1,0 +1,109 @@
+{
+  "schema": "rafaelia.authority-pyramid-adapter.v1",
+  "repo": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "authority_ref": "master",
+  "authority_sha": "5e83eef9aea803bee127cd21eed6206ced193cb7",
+  "role": "ANDROID_RUNTIME_PROVIDER",
+  "federated_authority": "rafaelmeloreisnovo/Mapa",
+  "central_contract": "data/control-plane/RAFAELIA_AUTHORITY_PYRAMID_FAIL_CLOSED_V1.json",
+  "claim_allowed": false,
+  "promotion_state": "HOLD_ON_P0_OR_GATING_TOKEN_VAZIO",
+  "evidence_state": "PARTIAL",
+  "attention_state": "URGENT",
+  "superseding_interpretation": "docs/security/SECURITY_SUMMARY_STATUS_V2_20260821.md",
+  "critical_data_classes": [
+    "device_identifiers",
+    "user_and_private_paths",
+    "environment_values",
+    "runtime_logs",
+    "retrieved_files",
+    "command_lines",
+    "app_and_user_payload",
+    "apk_and_bootstrap_material",
+    "ipc_request_result"
+  ],
+  "protected_subject": {
+    "state": "TOKEN_VAZIO_NOT_ESTABLISHED",
+    "no_inference": ["age","culture","ethnicity","religion","guardian_status","vulnerability"],
+    "context_invariants": [
+      "child_status_unknown != adult",
+      "age_threshold != cultural_context_resolved",
+      "group_label != cultural_meaning",
+      "cultural_reference_missing -> TOKEN_VAZIO_CONTEXT",
+      "guardian_role != automatically_valid_consent"
+    ],
+    "p0_trigger": "child_or_vulnerable_subject_established_or_potential AND purpose_dataflow_retention_recipient_authority_or_best_interest_unresolved"
+  },
+  "local_evidence_anchors": [
+    "AGENTS.md",
+    "SECURITY_SUMMARY.md",
+    "docs/security/SECURITY_SUMMARY_STATUS_V2_20260821.md",
+    "docs/security/RAFAELIA_SENSOR_PERMISSION_PROFILES.md",
+    "docs/RAFAELIA_ZERO_DEVICE_PROBE.md",
+    "docs/RAFAELIA_CLAIM_EXECUTION_MATRIX.md",
+    ".github/workflows/vectras-ipc-v2.yml"
+  ],
+  "gaps": [
+    {
+      "id": "TERMUX_HISTORICAL_SECURITY_OVERPROMOTION",
+      "category": "GOVERNANCE_GAP",
+      "evidence_state": "OBSERVED",
+      "attention_state": "FORGOTTEN_REDISCOVERED",
+      "priority": "P0",
+      "reason": "historical SECURITY_SUMMARY contains broad production/approval conclusions not bound to current exact-head/device evidence",
+      "next_probe": "use superseding status plus exact security/privacy receipts; do not delete history",
+      "owner": "termux-app-rafacodephi"
+    },
+    {
+      "id": "TERMUX_RUN_COMMAND_AND_IPC_NEGATIVE_PATHS",
+      "category": "SECURITY_WEAKNESS",
+      "evidence_state": "PARTIAL",
+      "attention_state": "URGENT",
+      "priority": "P0",
+      "next_probe": "unauthorized caller + permission denial + malformed/replay + protected-option bypass + result-integrity + safe-state fixtures",
+      "owner": "termux-app-rafacodephi"
+    },
+    {
+      "id": "TERMUX_EXECUTION_TIME_IDENTITY",
+      "category": "DEBUG_BLOCKER",
+      "evidence_state": "TOKEN_VAZIO",
+      "attention_state": "URGENT",
+      "priority": "P0",
+      "next_probe": "bind request digest to exact APK/package and executable digest at execution time plus result/exit",
+      "owner": "termux-app-rafacodephi"
+    },
+    {
+      "id": "TERMUX_PHYSICAL_RUNTIME_RECEIPT",
+      "category": "COMPLIANCE_GAP",
+      "evidence_state": "TOKEN_VAZIO",
+      "attention_state": "UNDERPRIORITIZED",
+      "priority": "P0",
+      "next_probe": "APK hash -> install -> launch -> PID/activity -> bounded logcat -> device/environment receipt",
+      "owner": "termux-app-rafacodephi"
+    },
+    {
+      "id": "TERMUX_RUNTIME_PRIVACY_MINIMIZATION",
+      "category": "PRIVACY_RISK",
+      "evidence_state": "TOKEN_VAZIO",
+      "attention_state": "URGENT",
+      "priority": "P0",
+      "next_probe": "inspect exact runtime/log/artifact output for data minimization, redaction, retention, access and public-receipt boundary",
+      "owner": "termux-app-rafacodephi"
+    },
+    {
+      "id": "TERMUX_NATIVE_BOOTSTRAP_SUPPLY_CHAIN",
+      "category": "SECURITY_WEAKNESS",
+      "evidence_state": "PARTIAL",
+      "attention_state": "ACTIVE",
+      "priority": "P1",
+      "next_probe": "pin source/provenance, hashes and vulnerability/dependency review for native/bootstrap material consumed by exact APK",
+      "owner": "termux-app-rafacodephi"
+    }
+  ],
+  "non_compensatory_gate": {
+    "dimensions": ["governance","privacy","security","protected_subject"],
+    "rule": "ANY_P0_OR_GATING_TOKEN_VAZIO_BLOCKS_PROMOTION",
+    "unknown_is_pass": false
+  },
+  "falsifier": "A broad current production/security/privacy claim based only on historical documentation or discovery identity, without exact scoped execution evidence, falsifies this adapter."
+}
