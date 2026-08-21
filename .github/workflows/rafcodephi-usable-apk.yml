@@ -1,5 +1,6 @@
 # ci_track: artifact
 # ci_abis: armeabi-v7a,arm64-v8a
+# trigger_generation: 2
 name: RAFCODEPHI Usable APK
 
 on:
@@ -53,6 +54,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TERMUX_PACKAGES_BUILD_SHA"
+          mkdir -p build
           python3 scripts/apply-rafcodephi-build-properties.py \
             --properties scripts/properties.sh \
             --receipt build/rafcodephi-build-properties.json
