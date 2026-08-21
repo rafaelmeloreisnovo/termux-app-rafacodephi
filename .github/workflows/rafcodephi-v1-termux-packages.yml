@@ -4,14 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       termux_packages_ref:
-        description: Exact termux-packages commit/ref to consume
+        description: canonical | candidate | exact 40-char termux-packages commit
         required: true
-        default: 7a26629938452c6d6fd80cf3fccce8c2056aabac
+        default: canonical
         type: string
   pull_request:
     branches: [master]
     paths:
       - '.github/workflows/rafcodephi-v1-termux-packages.yml'
+      - 'data/contracts/termux-packages-rafcodephi-pin.v1.json'
+      - 'scripts/resolve_termux_packages_pin.py'
       - 'docs/RAFCODEPHI_V1_TERMUX_PACKAGES.md'
       - 'tests/test_rafcodephi_v1_termux_packages_contract.py'
       - 'app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java'
@@ -34,7 +36,6 @@ concurrency:
 env:
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
-  TERMUX_PACKAGES_PIN: 7a26629938452c6d6fd80cf3fccce8c2056aabac
 
 jobs:
   contract:
@@ -55,7 +56,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 210
     env:
-      SELECTED_TERMUX_PACKAGES_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || '7a26629938452c6d6fd80cf3fccce8c2056aabac' }}
+      SELECTED_TERMUX_PACKAGES_SELECTOR: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || 'canonical' }}
     steps:
       - name: Checkout exact app revision
         uses: actions/checkout@v7
@@ -63,11 +64,21 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
+      - name: Resolve semantic termux-packages pin
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          python3 scripts/resolve_termux_packages_pin.py \
+            "$SELECTED_TERMUX_PACKAGES_SELECTOR" \
+            --github-env --json \
+            | tee build/reports/rafcodephi-v1-packages-pin-resolution.json
+
       - name: Checkout pinned termux-packages source
         uses: actions/checkout@v7
         with:
           repository: rafaelmeloreisnovo/termux-packages
-          ref: ${{ env.SELECTED_TERMUX_PACKAGES_REF }}
+          ref: ${{ env.TERMUX_PACKAGES_SHA }}
           path: termux-packages
           persist-credentials: false
           fetch-depth: 1
@@ -79,9 +90,7 @@ jobs:
           set -euo pipefail
           ACTUAL_SHA="$(git rev-parse HEAD)"
           test -n "$ACTUAL_SHA"
-          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
-            test "$ACTUAL_SHA" = "$TERMUX_PACKAGES_PIN"
-          fi
+          test "$ACTUAL_SHA" = "$TERMUX_PACKAGES_SHA"
           mkdir -p build/reports
           python3 scripts/apply-rafcodephi-build-properties.py \
             --properties scripts/properties.sh \
@@ -208,6 +217,7 @@ jobs:
               'state': 'BUILD_EVIDENCE_PASS',
               'app_commit': app_sha,
               'termux_packages_commit': pkg_sha,
+              'termux_packages_selector': __import__('os').environ.get('SELECTED_TERMUX_PACKAGES_SELECTOR', 'canonical'),
               'package_name': 'com.termux.rafacodephi',
               'prefix': '/data/data/com.termux.rafacodephi/files/usr',
               'source_built_arm_arm64': True,
