@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  TERMUX_PACKAGES_BUILD_SHA: 1fc540b0c296581c5793c109e3834589f85a0114
+  TERMUX_PACKAGES_BUILD_SHA: fd9b9c7ccb2ad385ed3a43619fe909fad4d92937
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
 
@@ -35,17 +35,24 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Preflight source and libLLVM18 patch identity
+      - name: Preflight source and Noble doxygen host closure identity
         working-directory: termux-packages
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TERMUX_PACKAGES_BUILD_SHA"
           grep -F 'libllvm18' packages/libxml2/build.sh
+          grep -F 'libfmt9' packages/libxml2/build.sh
+          grep -F 'libclang-cpp18' packages/libxml2/build.sh
+          if grep -Eq 'libfmt10|libspdlog1\.15' packages/libxml2/build.sh; then
+            echo 'stale non-Noble doxygen host dependency found' >&2
+            exit 1
+          fi
           mkdir -p build/reports
           {
             echo "app_sha=${{ github.sha }}"
             echo "termux_packages_sha=$(git rev-parse HEAD)"
+            echo "host_suite=noble"
             echo "claim_allowed=false"
             echo "physical_android=TOKEN_VAZIO"
           } > build/reports/bootstrap-localizer.identity
@@ -76,7 +83,7 @@ jobs:
           set -e
           printf 'architecture=arm\nexit_code=%s\n' "$rc" | tee build/reports/bootstrap-arm.status
           tail -n 200 build/reports/bootstrap-arm.log > build/reports/bootstrap-arm.tail.log || true
-          grep -Ein 'error:|fatal:|failed|failure|no such file|not found|traceback|permission denied|undefined reference|cmake error' \
+          grep -Ein 'error:|fatal:|failed|failure|no such file|not found|traceback|permission denied|undefined reference|cmake error|package.*not.*found' \
             build/reports/bootstrap-arm.log | tail -n 200 > build/reports/bootstrap-arm.signals.log || true
           exit "$rc"
 
@@ -95,7 +102,7 @@ jobs:
           set -e
           printf 'architecture=aarch64\nexit_code=%s\n' "$rc" | tee build/reports/bootstrap-aarch64.status
           tail -n 200 build/reports/bootstrap-aarch64.log > build/reports/bootstrap-aarch64.tail.log || true
-          grep -Ein 'error:|fatal:|failed|failure|no such file|not found|traceback|permission denied|undefined reference|cmake error' \
+          grep -Ein 'error:|fatal:|failed|failure|no such file|not found|traceback|permission denied|undefined reference|cmake error|package.*not.*found' \
             build/reports/bootstrap-aarch64.log | tail -n 200 > build/reports/bootstrap-aarch64.signals.log || true
           exit "$rc"
 
@@ -114,9 +121,11 @@ jobs:
               p=reports/name
               return hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else 'TOKEN_VAZIO'
           d={
-            'schema':'rafcodephi.bootstrap-failure-localizer/v2',
+            'schema':'rafcodephi.bootstrap-failure-localizer/v3',
             'app_sha':'${{ github.sha }}',
-            'termux_packages_sha':'1fc540b0c296581c5793c109e3834589f85a0114',
+            'termux_packages_sha':'fd9b9c7ccb2ad385ed3a43619fe909fad4d92937',
+            'host_suite':'noble',
+            'corrective_hypothesis':'stale_non_noble_doxygen_host_dependency_names',
             'package_identity_pre_materialized':True,
             'arm_outcome':os.getenv('ARM_OUTCOME','TOKEN_VAZIO'),
             'aarch64_outcome':os.getenv('AARCH64_OUTCOME','TOKEN_VAZIO'),
@@ -124,7 +133,7 @@ jobs:
             'aarch64_log_sha256':digest('bootstrap-aarch64.log'),
             'physical_android':'TOKEN_VAZIO',
             'claim_allowed':False,
-            'invariants':['probe_preconditions_match_parent_lane','diagnostic_PASS != usable_APK_PASS','ABI_localization != root_cause','TOKEN_VAZIO != PASS']
+            'invariants':['probe_preconditions_match_parent_lane','diagnostic_PASS != usable_APK_PASS','ABI_localization != root_cause','corrective_patch != closure_until_rerun','TOKEN_VAZIO != PASS']
           }
           (reports/'bootstrap-localizer-receipt.json').write_text(json.dumps(d,indent=2,sort_keys=True)+'\n')
           print(json.dumps(d,indent=2,sort_keys=True))
