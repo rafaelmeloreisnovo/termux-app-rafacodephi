@@ -18,11 +18,24 @@ A governança do conjunto inteiro é feita por `scripts/ci/workflow_control_plan
 |---|---|---|---|---|---|
 | `operator` | `.github/workflows/00-rafaelia-control-plane.yml` | Entrada humana única; inventário + roteamento dos pilares | conforme missão | não publica release por si só | inventário/step summary + artefatos dos especialistas chamados |
 | `official` | `.github/workflows/apk_matrix_build.yml` | Build oficial de release/debug com matriz completa e gates de contrato de release | `armeabi-v7a`, `arm64-v8a`, `universal` | `official` exige release assinado (`use_official_signing=true`), sem fallback implícito para artefato oficial | APKs signed/unsigned por ABI, relatórios de tamanho, checksums, manifest |
+| `artifact` | `.github/workflows/rafcodephi-usable-apk.yml` | Produção de artefatos instaláveis/evidência de build sem promover runtime físico | `armeabi-v7a`, `arm64-v8a` | pode produzir artefato interno assinado; nunca equivale a release/device proof | APKs + SHA-256 + build receipt; `physical_android=TOKEN_VAZIO` |
 | `internal` | `.github/workflows/arme-benchmark.yml` | Benchmark low-level ARM com validação de manifesto | `armeabi-v7a`, `arm64-v8a` | não aplicável (benchmark) | relatórios de benchmark/manifesto |
 | `debug` | `.github/workflows/run_tests.yml` | Testes unitários, smoke de bootstrap e inventário de código | host + validações Android | não aplicável (test lane) | relatórios de testes, inventário, logs de smoke |
 | `arm32` | `.github/workflows/_reusable-arm32-compat.yml` | Pilar único para build/inspeção ARM32 v7, usado por wrappers canônico e NDK29 | `armeabi-v7a` (valida também artefatos complementares da matriz debug) | verifica assinatura do debug; não promove release | APKs, badging, ELF, assinatura, bootstrap, SHA-256, receipt |
 | `bootstrap-contract` | `.github/workflows/beta-real-bootstrap-contract.yml` | Contrato estrutural do bootstrap real usado pela beta | `arm`, `aarch64` | não aplicável | logs/summary de contrato; prova física continua separada |
 | `evidence-contract` | `.github/workflows/apk-evidence-gate.yml` | Parser e contratos do gate de evidência APK | `armeabi-v7a`, `arm64-v8a` | não promove artefato | testes do parser/contratos |
+
+### Semântica de `artifact`
+
+`artifact` é uma trilha de **materialização**, não uma promoção de claim:
+
+`source/build PASS → artifact bytes + digest + receipt`
+
+não implica:
+
+`install PASS → device runtime PASS → release certification`.
+
+Assim, `artifact` pode produzir APK utilizável como candidato verificável sem transformar `PHYSICAL_ANDROID=TOKEN_VAZIO` em PASS.
 
 ## Workflows legados (deprecated)
 
@@ -38,7 +51,7 @@ Substituição estrutural: consolidar chamadas na matriz canônica (`apk_matrix_
 
 Todo workflow novo/ativo em `.github/workflows/*.yml` deve declarar metadados no cabeçalho YAML (comentários):
 
-- `ci_track: <debug|internal|official|ops|deprecated>`
+- `ci_track: <debug|internal|official|artifact|ops|deprecated>`
 - `ci_abis: <csv com ABIs ou n/a>`
 
 Exemplo:

@@ -1,0 +1,37 @@
+{
+  "schema": "rafcodephi.termux-packages-pin/v1",
+  "repository": "https://github.com/rafaelmeloreisnovo/termux-packages.git",
+  "semantic_role": "source-built-packages-bootstrap-and-apt",
+  "package_name": "com.termux.rafacodephi",
+  "prefix": "/data/data/com.termux.rafacodephi/files/usr",
+  "required_abis": [
+    "armeabi-v7a",
+    "arm64-v8a"
+  ],
+  "channels": {
+    "canonical": {
+      "commit": "837afec42ecf5f9ac1bd8b00e65d143bc23a380b",
+      "branch": "main",
+      "state": "MERGED_BASELINE",
+      "claim_allowed": false,
+      "physical_android": "TOKEN_VAZIO"
+    },
+    "candidate": {
+      "commit": "1fc540b0c296581c5793c109e3834589f85a0114",
+      "pull_request": 89,
+      "state": "CI_VALIDATION_IN_PROGRESS",
+      "promotion_target": "canonical",
+      "equivalent_duplicate_closed": 90,
+      "claim_allowed": false,
+      "physical_android": "TOKEN_VAZIO"
+    }
+  },
+  "invariants": {
+    "historical_refs_are_append_only": true,
+    "active_routes_must_resolve_through_this_contract_or_supply_an_exact_sha": true,
+    "candidate_is_not_canonical_until_merged_and_rebound": true,
+    "equivalent_candidates_must_converge_to_one_active_identity": true,
+    "bridge_is_not_final_success": true,
+    "device_runtime_requires_exact_apk_receipt": true
+  }
+}

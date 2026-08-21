@@ -1,5 +1,6 @@
 # ci_track: ops
 # ci_abis: arm32,arm64
+# trigger_generation: 7
 name: RafCodePhi Beta Build - libLLVM18 Unblock
 
 on:
@@ -7,6 +8,21 @@ on:
   push:
     paths:
       - '.github/workflows/beta-build-libllvm18-unblock.yml'
+      - 'data/contracts/termux-packages-rafcodephi-pin.v1.json'
+      - 'scripts/resolve_termux_packages_pin.py'
+      - 'scripts/validate_rafcodephi_packages_source.sh'
+      - 'scripts/rafcodephi_packages_bridge.sh'
+      - 'scripts/generate_usable_beta_receipt.py'
+      - 'tests/test_termux_packages_active_route_semantics.py'
+  pull_request:
+    paths:
+      - '.github/workflows/beta-build-libllvm18-unblock.yml'
+      - 'data/contracts/termux-packages-rafcodephi-pin.v1.json'
+      - 'scripts/resolve_termux_packages_pin.py'
+      - 'scripts/validate_rafcodephi_packages_source.sh'
+      - 'scripts/rafcodephi_packages_bridge.sh'
+      - 'scripts/generate_usable_beta_receipt.py'
+      - 'tests/test_termux_packages_active_route_semantics.py'
 
 permissions:
   contents: read
@@ -16,7 +32,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_FIX_SHA: cd4b2aa019f0f33502e7c79264facac2d810f1cb
+  TERMUX_PACKAGES_RAF_CHANNEL: candidate
+  TERMUX_PACKAGES_RAF_REQUIRE_PINNED: 'true'
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
 
@@ -31,6 +48,20 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
+      - name: Validate semantic custody and resolve candidate source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          python3 -m py_compile \
+            scripts/generate_usable_beta_receipt.py \
+            scripts/resolve_termux_packages_pin.py
+          python3 tests/test_termux_packages_active_route_semantics.py
+          python3 scripts/resolve_termux_packages_pin.py \
+            "$TERMUX_PACKAGES_RAF_CHANNEL" \
+            --github-env --json \
+            | tee build/reports/beta-packages-pin-resolution.json
+
       - name: Setup Java 21
         uses: actions/setup-java@v5
         with:
@@ -38,11 +69,11 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      - name: Checkout patched termux-packages
+      - name: Checkout patched termux-packages candidate
         uses: actions/checkout@v7
         with:
           repository: rafaelmeloreisnovo/termux-packages
-          ref: ${{ env.TERMUX_PACKAGES_FIX_SHA }}
+          ref: ${{ env.TERMUX_PACKAGES_SHA }}
           path: termux-packages
           persist-credentials: false
           fetch-depth: 1
@@ -52,7 +83,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$TERMUX_PACKAGES_FIX_SHA"
+          test "$(git rev-parse HEAD)" = "$TERMUX_PACKAGES_SHA"
           mkdir -p build/reports
           python3 scripts/apply-rafcodephi-build-properties.py \
             --properties scripts/properties.sh \
@@ -99,29 +130,42 @@ jobs:
           RAF_REAL_BOOTSTRAP_MANIFEST: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
         run: ./scripts/prepare_bootstrap_env.sh --github-env --skip-android-preflight
 
-      - name: Inspect embedded real-pkg profiles
+      - name: Validate embedded real-pkg profiles and ELF semantics
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p build/reports
-          python3 tools/raf_bootstrap_profile.py inspect --zip app/src/main/cpp/rewritten-bootstrap-arm.zip > build/reports/beta-embedded-arm.json
-          python3 tools/raf_bootstrap_profile.py inspect --zip app/src/main/cpp/rewritten-bootstrap-aarch64.zip > build/reports/beta-embedded-aarch64.json
+          python3 tools/raf_bootstrap_profile.py validate \
+            --zip app/src/main/cpp/rewritten-bootstrap-arm.zip \
+            --expected-profile real-pkg \
+            --expected-arch arm \
+            --package-name com.termux.rafacodephi \
+            > build/reports/beta-embedded-arm.json
+          python3 tools/raf_bootstrap_profile.py validate \
+            --zip app/src/main/cpp/rewritten-bootstrap-aarch64.zip \
+            --expected-profile real-pkg \
+            --expected-arch aarch64 \
+            --package-name com.termux.rafacodephi \
+            > build/reports/beta-embedded-aarch64.json
           python3 - <<'PY'
           import json
           from pathlib import Path
           for arch in ('arm', 'aarch64'):
               doc = json.loads(Path(f'build/reports/beta-embedded-{arch}.json').read_text())
-              profile = doc.get('profile_manifest') or {}
-              if profile.get('profile') != 'real-pkg' or profile.get('package_layer') != 'real-pkg':
-                  raise SystemExit(f'{arch}: expected real-pkg profile, got {profile}')
+              if doc.get('structural_state') != 'PASS':
+                  raise SystemExit(f'{arch}: structural_state={doc.get("structural_state")}')
+              if doc.get('profile') != 'real-pkg' or doc.get('package_name') != 'com.termux.rafacodephi':
+                  raise SystemExit(f'{arch}: semantic identity mismatch: {doc}')
+              if doc.get('device_validation') != 'TOKEN_VAZIO' or doc.get('claim_allowed') is not False:
+                  raise SystemExit(f'{arch}: claim boundary widened unexpectedly: {doc}')
               classifications = doc.get('classifications') or {}
               for name in ('bin/apt', 'bin/apt-get'):
                   if classifications.get(name) != 'ELF':
                       raise SystemExit(f'{arch}: {name} is not ELF: {classifications.get(name)}')
-          print('BETA_REAL_BOOTSTRAP_PROFILE_GATE=PASS')
+          print('BETA_REAL_BOOTSTRAP_SEMANTIC_GATE=PASS')
           PY
 
-      - name: Build signed + unsigned APK matrix
+      - name: Build signed + unsigned APK matrix from pinned source contract
         env:
           RAF_BOOTSTRAP_SOURCE: source-built-real
           RAF_REAL_BOOTSTRAP_ZIP_ARM: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
@@ -131,34 +175,22 @@ jobs:
           APK_MATRIX_UNIT_TESTS_REQUIRED: 'true'
         run: ./scripts/build_apk_matrix.sh
 
-      - name: Generate usable-artifact receipt
+      - name: Generate fail-closed semantic custody receipt
         if: always()
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p build/reports
-          python3 - <<'PY'
-          import hashlib, json
-          from pathlib import Path
-          root = Path('dist/apk-matrix')
-          apks = []
-          if root.exists():
-              for p in sorted(root.rglob('*.apk')):
-                  h = hashlib.sha256(p.read_bytes()).hexdigest()
-                  apks.append({'path': str(p), 'bytes': p.stat().st_size, 'sha256': h})
-          doc = {
-              'schema': 'rafcodephi.usable-beta-build/v1',
-              'termux_packages_fix_sha': 'cd4b2aa019f0f33502e7c79264facac2d810f1cb',
-              'apk_count': len(apks),
-              'apks': apks,
-              'claim_allowed_device_runtime': False,
-              'device_runtime_proof': 'TOKEN_VAZIO',
-          }
-          Path('build/reports/usable-beta-receipt.json').write_text(json.dumps(doc, indent=2, sort_keys=True) + '\n')
-          print(json.dumps(doc, indent=2, sort_keys=True))
-          PY
+          python3 scripts/generate_usable_beta_receipt.py \
+            --apk-root dist/apk-matrix \
+            --bootstrap-manifest termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt \
+            --arm-report build/reports/beta-embedded-arm.json \
+            --arm64-report build/reports/beta-embedded-aarch64.json \
+            --source-contract dist/source-contract/TERMUX_PACKAGES_RAFCODEPHI_SOURCE.env \
+            --packages-sha "$TERMUX_PACKAGES_SHA" \
+            --output build/reports/usable-beta-receipt.json
 
-      - name: Upload usable beta artifacts
+      - name: Upload usable beta artifacts and custody evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -167,6 +199,7 @@ jobs:
           retention-days: 14
           path: |
             dist/apk-matrix/
+            dist/source-contract/
             build/reports/
             termux-packages/build/reports/
             termux-packages/artifacts/rafcodephi-bootstrap/

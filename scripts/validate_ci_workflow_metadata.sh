@@ -48,7 +48,7 @@ for wf in "${workflows[@]}"; do
 
   if [[ -n "$track" ]]; then
     case "$track" in
-      debug|internal|official|ops|deprecated) ;;
+      debug|internal|official|artifact|ops|deprecated) ;;
       *)
         echo "[ERROR] invalid ci_track '$track' in $wf"
         status=1
