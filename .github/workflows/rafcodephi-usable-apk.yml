@@ -1,11 +1,14 @@
 # ci_track: artifact
 # ci_abis: armeabi-v7a,arm64-v8a
-# trigger_generation: 2
+# trigger_generation: 3
 name: RAFCODEPHI Usable APK
 
 on:
   workflow_dispatch:
   push:
+    paths:
+      - '.github/workflows/rafcodephi-usable-apk.yml'
+  pull_request:
     paths:
       - '.github/workflows/rafcodephi-usable-apk.yml'
 
