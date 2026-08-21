@@ -1,6 +1,6 @@
 # ci_track: artifact
 # ci_abis: armeabi-v7a,arm64-v8a
-# trigger_generation: 4
+# trigger_generation: 5
 name: RAFCODEPHI Usable APK
 
 on:
