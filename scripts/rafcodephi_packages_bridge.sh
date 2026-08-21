@@ -3,7 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGES_REPO_URL="${RAFCODEPHI_PACKAGES_REPO_URL:-https://github.com/rafaelmeloreisnovo/termux-packages.git}"
-PACKAGES_REF="${RAFCODEPHI_PACKAGES_REF:-7a26629938452c6d6fd80cf3fccce8c2056aabac}"
+PACKAGES_SELECTOR="${RAFCODEPHI_PACKAGES_REF:-${RAFCODEPHI_PACKAGES_CHANNEL:-canonical}}"
+PACKAGES_REF="$(python3 "${ROOT_DIR}/scripts/resolve_termux_packages_pin.py" "$PACKAGES_SELECTOR")"
 PACKAGES_DIR="${RAFCODEPHI_PACKAGES_DIR:-${ROOT_DIR}/out/termux-packages}"
 OUT_DIR="${ROOT_DIR}/out/rafcodephi-packages-bridge"
 REQUIRED_PACKAGES=(apt bash busybox proot dpkg ca-certificates coreutils termux-tools termux-api)
@@ -21,7 +22,7 @@ validate_source_identity() {
       ;;
   esac
   [[ "$PACKAGES_REF" =~ ^[0-9a-f]{40}$ ]] \
-    || fail "RAFCODEPHI_PACKAGES_REF must be a pinned 40-char commit, got: ${PACKAGES_REF}"
+    || fail "resolved packages ref must be a pinned 40-char commit, selector=${PACKAGES_SELECTOR} resolved=${PACKAGES_REF}"
 }
 
 checkout_pinned_ref() {
@@ -75,7 +76,9 @@ validate_contract() {
   printf '%s\n' "${REQUIRED_PACKAGES[@]}" > "${OUT_DIR}/required-packages.txt"
   printf '%s\n' "${REQUIRED_ARCHES[@]}" > "${OUT_DIR}/required-arches.txt"
   git -C "$PACKAGES_DIR" rev-parse HEAD > "${OUT_DIR}/packages-repo-head.txt"
+  printf '%s\n' "$PACKAGES_SELECTOR" > "${OUT_DIR}/packages-repo-selector.txt"
   printf '%s\n' "$PACKAGES_REF" > "${OUT_DIR}/packages-repo-required-ref.txt"
+  info "selector=${PACKAGES_SELECTOR}"
   info "contract=PASS"
 }
 
@@ -86,6 +89,7 @@ packages: ${REQUIRED_PACKAGES[*]}
 free-space: false
 workflow: Packages
 repository: ${PACKAGES_REPO_URL}
+selector: ${PACKAGES_SELECTOR}
 ref: ${PACKAGES_REF}
 EOF
   info "dispatch plan: ${OUT_DIR}/workflow-dispatch-packages.txt"
