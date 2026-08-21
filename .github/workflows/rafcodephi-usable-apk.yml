@@ -65,6 +65,7 @@ jobs:
           grep -F 'libllvm18' packages/libxml2/build.sh
 
       - name: Source-build real ARM32 and ARM64 bootstrap
+        id: bootstrap_build
         working-directory: termux-packages
         shell: bash
         run: |
@@ -77,6 +78,7 @@ jobs:
             2>&1 | tee build/reports/rafcodephi-usable-bootstrap.log
 
       - name: Gate bootstrap pair
+        id: bootstrap_gate
         working-directory: termux-packages
         shell: bash
         run: |
@@ -96,6 +98,7 @@ jobs:
           sha256sum "$manifest" "$arm" "$arm64" | tee build/reports/rafcodephi-usable-bootstrap.sha256
 
       - name: Build signed and unsigned APK matrix
+        id: apk_matrix
         env:
           RAF_BOOTSTRAP_SOURCE: source-built-real
           RAF_REAL_BOOTSTRAP_ZIP_ARM: ${{ github.workspace }}/termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
@@ -106,6 +109,7 @@ jobs:
         run: ./scripts/build_apk_matrix.sh
 
       - name: Gate usable signed APKs
+        id: usable_apk_gate
         shell: bash
         run: |
           set -euo pipefail
@@ -120,22 +124,44 @@ jobs:
       - name: Write build receipt
         if: always()
         shell: bash
+        env:
+          JOB_STATUS: ${{ job.status }}
+          BOOTSTRAP_BUILD_OUTCOME: ${{ steps.bootstrap_build.outcome }}
+          BOOTSTRAP_GATE_OUTCOME: ${{ steps.bootstrap_gate.outcome }}
+          APK_MATRIX_OUTCOME: ${{ steps.apk_matrix.outcome }}
+          USABLE_APK_GATE_OUTCOME: ${{ steps.usable_apk_gate.outcome }}
         run: |
           mkdir -p build/reports
           python3 - <<'PY'
-          import hashlib, json
+          import hashlib, json, os
           from pathlib import Path
           apks=[]
           for p in sorted(Path('dist/apk-matrix').rglob('*.apk')) if Path('dist/apk-matrix').exists() else []:
               apks.append({'path':str(p),'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
+          outcomes={
+              'bootstrap_build':os.environ.get('BOOTSTRAP_BUILD_OUTCOME','TOKEN_VAZIO'),
+              'bootstrap_gate':os.environ.get('BOOTSTRAP_GATE_OUTCOME','TOKEN_VAZIO'),
+              'apk_matrix':os.environ.get('APK_MATRIX_OUTCOME','TOKEN_VAZIO'),
+              'usable_apk_gate':os.environ.get('USABLE_APK_GATE_OUTCOME','TOKEN_VAZIO'),
+          }
+          usable_gate_passed=outcomes['usable_apk_gate']=='success'
           doc={
-              'schema':'rafcodephi.usable-apk-receipt/v1',
+              'schema':'rafcodephi.usable-apk-receipt/v2',
+              'receipt_kind':'SUCCESS_ARTIFACT_RECEIPT' if usable_gate_passed else 'FAILURE_DIAGNOSTIC_RECEIPT',
+              'job_status':os.environ.get('JOB_STATUS','TOKEN_VAZIO'),
+              'step_outcomes':outcomes,
+              'usable_apk_gate_passed':usable_gate_passed,
               'app_sha':'${{ github.sha }}',
               'termux_packages_sha':'1fc540b0c296581c5793c109e3834589f85a0114',
               'apk_count':len(apks),
               'apks':apks,
               'physical_android':'TOKEN_VAZIO',
               'claim_allowed_device_runtime':False,
+              'invariants':[
+                  'receipt_uploaded != usable_apk_gate_passed',
+                  'diagnostic_artifact != successful_artifact',
+                  'physical_android_TOKEN_VAZIO != runtime_PASS',
+              ],
           }
           Path('build/reports/rafcodephi-usable-apk-receipt.json').write_text(json.dumps(doc,indent=2,sort_keys=True)+'\n')
           print(json.dumps(doc,indent=2,sort_keys=True))
