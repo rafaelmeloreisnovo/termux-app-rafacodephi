@@ -10,7 +10,7 @@ on:
         description: Exact termux-packages commit/ref used to source-build the real bootstrap pair
         required: true
         type: string
-        default: 2538114ca05a7f9c0849d9a1e6bf764702f038a0
+        default: cd4b2aa019f0f33502e7c79264facac2d810f1cb
       build_apk_matrix:
         description: Build signed + unsigned APK matrix (arm32 + arm64)
         required: false
@@ -50,7 +50,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_PIN: 2538114ca05a7f9c0849d9a1e6bf764702f038a0
+  TERMUX_PACKAGES_PIN: cd4b2aa019f0f33502e7c79264facac2d810f1cb
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
 
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:
-      SELECTED_TERMUX_PACKAGES_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || '2538114ca05a7f9c0849d9a1e6bf764702f038a0' }}
+      SELECTED_TERMUX_PACKAGES_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || 'cd4b2aa019f0f33502e7c79264facac2d810f1cb' }}
     steps:
       - name: Checkout app
         uses: actions/checkout@v7
