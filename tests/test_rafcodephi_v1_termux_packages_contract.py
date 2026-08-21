@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
+import json
 from pathlib import Path
 
 WORKFLOW = Path('.github/workflows/rafcodephi-v1-termux-packages.yml')
-PIN = '7a26629938452c6d6fd80cf3fccce8c2056aabac'
+PIN_CONTRACT = Path('data/contracts/termux-packages-rafcodephi-pin.v1.json')
+RESOLVER = Path('scripts/resolve_termux_packages_pin.py')
+DEPRECATED_MAGIC_PIN = '7a26629938452c6d6fd80cf3fccce8c2056aabac'
 
 
 def require(text: str, token: str) -> None:
@@ -12,12 +15,26 @@ def require(text: str, token: str) -> None:
 
 def main() -> int:
     text = WORKFLOW.read_text(encoding='utf-8')
+    contract = json.loads(PIN_CONTRACT.read_text(encoding='utf-8'))
+
+    assert contract['schema'] == 'rafcodephi.termux-packages-pin/v1'
+    assert contract['repository'].endswith('/rafaelmeloreisnovo/termux-packages.git')
+    assert contract['package_name'] == 'com.termux.rafacodephi'
+    assert contract['prefix'] == '/data/data/com.termux.rafacodephi/files/usr'
+    assert contract['required_abis'] == ['armeabi-v7a', 'arm64-v8a']
+    assert contract['channels']['canonical']['state'] == 'MERGED_BASELINE'
+    assert contract['channels']['candidate']['claim_allowed'] is False
+    assert contract['channels']['candidate']['physical_android'] == 'TOKEN_VAZIO'
+    assert RESOLVER.is_file()
 
     for token in (
         'repository: rafaelmeloreisnovo/termux-packages',
-        f'TERMUX_PACKAGES_PIN: {PIN}',
-        f'default: {PIN}',
-        f"|| '{PIN}'",
+        'default: canonical',
+        "|| 'canonical'",
+        'scripts/resolve_termux_packages_pin.py',
+        '--github-env --json',
+        'ref: ${{ env.TERMUX_PACKAGES_SHA }}',
+        'test "$ACTUAL_SHA" = "$TERMUX_PACKAGES_SHA"',
         'scripts/apply-rafcodephi-build-properties.py',
         'scripts/validate-rafcodephi-build-properties.sh',
         'scripts/build-rafcodephi-real-bootstrap.sh',
@@ -38,6 +55,7 @@ def main() -> int:
         require(text, token)
 
     forbidden = (
+        DEPRECATED_MAGIC_PIN,
         '7b59383c25f7557ba8a29a24f715c5fb5b26cc53',
         'physical_android: PASS',
         "'physical_android': 'PASS'",
@@ -47,9 +65,9 @@ def main() -> int:
     )
     for token in forbidden:
         if token in text:
-            raise AssertionError(f'forbidden premature V1 promotion: {token}')
+            raise AssertionError(f'forbidden premature/stale V1 route: {token}')
 
-    print('PASS: RAFCODEPHI V1 binds pinned termux-packages -> source-built ARM/ARM64 bootstrap -> APK; device remains TOKEN_VAZIO')
+    print('PASS: V1 resolves semantic pin -> exact termux-packages -> source-built ARM/ARM64 bootstrap -> APK; device remains TOKEN_VAZIO')
     return 0
 
 
