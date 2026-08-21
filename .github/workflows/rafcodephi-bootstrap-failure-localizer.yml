@@ -1,0 +1,155 @@
+# ci_track: diagnostic
+# ci_abis: armeabi-v7a,arm64-v8a
+name: RAFCODEPHI Bootstrap Failure Localizer
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/rafcodephi-bootstrap-failure-localizer.yml'
+
+permissions:
+  contents: read
+
+env:
+  TERMUX_PACKAGES_BUILD_SHA: fd9b9c7ccb2ad385ed3a43619fe909fad4d92937
+  CLAIM_ALLOWED: 'false'
+  PHYSICAL_ANDROID: 'TOKEN_VAZIO'
+
+jobs:
+  localize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Checkout exact termux-packages source
+        uses: actions/checkout@v7
+        with:
+          repository: rafaelmeloreisnovo/termux-packages
+          ref: ${{ env.TERMUX_PACKAGES_BUILD_SHA }}
+          path: termux-packages
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Preflight source and Noble doxygen host closure identity
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TERMUX_PACKAGES_BUILD_SHA"
+          grep -F 'libllvm18' packages/libxml2/build.sh
+          grep -F 'libfmt9' packages/libxml2/build.sh
+          grep -F 'libclang-cpp18' packages/libxml2/build.sh
+          if grep -Eq 'libfmt10|libspdlog1\.15' packages/libxml2/build.sh; then
+            echo 'stale non-Noble doxygen host dependency found' >&2
+            exit 1
+          fi
+          mkdir -p build/reports
+          {
+            echo "app_sha=${{ github.sha }}"
+            echo "termux_packages_sha=$(git rev-parse HEAD)"
+            echo "host_suite=noble"
+            echo "claim_allowed=false"
+            echo "physical_android=TOKEN_VAZIO"
+          } > build/reports/bootstrap-localizer.identity
+
+      - name: Bind RAFCODEPHI package identity exactly as usable-APK lane
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/apply-rafcodephi-build-properties.py \
+            --properties scripts/properties.sh \
+            --receipt build/rafcodephi-build-properties.json
+          bash scripts/validate-rafcodephi-build-properties.sh
+          grep -Fx 'TERMUX_APP__PACKAGE_NAME="com.termux.rafacodephi"' scripts/properties.sh
+
+      - name: Build ARM32 only and preserve first failure boundary
+        id: arm
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p build/reports
+          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-real-bootstrap.sh
+          set +e
+          ./scripts/run-docker.sh ./scripts/build-rafcodephi-real-bootstrap.sh --architectures arm \
+            2>&1 | tee build/reports/bootstrap-arm.log
+          rc=${PIPESTATUS[0]}
+          set -e
+          printf 'architecture=arm\nexit_code=%s\n' "$rc" | tee build/reports/bootstrap-arm.status
+          tail -n 200 build/reports/bootstrap-arm.log > build/reports/bootstrap-arm.tail.log || true
+          grep -Ein 'error:|fatal:|failed|failure|no such file|not found|traceback|permission denied|undefined reference|cmake error|package.*not.*found' \
+            build/reports/bootstrap-arm.log | tail -n 200 > build/reports/bootstrap-arm.signals.log || true
+          exit "$rc"
+
+      - name: Build AArch64 only if ARM32 closed
+        if: steps.arm.outcome == 'success'
+        id: aarch64
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p build/reports
+          set +e
+          ./scripts/run-docker.sh ./scripts/build-rafcodephi-real-bootstrap.sh --architectures aarch64 \
+            2>&1 | tee build/reports/bootstrap-aarch64.log
+          rc=${PIPESTATUS[0]}
+          set -e
+          printf 'architecture=aarch64\nexit_code=%s\n' "$rc" | tee build/reports/bootstrap-aarch64.status
+          tail -n 200 build/reports/bootstrap-aarch64.log > build/reports/bootstrap-aarch64.tail.log || true
+          grep -Ein 'error:|fatal:|failed|failure|no such file|not found|traceback|permission denied|undefined reference|cmake error|package.*not.*found' \
+            build/reports/bootstrap-aarch64.log | tail -n 200 > build/reports/bootstrap-aarch64.signals.log || true
+          exit "$rc"
+
+      - name: Write fail-closed localization receipt
+        if: always()
+        working-directory: termux-packages
+        env:
+          ARM_OUTCOME: ${{ steps.arm.outcome }}
+          AARCH64_OUTCOME: ${{ steps.aarch64.outcome }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          reports=Path('build/reports')
+          def digest(name):
+              p=reports/name
+              return hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else 'TOKEN_VAZIO'
+          d={
+            'schema':'rafcodephi.bootstrap-failure-localizer/v3',
+            'app_sha':'${{ github.sha }}',
+            'termux_packages_sha':'fd9b9c7ccb2ad385ed3a43619fe909fad4d92937',
+            'host_suite':'noble',
+            'corrective_hypothesis':'stale_non_noble_doxygen_host_dependency_names',
+            'package_identity_pre_materialized':True,
+            'arm_outcome':os.getenv('ARM_OUTCOME','TOKEN_VAZIO'),
+            'aarch64_outcome':os.getenv('AARCH64_OUTCOME','TOKEN_VAZIO'),
+            'arm_log_sha256':digest('bootstrap-arm.log'),
+            'aarch64_log_sha256':digest('bootstrap-aarch64.log'),
+            'physical_android':'TOKEN_VAZIO',
+            'claim_allowed':False,
+            'invariants':['probe_preconditions_match_parent_lane','diagnostic_PASS != usable_APK_PASS','ABI_localization != root_cause','corrective_patch != closure_until_rerun','TOKEN_VAZIO != PASS']
+          }
+          (reports/'bootstrap-localizer-receipt.json').write_text(json.dumps(d,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(d,indent=2,sort_keys=True))
+          PY
+
+      - name: Upload localization evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rafcodephi-bootstrap-localizer-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            termux-packages/build/reports/bootstrap-localizer.identity
+            termux-packages/build/rafcodephi-build-properties.json
+            termux-packages/build/reports/bootstrap-*.status
+            termux-packages/build/reports/bootstrap-*.tail.log
+            termux-packages/build/reports/bootstrap-*.signals.log
+            termux-packages/build/reports/bootstrap-localizer-receipt.json
