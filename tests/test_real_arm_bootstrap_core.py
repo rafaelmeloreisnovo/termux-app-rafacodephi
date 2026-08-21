@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import subprocess
 import sys
 import zipfile
@@ -6,9 +7,11 @@ ROOT = Path(__file__).resolve().parents[1]
 BUILDER = ROOT / 'scripts/build_real_arm_bootstrap_core.py'
 VALIDATOR = ROOT / 'scripts/validate_real_arm_bootstrap_core.py'
 BRIDGE = ROOT / 'scripts/rafcodephi_packages_bridge.sh'
+PIN = ROOT / 'data/contracts/termux-packages-rafcodephi-pin.v1.json'
 BOOTSTRAP_BUILD = ROOT / 'scripts/build_rafaelia_bootstraps.sh'
 RUNBOOK = ROOT / 'docs/ENGINEERING_RUNBOOK_RAFCODEPHI.md'
 TRUTH_TABLE = ROOT / 'docs/RUNTIME_TRUTH_TABLE.md'
+DEPRECATED_MAGIC_PIN = '7a26629938452c6d6fd80cf3fccce8c2056aabac'
 
 
 def test_real_arm_core_builder_declares_required_payload_and_arches():
@@ -148,10 +151,16 @@ def test_validator_rejects_binary_zip_entry_with_legacy_prefix(tmp_path):
     assert 'legacy_prefix=/data/data/com.termux/files/usr' in result.stderr
 
 
-def test_bridge_targets_the_pinned_arm_core_package_set_including_termux_api():
+def test_bridge_targets_semantically_pinned_arm_core_package_set_including_termux_api():
     text = BRIDGE.read_text(encoding='utf-8')
+    contract = json.loads(PIN.read_text(encoding='utf-8'))
     assert 'rafaelmeloreisnovo/termux-packages.git' in text
-    assert 'PACKAGES_REF="${RAFCODEPHI_PACKAGES_REF:-7a26629938452c6d6fd80cf3fccce8c2056aabac}"' in text
+    assert 'resolve_termux_packages_pin.py' in text
+    assert 'RAFCODEPHI_PACKAGES_CHANNEL:-canonical' in text
+    assert DEPRECATED_MAGIC_PIN not in text
+    assert contract['schema'] == 'rafcodephi.termux-packages-pin/v1'
+    assert contract['channels']['canonical']['state'] == 'MERGED_BASELINE'
+    assert contract['channels']['candidate']['claim_allowed'] is False
     assert 'REQUIRED_PACKAGES=(apt bash busybox proot dpkg ca-certificates coreutils termux-tools termux-api)' in text
     assert 'REQUIRED_ARCHES=(aarch64 arm)' in text
 
