@@ -71,11 +71,13 @@ def main() -> int:
     assert "TERMUX_PACKAGES_RAF_REF: canonical" in apk_matrix
     assert "default: canonical" in v1 and "resolve_termux_packages_pin.py" in v1
     assert "default: canonical" in control and "resolve_termux_packages_pin.py" in control
-    assert candidate["commit"] in beta
+    assert "TERMUX_PACKAGES_RAF_CHANNEL: candidate" in beta
+    assert "resolve_termux_packages_pin.py" in beta
+    assert candidate["commit"] not in beta
     assert "TERMUX_PACKAGES_RAF_REQUIRE_PINNED: 'true'" in beta
 
     print(
-        "PASS: active Termux routes resolve semantic pin channels; historical SHA is excluded from executable surfaces; candidate remains fail-closed"
+        "PASS: active Termux routes resolve semantic pin channels; historical/candidate magic SHAs are excluded from executable surfaces; candidate remains fail-closed"
     )
     return 0
 
