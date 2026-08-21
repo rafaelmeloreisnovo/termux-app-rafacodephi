@@ -50,6 +50,17 @@ jobs:
             echo "physical_android=TOKEN_VAZIO"
           } > build/reports/bootstrap-localizer.identity
 
+      - name: Bind RAFCODEPHI package identity exactly as usable-APK lane
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/apply-rafcodephi-build-properties.py \
+            --properties scripts/properties.sh \
+            --receipt build/rafcodephi-build-properties.json
+          bash scripts/validate-rafcodephi-build-properties.sh
+          grep -Fx 'TERMUX_APP__PACKAGE_NAME="com.termux.rafacodephi"' scripts/properties.sh
+
       - name: Build ARM32 only and preserve first failure boundary
         id: arm
         working-directory: termux-packages
@@ -64,9 +75,9 @@ jobs:
           rc=${PIPESTATUS[0]}
           set -e
           printf 'architecture=arm\nexit_code=%s\n' "$rc" | tee build/reports/bootstrap-arm.status
-          tail -n 160 build/reports/bootstrap-arm.log > build/reports/bootstrap-arm.tail.log || true
-          grep -Ein 'error:|fatal:|failed|failure|no such file|not found|traceback|undefined reference|cmake error' \
-            build/reports/bootstrap-arm.log | tail -n 160 > build/reports/bootstrap-arm.signals.log || true
+          tail -n 200 build/reports/bootstrap-arm.log > build/reports/bootstrap-arm.tail.log || true
+          grep -Ein 'error:|fatal:|failed|failure|no such file|not found|traceback|permission denied|undefined reference|cmake error' \
+            build/reports/bootstrap-arm.log | tail -n 200 > build/reports/bootstrap-arm.signals.log || true
           exit "$rc"
 
       - name: Build AArch64 only if ARM32 closed
@@ -83,9 +94,9 @@ jobs:
           rc=${PIPESTATUS[0]}
           set -e
           printf 'architecture=aarch64\nexit_code=%s\n' "$rc" | tee build/reports/bootstrap-aarch64.status
-          tail -n 160 build/reports/bootstrap-aarch64.log > build/reports/bootstrap-aarch64.tail.log || true
-          grep -Ein 'error:|fatal:|failed|failure|no such file|not found|traceback|undefined reference|cmake error' \
-            build/reports/bootstrap-aarch64.log | tail -n 160 > build/reports/bootstrap-aarch64.signals.log || true
+          tail -n 200 build/reports/bootstrap-aarch64.log > build/reports/bootstrap-aarch64.tail.log || true
+          grep -Ein 'error:|fatal:|failed|failure|no such file|not found|traceback|permission denied|undefined reference|cmake error' \
+            build/reports/bootstrap-aarch64.log | tail -n 200 > build/reports/bootstrap-aarch64.signals.log || true
           exit "$rc"
 
       - name: Write fail-closed localization receipt
@@ -103,16 +114,17 @@ jobs:
               p=reports/name
               return hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else 'TOKEN_VAZIO'
           d={
-            'schema':'rafcodephi.bootstrap-failure-localizer/v1',
+            'schema':'rafcodephi.bootstrap-failure-localizer/v2',
             'app_sha':'${{ github.sha }}',
             'termux_packages_sha':'1fc540b0c296581c5793c109e3834589f85a0114',
+            'package_identity_pre_materialized':True,
             'arm_outcome':os.getenv('ARM_OUTCOME','TOKEN_VAZIO'),
             'aarch64_outcome':os.getenv('AARCH64_OUTCOME','TOKEN_VAZIO'),
             'arm_log_sha256':digest('bootstrap-arm.log'),
             'aarch64_log_sha256':digest('bootstrap-aarch64.log'),
             'physical_android':'TOKEN_VAZIO',
             'claim_allowed':False,
-            'invariants':['diagnostic_PASS != usable_APK_PASS','ABI_localization != root_cause','TOKEN_VAZIO != PASS']
+            'invariants':['probe_preconditions_match_parent_lane','diagnostic_PASS != usable_APK_PASS','ABI_localization != root_cause','TOKEN_VAZIO != PASS']
           }
           (reports/'bootstrap-localizer-receipt.json').write_text(json.dumps(d,indent=2,sort_keys=True)+'\n')
           print(json.dumps(d,indent=2,sort_keys=True))
@@ -127,6 +139,7 @@ jobs:
           if-no-files-found: error
           path: |
             termux-packages/build/reports/bootstrap-localizer.identity
+            termux-packages/build/rafcodephi-build-properties.json
             termux-packages/build/reports/bootstrap-*.status
             termux-packages/build/reports/bootstrap-*.tail.log
             termux-packages/build/reports/bootstrap-*.signals.log
