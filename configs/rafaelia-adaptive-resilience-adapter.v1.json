@@ -1,0 +1,19 @@
+{
+  "schema":"rafaelia.adaptive-resilience-adapter/v1",
+  "repo":"rafaelmeloreisnovo/termux-app-rafacodephi",
+  "authority_ref":"master",
+  "authority_sha":"8d527e8870ab0cfe9fc719597a654b278e5bfa36",
+  "federated_authority":"rafaelmeloreisnovo/Mapa",
+  "central_contract_pr":334,
+  "claim_allowed":false,
+  "state_machine":["OBSERVE","SCORE","HOLD_OR_ROUTE","SANDBOX_TEST","MITIGATE","VERIFY","CANARY","HOTSWAP_OR_FAILOVER","MONITOR","CLOSE_OR_ROLLBACK"],
+  "fail_closed":{"p0":"HOLD","unknown":"TOKEN_VAZIO","stale_watchdog":"HOLD","prediction_promotes_claim":false},
+  "local_scope":{"role":"ANDROID_RUNTIME_PROVIDER","allowed_autonomous_actions":["observe","record","owned_fixture_test","isolate_non_authoritative_route"],"requires_authority":["production_hotfix","package_or_permission_change","runtime_hotswap","release"]},
+  "gaps":[
+    {"gap_id":"TERMUX_RUN_COMMAND_AND_IPC_NEGATIVE_PATHS","urgency":"P0","state":"PARTIAL","next_probe":"owned fixtures for permission denial, malformed request, replay and result integrity","closure_gate":"all bounded negative-path fixtures fail safe"},
+    {"gap_id":"TERMUX_EXECUTION_TIME_IDENTITY","urgency":"P0","state":"TOKEN_VAZIO","next_probe":"bind request digest to exact APK/package/executable digest at execution time","closure_gate":"execution-time identity receipt"},
+    {"gap_id":"TERMUX_PHYSICAL_RUNTIME_RECEIPT","urgency":"P0","state":"TOKEN_VAZIO","next_probe":"APK hash→install→launch→PID/activity→bounded device receipt","closure_gate":"physical runtime receipt"},
+    {"gap_id":"TERMUX_RUNTIME_PRIVACY_MINIMIZATION","urgency":"P0","state":"TOKEN_VAZIO","next_probe":"bounded output/log minimization fixture","closure_gate":"runtime privacy receipt"}
+  ],
+  "invariants":["prediction != evidence","sandbox_pass != production_pass","TOKEN_VAZIO != PASS","hotfix_candidate != hotfix_approved","rollback_success != prevention_control"]
+}
