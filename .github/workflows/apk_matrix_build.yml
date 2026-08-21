@@ -95,7 +95,7 @@ jobs:
       - name: Validate canonical termux-packages source contract
         env:
           TERMUX_PACKAGES_RAF_REPO: https://github.com/rafaelmeloreisnovo/termux-packages.git
-          TERMUX_PACKAGES_RAF_REF: 7a26629938452c6d6fd80cf3fccce8c2056aabac
+          TERMUX_PACKAGES_RAF_REF: canonical
           TERMUX_PACKAGES_RAF_REQUIRE_PINNED: "true"
         run: ./scripts/validate_rafcodephi_packages_source.sh
 
