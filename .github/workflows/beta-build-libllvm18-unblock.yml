@@ -1,5 +1,6 @@
 # ci_track: ops
 # ci_abis: arm32,arm64
+# trigger_generation: 2
 name: RafCodePhi Beta Build - libLLVM18 Unblock
 
 on:
