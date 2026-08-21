@@ -1,11 +1,14 @@
 # ci_track: ops
 # ci_abis: arm32,arm64
-# trigger_generation: 2
+# trigger_generation: 3
 name: RafCodePhi Beta Build - libLLVM18 Unblock
 
 on:
   workflow_dispatch:
   push:
+    paths:
+      - '.github/workflows/beta-build-libllvm18-unblock.yml'
+  pull_request:
     paths:
       - '.github/workflows/beta-build-libllvm18-unblock.yml'
 
