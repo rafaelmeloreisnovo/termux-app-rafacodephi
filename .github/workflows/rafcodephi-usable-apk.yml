@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_BUILD_SHA: 1fc540b0c296581c5793c109e3834589f85a0114
+  TERMUX_PACKAGES_BUILD_SHA: c4d3b50299ac693bc3818628d5562591bfb2baa0
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
 
@@ -152,7 +152,7 @@ jobs:
               'step_outcomes':outcomes,
               'usable_apk_gate_passed':usable_gate_passed,
               'app_sha':'${{ github.sha }}',
-              'termux_packages_sha':'1fc540b0c296581c5793c109e3834589f85a0114',
+              'termux_packages_sha':'c4d3b50299ac693bc3818628d5562591bfb2baa0',
               'apk_count':len(apks),
               'apks':apks,
               'physical_android':'TOKEN_VAZIO',
