@@ -1,6 +1,6 @@
 # ci_track: artifact
 # ci_abis: armeabi-v7a,arm64-v8a
-# trigger_generation: 5
+# trigger_generation: 6
 name: RAFCODEPHI Usable APK
 
 on:
@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_BUILD_SHA: c4d3b50299ac693bc3818628d5562591bfb2baa0
+  TERMUX_PACKAGES_BUILD_SHA: c26dfb8debbe4ae36192a60e996526b1c2247e40
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
 
@@ -133,8 +133,20 @@ jobs:
         run: |
           mkdir -p build/reports
           python3 - <<'PY'
-          import hashlib, json, os
+          import hashlib, json, os, subprocess
+          from datetime import datetime, timezone
           from pathlib import Path
+
+          def evidence(path):
+              p=Path(path)
+              if not p.is_file():
+                  return None
+              return {
+                  'path':str(p),
+                  'bytes':p.stat().st_size,
+                  'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),
+              }
+
           apks=[]
           for p in sorted(Path('dist/apk-matrix').rglob('*.apk')) if Path('dist/apk-matrix').exists() else []:
               apks.append({'path':str(p),'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
@@ -145,17 +157,89 @@ jobs:
               'usable_apk_gate':os.environ.get('USABLE_APK_GATE_OUTCOME','TOKEN_VAZIO'),
           }
           usable_gate_passed=outcomes['usable_apk_gate']=='success'
+          try:
+              app_checkout_sha=subprocess.check_output(
+                  ['git','rev-parse','HEAD'],text=True
+              ).strip()
+          except Exception:
+              app_checkout_sha='TOKEN_VAZIO'
+          event_payload={}
+          event_path=Path(os.environ.get('GITHUB_EVENT_PATH',''))
+          if event_path.is_file():
+              try:
+                  event_payload=json.loads(event_path.read_text())
+              except Exception:
+                  event_payload={}
+          pull_request_head_sha=(
+              event_payload.get('pull_request',{}).get('head',{}).get('sha')
+              or 'TOKEN_VAZIO'
+          )
+          inputs={
+              'app_checkout_sha':app_checkout_sha,
+              'github_event_sha':os.environ.get('GITHUB_SHA','TOKEN_VAZIO'),
+              'pull_request_head_sha':pull_request_head_sha,
+              'termux_packages_sha':os.environ.get('TERMUX_PACKAGES_BUILD_SHA','TOKEN_VAZIO'),
+              'package_name':'com.termux.rafacodephi',
+              'architectures':['arm','aarch64'],
+              'bootstrap_source':'source-built-real',
+          }
+          inputs_sha256=hashlib.sha256(
+              json.dumps(inputs,sort_keys=True,separators=(',',':')).encode()
+          ).hexdigest()
+          evidence_files=[]
+          for path in (
+              'termux-packages/build/rafcodephi-build-properties.json',
+              'termux-packages/build/reports/rafcodephi-usable-bootstrap.log',
+              'termux-packages/build/reports/rafcodephi-usable-bootstrap.sha256',
+              'termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt',
+              'dist/apk-matrix/ARTIFACT_MANIFEST.txt',
+              'dist/apk-matrix/SHA256SUMS.txt',
+          ):
+              item=evidence(path)
+              if item:
+                  evidence_files.append(item)
+          residuals=[]
+          if outcomes['bootstrap_build']!='success':
+              residuals.append('bootstrap_build_not_passed')
+          if not usable_gate_passed:
+              residuals.append('usable_apk_gate_not_passed')
+          residuals.append('physical_android_runtime_unverified')
           doc={
-              'schema':'rafcodephi.usable-apk-receipt/v2',
+              'schema':'rafcodephi.usable-apk-receipt/v3',
+              'schema_compatibility':['rafcodephi.usable-apk-receipt/v2'],
               'receipt_kind':'SUCCESS_ARTIFACT_RECEIPT' if usable_gate_passed else 'FAILURE_DIAGNOSTIC_RECEIPT',
+              'issued_at_utc':datetime.now(timezone.utc).isoformat(),
+              'repository':os.environ.get('GITHUB_REPOSITORY','TOKEN_VAZIO'),
+              'workflow':os.environ.get('GITHUB_WORKFLOW','TOKEN_VAZIO'),
+              'workflow_ref':os.environ.get('GITHUB_WORKFLOW_REF','TOKEN_VAZIO'),
+              'workflow_sha':os.environ.get('GITHUB_WORKFLOW_SHA','TOKEN_VAZIO'),
+              'run_id':os.environ.get('GITHUB_RUN_ID','TOKEN_VAZIO'),
+              'run_number':os.environ.get('GITHUB_RUN_NUMBER','TOKEN_VAZIO'),
+              'run_attempt':os.environ.get('GITHUB_RUN_ATTEMPT','TOKEN_VAZIO'),
+              'job':os.environ.get('GITHUB_JOB','TOKEN_VAZIO'),
+              'job_numeric_id':'TOKEN_VAZIO',
+              'event_name':os.environ.get('GITHUB_EVENT_NAME','TOKEN_VAZIO'),
+              'ref':os.environ.get('GITHUB_REF','TOKEN_VAZIO'),
+              'runner':{
+                  'os':os.environ.get('RUNNER_OS','TOKEN_VAZIO'),
+                  'arch':os.environ.get('RUNNER_ARCH','TOKEN_VAZIO'),
+                  'name':os.environ.get('RUNNER_NAME','TOKEN_VAZIO'),
+              },
               'job_status':os.environ.get('JOB_STATUS','TOKEN_VAZIO'),
               'step_outcomes':outcomes,
               'usable_apk_gate_passed':usable_gate_passed,
-              'app_sha':'${{ github.sha }}',
-              'termux_packages_sha':'c4d3b50299ac693bc3818628d5562591bfb2baa0',
+              'inputs':inputs,
+              'inputs_sha256':inputs_sha256,
+              'app_sha':inputs['app_checkout_sha'],
+              'github_event_sha':inputs['github_event_sha'],
+              'pull_request_head_sha':inputs['pull_request_head_sha'],
+              'termux_packages_sha':inputs['termux_packages_sha'],
               'apk_count':len(apks),
               'apks':apks,
+              'evidence_files':evidence_files,
+              'residuals':residuals,
               'physical_android':'TOKEN_VAZIO',
+              'claim_allowed_release':False,
               'claim_allowed_device_runtime':False,
               'invariants':[
                   'receipt_uploaded != usable_apk_gate_passed',
