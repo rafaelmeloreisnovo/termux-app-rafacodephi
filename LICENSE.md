@@ -1,15 +1,27 @@
 # License Information
 
+> **Authority boundary (audited 2026-08-22):** The normative terms are the
+> upstream GPLv3-only declaration, the cited component licenses, and any
+> file-level notices. The detailed attribution, compliance summaries, RAFAELIA
+> methodology, equations, and acknowledgements below are non-normative project
+> documentation: they do not add permissions, restrictions, or attribution
+> conditions to those licenses. This document does not independently establish
+> legal compliance or whether a contribution is copyrightable. The canonical
+> fork route audited here is
+> [`rafaelmeloreisnovo/termux-app-rafacodephi`](https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi).
+
 ## Fork Notice
 
 **This is a fork of the original Termux project.**
 
 - **Original Repository**: [termux/termux-app](https://github.com/termux/termux-app)
 - **Original Copyright**: © The Termux developers and contributors
-- **Fork Repository**: [instituto-Rafael/termux-app-rafacodephi](https://github.com/instituto-Rafael/termux-app-rafacodephi)
+- **Fork Repository**: [rafaelmeloreisnovo/termux-app-rafacodephi](https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi)
 - **Fork Copyright**: © instituto-Rafael and RafaCodePhi contributors (for modifications)
 
-This fork maintains all original copyright notices and complies fully with the GPLv3 license of the upstream project.
+This fork intends to preserve the original copyright and license notices. This
+file alone is not evidence that every source file or distribution satisfies all
+applicable obligations.
 
 ---
 
@@ -80,25 +92,30 @@ All modifications and additions made in this fork are also released under the GP
 
 ---
 
-## Legal Compliance Statement
+## License and notice inventory (non-normative)
 
-This project complies with:
+This document records the following license families and notices for verification:
 
 1. **GNU General Public License v3.0** - The primary license governing the Termux application
 2. **Apache License 2.0** - For components derived from the Terminal Emulator for Android
 3. **MIT License** - For applicable termux-shared library components
 4. **GPLv2 with Classpath Exception** - For filesystem utilities from AOSP
-5. **International Copyright Law** - All copyright notices are preserved
-6. **Intellectual Property Regulations** - Proper attribution is provided for all sources
+5. **Copyright notices** - intended to be preserved and verified against source provenance
+6. **Attribution records** - project claims that remain subject to source-level verification
 
 ### Copyleft Provision
-As required by GPLv3, this entire work and any derivative works must be distributed under GPLv3. The source code is made available at [https://github.com/instituto-Rafael/termux-app-rafacodephi](https://github.com/instituto-Rafael/termux-app-rafacodephi).
+Redistribution and derivative-work obligations are governed by the GPLv3 text
+and the applicable component or file-level licenses; this summary does not
+replace those terms. The audited source route is
+[https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi](https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi).
 
 ### Patent Grant
 Components under Apache 2.0 license include an express patent grant from contributors.
 
-### Attribution Requirements
-All original copyright notices, license texts, and attribution information must be preserved in any redistribution or derivative work. Even minor contributions (including single character or punctuation changes) are recognized as copyrightable modifications under copyright law.
+### Attribution notice handling (non-normative summary)
+Preserve applicable copyright, license, and attribution notices as required by
+their governing terms. Copyrightability depends on facts and applicable law;
+this project document does not decide it.
 
 ---
 
@@ -160,7 +177,7 @@ The following components are original contributions under the RAFAELIA framework
 **Copyright**: © 2024-present instituto-Rafael  
 **Methodology**: RAFAELIA Framework (RAFCODE-Φ)  
 **License**: GPLv3 (maintaining compatibility with upstream Termux)  
-**Attribution Required**: When using RAFAELIA components, please acknowledge:
+**Attribution Request (non-normative)**: When using RAFAELIA components, the project asks that you acknowledge:
   - "Powered by RAFAELIA Framework - instituto-Rafael"
   - Reference to this repository and methodology
 
@@ -211,8 +228,8 @@ The RAFAELIA framework acknowledges and thanks:
 
 For questions about licensing, attribution, or to report missing attributions:
 - **Original Termux**: See [https://termux.com](https://termux.com)
-- **RAFAELIA Framework**: Open an issue at [https://github.com/instituto-Rafael/termux-app-rafacodephi/issues](https://github.com/instituto-Rafael/termux-app-rafacodephi/issues)
-- **This Fork**: Open an issue at [https://github.com/instituto-Rafael/termux-app-rafacodephi/issues](https://github.com/instituto-Rafael/termux-app-rafacodephi/issues)
+- **RAFAELIA Framework**: Open an issue at [https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/issues](https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/issues)
+- **This Fork**: Open an issue at [https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/issues](https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/issues)
 
 ## Manifesto Notice (Non-Normative)
 
