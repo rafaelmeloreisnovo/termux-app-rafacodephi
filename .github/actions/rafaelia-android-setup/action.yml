@@ -26,6 +26,18 @@ runs:
       with:
         packages: platform-tools
 
+    - name: Install strict BLAKE3 checksum tool
+      if: inputs.prepare-bootstrap == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! command -v b3sum >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends b3sum
+        fi
+        command -v b3sum
+        b3sum --version
+
     - name: Install canonical Android toolchain
       shell: bash
       run: ./scripts/ci_android_preflight.sh
