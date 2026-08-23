@@ -1,6 +1,6 @@
 # ci_track: official
 # ci_abis: armeabi-v7a,arm64-v8a
-# trigger_generation: 6
+# trigger_generation: 8
 name: RAFCODEPHI Usable APK
 
 on:
@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_BUILD_SHA: c26dfb8debbe4ae36192a60e996526b1c2247e40
+  TERMUX_PACKAGES_BUILD_SHA: 8fcb13afd14398b496ec0c90026a6765fa09c54b
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
 
