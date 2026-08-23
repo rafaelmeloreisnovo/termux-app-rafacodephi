@@ -32,6 +32,7 @@ emit_embedded_hashes(){
   need sha256sum
   local has_b3=0
   command -v b3sum >/dev/null 2>&1 && has_b3=1
+  local strict_mode="${TERMUX_BOOTSTRAP_BLAKE3_STRICT:-1}"
   local z p sha b3
   for z in "${EMBEDDED_BOOTSTRAPS[@]}"; do
     p="$BOOTSTRAP_DIR/$z"
@@ -44,7 +45,13 @@ emit_embedded_hashes(){
       printf 'EMBEDDED_BLAKE3 %s %s\n' "$z" "$b3"
     fi
   done
-  (( has_b3 == 1 )) || log "b3sum unavailable; BLAKE3 skipped (embedded SHA256 emitted)."
+  if (( has_b3 == 0 )); then
+    if [[ "$strict_mode" == "1" || "$strict_mode" == "true" ]]; then
+      fail "b3sum unavailable and TERMUX_BOOTSTRAP_BLAKE3_STRICT=1; BLAKE3 hashing required for release builds"
+    else
+      log "b3sum unavailable; BLAKE3 skipped (embedded SHA256 emitted, non-strict mode)."
+    fi
+  fi
 }
 
 check_source_bootstrap_metadata(){
