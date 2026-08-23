@@ -1,4 +1,4 @@
-# ci_track: diagnostic
+# ci_track: debug
 # ci_abis: armeabi-v7a,arm64-v8a
 name: RAFCODEPHI Bootstrap Failure Localizer
 
