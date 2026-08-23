@@ -99,6 +99,14 @@ typedef struct {
     char     zip_path[64];   /* null-terminated path */
 } ZrManifest;
 
+/* Compile-time guard: ensure no accidental stack allocation
+ * A stack frame (even on host) is typically < 4MB, but Android threads
+ * have only 1MB stack. ZrManifest at ~59KB is borderline and triggers
+ * silent overflow with nested calls. */
+#define ZR_PROHIBIT_STACK_ALLOCATION \
+    _Static_assert(sizeof(ZrManifest) >= 58000u && sizeof(ZrManifest) <= 60000u, \
+        "ZrManifest size changed — review allocation strategy: must be STATIC or GLOBAL, never STACK or THREAD-LOCAL")
+
 /* ── Public API ─────────────────────────────────────────────────────────── */
 
 /* Initialise manifest with ZIP path and physical file size. */

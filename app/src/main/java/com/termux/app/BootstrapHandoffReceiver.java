@@ -8,6 +8,7 @@ import android.os.Build;
 import android.system.Os;
 
 import com.termux.shared.logger.Logger;
+import com.termux.rafacodephi.BuildConfig;
 
 import org.json.JSONObject;
 
@@ -37,9 +38,9 @@ public final class BootstrapHandoffReceiver extends BroadcastReceiver {
 
     private static final String LOG_TAG = "BootstrapHandoff";
     private static final String ACTION_BOOTSTRAP_VERIFIED =
-            "com.termux.rafacodephi.BOOTSTRAP_VERIFIED";
+            BuildConfig.TERMUX_PACKAGE_NAME + ".BOOTSTRAP_VERIFIED";
     private static final String PROVIDER_AUTHORITY =
-            "com.termux.rafacodephi.loader.bootstrap";
+            BuildConfig.TERMUX_PACKAGE_NAME + ".loader.bootstrap";
     private static final String EXTRA_SUCCESS = "success";
     private static final String EXTRA_FAILURE_REASON = "failure_reason";
     private static final String EXTRA_VERIFIED_ABI = "verified_abi";

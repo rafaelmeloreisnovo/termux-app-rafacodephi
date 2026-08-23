@@ -292,16 +292,24 @@ void zr_print(const ZrManifest *m) {
     _ws("=== END MANIFESTO ===\n");
 }
 
+/* ── Mandatory global guard: prevent stack allocation (BUG-05 fix) ────────── */
+ZR_PROHIBIT_STACK_ALLOCATION;
+
+/* Global instance — allocated in data segment, not stack.
+ * Thread-safe for concurrent readers (no mutation after init).
+ * Initialization must complete before any concurrent access. */
+static ZrManifest _zr_global_manifest;
+
 /* ── Optional standalone CLI entry point ────────────────────────────────── */
 #ifdef ZIPRAF_BUILD_MAIN
 int main(int argc, char **argv) {
-    /* ZrManifest ≈ 59 KB — static to avoid thread-stack overflow */
-    static ZrManifest mf;
+    /* Use global instance (static, not stack) — satisfies BUG-05 constraint */
+    ZrManifest *mf = &_zr_global_manifest;
     uint64_t sz = (argc >= 3) ? (uint64_t)argv[2][0] * 1024u * 1024u : (uint64_t)1024 * 1024;
     const char *path = (argc >= 2) ? argv[1] : "(test)";
-    zr_init(&mf, path, sz);
-    zr_auto_index(&mf, sz, 0u);
-    zr_print(&mf);
+    zr_init(mf, path, sz);
+    zr_auto_index(mf, sz, 0u);
+    zr_print(mf);
     return 0;
 }
 #endif

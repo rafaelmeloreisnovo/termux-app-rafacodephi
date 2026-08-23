@@ -81,7 +81,7 @@ def hasReleaseTaskRequested() {
 }
 
 android {
-    namespace = "com.termux.rafacodephi"
+    namespace = project.ext.appPackageName
 
     compileSdk = project.properties.compileSdkVersion.toInteger()
     ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
@@ -119,6 +119,10 @@ android {
 
         buildConfigField "int", "CONFIGURED_MIN_SDK", String.valueOf(project.properties.minSdkVersion.toInteger())
         buildConfigField "String", "SUPPORTED_APK_ABIS", buildConfigString(project.findProperty('termux.abi.matrix').toString())
+
+        // Package name configuration fields for runtime access
+        buildConfigField "String", "TERMUX_PACKAGE_NAME", buildConfigString(project.ext.appPackageName)
+        buildConfigField "String", "BOOTSTRAP_METADATA_PACKAGE_NAME", buildConfigString(project.ext.bootstrapMetadataPackageName)
 
         manifestPlaceholders.TERMUX_PACKAGE_NAME = project.ext.appPackageName
         manifestPlaceholders.TERMUX_APP_NAME = "Termux RAFCODEΦ"
