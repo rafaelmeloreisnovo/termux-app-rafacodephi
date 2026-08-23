@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: rafcodephi-bootstrap-localizer-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   TERMUX_PACKAGES_BUILD_SHA: fd9b9c7ccb2ad385ed3a43619fe909fad4d92937
   CLAIM_ALLOWED: 'false'
