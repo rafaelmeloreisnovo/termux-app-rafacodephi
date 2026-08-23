@@ -160,12 +160,31 @@ sdkmanager \
   "ndk;${NDK_VERSION}" \
   "cmake;3.22.1"
 
+ensure_ci_blake3() {
+  command -v b3sum >/dev/null 2>&1 && return 0
+
+  if ! command -v sudo >/dev/null 2>&1 || ! command -v apt-get >/dev/null 2>&1; then
+    echo "❌ b3sum is required for strict GitHub Actions bootstrap hashing, but no supported installer is available."
+    return 1
+  fi
+
+  echo "📦 Installing b3sum for strict GitHub Actions bootstrap hashing"
+  sudo apt-get update
+  sudo apt-get install --yes --no-install-recommends b3sum
+  command -v b3sum >/dev/null 2>&1 || {
+    echo "❌ b3sum remained unavailable after package installation."
+    return 1
+  }
+  b3sum --version
+}
+
 # GitHub Actions that use this legacy/general toolchain helper and then invoke
 # Gradle must materialize the same rewritten bootstraps as the canonical
 # RAFAELIA setup action. This closes the .incbin divergence without changing
 # local developer semantics. Set TERMUX_SKIP_BOOTSTRAP_PREPARE=1 only for jobs
 # that provably do not build the app/native bootstrap target.
 if [[ "${GITHUB_ACTIONS:-false}" == "true" && "${TERMUX_SKIP_BOOTSTRAP_PREPARE:-0}" != "1" ]]; then
+  ensure_ci_blake3
   BOOTSTRAP_PREPARE_SCRIPT="${ROOT_DIR}/scripts/prepare_bootstrap_env.sh"
   if [[ ! -x "$BOOTSTRAP_PREPARE_SCRIPT" ]]; then
     echo "❌ Missing executable bootstrap preparation script: $BOOTSTRAP_PREPARE_SCRIPT"
