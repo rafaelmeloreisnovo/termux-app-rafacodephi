@@ -1,0 +1,143 @@
+{
+  "schema": "rafaelia.android-runtime-provenance-assurance.v1",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "observed_commit": "afa012d50d26640264f89befe96ceb98988356ae",
+  "role": "android_runtime_producer_provider",
+  "authority": {
+    "local": "termux-app-rafacodephi",
+    "federated_router": "rafaelmeloreisnovo/Mapa",
+    "executor": "rafaelmeloreisnovo/RafGitTools",
+    "evidence_kernel": "rafaelmeloreisnovo/Recipt"
+  },
+  "license": {
+    "state": "OBSERVED_MULTI_COMPONENT_SCOPE",
+    "root_anchor": "LICENSE.md@470c7d9c51b0b61a5fc4868f293d87b4c34ccc5f",
+    "upstream": "termux/termux-app GPLv3-only as documented by repository",
+    "fork_modification_rule": "GPLv3_for_modifications_subject_to_component_and_file_level_terms",
+    "flatten_component_licenses": false,
+    "compliance_claim_allowed_from_summary_alone": false
+  },
+  "identity": {
+    "package": "com.termux.rafacodephi",
+    "apk_identity_state": "TOKEN_VAZIO_CURRENT_EXACT_APK_HASH",
+    "bootstrap_identity_state": "TOKEN_VAZIO_CURRENT_BOOTSTRAP_ARCHIVE_HASH",
+    "physical_device_identity_state": "TOKEN_VAZIO_CURRENT_DEVICE_RECEIPT"
+  },
+  "provenance": {
+    "fork_origin": "termux/termux-app",
+    "delta_boundary_state": "TOKEN_VAZIO_CURRENT_UPSTREAM_DIFF_RECONCILIATION",
+    "component_license_state": "PARTIAL_REPOSITORY_DOCUMENTED_REQUIRES_FILE_LEVEL_RECONCILIATION",
+    "third_party_state": "TOKEN_VAZIO_COMPLETE_COMPONENT_AND_FILE_LEVEL_INVENTORY"
+  },
+  "runtime": {
+    "ci_build_is_physical_runtime": false,
+    "bootstrap_materialization_is_pkg_runtime": false,
+    "provider_dispatch_is_guest_execution": false,
+    "device_validation": "TOKEN_VAZIO",
+    "armv7_required": true,
+    "arm64_supported": true,
+    "physical_e2e_state": "TOKEN_VAZIO_TERMUX_VECTRAS_PHYSICAL_E2E"
+  },
+  "privacy": {
+    "state": "FAIL_CLOSED",
+    "forbidden_public_receipt_payloads": [
+      "device_identifiers",
+      "unredacted_user_paths",
+      "credentials_or_tokens",
+      "unrelated_environment_values",
+      "app_or_user_payload",
+      "private_termux_filesystem_paths"
+    ],
+    "allowed_pattern": "minimum_metadata_plus_hash_or_typed_reference"
+  },
+  "security": {
+    "state": "TOKEN_VAZIO_PER_CHANGED_SURFACE",
+    "surfaces": [
+      "exported_components",
+      "permissions",
+      "package_identity",
+      "signing",
+      "bootstrap_archive_integrity",
+      "provider_ipc",
+      "result_bounding",
+      "secrets"
+    ],
+    "success_boolean_source": "terminal_gate_evidence_only"
+  },
+  "gates": [
+    {
+      "id": "LICENSE_AUTHORITY_BOUND",
+      "state": "IMPLEMENTED",
+      "falsifier": "LICENSE.md missing or exact observed anchor no longer matches the asserted governing summary"
+    },
+    {
+      "id": "UPSTREAM_DELTA_BOUND",
+      "state": "TOKEN_VAZIO",
+      "falsifier": "current fork changes lack exact upstream baseline and path/hunk origin classification"
+    },
+    {
+      "id": "APK_BOOTSTRAP_BOUND",
+      "state": "TOKEN_VAZIO",
+      "falsifier": "runtime claim has no exact APK and consumed bootstrap/archive digest"
+    },
+    {
+      "id": "PHYSICAL_DEVICE_RUNTIME",
+      "state": "TOKEN_VAZIO",
+      "falsifier": "no exact device/APK/commit/protocol receipt with terminal result"
+    },
+    {
+      "id": "VECTRAS_PROVIDER_CONSUMER_E2E",
+      "state": "TOKEN_VAZIO",
+      "falsifier": "only provider dispatch/discovery exists without consumer exit/guest evidence"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "TV-PROVENANCE-DELTA",
+      "urgency": "P0",
+      "owner": "repository_maintainer",
+      "closure": "bind current upstream baseline and classify fork delta by path/hunk"
+    },
+    {
+      "id": "TV-APK-BOOTSTRAP-IDENTITY",
+      "urgency": "P0",
+      "owner": "build_evidence_producer",
+      "closure": "receipt exact APK digest plus bootstrap/profile/archive digests consumed"
+    },
+    {
+      "id": "TV-DEVICE-RUNTIME",
+      "urgency": "P0",
+      "owner": "physical_runtime_evidence_producer",
+      "closure": "execute exact APK on named but privacy-minimized device class and record terminal gate"
+    },
+    {
+      "id": "TV-VECTRAS-E2E",
+      "urgency": "P0",
+      "owner": "termux_and_vectras_producers",
+      "closure": "bind producer request/result receipt to consumer VM/QEMU terminal evidence"
+    },
+    {
+      "id": "TV-THIRD-PARTY-INVENTORY",
+      "urgency": "P1",
+      "owner": "license_provenance_auditor",
+      "closure": "reconcile component/file-level licenses without flattening"
+    }
+  ],
+  "risk": {
+    "severity": "CRITICAL",
+    "summary": "public fork can accidentally conflate source/build/provider availability with legal completeness or physical Android/VM execution",
+    "mitigations": [
+      "preserve upstream/component licenses",
+      "require exact upstream delta provenance",
+      "bind APK and bootstrap identities",
+      "keep device and Vectras E2E as TOKEN_VAZIO until terminal receipts",
+      "redact/minimize public runtime evidence",
+      "require rollback for high-risk mutations"
+    ]
+  },
+  "rollback": {
+    "available": true,
+    "procedure": "revert assurance branch/commit; do not change signing, package identity, upstream license or runtime implementation as part of this assurance-only change"
+  },
+  "claim_allowed": false
+}
