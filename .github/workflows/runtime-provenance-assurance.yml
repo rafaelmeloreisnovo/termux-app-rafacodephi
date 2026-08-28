@@ -1,0 +1,42 @@
+name: Runtime Provenance Assurance
+
+on:
+  push:
+    paths:
+      - 'docs/assurance/runtime-provenance-assurance.v1.json'
+      - 'scripts/validate_runtime_provenance_assurance.py'
+      - '.github/workflows/runtime-provenance-assurance.yml'
+  pull_request:
+    paths:
+      - 'docs/assurance/runtime-provenance-assurance.v1.json'
+      - 'scripts/validate_runtime_provenance_assurance.py'
+      - '.github/workflows/runtime-provenance-assurance.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  assurance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate fail-closed runtime/provenance contract
+        run: python3 scripts/validate_runtime_provenance_assurance.py
+      - name: Negative gate — CI build cannot be promoted to physical runtime
+        run: |
+          cp docs/assurance/runtime-provenance-assurance.v1.json /tmp/assurance.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('docs/assurance/runtime-provenance-assurance.v1.json')
+          d = json.loads(p.read_text())
+          d['runtime']['ci_build_is_physical_runtime'] = True
+          d['claim_allowed'] = True
+          p.write_text(json.dumps(d))
+          PY
+          if python3 scripts/validate_runtime_provenance_assurance.py; then
+            echo 'FAIL: CI build was accepted as physical runtime' >&2
+            exit 1
+          fi
+          mv /tmp/assurance.json docs/assurance/runtime-provenance-assurance.v1.json
+          python3 scripts/validate_runtime_provenance_assurance.py
