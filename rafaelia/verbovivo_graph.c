@@ -300,6 +300,7 @@ int vv_graph_converge(T7ToroidGraph *g, uint32_t max_steps,
 
 /* ── Recall: Find attractor closest to query vector ────────────────────── */
 uint8_t vv_graph_recall(T7ToroidGraph *g, const HyperVector *query, uint32_t max_steps) {
+    (void)max_steps;
     if (!g || !query) return 255u;
 
     uint8_t best_attractor = 255u;

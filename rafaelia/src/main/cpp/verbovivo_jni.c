@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 /* Include Verbovivo headers */
-#include "../../../rafaelia/verbovivo_graph.h"
+#include "../../../verbovivo_graph.h"
 
 /* Global graph (static, allocated once at JNI load) */
 static T7ToroidGraph g_verbovivo_graph;
@@ -60,7 +60,7 @@ Java_com_termux_rafaelia_VerbativoCore_executeConvergence(
     /* Run convergence walk */
     uint64_t phi_fst = 0;
     uint8_t attractor_id = 255;
-    int status = vv_graph_converge(&g_verbovivo_graph, 5000, &phi_fst, &attractor_id);
+    vv_graph_converge(&g_verbovivo_graph, 5000, &phi_fst, &attractor_id);
 
     /* Validate bounds */
     if (phi_fst > 0x10000u) {

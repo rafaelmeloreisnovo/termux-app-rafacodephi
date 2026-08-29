@@ -79,8 +79,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := libverbovivo_graph
 LOCAL_SRC_FILES := \
   ../../../verbovivo_graph.c \
-  ../../../t7_toroid_builder.c \
-  ../../../verbovivo_bootstrap_gate.c
+  ../../../t7_toroid_builder.c
 LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../../../
 LOCAL_CFLAGS := -std=c11 -O2 -Wall -Wextra -Werror \
   -ffreestanding -fno-builtin -fno-common -fvisibility=hidden \
