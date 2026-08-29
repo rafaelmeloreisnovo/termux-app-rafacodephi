@@ -160,7 +160,7 @@ Byte   25:    status (0=attractor, 1=stable, 2=no-edges, 3=timeout)
 
 ## CI Status
 
-### Latest Run (Commit 23271f85)
+### Latest Run (Commit e3d9690e, 04:25:48Z)
 
 **Stages:**
 - ✅ ψ Perception - Contract Gate (PASS)
@@ -168,10 +168,26 @@ Byte   25:    status (0=attractor, 1=stable, 2=no-edges, 3=timeout)
 - ✅ Σ Execution - Android Compatibility (PASS)
 - ✅ Δ Validation - Unit Tests (PASS)
 - ✅ 📱 ARM32 v7 (both variants) - (PASS)
-- 🟡 📱 ARM64 Debug (apt-android-5, apt-android-7) - [Awaiting rerun with b08b1d0a]
-- ⏳ Ω Alignment - Terminal Gate [Depends on above]
+- ❌ 📱 ARM64 Debug (apt-android-5, apt-android-7) - (FAIL)
+  - Both fixes applied (672d6fdb JNI, b08b1d0a paths)
+  - Build completes in < 2 min (suggests pre-build check failure)
+  - Detailed error logs inaccessible via API
+  - Requires GitHub Actions UI inspection
+- ❌ Ω Alignment - Terminal Gate (FAIL, blocked by ARM64)
 
-### Expected After Path Fix
+### Analysis
+
+Both critical fixes are in place:
+1. ✅ JNI type conversion (672d6fdb) — verified in HEAD
+2. ✅ Android.mk paths (b08b1d0a) — verified to resolve correctly
+
+ARM64 still failing despite fixes suggests:
+- Issue is ARM64-specific (not general code problem)
+- Not a compilation error (would take longer)
+- Likely pre-build check or environment issue
+- Detailed error message needed for diagnosis
+
+### Expected After ARM64 Fix
 
 All 7 CI stages should pass:
 ```
@@ -179,7 +195,7 @@ All 7 CI stages should pass:
 ✅ χ Feedback (invariants)
 ✅ ρ ARM32 v7 canonical (build)
 ✅ ρ ARM32 v7 NDK29 (build)
-✅ ρ ARM64 Debug (build) [FIX: paths corrected]
+✅ ρ ARM64 Debug (build) [Debugging in progress]
 ✅ Δ Validation (tests)
 ✅ Σ Execution (compatibility)
 → ✅ Ω Alignment (terminal gate aggregates above)
