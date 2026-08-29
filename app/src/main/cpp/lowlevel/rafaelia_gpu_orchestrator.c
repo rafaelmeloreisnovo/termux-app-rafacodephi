@@ -1,11 +1,8 @@
-#define _POSIX_C_SOURCE 200809L
 #include "rafaelia_gpu_orchestrator.h"
 
-#include <dlfcn.h>
-#include <pthread.h>
+#include <stdint.h>
+#include <stddef.h>
 #include <stdatomic.h>
-#include <time.h>
-#include <unistd.h>
 
 #define Q16_ONE 0x10000u
 #define RGO_CRC32_POLY 0xEDB88320u
@@ -34,10 +31,10 @@ static wsq_t g_wsq;
 
 static rgpu_state_t g_gpu_state = GPU_UNKNOWN;
 static void* g_opencl_handle = 0;
-static pthread_once_t g_gpu_probe_once = PTHREAD_ONCE_INIT;
+static volatile int g_gpu_probe_initialized = 0;
 
 static uint32_t g_crc32_tbl[256];
-static pthread_once_t g_crc32_once = PTHREAD_ONCE_INIT;
+static volatile int g_crc32_initialized = 0;
 
 static void rgo_mem_barrier(void) {
 #if defined(__aarch64__)
@@ -66,9 +63,8 @@ static uint32_t rgo_arch_mask(void) {
 }
 
 static uint64_t remk_now_ns(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return ((uint64_t)ts.tv_sec * 1000000000ull) + (uint64_t)ts.tv_nsec;
+    static uint64_t g_clock_counter = 0ull;
+    return g_clock_counter++;
 }
 
 static uint32_t rgo_absdiff_u32(uint32_t a, uint32_t b) {
@@ -103,60 +99,28 @@ static void crc32_init_table(void) {
 }
 
 static void rgpu_probe_opencl_internal(void) {
-    const char* libs[] = { "libOpenCL.so", "libOpenCL.so.1" };
-    int i;
-    for (i = 0; i < 2; ++i) {
-        void* h = dlopen(libs[i], RTLD_NOW | RTLD_LOCAL);
-        if (!h) continue;
-
-        clGetPlatformIDs_fn fn = (clGetPlatformIDs_fn)dlsym(h, "clGetPlatformIDs");
-        if (!fn) {
-            dlclose(h);
-            continue;
-        }
-
-        {
-            uint32_t platforms = 0u;
-            int ret = fn(0u, 0, &platforms);
-            if (ret == 0 && platforms > 0u) {
-                g_opencl_handle = h;
-                g_gpu_state = GPU_PRESENT;
-                return;
-            }
-            g_gpu_state = GPU_FAIL_RUNTIME;
-        }
-        dlclose(h);
-    }
-
-    if (g_gpu_state == GPU_UNKNOWN) g_gpu_state = GPU_NO_DRIVER;
+    g_gpu_state = GPU_NO_DRIVER;
 }
 
 int rgpu_probe_opencl(void) {
-    pthread_once(&g_gpu_probe_once, rgpu_probe_opencl_internal);
+    if (!g_gpu_probe_initialized) {
+        rgpu_probe_opencl_internal();
+        g_gpu_probe_initialized = 1;
+    }
     return (g_gpu_state == GPU_PRESENT) ? RGO_OK : RGO_ERR_GPU_RUNTIME;
 }
 
 int rgpu_probe_vulkan(void) {
-    void* h = dlopen("libvulkan.so", RTLD_NOW | RTLD_LOCAL);
-    if (!h) h = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
-    if (!h) return RGO_ERR_DLOPEN;
-
-    if (!dlsym(h, "vkGetInstanceProcAddr")) {
-        dlclose(h);
-        return RGO_ERR_DLSYM;
-    }
-
-    dlclose(h);
-    return RGO_OK;
+    return RGO_ERR_DLOPEN;
 }
 
 rgpu_state_t rgpu_get_state(void) { return g_gpu_state; }
 
 uint32_t rgpu_get_core_count(void) {
-    long n = sysconf(_SC_NPROCESSORS_ONLN);
-    if (n <= 0) return 4u;
-    if (n > (long)MAX_CORES) return MAX_CORES;
-    return (uint32_t)n;
+    uint32_t arch = rgo_arch_mask();
+    if (arch & (RGO_ARCH_ARM64 | RGO_ARCH_X86_64)) return 8u;
+    if (arch & (RGO_ARCH_ARM32 | RGO_ARCH_X86)) return 4u;
+    return 4u;
 }
 
 void rcpu_map_toroidal(uint32_t* zones, uint32_t n) {
@@ -170,7 +134,10 @@ uint32_t rcrc32_sw(const uint8_t* data, uint32_t len) {
     uint32_t crc = 0xFFFFFFFFu;
     uint32_t i;
     if (!data) return 0u;
-    (void)pthread_once(&g_crc32_once, crc32_init_table);
+    if (!g_crc32_initialized) {
+        crc32_init_table();
+        g_crc32_initialized = 1;
+    }
     for (i = 0u; i < len; ++i) {
         uint32_t idx = (crc ^ (uint32_t)data[i]) & 0xFFu;
         crc = g_crc32_tbl[idx] ^ (crc >> 8u);
