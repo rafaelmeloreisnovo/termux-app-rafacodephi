@@ -54,7 +54,7 @@ static uint32_t _crc32(const void *buf, size_t n) {
 
 /* ── Estado global do orquestrador (sem malloc) ───────────────────────── */
 #define RAF_STATE_DIM  7
-#define RAF_PERIOD     42
+#define RAF_PERIOD     41
 #define RAF_VCPU       8
 
 /* estado 7D + coerência + entropia + fase + step + crc */
@@ -62,7 +62,7 @@ typedef struct __attribute__((packed)) {
     uint32_t s[RAF_STATE_DIM];  /* Q16.16 */
     uint32_t coherence;         /* Q16.16 */
     uint32_t entropy;           /* Q16.16 */
-    uint32_t phase;             /* 0..41  */
+    uint32_t phase;             /* 0..40  */
     uint32_t step;
     uint32_t crc;
 } raf_state_t;

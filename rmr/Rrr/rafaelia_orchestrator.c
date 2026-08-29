@@ -73,7 +73,7 @@
 /* Constantes geométricas Q16.16 */
 #define SPIRAL_Q16      56755u  /* sqrt(3)/2 */
 #define PHI_Q16         105965u /* phi = (1+sqrt(5))/2 */
-#define PERIOD          42u     /* período dos atratores */
+#define PERIOD          41u     /* período dos atratores (corrigido de 42 → 41) */
 
 /* Fibonacci sequence para mapeamento de Hz
  * 0001123 0123 01123 — família Rafaeliana */
