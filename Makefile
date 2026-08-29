@@ -3,7 +3,7 @@ CFLAGS_BASE ?= -O2 -fno-strict-aliasing -Wall -Wextra -Werror=implicit-function-
 ARCH ?= host
 EXTRA_CFLAGS ?=
 
-.PHONY: all clean diagnose selftest extract-abi-bootstrap attractor-table-complete-gate attractor-coherence-gate aarch64-vectorpulse-gate lyapunov-convergence-gate
+.PHONY: all clean diagnose selftest extract-abi-bootstrap attractor-table-complete-gate attractor-coherence-gate aarch64-vectorpulse-gate lyapunov-convergence-gate cti-race-condition-gate
 
 all: diagnose
 
@@ -41,12 +41,21 @@ lyapunov-convergence-gate: rmr/Rrr/lyapunov_convergence.c rmr/Rrr/lyapunov_conve
 	./build/lyapunov_validator
 	@echo "✅ BUG-08 closure gate: PASS"
 
+cti-race-condition-gate: rmr/Rrr/cti_scanner_barrier.h rmr/Rrr/cti_race_condition_validator.c
+	@echo "=== BUG-06 CtiScanner Race Condition Gate ==="
+	@mkdir -p build
+	$(CC) $(CFLAGS_BASE) -I rmr/Rrr -I rmr/include \
+		rmr/Rrr/cti_race_condition_validator.c -pthread -o build/cti_race_validator
+	./build/cti_race_validator
+	@echo "✅ BUG-06 closure gate: PASS"
+
 clean:
 	$(MAKE) -C bootstrap_rafaelia clean || true
 	rm -rf build
 	rm -f bootstrap_rafaelia/selftest.log
 	rm -f rmr/Rrr/attractor_table.o rmr/Rrr/attractor_table_validator.o
 	rm -f rmr/Rrr/vectra_pulse_validator.o rmr/Rrr/lyapunov_convergence.o rmr/Rrr/lyapunov_convergence_validator.o
+	rm -f rmr/Rrr/cti_race_condition_validator.o
 	@echo "Cleaned top-level build artifacts."
 
 extract-abi-bootstrap:

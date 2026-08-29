@@ -19,7 +19,7 @@ requerem intervenção cirúrgica nos invariantes do sistema.
 | **BUG-03** | **`vectra_pulse.S`** | **AArch64 ASM** | **✅ RESOLVED** | **All 4 bugs fixed: load-use hazard, indexing, barrier, phase wrap** |
 | **BUG-04** | **Bootstrap** | **Hardcode** | **🟡 MÉDIO** | **✅ RESOLVED** |
 | **BUG-05** | **`ZrManifest`** | **Stack overflow** | **🔴 CRÍTICO** | **✅ RESOLVED** |
-| BUG-06 | `CtiScanner` | Race condition | 🟠 ALTO | Depends on BUG-03 (now ready) |
+| **BUG-06** | **`CtiScanner`** | **Race condition** | **✅ RESOLVED** | **Memory barriers for TOROID mode (dmb ish)** |
 | **BUG-07** | **Build pipeline** | **Hash mismatch** | **🟡 MÉDIO** | **✅ RESOLVED** |
 | **BUG-08** | **RAFAELIA pipeline** | **Invariante** | **✅ RESOLVED** | **φ = (1-H)·C validated φ ∈ [0, 1]** |
 
