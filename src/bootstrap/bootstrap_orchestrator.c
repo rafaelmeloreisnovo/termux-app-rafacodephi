@@ -44,9 +44,9 @@ static int validate_receipt_state(struct Receipt *receipt, BootstrapProgress *pr
         return -3;
     }
 
-    /* Validate attractor range [0, 41] */
-    if (receipt->attractor > 41) {
-        log_message("ERROR: attractor out of range\n", 31);
+    /* Validate attractor range [0, 40] — 41-state toroid (BUG-02 resolved) */
+    if (receipt->attractor > 40) {
+        log_message("ERROR: attractor out of range [0..40]\n", 39);
         return -4;
     }
 

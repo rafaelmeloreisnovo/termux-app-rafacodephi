@@ -37,7 +37,7 @@ struct Receipt {
     uint32_t crc32c;          /* Castagnoli polynomial */
     uint8_t  sha256[32];      /* SHA-256 digest */
     uint32_t phi_fst;         /* Coherence Q16 fixed-point */
-    uint32_t attractor;       /* T^7 attractor slot [0..41] */
+    uint32_t attractor;       /* T^7 attractor slot [0..40] (41-state toroid) */
     uint32_t entropy_norm;    /* H_norm Q16 */
     uint32_t coherence_norm;  /* C_norm Q16 */
     int32_t  exit_code;
