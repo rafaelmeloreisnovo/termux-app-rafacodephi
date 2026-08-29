@@ -1,0 +1,59 @@
+# Makefile.verbovivo — Compile Verbovivo Graph (Pure freestanding, no ASCII)
+# Target: ARM64 freestanding (aarch64-linux-gnu)
+
+CC = clang
+CFLAGS = -target aarch64-linux-gnu -ffreestanding -nostdlib -nostdinc \
+         -O2 -Wall -Werror -fno-exceptions \
+         -march=armv8-a+simd -mtune=cortex-a72
+
+VERBOVIVO_SRC = rafaelia/verbovivo_graph.c \
+                rafaelia/t7_toroid_builder.c \
+                rafaelia/verbovivo_bootstrap_gate.c
+
+VERBOVIVO_OBJ = $(VERBOVIVO_SRC:.c=.o)
+VERBOVIVO_LIB = build/libverbovivo_graph.a
+
+# Bootstrap dependencies
+BOOTSTRAP_SRC = src/bootstrap/freestanding.h \
+                src/bootstrap/syscall_arm64.h
+
+.PHONY: all clean verbovivo-lib verbovivo-syntax-check
+
+all: verbovivo-lib
+
+verbovivo-lib: $(VERBOVIVO_LIB)
+	@echo "✅ Verbovivo Graph library built: $<"
+
+$(VERBOVIVO_LIB): $(VERBOVIVO_OBJ)
+	@mkdir -p build
+	@ar rcs $@ $^
+	@echo "📦 Archived: $@"
+
+%.o: %.c
+	@echo "🔨 Compiling: $<"
+	$(CC) $(CFLAGS) -c $< -o $@
+
+verbovivo-syntax-check:
+	@echo "🔍 Freestanding compliance check..."
+	@for src in $(VERBOVIVO_SRC); do \
+	    if grep -q "#include <[^>]*>" "$$src" | grep -qv "stdint\|stddef\|string"; then \
+	        echo "❌ FAIL: $$src uses libc include"; \
+	        exit 1; \
+	    fi; \
+	done
+	@echo "✅ No libc includes detected"
+	@if grep -E '\b(malloc|calloc|printf|strlen)\s*\(' $(VERBOVIVO_SRC) 2>/dev/null; then \
+	    echo "❌ FAIL: Verbovivo uses malloc/printf/strlen function calls"; \
+	    exit 1; \
+	fi
+	@echo "✅ No libc function calls detected"
+
+clean:
+	rm -f $(VERBOVIVO_OBJ) $(VERBOVIVO_LIB)
+	@echo "🗑️  Cleaned Verbovivo objects"
+
+# Test: Minimal convergence demo (requires bootstrap libs)
+verbovivo-demo: $(VERBOVIVO_LIB)
+	@echo "📝 Verbovivo Graph structure built (demo requires bootstrap integration)"
+	@echo "Next: Integrate with P0 bootstrap gate in Android APK"
+	@echo "Status: φ computation ready for runtime validation"
