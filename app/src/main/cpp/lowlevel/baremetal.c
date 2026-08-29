@@ -55,23 +55,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <assert.h>
+#include "../../../src/bootstrap/freestanding_syscalls.h"
 
-#ifdef __linux__
-#include <sys/auxv.h>
-#endif
-
-#ifdef __ANDROID__
-#include <android/log.h>
-#define LOG_TAG "TermuxBareMetal"
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
-#else
 #define LOGD(...)
-#endif
 
 
 /* ============================================================================
@@ -85,7 +71,7 @@ typedef struct {
 } arch_caps_rt_t;
 
 static arch_caps_rt_t g_arch_caps = {0, 0, 0};
-static pthread_once_t g_arch_caps_once = PTHREAD_ONCE_INIT;
+static volatile int g_arch_caps_initialized = 0;
 
 static uint32_t get_binary_caps(void) {
     uint32_t caps = 0;
@@ -152,7 +138,7 @@ typedef struct {
 #endif
 
 static int read_auxv_hwcap(unsigned long* hwcap, unsigned long* hwcap2) {
-    int fd = open("/proc/self/auxv", O_RDONLY | O_CLOEXEC);
+    int fd = (int)freestanding_open("/proc/self/auxv", O_RDONLY, 0);
     if (fd < 0) {
         return 0;
     }
@@ -162,7 +148,8 @@ static int read_auxv_hwcap(unsigned long* hwcap, unsigned long* hwcap2) {
     *hwcap = 0;
     *hwcap2 = 0;
 
-    while (read(fd, &ent, sizeof(ent)) == (ssize_t)sizeof(ent)) {
+    int64_t n;
+    while ((n = freestanding_read(fd, &ent, sizeof(ent))) == (int64_t)sizeof(ent)) {
         if (ent.a_type == 0) break;
         if (ent.a_type == AT_HWCAP) {
             *hwcap = ent.a_val;
@@ -173,7 +160,7 @@ static int read_auxv_hwcap(unsigned long* hwcap, unsigned long* hwcap2) {
         }
     }
 
-    close(fd);
+    freestanding_close(fd);
     return (got & 1) != 0;
 }
 
@@ -300,7 +287,10 @@ static void init_runtime_caps_once(void) {
 }
 
 static inline void ensure_runtime_caps_initialized(void) {
-    (void)pthread_once(&g_arch_caps_once, init_runtime_caps_once);
+    if (!g_arch_caps_initialized) {
+        init_runtime_caps_once();
+        g_arch_caps_initialized = 1;
+    }
 }
 
 static __attribute__((unused)) uint32_t bm_simd_step_f32(void) {
@@ -344,9 +334,9 @@ void vop_add(const float* a, const float* b, float* r, uint32_t n) {
 #if defined(HAS_BM_NEON_ASM)
     if (bm_can_use_neon_asm()) {
         const uint32_t step = bm_simd_step_f32();
-        assert(step != 0u);
+        if (step == 0u) return;
         const uint32_t simd_n = n - (n % step);
-        assert(simd_n <= n);
+        if (simd_n > n) return;
         if (simd_n != 0) {
             bm_vadd_neon(a, b, r, simd_n);
         }
@@ -425,9 +415,9 @@ float vop_dot(const float* a, const float* b, uint32_t n) {
 #if defined(HAS_BM_NEON_ASM)
     if (bm_can_use_neon_asm()) {
         const uint32_t step = bm_simd_step_f32();
-        assert(step != 0u);
+        if (step == 0u) return;
         const uint32_t simd_n = n - (n % step);
-        assert(simd_n <= n);
+        if (simd_n > n) return;
         float s = 0.0f;
         if (simd_n != 0) {
             s = bm_dot_neon(a, b, simd_n);
@@ -458,8 +448,10 @@ float vop_norm(const float* a, uint32_t n) {
  * Matrix Operations - Deterministic mathematics
  * ========================================================================== */
 
-/* Simple memory allocation - using stdlib for now */
-#include <stdlib.h>
+/* Static memory arena for matrix operations (freestanding) */
+static unsigned char g_arena[2048 * 1024]; /* 2MB arena */
+static mx_arena_t g_static_arena = {0, 0, 0};
+static int g_static_arena_initialized = 0;
 
 
 static size_t align_up_size(size_t value, size_t alignment) {
@@ -469,14 +461,15 @@ static size_t align_up_size(size_t value, size_t alignment) {
 }
 
 mx_arena_t* arena_create(size_t capacity_bytes) {
-    if (capacity_bytes == 0) return NULL;
-    mx_arena_t* arena = (mx_arena_t*)malloc(sizeof(mx_arena_t));
-    if (!arena) return NULL;
-    arena->base = (unsigned char*)malloc(capacity_bytes);
-    if (!arena->base) { free(arena); return NULL; }
-    arena->cap = capacity_bytes;
-    arena->off = 0;
-    return arena;
+    if (capacity_bytes == 0 || capacity_bytes > sizeof(g_arena)) return NULL;
+    if (!g_static_arena_initialized) {
+        g_static_arena.base = g_arena;
+        g_static_arena.cap = sizeof(g_arena);
+        g_static_arena.off = 0;
+        g_static_arena_initialized = 1;
+    }
+    g_static_arena.off = 0;
+    return &g_static_arena;
 }
 
 void* arena_alloc(mx_arena_t* arena, size_t size_bytes, size_t alignment) {
@@ -493,8 +486,6 @@ void arena_reset(mx_arena_t* arena) { if (arena) arena->off = 0; }
 
 void arena_destroy(mx_arena_t* arena) {
     if (!arena) return;
-    free(arena->base);
-    free(arena);
 }
 
 mx_t* mx_create_in_arena(mx_arena_t* arena, uint32_t r, uint32_t c) {
@@ -526,30 +517,13 @@ mx_t* mx_create(uint32_t r, uint32_t c) {
         return NULL;
     }
 
-    mx_t* m = (mx_t*)malloc(sizeof(mx_t));
-    if (!m) return NULL;
-    
-    /* Allocate matrix data */
-    size_t count = (size_t)r * (size_t)c;
-    size_t bytes = count * sizeof(float);
-    m->m = (float*)malloc(bytes);
-    if (!m->m) {
-        free(m);
-        return NULL;
-    }
-    bmem_zero(m->m, bytes);
-    
-    m->r = r;
-    m->c = c;
-    return m;
+    mx_arena_t* arena = arena_create(sizeof(g_arena));
+    if (!arena) return NULL;
+    return mx_create_in_arena(arena, r, c);
 }
 
 void mx_free(mx_t* m) {
     if (!m) return;
-    if (m->m) {
-        free(m->m);
-    }
-    free(m);
 }
 
 void mx_mul(const mx_t* a, const mx_t* b, mx_t* r) {
@@ -1000,14 +974,14 @@ void* bmem_cpy(void* d, const void* s, size_t n) {
 #if defined(HAS_BM_NEON_ASM)
     if (bm_can_use_neon_asm()) {
         const size_t step = bm_simd_step_u8();
-        assert(step != 0u);
+        if (step == 0u) return;
         while (n != 0 && ((((uintptr_t)pd & (step - 1u)) != 0u) || (((uintptr_t)ps & (step - 1u)) != 0u))) {
             *pd++ = *ps++;
             n--;
         }
 
         const size_t simd_n = n - (n % step);
-        assert(simd_n <= n);
+        if (simd_n > n) return;
         if (simd_n != 0) {
             bm_memcpy_neon(pd, ps, simd_n);
             pd += simd_n;
