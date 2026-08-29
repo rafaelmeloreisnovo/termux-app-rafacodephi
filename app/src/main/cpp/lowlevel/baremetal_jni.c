@@ -7,13 +7,23 @@
  */
 
 #include <jni.h>
-#include <android/log.h>
-#include <stdio.h>
+#include <stdint.h>
+#include <stddef.h>
 #include "baremetal.h"
 
+#include "freestanding_log.h"
+#include "freestanding_string.h"
+
 #define LOG_TAG "TermuxBareMetal-JNI"
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+#define LOG_TAG_LEN 19
+
+static inline void logd_msg(const char *msg) {
+    if (msg) freestanding_log_info(msg, (uint32_t)freestanding_strlen(msg));
+}
+
+static inline void loge_msg(const char *msg) {
+    if (msg) freestanding_log_error(msg, (uint32_t)freestanding_strlen(msg));
+}
 
 static void throw_illegal_argument(JNIEnv *env, const char *message) {
     jclass illegal_argument = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
@@ -73,24 +83,45 @@ Java_com_termux_lowlevel_BareMetal_getHardwareProfile(JNIEnv *env, jclass clazz)
     hw_profile_t p;
     get_hw_profile(&p);
 
-    char out[512];
-    int n = snprintf(
-        out,
-        sizeof(out),
-        "abi=%s;hwcap=0x%llx;hwcap2=0x%llx;cpus_online=%u;page_size=%u;cache_line=%u;flags=0x%08x;clusters=%s",
-        p.abi,
-        (unsigned long long)p.hwcap,
-        (unsigned long long)p.hwcap2,
-        p.cpus_online,
-        p.page_size,
-        p.cache_line,
-        p.access_flags,
-        p.cpu_clusters[0] ? p.cpu_clusters : "n/a"
-    );
+    /* Build profile string without snprintf — simplified format */
+    char out[256];
+    size_t off = 0;
 
-    if (n <= 0) {
-        return (*env)->NewStringUTF(env, "abi=n/a;flags=0");
+    /* abi= */
+    freestanding_memcpy(out + off, "abi=", 4); off += 4;
+    uint32_t abi_len = (uint32_t)freestanding_strlen(p.abi);
+    freestanding_memcpy(out + off, p.abi, abi_len); off += abi_len;
+
+    /* ;page_size= */
+    freestanding_memcpy(out + off, ";page_size=", 11); off += 11;
+    /* page_size as decimal (max 5 digits) */
+    char page_buf[8];
+    int plen = 0;
+    uint32_t ps = p.page_size;
+    if (ps == 0) { page_buf[0] = '0'; plen = 1; }
+    else {
+        uint32_t d[] = {10000, 1000, 100, 10, 1};
+        int started = 0;
+        for (int i = 0; i < 5; i++) {
+            int digit = ps / d[i];
+            ps %= d[i];
+            if (digit > 0 || started) {
+                page_buf[plen++] = (char)('0' + digit);
+                started = 1;
+            }
+        }
     }
+    freestanding_memcpy(out + off, page_buf, plen); off += plen;
+
+    /* ;clusters= */
+    freestanding_memcpy(out + off, ";clusters=", 10); off += 10;
+    uint32_t clusters_len = (uint32_t)freestanding_strlen(p.cpu_clusters[0] ? p.cpu_clusters : "n/a");
+    freestanding_memcpy(out + off, p.cpu_clusters[0] ? p.cpu_clusters : "n/a", clusters_len); off += clusters_len;
+
+    if (off >= sizeof(out)) {
+        return (*env)->NewStringUTF(env, "abi=unknown");
+    }
+    out[off] = '\0';
     return (*env)->NewStringUTF(env, out);
 }
 
@@ -106,7 +137,7 @@ Java_com_termux_lowlevel_BareMetal_vectorDot(JNIEnv *env, jclass clazz,
     jsize len_b = (*env)->GetArrayLength(env, b);
 
     if (len_a != len_b) {
-        LOGE("Vector dimensions mismatch: %d != %d", len_a, len_b);
+        loge_msg("Vector dimensions mismatch");
         jclass illegal_arg = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
         if (illegal_arg) {
             (*env)->ThrowNew(env, illegal_arg,
@@ -165,7 +196,7 @@ Java_com_termux_lowlevel_BareMetal_vectorAdd(JNIEnv *env, jclass clazz,
     jsize len_r = (*env)->GetArrayLength(env, result);
 
     if (len_a != len_b || len_a != len_r) {
-        LOGE("Vector dimensions mismatch: a=%d b=%d result=%d", len_a, len_b, len_r);
+        loge_msg("Vector dimensions mismatch");
         jclass illegal_arg = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
         if (illegal_arg) {
             (*env)->ThrowNew(env, illegal_arg,
@@ -396,7 +427,7 @@ Java_com_termux_lowlevel_BareMetal_matrixSolveLinear(JNIEnv *env, jclass clazz,
     jsize len_x = (*env)->GetArrayLength(env, x);
     
     if (len_b != (jsize)m->r || len_x != (jsize)m->c) {
-        LOGE("Size mismatch in matrixSolveLinear");
+        loge_msg("Size mismatch in matrixSolveLinear");
         throw_illegal_argument(env, "Invalid dimensions for linear solve");
         return -1;
     }
@@ -440,7 +471,7 @@ Java_com_termux_lowlevel_BareMetal_matrixGetData(JNIEnv *env, jclass clazz,
     jsize len = (*env)->GetArrayLength(env, data);
     
     if (len < (jsize)(m->r * m->c)) {
-        LOGE("Array too small for matrix data");
+        loge_msg("Array too small for matrix data");
         throw_illegal_argument(env, "Array too small for matrix data");
         return;
     }
@@ -464,7 +495,7 @@ Java_com_termux_lowlevel_BareMetal_matrixSetData(JNIEnv *env, jclass clazz,
     jsize len = (*env)->GetArrayLength(env, data);
     
     if (len < (jsize)(m->r * m->c)) {
-        LOGE("Array too small for matrix data");
+        loge_msg("Array too small for matrix data");
         throw_illegal_argument(env, "Array too small for matrix data");
         return;
     }
@@ -557,7 +588,7 @@ Java_com_termux_lowlevel_BareMetal_memCopy(JNIEnv *env, jclass clazz,
     jsize dst_len = (*env)->GetArrayLength(env, dst);
 
     if (dst_len < src_len) {
-        LOGE("memCopy destination too small: dst=%d src=%d", dst_len, src_len);
+        loge_msg("memCopy destination too small");
         jclass illegal_arg = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
         if (illegal_arg) {
             (*env)->ThrowNew(env, illegal_arg,
@@ -661,17 +692,17 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     
     jclass clazz = (*env)->FindClass(env, "com/termux/lowlevel/BareMetal");
     if (clazz == NULL) {
-        LOGE("Cannot find BareMetal class");
+        loge_msg("Cannot find BareMetal class");
         return JNI_ERR;
     }
     
     if ((*env)->RegisterNatives(env, clazz, methods, 
                                  sizeof(methods)/sizeof(methods[0])) < 0) {
-        LOGE("Failed to register native methods");
+        loge_msg("Failed to register native methods");
         return JNI_ERR;
     }
     
-    LOGD("BareMetal JNI loaded successfully - Architecture: %s", get_arch_name());
+    { char buf[128]; freestanding_strcpy(buf, "BareMetal JNI loaded - "); freestanding_strcat(buf, get_arch_name()); logd_msg(buf); }
     
     return JNI_VERSION_1_6;
 }
