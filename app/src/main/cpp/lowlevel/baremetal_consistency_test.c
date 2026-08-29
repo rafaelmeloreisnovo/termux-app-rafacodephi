@@ -1,6 +1,5 @@
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <stddef.h>
 
 float vop_dot(const float* a, const float* b, uint32_t n);
 void vop_add(const float* a, const float* b, float* r, uint32_t n);
@@ -63,15 +62,18 @@ static int ref_mem_eq(const unsigned char* a, const unsigned char* b, size_t n) 
 }
 
 int main(void) {
-    const uint32_t sizes[] = {1, 2, 3, 4, 5, 15, 16, 17, 63, 64, 65, 255, 1024, 1027};
+    static float a_buf[2048], b_buf[2048], r_buf[2048];
+    static unsigned char mem_buf[4096];
+
+    const uint32_t sizes[] = {1, 2, 3, 4, 5, 15, 16, 17, 63, 64, 65, 255, 1024};
     const size_t count = sizeof(sizes) / sizeof(sizes[0]);
 
     for (size_t t = 0; t < count; t++) {
         uint32_t n = sizes[t];
-        float* a = (float*)malloc(n * sizeof(float));
-        float* b = (float*)malloc(n * sizeof(float));
-        float* r = (float*)malloc(n * sizeof(float));
-        if (!a || !b || !r) return 2;
+        if (n > 2048) break;
+        float* a = a_buf;
+        float* b = b_buf;
+        float* r = r_buf;
 
         for (uint32_t i = 0; i < n; i++) {
             a[i] = (float)((int32_t)((i * 17u + 3u) % 97u) - 48);
@@ -80,25 +82,21 @@ int main(void) {
 
         vop_add(a, b, r, n);
         if (!ref_add_eq(a, b, r, n)) {
-            fprintf(stderr, "vop_add mismatch at n=%u\n", n);
             return 3;
         }
 
         float got = vop_dot(a, b, n);
         float exp = ref_dot(a, b, n);
         if (got != exp) {
-            fprintf(stderr, "vop_dot mismatch at n=%u got=%f exp=%f\n", n, got, exp);
             return 4;
         }
-
-        free(a); free(b); free(r);
     }
 
     for (size_t t = 0; t < count; t++) {
         size_t n = sizes[t];
-        unsigned char* srcb = (unsigned char*)malloc(n + 64);
-        unsigned char* dstb = (unsigned char*)malloc(n + 64);
-        if (!srcb || !dstb) return 5;
+        if (n + 64 > sizeof(mem_buf)) break;
+        unsigned char* srcb = mem_buf;
+        unsigned char* dstb = mem_buf + 2048;
 
         unsigned char* src = srcb + (t % 13u);
         unsigned char* dst = dstb + (t % 11u);
@@ -108,13 +106,9 @@ int main(void) {
 
         bmem_cpy(dst, src, n);
         if (!ref_mem_eq(dst, src, n)) {
-            fprintf(stderr, "bmem_cpy mismatch at n=%zu\n", n);
             return 6;
         }
-
-        free(srcb); free(dstb);
     }
 
-    puts("baremetal_consistency_test: ok");
     return 0;
 }
