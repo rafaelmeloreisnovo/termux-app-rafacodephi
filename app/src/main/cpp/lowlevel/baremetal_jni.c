@@ -11,8 +11,8 @@
 #include <stddef.h>
 #include "baremetal.h"
 
-#include "freestanding_log.h"
-#include "freestanding_string.h"
+#include "../../../../../src/bootstrap/freestanding_log.h"
+#include "../../../../../src/bootstrap/freestanding_string.h"
 
 #define LOG_TAG "TermuxBareMetal-JNI"
 #define LOG_TAG_LEN 19

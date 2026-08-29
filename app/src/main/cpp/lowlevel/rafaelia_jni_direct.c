@@ -17,8 +17,8 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <limits.h>
-#include "../../../src/bootstrap/freestanding_string.h"
-#include "../../../src/bootstrap/freestanding_syscalls.h"
+#include "../../../../../src/bootstrap/freestanding_string.h"
+#include "../../../../../src/bootstrap/freestanding_syscalls.h"
 #include "raf_vcpu.h"
 #include "raf_clock.h"
 #include "raf_memory_layers.h"

@@ -55,7 +55,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include "../../../src/bootstrap/freestanding_syscalls.h"
+#include "../../../../../src/bootstrap/freestanding_syscalls.h"
 
 #define LOGD(...)
 

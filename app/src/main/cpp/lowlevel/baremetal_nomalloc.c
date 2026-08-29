@@ -16,8 +16,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "freestanding_syscalls.h"
-#include "freestanding_log.h"
+#include "../../../../../src/bootstrap/freestanding_syscalls.h"
+#include "../../../../../src/bootstrap/freestanding_log.h"
 
 #define LOG_TAG "TermuxBM"
 #define LOG_TAG_LEN 8

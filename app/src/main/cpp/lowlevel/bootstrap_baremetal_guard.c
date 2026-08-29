@@ -4,9 +4,9 @@
 #include <stddef.h>
 #include <limits.h>
 
-#include "freestanding_syscalls.h"
-#include "freestanding_string.h"
-#include "freestanding_log.h"
+#include "../../../../../src/bootstrap/freestanding_syscalls.h"
+#include "../../../../../src/bootstrap/freestanding_string.h"
+#include "../../../../../src/bootstrap/freestanding_log.h"
 
 #define RAF_OK 0
 #define RAF_ERR_PARAM -1
