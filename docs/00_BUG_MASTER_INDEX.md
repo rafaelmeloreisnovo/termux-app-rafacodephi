@@ -16,12 +16,12 @@ requerem intervenção cirúrgica nos invariantes do sistema.
 |----|-----------|------|------------|--------|
 | **BUG-01** | **`attractor_table`** | **Faltante** | **✅ RESOLVED** | **41 attractors generated + validated (SHA-256: 21bd04e6...)** |
 | **BUG-02** | **Atrator #22** | **Estrutural/Teórico** | **✅ RESOLVED** | **Option 1: Removed #22 (41-state toroid)** |
-| BUG-03 | `vectra_pulse.S` | AArch64 ASM | 🟠 ALTO | Unblocked, ready for implementation |
+| **BUG-03** | **`vectra_pulse.S`** | **AArch64 ASM** | **✅ RESOLVED** | **All 4 bugs fixed: load-use hazard, indexing, barrier, phase wrap** |
 | **BUG-04** | **Bootstrap** | **Hardcode** | **🟡 MÉDIO** | **✅ RESOLVED** |
 | **BUG-05** | **`ZrManifest`** | **Stack overflow** | **🔴 CRÍTICO** | **✅ RESOLVED** |
-| BUG-06 | `CtiScanner` | Race condition | 🟠 ALTO | Sem barrier em TOROID |
+| BUG-06 | `CtiScanner` | Race condition | 🟠 ALTO | Depends on BUG-03 (now ready) |
 | **BUG-07** | **Build pipeline** | **Hash mismatch** | **🟡 MÉDIO** | **✅ RESOLVED** |
-| BUG-08 | RAFAELIA pipeline | Invariante | 🟠 ALTO | Unblocked, ready for implementation |
+| **BUG-08** | **RAFAELIA pipeline** | **Invariante** | **✅ RESOLVED** | **φ = (1-H)·C validated φ ∈ [0, 1]** |
 
 ---
 
