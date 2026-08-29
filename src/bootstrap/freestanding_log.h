@@ -17,12 +17,12 @@
  * Returns number of bytes written, or negative on error
  */
 static inline int64_t freestanding_write(int fd, const void *buf, uint32_t count) {
-    register int64_t x0 asm("x0") = (int64_t)fd;
-    register int64_t x1 asm("x1") = (int64_t)buf;
-    register int64_t x2 asm("x2") = (int64_t)count;
-    register int64_t x8 asm("x8") = 64;  /* write syscall number */
+    register int64_t x0 __asm__("x0") = (int64_t)fd;
+    register int64_t x1 __asm__("x1") = (int64_t)buf;
+    register int64_t x2 __asm__("x2") = (int64_t)count;
+    register int64_t x8 __asm__("x8") = 64;  /* write syscall number */
 
-    asm volatile (
+    __asm__ volatile (
         "svc #0"
         : "+r"(x0)
         : "r"(x1), "r"(x2), "r"(x8)
