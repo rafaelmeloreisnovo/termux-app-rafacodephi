@@ -1,6 +1,16 @@
 apply plugin: 'com.android.library'
 apply plugin: 'maven-publish'
 
+ext {
+    // Package configuration for shared library
+    appPackageName = System.getenv("TERMUX_APP_PACKAGE_NAME") ?: "com.termux.rafacodephi"
+    appCodePackageName = System.getenv("TERMUX_APP_CODE_PACKAGE_NAME") ?: "com.termux.app"
+}
+
+def buildConfigString(String value) {
+    return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+}
+
 android {
     namespace = "com.termux.shared"
 
@@ -16,6 +26,9 @@ android {
                 cppFlags ''
             }
         }
+        // Package name configuration fields for runtime access
+        buildConfigField "String", "TERMUX_PACKAGE_NAME", buildConfigString(project.ext.appPackageName)
+        buildConfigField "String", "TERMUX_APP_CODE_PACKAGE_NAME", buildConfigString(project.ext.appCodePackageName)
     }
 
     buildTypes {
@@ -31,6 +44,10 @@ android {
 
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     externalNativeBuild {

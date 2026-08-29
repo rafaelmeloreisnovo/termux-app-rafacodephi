@@ -3,6 +3,7 @@ package com.termux.shared.termux;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 
+import com.termux.shared.BuildConfig;
 import com.termux.shared.shell.command.ExecutionCommand;
 import com.termux.shared.shell.command.ExecutionCommand.Runner;
 
@@ -348,10 +349,10 @@ public final class TermuxConstants {
 
     /** Termux app name */
     public static final String TERMUX_APP_NAME = "Termux RAFCODEΦ"; // Default: "Termux"
-    /** Termux package name */
-    public static final String TERMUX_PACKAGE_NAME = "com.termux.rafacodephi"; // Default: "com.termux"
-    /** Real Java/Kotlin package where app component classes are declared. */
-    public static final String TERMUX_APP_CODE_PACKAGE_NAME = "com.termux"; // Default: "com.termux"
+    /** Termux package name (configured via TERMUX_APP_PACKAGE_NAME environment variable) */
+    public static final String TERMUX_PACKAGE_NAME = BuildConfig.TERMUX_PACKAGE_NAME;
+    /** Real Java/Kotlin package where app component classes are declared (configured via TERMUX_APP_CODE_PACKAGE_NAME environment variable) */
+    public static final String TERMUX_APP_CODE_PACKAGE_NAME = BuildConfig.TERMUX_APP_CODE_PACKAGE_NAME;
     /** Termux GitHub repo name */
     public static final String TERMUX_GITHUB_REPO_NAME = "termux-app-rafacodephi"; // Default: "termux-app"
     /** Termux GitHub repo url */
