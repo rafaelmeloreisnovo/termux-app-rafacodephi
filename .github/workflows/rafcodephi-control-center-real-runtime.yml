@@ -83,7 +83,7 @@ jobs:
             | tee build/reports/control-center-packages-pin-resolution.json
 
       - name: Setup Java 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
