@@ -20,7 +20,7 @@ requerem intervenção cirúrgica nos invariantes do sistema.
 | **BUG-04** | **Bootstrap** | **Hardcode** | **🟡 MÉDIO** | **✅ RESOLVED** |
 | **BUG-05** | **`ZrManifest`** | **Stack overflow** | **🔴 CRÍTICO** | **✅ RESOLVED** |
 | BUG-06 | `CtiScanner` | Race condition | 🟠 ALTO | Sem barrier em TOROID |
-| BUG-07 | Build pipeline | Hash mismatch | 🟡 MÉDIO | BLAKE3 skip silencioso |
+| **BUG-07** | **Build pipeline** | **Hash mismatch** | **🟡 MÉDIO** | **✅ RESOLVED** |
 | BUG-08 | RAFAELIA pipeline | Invariante | 🟠 ALTO | Bloqueado em BUG-01 |
 
 ---
