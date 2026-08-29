@@ -23,42 +23,42 @@
 /* Macro for inline ARM64 syscall (1 arg) */
 #define SYSCALL_1(num, a) \
     ({ \
-        register int64_t x0 asm("x0") = (int64_t)(a); \
-        register int64_t x8 asm("x8") = (num); \
-        asm volatile("svc #0" : "+r"(x0) : "r"(x8) : "cc", "memory"); \
+        register int64_t x0 __asm__("x0") = (int64_t)(a); \
+        register int64_t x8 __asm__("x8") = (num); \
+        __asm__ volatile("svc #0" : "+r"(x0) : "r"(x8) : "cc", "memory"); \
         x0; \
     })
 
 /* Macro for inline ARM64 syscall (2 args) */
 #define SYSCALL_2(num, a, b) \
     ({ \
-        register int64_t x0 asm("x0") = (int64_t)(a); \
-        register int64_t x1 asm("x1") = (int64_t)(b); \
-        register int64_t x8 asm("x8") = (num); \
-        asm volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x8) : "cc", "memory"); \
+        register int64_t x0 __asm__("x0") = (int64_t)(a); \
+        register int64_t x1 __asm__("x1") = (int64_t)(b); \
+        register int64_t x8 __asm__("x8") = (num); \
+        __asm__ volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x8) : "cc", "memory"); \
         x0; \
     })
 
 /* Macro for inline ARM64 syscall (3 args) */
 #define SYSCALL_3(num, a, b, c) \
     ({ \
-        register int64_t x0 asm("x0") = (int64_t)(a); \
-        register int64_t x1 asm("x1") = (int64_t)(b); \
-        register int64_t x2 asm("x2") = (int64_t)(c); \
-        register int64_t x8 asm("x8") = (num); \
-        asm volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x8) : "cc", "memory"); \
+        register int64_t x0 __asm__("x0") = (int64_t)(a); \
+        register int64_t x1 __asm__("x1") = (int64_t)(b); \
+        register int64_t x2 __asm__("x2") = (int64_t)(c); \
+        register int64_t x8 __asm__("x8") = (num); \
+        __asm__ volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x8) : "cc", "memory"); \
         x0; \
     })
 
 /* Macro for inline ARM64 syscall (4 args) */
 #define SYSCALL_4(num, a, b, c, d) \
     ({ \
-        register int64_t x0 asm("x0") = (int64_t)(a); \
-        register int64_t x1 asm("x1") = (int64_t)(b); \
-        register int64_t x2 asm("x2") = (int64_t)(c); \
-        register int64_t x3 asm("x3") = (int64_t)(d); \
-        register int64_t x8 asm("x8") = (num); \
-        asm volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x3), "r"(x8) : "cc", "memory"); \
+        register int64_t x0 __asm__("x0") = (int64_t)(a); \
+        register int64_t x1 __asm__("x1") = (int64_t)(b); \
+        register int64_t x2 __asm__("x2") = (int64_t)(c); \
+        register int64_t x3 __asm__("x3") = (int64_t)(d); \
+        register int64_t x8 __asm__("x8") = (num); \
+        __asm__ volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x3), "r"(x8) : "cc", "memory"); \
         x0; \
     })
 
@@ -143,7 +143,7 @@ struct freestanding_stat {
     uint64_t st_mtime_nsec;
     int64_t  st_ctime;
     uint64_t st_ctime_nsec;
-    int32_t  __unused[2];
+    int32_t  _unused[2];
 };
 
 /* read(fd, buf, count) → bytes read */
