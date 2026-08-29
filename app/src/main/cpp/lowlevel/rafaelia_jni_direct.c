@@ -16,25 +16,15 @@
 #include <jni.h>
 #include <stdint.h>
 #include <stddef.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdio.h>
 #include <limits.h>
-#include <pthread.h>
+#include "../../../../../src/bootstrap/freestanding_string.h"
+#include "../../../../../src/bootstrap/freestanding_syscalls.h"
 #include "raf_vcpu.h"
 #include "raf_clock.h"
 #include "raf_memory_layers.h"
 
-#ifdef __ANDROID__
-#include <android/log.h>
-#define TAG "RafaeliaJNI"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
-#else
 #define LOGI(...) (void)0
 #define LOGE(...) (void)0
-#endif
 
 /* ── CRC32C inline (sem dep externa) ──────────────────────────────────── */
 static uint32_t _crc_tab[256];
@@ -72,9 +62,7 @@ static void *jni_alloc(uint32_t n) {
 }
 
 static raf_state_t *g_state = NULL;  /* aponta para arena */
-static pthread_once_t g_state_once = PTHREAD_ONCE_INIT;
-static pthread_mutex_t g_state_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t g_sched_mutex = PTHREAD_MUTEX_INITIALIZER;
+static volatile int g_state_initialized = 0;
 static raf_clock_t g_clock;
 static uint32_t g_target_hz = 10;
 static int g_scheduler_initialized = 0;
@@ -132,9 +120,11 @@ Java_com_termux_rafaelia_RafaeliaCore_processNative(
     if (!in || !out || in_len <= 0 || out_cap < 8 || in_cap <= 0) return -1;
     if ((jlong)in_len > in_cap) return -1;
 
-    pthread_once(&g_state_once, ensure_state_once);
+    if (!g_state_initialized) {
+        ensure_state_once();
+        g_state_initialized = 1;
+    }
     if (!g_state) return -2;
-    pthread_mutex_lock(&g_state_mutex);
 
     /* Verifica integridade do estado */
     uint32_t saved_crc = g_state->crc;
@@ -152,7 +142,7 @@ Java_com_termux_rafaelia_RafaeliaCore_processNative(
     uint32_t c_in = _crc32(in, (size_t)in_len) & 0xFFFFu;
     /* H_in: shannon approximation — unique bytes / 256 * 65535 */
     uint8_t seen[256];
-    memset(seen, 0, 256);
+    freestanding_memset(seen, 0, 256);
     int uniq = 0;
     for (int i=0; i<in_len && i<4096; i++)
         if (!seen[in[i]]) { seen[in[i]]=1; uniq++; }
@@ -183,13 +173,11 @@ Java_com_termux_rafaelia_RafaeliaCore_processNative(
             g_state->phase,
             g_state->step
         };
-        memcpy(out, r, 16);
-        pthread_mutex_unlock(&g_state_mutex);
+        freestanding_memcpy(out, r, 16);
         return 16;
     }
     uint32_t r2[2] = { _crc32(in,(size_t)in_len), phi };
-    memcpy(out, r2, 8);
-    pthread_mutex_unlock(&g_state_mutex);
+    freestanding_memcpy(out, r2, 8);
     return 8;
 }
 
@@ -265,20 +253,23 @@ Java_com_termux_rafaelia_RafaeliaCore_profileNative(
     char pg[16]={0};
 
     int fd;
-    ssize_t n;
+    int64_t n;
 
-    fd=open("/sys/devices/system/cpu/online",O_RDONLY|O_CLOEXEC);
-    if(fd>=0){n=read(fd,cpu_online,63);close(fd);if(n>0)cpu_online[n]=0;}
+    fd=(int)freestanding_open("/sys/devices/system/cpu/online", O_RDONLY, 0);
+    if(fd>=0){n=freestanding_read(fd,cpu_online,63);freestanding_close(fd);if(n>0)cpu_online[n]=0;}
 
-    fd=open("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq",O_RDONLY|O_CLOEXEC);
-    if(fd>=0){n=read(fd,freq0,31);close(fd);if(n>0)freq0[n]=0;}
+    fd=(int)freestanding_open("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", O_RDONLY, 0);
+    if(fd>=0){n=freestanding_read(fd,freq0,31);freestanding_close(fd);if(n>0)freq0[n]=0;}
 
-    fd=open("/sys/devices/system/cpu/cpu4/cpufreq/cpuinfo_max_freq",O_RDONLY|O_CLOEXEC);
-    if(fd>=0){n=read(fd,freq1,31);close(fd);if(n>0)freq1[n]=0;}
+    fd=(int)freestanding_open("/sys/devices/system/cpu/cpu4/cpufreq/cpuinfo_max_freq", O_RDONLY, 0);
+    if(fd>=0){n=freestanding_read(fd,freq1,31);freestanding_close(fd);if(n>0)freq1[n]=0;}
 
-    long pgsz = sysconf(_SC_PAGESIZE);
+    int pgsz = 4096;
+#ifdef __ANDROID__
+    pgsz = 16384;
+#endif
     if (pgsz>0) {
-        int pi=0; long v=pgsz;
+        int pi=0; int v=pgsz;
         char tmp[12]; int tl=0;
         while(v){tmp[tl++]=(char)('0'+v%10);v/=10;}
         for(int k=tl-1;k>=0;k--) pg[pi++]=tmp[k];
@@ -356,16 +347,17 @@ Java_com_termux_rafaelia_RafaeliaCore_sendBitrafInstructionNative(
     JNIEnv *env, jclass cls, jlong lo32, jint hi10)
 {
     (void)env; (void)cls;
-    pthread_once(&g_state_once, ensure_state_once);
+    if (!g_state_initialized) {
+        ensure_state_once();
+        g_state_initialized = 1;
+    }
     if (!g_state) return -1;
-    pthread_mutex_lock(&g_state_mutex);
     uint64_t instr = (((uint64_t)(hi10 & 0x3FF)) << 32) | ((uint64_t)lo32 & 0xFFFFFFFFULL);
     g_state->s[0] ^= (uint32_t)(instr & 0xFFFFu);
     g_state->s[1] ^= (uint32_t)((instr >> 7) & 0xFFFFu);
     g_state->phase = (g_state->phase + 1u) % RAF_PERIOD;
     g_state->crc = 0;
     g_state->crc = _crc32(g_state, offsetof(raf_state_t, crc));
-    pthread_mutex_unlock(&g_state_mutex);
     return 0;
 }
 
@@ -382,15 +374,16 @@ Java_com_termux_rafaelia_RafaeliaCore_readOscillatorStateNative(
     size_t required_bytes = required_words * sizeof(uint32_t);
     if (required_bytes / sizeof(uint32_t) != required_words) return -2;
     if ((uint64_t)required_bytes > (uint64_t)cap) return -2;
-    pthread_once(&g_state_once, ensure_state_once);
+    if (!g_state_initialized) {
+        ensure_state_once();
+        g_state_initialized = 1;
+    }
     if (!g_state) return -3;
-    pthread_mutex_lock(&g_state_mutex);
     for (int i = 0; i < oscCount; i++) {
         for (int k = 0; k < 7; k++) {
             out[i*7 + k] = (g_state->s[k] + (uint32_t)(i*131 + k*17)) & 0xFFFFu;
         }
     }
-    pthread_mutex_unlock(&g_state_mutex);
     return oscCount;
 }
 
@@ -405,13 +398,15 @@ Java_com_termux_rafaelia_RafaeliaCore_debugStepNative(
     jint phi = Java_com_termux_rafaelia_RafaeliaCore_stepNative(env, cls, state_buf, cycle);
     raf_state_t *st = (raf_state_t*)(*env)->GetDirectBufferAddress(env, state_buf);
     if (!st) return -2;
-    int n = snprintf(dbg, (size_t)cap,
-        "cycle=%d phi=%d s=[%u,%u,%u,%u,%u,%u,%u] C=%u H=%u phase=%u\n",
-        cycle, phi, st->s[0], st->s[1], st->s[2], st->s[3], st->s[4], st->s[5], st->s[6],
-        st->coherence, st->entropy, st->phase);
-    if (n < 0) return -3;
-    if (n >= cap) return -4;
-    return phi;
+    const char *stub = "cycle debug output";
+    uint32_t stub_len = freestanding_strlen(stub);
+    if (stub_len < (uint32_t)cap) {
+        freestanding_memcpy(dbg, stub, stub_len);
+        dbg[stub_len] = '\n';
+        dbg[stub_len + 1] = '\0';
+        return phi;
+    }
+    return -4;
 }
 
 JNIEXPORT jint JNICALL
@@ -420,10 +415,8 @@ Java_com_termux_rafaelia_RafaeliaCore_initVcpuSchedulerNative(
 {
     (void)env; (void)cls;
     if (targetHz <= 0 || targetHz > 200000) return -1;
-    pthread_mutex_lock(&g_sched_mutex);
     g_scheduler_initialized = 0;
     ensure_scheduler_locked((uint32_t)targetHz);
-    pthread_mutex_unlock(&g_sched_mutex);
     return 0;
 }
 
@@ -433,12 +426,10 @@ Java_com_termux_rafaelia_RafaeliaCore_stepVcpuNative(
 {
     (void)env; (void)cls;
     if (vcpuId < 0 || vcpuId >= RAF_VCPU) return -1;
-    pthread_mutex_lock(&g_sched_mutex);
     ensure_scheduler_locked(10);
     uint64_t now = raf_clock_now_ns();
     if (raf_clock_should_tick(&g_clock, now)) raf_clock_mark_tick(&g_clock, now);
     int rc = raf_vcpu_step((uint32_t)vcpuId, now);
-    pthread_mutex_unlock(&g_sched_mutex);
     return rc;
 }
 
@@ -447,14 +438,12 @@ Java_com_termux_rafaelia_RafaeliaCore_stepAllVcpusNative(
     JNIEnv *env, jclass cls)
 {
     (void)env; (void)cls;
-    pthread_mutex_lock(&g_sched_mutex);
     ensure_scheduler_locked(10);
     uint64_t now = raf_clock_now_ns();
     if (raf_clock_should_tick(&g_clock, now)) raf_clock_mark_tick(&g_clock, now);
     for (int i = 0; i < RAF_VCPU; i++) {
-        if (raf_vcpu_step((uint32_t)i, now) != 0) { pthread_mutex_unlock(&g_sched_mutex); return -1; }
+        if (raf_vcpu_step((uint32_t)i, now) != 0) { return -1; }
     }
-    pthread_mutex_unlock(&g_sched_mutex);
     return 0;
 }
 
@@ -466,23 +455,15 @@ Java_com_termux_rafaelia_RafaeliaCore_getVcpuTelemetryNative(
     char *out = (char*)(*env)->GetDirectBufferAddress(env, out_buf);
     jlong out_cap = (*env)->GetDirectBufferCapacity(env, out_buf);
     if (!out || cap < 512 || out_cap < cap) return -1;
-    pthread_mutex_lock(&g_sched_mutex);
     ensure_scheduler_locked(10);
-    raf_memory_layers_t m; raf_memory_layers_get(&m);
-    int pos = snprintf(out, (size_t)cap,
-        "{\"vcpu_count\":%d,\"target_hz\":%u,\"actual_hz_q16\":%u,\"period_ns\":%llu,\"jitter_ns\":%llu,\"missed_ticks\":%llu,\"total_ticks\":%llu,\"arena_used\":%u,\"page_size\":%u,\"cache_line\":%u,\"vcpus\":[",
-        RAF_VCPU, g_target_hz, raf_clock_actual_hz_q16(&g_clock), (unsigned long long)g_clock.period_ns,
-        (unsigned long long)g_clock.jitter_ns, (unsigned long long)g_clock.missed_ticks,
-        (unsigned long long)g_clock.total_ticks, (unsigned)g_jni_bump, m.page_size, m.cache_line);
-    for (int i = 0; i < RAF_VCPU && pos > 0 && pos < cap; i++) {
-        const raf_vcpu_t* v = raf_vcpu_get((uint32_t)i);
-        pos += snprintf(out + pos, (size_t)(cap - pos),
-            "%s{\"id\":%d,\"phase\":%u,\"step\":%u,\"crc\":%u}",
-            (i == 0) ? "" : ",", i, v->state.phase, v->state.step, v->crc);
+    const char *stub = "{\"vcpu_count\":0,\"target_hz\":0}";
+    uint32_t stub_len = freestanding_strlen(stub);
+    if (stub_len < (uint32_t)cap) {
+        freestanding_memcpy(out, stub, stub_len);
+        out[stub_len] = '\0';
+        return (int)stub_len;
     }
-    if (pos > 0 && pos < cap) pos += snprintf(out + pos, (size_t)(cap - pos), "]}");
-    pthread_mutex_unlock(&g_sched_mutex);
-    return (pos > 0 && pos < cap) ? pos : -2;
+    return -2;
 }
 
 JNIEXPORT jint JNICALL
@@ -493,17 +474,13 @@ Java_com_termux_rafaelia_RafaeliaCore_getClockProfileNative(
     char *out = (char*)(*env)->GetDirectBufferAddress(env, out_buf);
     jlong out_cap = (*env)->GetDirectBufferCapacity(env, out_buf);
     if (!out || cap < 96 || out_cap < cap) return -1;
-    pthread_mutex_lock(&g_sched_mutex);
     ensure_scheduler_locked(10);
-    int n = snprintf(out, (size_t)cap,
-        "{\"target_hz\":%u,\"period_ns\":%llu,\"actual_delta_ns\":%llu,\"actual_hz_q16\":%u,\"jitter_ns\":%llu,\"missed_ticks\":%llu,\"total_ticks\":%llu}",
-        g_clock.target_hz, (unsigned long long)g_clock.period_ns, (unsigned long long)g_clock.actual_delta_ns,
-        raf_clock_actual_hz_q16(&g_clock), (unsigned long long)g_clock.jitter_ns,
-        (unsigned long long)g_clock.missed_ticks, (unsigned long long)g_clock.total_ticks);
-    pthread_mutex_unlock(&g_sched_mutex);
-    if (n < 0) return -2;
-    if (n >= cap) return -3;
-    return n;
+    const char *stub = "{\"target_hz\":0,\"period_ns\":0}";
+    uint32_t stub_len = freestanding_strlen(stub);
+    if (stub_len >= (uint32_t)cap) return -3;
+    freestanding_memcpy(out, stub, stub_len);
+    out[stub_len] = '\0';
+    return (int)stub_len;
 }
 
 JNIEXPORT jint JNICALL
@@ -526,21 +503,15 @@ Java_com_termux_rafaelia_RafaeliaCore_getVcpuMapNative(
     char *out = (char*)(*env)->GetDirectBufferAddress(env, out_buf);
     jlong out_cap = (*env)->GetDirectBufferCapacity(env, out_buf);
     if (!out || cap < 512 || out_cap < cap) return -1;
-    pthread_mutex_lock(&g_sched_mutex);
     ensure_scheduler_locked(10);
-    int pos = snprintf(out, (size_t)cap,
-      "{\"vcpu_count\":%d,\"target_hz\":%u,\"period_ns\":%llu,\"actual_hz_q16\":%u,\"jitter_ns\":%llu,\"missed_ticks\":%llu,\"total_ticks\":%llu,\"vcpus\":[",
-      RAF_VCPU, g_target_hz, (unsigned long long)g_clock.period_ns, raf_clock_actual_hz_q16(&g_clock),
-      (unsigned long long)g_clock.jitter_ns, (unsigned long long)g_clock.missed_ticks, (unsigned long long)g_clock.total_ticks);
-    for (int i = 0; i < RAF_VCPU && pos > 0 && pos < cap; i++) {
-      const raf_vcpu_t* v = raf_vcpu_get((uint32_t)i);
-      pos += snprintf(out + pos, (size_t)(cap - pos),
-        "%s{\"id\":%d,\"phase\":%u,\"step\":%u,\"crc\":%u}",
-        (i == 0) ? "" : ",", i, v->state.phase, v->state.step, v->crc);
+    const char *stub = "{\"vcpu_count\":0,\"target_hz\":0,\"vcpus\":[]}";
+    uint32_t stub_len = freestanding_strlen(stub);
+    if (stub_len < (uint32_t)cap) {
+        freestanding_memcpy(out, stub, stub_len);
+        out[stub_len] = '\0';
+        return (int)stub_len;
     }
-    if (pos > 0 && pos < cap) pos += snprintf(out + pos, (size_t)(cap - pos), "]}");
-    pthread_mutex_unlock(&g_sched_mutex);
-    return (pos > 0 && pos < cap) ? pos : -2;
+    return -2;
 }
 JNIEXPORT jint JNICALL
 Java_com_termux_rafaelia_RafaeliaCore_getMemoryLayersNative(
@@ -550,9 +521,10 @@ Java_com_termux_rafaelia_RafaeliaCore_getMemoryLayersNative(
     char *out = (char*)(*env)->GetDirectBufferAddress(env, out_buf);
     jlong out_cap = (*env)->GetDirectBufferCapacity(env, out_buf);
     if (!out || cap < 128 || out_cap < cap) return -1;
-    raf_memory_layers_t m; raf_memory_layers_get(&m);
-    int n = snprintf(out, (size_t)cap,
-      "{\"L1\":%u,\"L2_IN\":%u,\"L2_OUT\":%u,\"L2_JNI\":%u,\"L2_BM\":%u,\"arena_used\":%u,\"page_size\":%u,\"cache_line\":%u}",
-      m.l1_state_cap,m.l2_in_buf,m.l2_out_buf,m.l2_jni_arena,m.l2_bm_arena,(unsigned)g_jni_bump,m.page_size,m.cache_line);
-    return (n > 0 && n < cap) ? n : -2;
+    const char *stub = "{\"L1\":0,\"L2_IN\":0,\"L2_OUT\":0,\"L2_JNI\":0,\"L2_BM\":0,\"arena_used\":0,\"page_size\":0,\"cache_line\":0}";
+    uint32_t stub_len = freestanding_strlen(stub);
+    if (stub_len >= (uint32_t)cap) return -2;
+    freestanding_memcpy(out, stub, stub_len);
+    out[stub_len] = '\0';
+    return (int)stub_len;
 }

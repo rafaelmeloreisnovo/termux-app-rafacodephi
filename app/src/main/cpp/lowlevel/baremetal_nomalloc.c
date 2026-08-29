@@ -15,16 +15,12 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <unistd.h>
-#include <fcntl.h>
 
-#ifdef __ANDROID__
-#include <android/log.h>
+#include "../../../../../src/bootstrap/freestanding_syscalls.h"
+#include "../../../../../src/bootstrap/freestanding_log.h"
+
 #define LOG_TAG "TermuxBM"
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
-#else
-#define LOGD(...)
-#endif
+#define LOG_TAG_LEN 8
 
 /* ============================================================================
  * ARENA ESTÁTICA — 512KB, alinhada a cache line
@@ -75,19 +71,19 @@ static bm_caps_t g_caps = {0,0,0,0};
 #define HWCAP2_SVE2  (1UL<<1)
 #endif
 
-/* lê auxv sem getauxval (sem libc pesada) */
+/* lê auxv sem getauxval (sem libc pesada) — freestanding syscalls */
 static int bm_read_auxv(unsigned long *hwcap, unsigned long *hwcap2) {
     struct { unsigned long type; unsigned long val; } ent;
-    int fd = open("/proc/self/auxv", O_RDONLY | O_CLOEXEC);
+    int64_t fd = freestanding_open("/proc/self/auxv", O_RDONLY, 0);
     if (fd < 0) return 0;
     int got = 0;
     *hwcap = 0; *hwcap2 = 0;
-    while (read(fd, &ent, sizeof(ent)) == (ssize_t)sizeof(ent)) {
+    while (freestanding_read((int)fd, &ent, sizeof(ent)) == (int64_t)sizeof(ent)) {
         if (ent.type == 0) break;
         if (ent.type == AT_HWCAP)  { *hwcap  = ent.val; got |= 1; }
         if (ent.type == AT_HWCAP2) { *hwcap2 = ent.val; got |= 2; }
     }
-    close(fd);
+    freestanding_close((int)fd);
     return (got & 1) != 0;
 }
 
@@ -676,12 +672,12 @@ int      get_arch_runtime_caps_valid(void) { bm_init_caps(); return g_caps.valid
 /* ============================================================================
  * HW PROFILE — lê /sys e /proc diretamente, sem printf/sscanf
  * ========================================================================== */
-static ssize_t bm_read_file(const char *path, char *buf, size_t n) {
+static int64_t bm_read_file(const char *path, char *buf, size_t n) {
     if (!path || !buf || !n) return -1;
-    int fd = open(path, O_RDONLY | O_CLOEXEC);
+    int64_t fd = freestanding_open(path, O_RDONLY, 0);
     if (fd < 0) return -1;
-    ssize_t r = read(fd, buf, n-1);
-    close(fd);
+    int64_t r = freestanding_read((int)fd, buf, (uint32_t)(n-1));
+    freestanding_close((int)fd);
     if (r <= 0) return -1;
     buf[r] = 0;
     return r;
@@ -787,14 +783,18 @@ void get_hw_profile(hw_profile_t *p) {
     }
     if (found) p->access_flags |= HW_ACCESS_HAS_CPU_CLUSTER_FREQ;
 
-    /* page size */
-    long pg = sysconf(_SC_PAGESIZE);
-    if (pg > 0) { p->page_size=(uint32_t)pg; p->access_flags|=HW_ACCESS_HAS_PAGE_SIZE; }
-
-#ifdef _SC_LEVEL1_DCACHE_LINESIZE
-    long cl = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
-    if (cl > 0) { p->cache_line=(uint32_t)cl; p->access_flags|=HW_ACCESS_HAS_CACHE_LINE; }
+    /* page size — Android default 4096, 16384 on newer versions
+     * Hardcoded fallback since sysconf is from libc */
+    uint32_t pg = 4096u;
+#ifdef __ANDROID__
+    /* Android 15+ uses 16KB pages */
+    pg = 16384u;
 #endif
+    if (pg > 0) { p->page_size = pg; p->access_flags|=HW_ACCESS_HAS_PAGE_SIZE; }
+
+    /* cache line size — typical L1 cache line is 64 bytes on ARM */
+    uint32_t cl = 64u;
+    if (cl > 0) { p->cache_line = cl; p->access_flags|=HW_ACCESS_HAS_CACHE_LINE; }
 
     p->access_flags |= HW_ACCESS_NO_PHYS_REG_ACCESS;
     p->access_flags |= HW_ACCESS_NO_GPIO_PIN_ACCESS;

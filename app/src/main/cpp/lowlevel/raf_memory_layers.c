@@ -1,5 +1,4 @@
 #include "raf_memory_layers.h"
-#include <unistd.h>
 
 void raf_memory_layers_get(raf_memory_layers_t* out){
  if(!out) return;
@@ -10,6 +9,9 @@ void raf_memory_layers_get(raf_memory_layers_t* out){
  out->l2_bm_arena=512u*1024u;
  out->ram_note=1;
  out->cache_line=64;
- long p = sysconf(_SC_PAGESIZE);
- out->page_size = p>0?(uint32_t)p:4096u;
+#ifdef __ANDROID__
+ out->page_size = 16384u;
+#else
+ out->page_size = 4096u;
+#endif
 }

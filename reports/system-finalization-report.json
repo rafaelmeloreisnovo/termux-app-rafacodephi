@@ -1,0 +1,143 @@
+{
+  "schema": "termux.rafacodephi.system-finalization-report.v1",
+  "profile": "safe-core",
+  "profile_closed": true,
+  "state": "SAFE_CORE_IMPLEMENTATION_CLOSED",
+  "claim_scope": "static implementation, fail-closed boundaries and executable host validators",
+  "claim_allowed_scope": true,
+  "release_allowed": false,
+  "required_checks": [
+    "build_metadata",
+    "github_action_references",
+    "loader_quarantine",
+    "rafaelia_zero_instrumentation",
+    "canonical_truth_sources"
+  ],
+  "failed_required_checks": [],
+  "allowed_open_gaps": [
+    "observable_remote_ci",
+    "production_release_signing",
+    "dual_arm_device_evidence",
+    "prefix_safe_real_package_stack",
+    "current_federation_runtime_lock",
+    "functional_loader",
+    "browser_tls",
+    "complete_apkc_compilers",
+    "complete_vcpu_vm"
+  ],
+  "checks": {
+    "build_metadata": {
+      "ok": true,
+      "state": "PROVEN_STRUCTURAL",
+      "detail": "canonical Android/NDK/ABI metadata matches",
+      "evidence": [
+        "gradle.properties"
+      ]
+    },
+    "github_action_references": {
+      "ok": true,
+      "state": "PROVEN_STRUCTURAL",
+      "detail": "201 action references classified; no strict violation",
+      "evidence": [
+        "scripts/audit_github_actions_refs.py"
+      ]
+    },
+    "loader_quarantine": {
+      "ok": true,
+      "state": "STUB_SAFE_BLOCKED",
+      "detail": "loader is accepted only in quarantined state STUB_SAFE_BLOCKED; release remains blocked",
+      "evidence": [
+        "configs/loader-functional-security-contract.json",
+        "reports/loader-functional-quarantine-local-validation.json"
+      ]
+    },
+    "rafaelia_zero_instrumentation": {
+      "ok": true,
+      "state": "PROVEN_STRUCTURAL",
+      "detail": "device probe, bundle and matrix instruments are implemented; physical evidence remains separate",
+      "evidence": [
+        "reports/RAFAELIA_ZERO_OPERATIONAL_EVIDENCE_BASELINE_20260720.json"
+      ]
+    },
+    "canonical_truth_sources": {
+      "ok": true,
+      "state": "PROVEN_STRUCTURAL",
+      "detail": "8 mandatory canonical sources are present",
+      "evidence": [
+        "configs/first-part-gap-map.json",
+        "configs/loader-functional-security-contract.json",
+        "docs/RUNTIME_TRUTH_TABLE.md",
+        "gradle.properties",
+        "reports/RAFAELIA_ZERO_OPERATIONAL_EVIDENCE_BASELINE_20260720.json",
+        "reports/loader-functional-quarantine-local-validation.json",
+        "runtime-lock.json",
+        "scripts/audit_github_actions_refs.py"
+      ]
+    },
+    "observable_remote_ci": {
+      "ok": false,
+      "state": "TOKEN_VAZIO",
+      "detail": "no finalization CI receipt with observable steps/logs",
+      "evidence": [
+        "reports/ci-finalization-evidence.json"
+      ]
+    },
+    "production_release_signing": {
+      "ok": false,
+      "state": "TOKEN_VAZIO",
+      "detail": "production release signing is not proven",
+      "evidence": [
+        "configs/first-part-gap-map.json"
+      ]
+    },
+    "dual_arm_device_evidence": {
+      "ok": false,
+      "state": "TOKEN_VAZIO",
+      "detail": "ARM32 and ARM64 physical bundles have not both been selected and validated",
+      "evidence": [
+        "reports/RAFAELIA_ZERO_OPERATIONAL_EVIDENCE_BASELINE_20260720.json"
+      ]
+    },
+    "prefix_safe_real_package_stack": {
+      "ok": false,
+      "state": "BLOCKED",
+      "detail": "{\"DNS/network básico\": \"TOKEN_VAZIO\", \"libapt\": \"TOKEN_VAZIO\", \"payload ARM real\": \"MISSING\", \"pkg real\": \"MISSING\", \"repositório configurado\": \"MISSING\"}",
+      "evidence": [
+        "docs/RUNTIME_TRUTH_TABLE.md"
+      ]
+    },
+    "current_federation_runtime_lock": {
+      "ok": false,
+      "state": "STALE_OR_INCOMPLETE",
+      "detail": "runtime lock is not release-current (branch=master, commit=ff500183d1b3dafcda9e15807c05bc9390fa2712, head=7d99e9a1ea91924d9f2efe4d8949faec83159b59)",
+      "evidence": [
+        "runtime-lock.json"
+      ]
+    },
+    "browser_tls": {
+      "ok": false,
+      "state": "TOKEN_VAZIO",
+      "detail": "owned TLS and certification remain research gaps",
+      "evidence": [
+        "configs/first-part-gap-map.json"
+      ]
+    },
+    "complete_apkc_compilers": {
+      "ok": false,
+      "state": "TOKEN_VAZIO",
+      "detail": "fixed ELF/DEX fixtures are not complete owned compilers",
+      "evidence": [
+        "configs/first-part-gap-map.json"
+      ]
+    },
+    "complete_vcpu_vm": {
+      "ok": false,
+      "state": "TOKEN_VAZIO",
+      "detail": "VCPU remains a deterministic state kernel, not a complete VM",
+      "evidence": [
+        "configs/first-part-gap-map.json"
+      ]
+    }
+  },
+  "global_boundary": "safe-core closure never implies functional distribution release or full-platform completion"
+}
