@@ -60,6 +60,7 @@ endif
 ifeq ($(TARGET_ARCH_ABI),x86_64)
     LOCAL_CFLAGS += -msse2 -msse4.2 -mavx -ftree-vectorize
 endif
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../src/bootstrap
 LOCAL_LDLIBS := -llog -ldl
 ifneq ($(RMR_NO_LIBM),1)
 LOCAL_LDLIBS += -lm
@@ -76,6 +77,7 @@ endif
 ifeq ($(RMR_PURE_CORE),1)
 LOCAL_CFLAGS += -DRMR_NO_DEBUG_STRING=1
 endif
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../src/bootstrap
 LOCAL_CFLAGS += -std=c11 -Wall -Wextra -Os -fno-stack-protector -fno-common
 LOCAL_CFLAGS += -ffunction-sections -fdata-sections
 LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
