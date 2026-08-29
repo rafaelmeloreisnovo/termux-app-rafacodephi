@@ -15,7 +15,7 @@ public class VerbativoCore {
     static {
         try {
             System.loadLibrary("termux-rafaelia");
-            initialized = isInitializedNative();
+            initialized = isInitializedNative() != 0;
             if (initialized) {
                 Log.i(TAG, "Verbovivo graph loaded and initialized");
             } else {
