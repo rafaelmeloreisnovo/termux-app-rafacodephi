@@ -109,7 +109,7 @@
     "current_federation_runtime_lock": {
       "ok": false,
       "state": "STALE_OR_INCOMPLETE",
-      "detail": "runtime lock is not release-current (branch=master, commit=ff500183d1b3dafcda9e15807c05bc9390fa2712, head=2a512928b0b6c6c6c8d62ee020cb3709f050b2f0)",
+      "detail": "runtime lock is not release-current (branch=master, commit=ff500183d1b3dafcda9e15807c05bc9390fa2712, head=7d99e9a1ea91924d9f2efe4d8949faec83159b59)",
       "evidence": [
         "runtime-lock.json"
       ]
