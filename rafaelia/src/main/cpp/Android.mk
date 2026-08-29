@@ -78,10 +78,10 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libverbovivo_graph
 LOCAL_SRC_FILES := \
-  ../../verbovivo_graph.c \
-  ../../t7_toroid_builder.c \
-  ../../verbovivo_bootstrap_gate.c
-LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../../
+  ../../../verbovivo_graph.c \
+  ../../../t7_toroid_builder.c \
+  ../../../verbovivo_bootstrap_gate.c
+LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../../../
 LOCAL_CFLAGS := -std=c11 -O2 -Wall -Wextra -Werror \
   -ffreestanding -fno-builtin -fno-common -fvisibility=hidden \
   -ffunction-sections -fdata-sections
@@ -108,7 +108,7 @@ include $(BUILD_STATIC_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE := termux-rafaelia-verbovivo
 LOCAL_SRC_FILES := verbovivo_jni.c
-LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../../
+LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../../../
 LOCAL_CFLAGS := -std=c11 -O2 -Wall -Wextra -Werror \
   -fno-builtin -fno-common -fvisibility=hidden \
   -ffunction-sections -fdata-sections
