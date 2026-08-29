@@ -35,6 +35,9 @@ else
   $(error Unsupported RAF_ECC32_PROFILE='$(RAF_ECC32_PROFILE)'; use compact or speed)
 endif
 
+# Link Verbovivo convergence engine as static library
+LOCAL_STATIC_LIBRARIES := libverbovivo_graph termux-rafaelia-verbovivo
+
 # Critical: 16KB page alignment for Android 15/16 compatibility.
 LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384
 
@@ -69,3 +72,63 @@ LOCAL_LDFLAGS := -Wl,--gc-sections \
   -Wl,-z,max-page-size=16384 \
   -Wl,-z,common-page-size=16384
 include $(BUILD_SHARED_LIBRARY)
+
+# VERBOVIVO Core Graph Library — Pure Freestanding Convergence Engine (T^7 Toroid)
+# Freestanding: no libc, no malloc, no syscalls (except JNI layer)
+include $(CLEAR_VARS)
+LOCAL_MODULE := libverbovivo_graph
+LOCAL_SRC_FILES := \
+  ../../../verbovivo_graph.c \
+  ../../../t7_toroid_builder.c
+LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../../../
+LOCAL_CFLAGS := -std=c11 -O2 -Wall -Wextra -Werror \
+  -ffreestanding -fno-builtin -fno-common -fvisibility=hidden \
+  -ffunction-sections -fdata-sections
+
+ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
+  LOCAL_CFLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=softfp
+endif
+ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+  LOCAL_CFLAGS += -march=armv8-a+simd
+endif
+ifeq ($(TARGET_ARCH_ABI),x86)
+  LOCAL_CFLAGS += -march=i686 -msse2
+endif
+ifeq ($(TARGET_ARCH_ABI),x86_64)
+  LOCAL_CFLAGS += -march=x86-64 -msse2
+endif
+
+LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384
+LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)
+include $(BUILD_STATIC_LIBRARY)
+
+# VERBOVIVO JNI Bridge — Java interface to graph engine
+# Integrated into termux-rafaelia shared library
+include $(CLEAR_VARS)
+LOCAL_MODULE := termux-rafaelia-verbovivo
+LOCAL_SRC_FILES := verbovivo_jni.c
+LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../../../
+LOCAL_CFLAGS := -std=c11 -O2 -Wall -Wextra -Werror \
+  -fno-builtin -fno-common -fvisibility=hidden \
+  -ffunction-sections -fdata-sections
+
+ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
+  LOCAL_CFLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=softfp
+endif
+ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+  LOCAL_CFLAGS += -march=armv8-a+simd
+endif
+ifeq ($(TARGET_ARCH_ABI),x86)
+  LOCAL_CFLAGS += -march=i686 -msse2
+endif
+ifeq ($(TARGET_ARCH_ABI),x86_64)
+  LOCAL_CFLAGS += -march=x86-64 -msse2
+endif
+
+# Link against Verbovivo core graph library
+LOCAL_STATIC_LIBRARIES := libverbovivo_graph
+LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)
+
+LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384
+
+include $(BUILD_STATIC_LIBRARY)

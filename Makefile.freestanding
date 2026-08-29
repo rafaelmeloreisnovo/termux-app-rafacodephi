@@ -1,0 +1,117 @@
+# Freestanding bootstrap build — P0.1-P0.5 implementation
+# No Python, no libc, no external dependencies
+
+CC := clang
+CFLAGS := -target aarch64-linux-gnu -ffreestanding -nostdlib -fno-builtin \
+          -I./src/bootstrap -I./src/elf -I./src/dex \
+          -Wall -O2 -fPIC
+ASFLAGS := -target aarch64-linux-gnu -nostdlib -fno-integrated-as
+
+# Output directories
+BUILD_DIR := build
+BIN_DIR := bin
+
+# Source files
+BOOTSTRAP_SRCS := src/bootstrap/proot_freestanding_real.c \
+                  src/bootstrap/receipt_sealer_real.c \
+                  src/bootstrap/extract_payload_real.c \
+                  src/bootstrap/dpkg_install_real.c \
+                  src/bootstrap/bootstrap_orchestrator.c
+
+NATIVE_SRCS := src/native/bootstrap-validator.S
+
+ELF_SRCS := src/elf/elf64_builder.c
+
+DEX_SRCS := src/dex/dex_builder.c
+
+# Object files
+BOOTSTRAP_OBJS := $(BOOTSTRAP_SRCS:src/%.c=$(BUILD_DIR)/%.o)
+NATIVE_OBJS := $(NATIVE_SRCS:src/%.S=$(BUILD_DIR)/%.o)
+ELF_OBJS := $(ELF_SRCS:src/%.c=$(BUILD_DIR)/%.o)
+DEX_OBJS := $(DEX_SRCS:src/%.c=$(BUILD_DIR)/%.o)
+
+ALL_OBJS := $(BOOTSTRAP_OBJS) $(NATIVE_OBJS) $(ELF_OBJS) $(DEX_OBJS)
+
+# Targets
+.PHONY: all clean bootstrap native elf dex
+
+all: bootstrap native elf dex
+	@echo "[DONE] All P0.1-P0.5 modules built"
+
+bootstrap: $(BIN_DIR)/bootstrap-orchestrator
+	@echo "[✓] Bootstrap orchestrator built"
+
+native: $(BIN_DIR)/bootstrap-validator.o
+	@echo "[✓] Native bootstrap validator built"
+
+elf: $(BIN_DIR)/elf64-test
+	@echo "[✓] ELF64 builder built"
+
+dex: $(BIN_DIR)/dex-test
+	@echo "[✓] DEX builder built"
+
+# Compilation rules
+$(BUILD_DIR)/%.o: src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "[CC] $< → $@"
+
+$(BUILD_DIR)/%.o: src/%.S
+	@mkdir -p $(dir $@)
+	$(CC) $(ASFLAGS) -c $< -o $@
+	@echo "[AS] $< → $@"
+
+# Linking
+$(BIN_DIR)/bootstrap-orchestrator: $(BOOTSTRAP_OBJS) $(ELF_OBJS) $(DEX_OBJS)
+	@mkdir -p $(BIN_DIR)
+	$(CC) -nostdlib -fPIC -Wl,-static $^ -o $@
+	@echo "[LD] $@ built ($(shell wc -c < $@) bytes)"
+
+$(BIN_DIR)/bootstrap-validator.o: $(BUILD_DIR)/native/bootstrap-validator.o
+	@mkdir -p $(BIN_DIR)
+	cp $< $@
+
+$(BIN_DIR)/elf64-test: $(BUILD_DIR)/elf/elf64_builder.o
+	@mkdir -p $(BIN_DIR)
+	@echo "[INFO] ELF64 builder object file: $@"
+	cp $< $@
+
+$(BIN_DIR)/dex-test: $(BUILD_DIR)/dex/dex_builder.o
+	@mkdir -p $(BIN_DIR)
+	@echo "[INFO] DEX builder object file: $@"
+	cp $< $@
+
+# Clean
+clean:
+	rm -rf $(BUILD_DIR) $(BIN_DIR)
+	@echo "[CLEAN] Build artifacts removed"
+
+# Verify freestanding compliance
+verify-freestanding:
+	@echo "[CHECK] Verifying no libc dependencies..."
+	@for f in $(BOOTSTRAP_SRCS) $(ELF_SRCS) $(DEX_SRCS); do \
+		if grep -q "#include <" $$f; then \
+			echo "ERROR: libc include found in $$f"; \
+			exit 1; \
+		fi; \
+	done
+	@echo "[✓] No libc includes detected"
+
+# Size report
+size-report: all
+	@echo "[SIZE] Binary sizes:"
+	@ls -lh $(BIN_DIR)/* | awk '{print "  " $$9 ": " $$5}'
+
+# Help
+help:
+	@echo "Freestanding Bootstrap Build (P0.1-P0.5)"
+	@echo ""
+	@echo "Targets:"
+	@echo "  all                 - Build all modules (default)"
+	@echo "  bootstrap           - Build P0.1-P0.4 bootstrap orchestrator"
+	@echo "  native              - Build P0.5 ARM64 validator"
+	@echo "  elf                 - Build ELF64 builder"
+	@echo "  dex                 - Build DEX builder"
+	@echo "  clean               - Remove build artifacts"
+	@echo "  verify-freestanding - Check for libc includes"
+	@echo "  size-report         - Show binary sizes"

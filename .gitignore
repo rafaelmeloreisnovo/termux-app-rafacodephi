@@ -50,3 +50,4 @@ __pycache__/
 
 # Generated release artifacts
 dist/
+rafaelia/*.o

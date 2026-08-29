@@ -11,13 +11,26 @@ apk_version_tag="$1"
 shift
 
 workspace="${GITHUB_WORKSPACE:-$PWD}"
-search_root="${APK_SEARCH_ROOT:-$workspace/app/build/outputs/apk}"
+search_root="${APK_SEARCH_ROOT:-}"
 
-if [[ ! -d "$search_root" ]]; then
-  echo "❌ APK search root does not exist: $search_root" >&2
+# Auto-detect gradle APK output directory (gradle 7.x+, 8.x compatibility)
+if [[ -z "$search_root" ]]; then
+  # Prefer explicit outputs/apk (gradle < 8.x or configured output)
+  if [[ -d "$workspace/app/build/outputs/apk" ]]; then
+    search_root="$workspace/app/build/outputs/apk"
+  # Fallback to intermediates/apk (gradle 8.x+)
+  elif [[ -d "$workspace/app/build/intermediates/apk" ]]; then
+    search_root="$workspace/app/build/intermediates/apk"
+  fi
+fi
+
+if [[ -z "$search_root" || ! -d "$search_root" ]]; then
+  echo "❌ APK search root does not exist (tried outputs/apk and intermediates/apk)" >&2
   if [[ -d "$workspace/app/build" ]]; then
     echo "Observed app/build directories:" >&2
     find "$workspace/app/build" -maxdepth 5 -type d -print | sort >&2 || true
+    echo "Searching for any .apk files:" >&2
+    find "$workspace/app/build" -name "*.apk" -type f -print | head -20 >&2 || true
   fi
   exit 3
 fi
