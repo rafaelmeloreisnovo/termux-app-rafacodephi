@@ -19,7 +19,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y build-essential clang gcc-multilib
 
-      - name: Syntax check (freestanding ARM64)
+      - name: Syntax check (freestanding ARM64 — core modules)
         run: |
           echo "Checking freestanding C syntax (ARM64 target)..."
           clang -target aarch64-linux-gnu \
@@ -27,6 +27,30 @@ jobs:
             -I rmr/Rrr -I rmr/include \
             rmr/Rrr/*.c rmr/Rrr/*.S 2>&1 || true
           echo "✓ Syntax check complete (warnings may be expected in freestanding mode)"
+
+      - name: Freestanding compliance gate (lowlevel modules)
+        run: |
+          echo "=== Phase 2D: Validating freestanding lowlevel modules ==="
+          echo "Checking for non-freestanding includes in app/src/main/cpp/lowlevel/*.c..."
+
+          # Check for stdlib.h, stdio.h, string.h, time.h, unistd.h, sys/*, pthread.h, math.h, assert.h
+          NON_FREE=$(grep -l "^#include <stdlib.h>\|^#include <stdio.h>\|^#include <string.h>\|^#include <time.h>\|^#include <unistd.h>\|^#include <sys/\|^#include <pthread.h>\|^#include <math.h>\|^#include <assert.h>" app/src/main/cpp/lowlevel/*.c 2>/dev/null | wc -l)
+
+          if [ "$NON_FREE" -eq 0 ]; then
+            echo "✅ All lowlevel files are freestanding-compliant (zero non-freestanding includes detected)"
+          else
+            echo "❌ Found $NON_FREE lowlevel files with non-freestanding includes"
+            grep -l "^#include <stdlib.h>\|^#include <stdio.h>\|^#include <string.h>\|^#include <time.h>\|^#include <unistd.h>\|^#include <sys/\|^#include <pthread.h>\|^#include <math.h>\|^#include <assert.h>" app/src/main/cpp/lowlevel/*.c
+            exit 1
+          fi
+
+          echo ""
+          echo "Verifying freestanding wrapper header includes..."
+          FS_USED=$(grep -l "freestanding_" app/src/main/cpp/lowlevel/*.c 2>/dev/null | wc -l)
+          echo "  • Freestanding headers used in: $FS_USED files"
+
+          echo ""
+          echo "✅ Phase 2D milestone: Lowlevel freestanding compliance verified"
 
       - name: BUG-01 Attractor Table Complete Gate
         run: |
