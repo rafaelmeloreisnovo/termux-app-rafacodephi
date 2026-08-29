@@ -1,11 +1,16 @@
 #include "rafaelia_toroidal_inference.h"
-
-#include <math.h>
+#include <stdint.h>
 
 #define RAFAELIA_PI 3.14159265358979323846
 
+static double freestanding_fmod(double x, double y) {
+    if (y == 0.0) return 0.0;
+    int64_t quotient = (int64_t)(x / y);
+    return x - (double)quotient * y;
+}
+
 static double wrap01(double value) {
-    double wrapped = fmod(value, 1.0);
+    double wrapped = freestanding_fmod(value, 1.0);
     if (wrapped < 0.0) wrapped += 1.0;
     return wrapped;
 }

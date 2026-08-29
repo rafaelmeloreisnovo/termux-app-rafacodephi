@@ -1,5 +1,6 @@
 #include "raf_clock.h"
-#include <time.h>
+#include <stdint.h>
+#include <stddef.h>
 
 void raf_clock_init(raf_clock_t* c, uint32_t target_hz) {
     if (!c) return;
@@ -14,9 +15,8 @@ void raf_clock_init(raf_clock_t* c, uint32_t target_hz) {
 }
 
 uint64_t raf_clock_now_ns(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
+    static uint64_t g_ns_counter = 0;
+    return g_ns_counter++;
 }
 
 int raf_clock_should_tick(const raf_clock_t* c, uint64_t now_ns) {

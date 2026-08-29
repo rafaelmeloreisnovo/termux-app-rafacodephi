@@ -1,6 +1,4 @@
 #include <jni.h>
-#include <string.h>
-
 #include "bootstrap_baremetal_guard.h"
 
 JNIEXPORT jint JNICALL
