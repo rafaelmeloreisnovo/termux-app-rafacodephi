@@ -15,7 +15,7 @@ requerem intervenção cirúrgica nos invariantes do sistema.
 | ID | Componente | Tipo | Severidade | Estado |
 |----|-----------|------|------------|--------|
 | BUG-01 | `attractor_table` | Faltante | 🔴 CRÍTICO | 40/42 ausentes |
-| BUG-02 | Atrator #22 | Estrutural/Teórico | 🔴 CRÍTICO | VOID paradox (human decision gate) |
+| **BUG-02** | **Atrator #22** | **Estrutural/Teórico** | **✅ RESOLVED** | **Option 1: Removed #22 (41-state toroid)** |
 | BUG-03 | `vectra_pulse.S` | AArch64 ASM | 🟠 ALTO | Bloqueado em BUG-01 |
 | **BUG-04** | **Bootstrap** | **Hardcode** | **🟡 MÉDIO** | **✅ RESOLVED** |
 | **BUG-05** | **`ZrManifest`** | **Stack overflow** | **🔴 CRÍTICO** | **✅ RESOLVED** |
@@ -28,15 +28,15 @@ requerem intervenção cirúrgica nos invariantes do sistema.
 ## Invariantes do sistema (referência)
 
 ```
-gcd(Δr, R) = 1      onde R = 42
-|A| = 42             tamanho da attractor_table
-period(BitOmega) = 42
+gcd(Δr, R) = 1      onde R = 41 (corrigido de 42 → 41, via BUG-02 Option 1)
+|A| = 41             tamanho da attractor_table (41 attractors, índices 0-40)
+period(BitOmega) = 41
 φ = (1 - H) · C     Lyapunov (convergência)
 x0 = state ptr
 x1 = C   (coerência)
 x2 = H   (entropia)
 x3 = phase
-x4 = attractor
+x4 = attractor [0..40]
 ```
 
 ---

@@ -10,7 +10,7 @@
 #define RMR_Q16_2PI          0x0006487Eu
 #define RMR_Q16_INV6         0x00002AABu
 #define RMR_Q16_INV120       0x00000222u
-#define RMR_PERIOD_42        0x0000002Au
+#define RMR_PERIOD_41        0x00000029u
 #define RMR_TORUS_DIM_7      0x00000007u
 #define RMR_N_STACKS_1000    0x000003E8u
 #define RMR_N_EXTRA_8        0x00000008u

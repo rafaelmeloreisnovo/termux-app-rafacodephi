@@ -50,7 +50,7 @@ typedef float     f32;
 #define PACKED   __attribute__((packed))
 
 /* ── Constantes do sistema ────────────────────────────────────────────── */
-#define PERIOD      RMR_PERIOD_42
+#define PERIOD      RMR_PERIOD_41
 #define TORUS_DIM   RMR_TORUS_DIM_7
 #define N_VCPU      8u
 #define N_STACKS    RMR_N_STACKS_1000

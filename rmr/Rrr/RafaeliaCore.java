@@ -115,7 +115,7 @@ public final class RafaeliaCore {
     public static int step() {
         if (!_libLoaded) return 0;
         int phi = stepNative(STATE_BUF, _cycle);
-        _cycle = (_cycle + 1) % 42;
+        _cycle = (_cycle + 1) % 41;
         return phi;
     }
 
@@ -161,7 +161,7 @@ public final class RafaeliaCore {
     public static int debugSingleStep(ByteBuffer debugOut, int cap) {
         if (!_libLoaded) return -1;
         int phi = debugStepNative(STATE_BUF, _cycle, debugOut, cap);
-        _cycle = (_cycle + 1) % 42;
+        _cycle = (_cycle + 1) % 41;
         return phi;
     }
 
