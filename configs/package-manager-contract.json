@@ -1,0 +1,129 @@
+{
+  "schema": "raf.package-manager-contract.v1",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "revised_on": "2026-08-29",
+  "profile": "pkg-manager-freestanding",
+  "description": "Package manager (dpkg/libapt/apt) rebuild contract for RAFCODEΦ prefix independence",
+
+  "requirements": {
+    "dpkg_prefix_rafcodephi": {
+      "state": "IN_PROGRESS",
+      "description": "All dpkg paths rewritten from /data/data/com.termux to /data/data/com.termux.rafacodephi",
+      "evidence": [],
+      "validation_gate": "scripts/validate_package_manager_contract.py --requirement dpkg_prefix_rafcodephi"
+    },
+    "libapt_freestanding_or_musl": {
+      "state": "PLANNED",
+      "description": "libapt rebuilt against musl or freestanding libc, no glibc dependencies",
+      "evidence": [],
+      "validation_gate": "scripts/validate_package_manager_contract.py --requirement libapt_freestanding"
+    },
+    "apt_deterministic_sources": {
+      "state": "PLANNED",
+      "description": "APT source selection is deterministic with no random mirror selection",
+      "evidence": [],
+      "validation_gate": "scripts/validate_package_manager_contract.py --requirement apt_determinism"
+    },
+    "package_signatures_present": {
+      "state": "PLANNED",
+      "description": "All installed packages carry RAFCODEΦ signatures or pass origin verification",
+      "evidence": [],
+      "validation_gate": "scripts/validate_package_manager_contract.py --requirement pkg_signatures"
+    },
+    "no_global_prefix_references": {
+      "state": "PLANNED",
+      "description": "No hard-coded references to global /data/data/com.termux prefix in binaries",
+      "evidence": [],
+      "validation_gate": "scripts/validate_package_manager_contract.py --requirement no_global_refs"
+    },
+    "dpkg_status_file_valid": {
+      "state": "PLANNED",
+      "description": "dpkg status file format is valid and parseable per dpkg contract",
+      "evidence": [],
+      "validation_gate": "scripts/validate_package_manager_contract.py --requirement dpkg_status"
+    },
+    "apt_cache_coherent": {
+      "state": "PLANNED",
+      "description": "APT cache is coherent with installed package state (no stale entries)",
+      "evidence": [],
+      "validation_gate": "scripts/validate_package_manager_contract.py --requirement apt_cache"
+    }
+  },
+
+  "build_chain": {
+    "source_termux_packages": "https://github.com/termux/termux-packages",
+    "source_version": "2026-08-29",
+    "target_prefix": "/data/data/com.termux.rafacodephi",
+    "libc_implementation": "musl-libc",
+    "compiler_flags": "-fno-plt -fPIC -O2",
+    "static_linking": true,
+    "strip_binaries": true
+  },
+
+  "critical_binaries": [
+    {
+      "name": "dpkg",
+      "version_constraint": ">=1.20",
+      "static_link_required": true,
+      "signature_required": true,
+      "path_prefix": "/data/data/com.termux.rafacodephi/bin/dpkg"
+    },
+    {
+      "name": "apt",
+      "version_constraint": ">=2.0",
+      "static_link_required": true,
+      "signature_required": true,
+      "path_prefix": "/data/data/com.termux.rafacodephi/bin/apt"
+    },
+    {
+      "name": "apt-get",
+      "version_constraint": ">=2.0",
+      "static_link_required": true,
+      "signature_required": true,
+      "path_prefix": "/data/data/com.termux.rafacodephi/bin/apt-get"
+    },
+    {
+      "name": "pkg",
+      "version_constraint": ">=1.0",
+      "static_link_required": true,
+      "signature_required": true,
+      "path_prefix": "/data/data/com.termux.rafacodephi/bin/pkg"
+    }
+  ],
+
+  "environment_variables": {
+    "TERMUX_PREFIX": "/data/data/com.termux.rafacodephi/files/usr",
+    "TERMUX_HOME": "/data/data/com.termux.rafacodephi/files/home",
+    "TERMUX_ANDROID_HOME": "/data/data/com.termux.rafacodephi/files/home"
+  },
+
+  "verification_gates": {
+    "binary_has_no_glibc": {
+      "description": "Verify binary has no glibc dependencies using ldd/nm",
+      "command": "ldd /path/to/binary | grep -i glibc | wc -l",
+      "expected_output": "0"
+    },
+    "prefix_path_embedded": {
+      "description": "Verify prefix path is correct in strings/symbols",
+      "command": "strings /path/to/binary | grep -c '/data/data/com.termux.rafacodephi'",
+      "expected_output": ">0"
+    },
+    "no_global_prefix": {
+      "description": "Verify no global /data/data/com.termux references",
+      "command": "strings /path/to/binary | grep '/data/data/com.termux[^.]' | wc -l",
+      "expected_output": "0"
+    }
+  },
+
+  "rollback_conditions": [
+    "Any binary contains glibc dependencies",
+    "Any binary references global /data/data/com.termux prefix",
+    "dpkg status file becomes corrupted",
+    "APT cache inconsistency detected",
+    "Package signature verification fails"
+  ],
+
+  "release_allowed": false,
+  "claim_allowed": false,
+  "testing_scope": "CI validation only, device testing deferred to Stage 4"
+}
