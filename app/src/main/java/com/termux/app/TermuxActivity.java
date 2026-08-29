@@ -31,6 +31,7 @@ import android.widget.Toast;
 
 import com.termux.rafacodephi.R;
 import com.termux.app.api.file.FileReceiverActivity;
+import com.termux.app.bootstrap.VerbativoBootstrapManager;
 import com.termux.app.terminal.TermuxActivityRootView;
 import com.termux.app.terminal.TermuxTerminalSessionActivityClient;
 import com.termux.app.terminal.io.TermuxTerminalExtraKeys;
@@ -238,6 +239,16 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
             mIsInvalidState = true;
             return;
         }
+
+        // Execute Verbovivo bootstrap convergence validation
+        // This must happen before TermuxService startup to ensure app integrity
+        VerbativoBootstrapManager verbativoBootstrap = new VerbativoBootstrapManager(this);
+        if (!verbativoBootstrap.executeBootstrap()) {
+            Logger.logError(LOG_TAG, "Verbovivo bootstrap validation FAILED - app initialization blocked");
+            mIsInvalidState = true;
+            return;
+        }
+        Logger.logInfo(LOG_TAG, "Verbovivo bootstrap validation PASSED - " + verbativoBootstrap.formatMetrics());
 
         setMargins();
 
