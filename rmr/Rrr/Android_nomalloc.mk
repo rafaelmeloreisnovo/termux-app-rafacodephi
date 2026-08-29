@@ -15,7 +15,8 @@ LOCAL_SRC_FILES := \
     rafaelia_orchestrator.c \
     raf_b7_orchestrator.c \
     cti_raw_reader.c \
-    zipraf_index.c
+    zipraf_index.c \
+    zipraf_manifest_pool.c
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)
 

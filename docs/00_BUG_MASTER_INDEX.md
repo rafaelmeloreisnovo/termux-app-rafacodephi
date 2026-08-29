@@ -15,13 +15,13 @@ requerem intervenção cirúrgica nos invariantes do sistema.
 | ID | Componente | Tipo | Severidade | Estado |
 |----|-----------|------|------------|--------|
 | BUG-01 | `attractor_table` | Faltante | 🔴 CRÍTICO | 40/42 ausentes |
-| BUG-02 | Atrator #22 | Estrutural/Teórico | 🔴 CRÍTICO | VOID paradox |
-| BUG-03 | `vectra_pulse.S` | AArch64 ASM | 🟠 ALTO | 4 bugs abertos |
-| BUG-04 | Bootstrap | Hardcode | 🟡 MÉDIO | `com.termux` fixo |
-| BUG-05 | `ZrManifest` | Stack overflow | 🔴 CRÍTICO | Uso incorreto em stack |
+| BUG-02 | Atrator #22 | Estrutural/Teórico | 🔴 CRÍTICO | VOID paradox (human decision gate) |
+| BUG-03 | `vectra_pulse.S` | AArch64 ASM | 🟠 ALTO | Bloqueado em BUG-01 |
+| **BUG-04** | **Bootstrap** | **Hardcode** | **🟡 MÉDIO** | **✅ RESOLVED** |
+| **BUG-05** | **`ZrManifest`** | **Stack overflow** | **🔴 CRÍTICO** | **✅ RESOLVED** |
 | BUG-06 | `CtiScanner` | Race condition | 🟠 ALTO | Sem barrier em TOROID |
-| BUG-07 | Build pipeline | Hash mismatch | 🟡 MÉDIO | BLAKE3 skip silencioso |
-| BUG-08 | RAFAELIA pipeline | Invariante | 🟠 ALTO | φ=(1-H)·C não verificado |
+| **BUG-07** | **Build pipeline** | **Hash mismatch** | **🟡 MÉDIO** | **✅ RESOLVED** |
+| BUG-08 | RAFAELIA pipeline | Invariante | 🟠 ALTO | Bloqueado em BUG-01 |
 
 ---
 
