@@ -1,0 +1,313 @@
+{
+  "schema": "raf.device-validation-contract.v1",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "revised_on": "2026-08-29",
+  "stage": "Stage 4: Device Validation & Release",
+  "claim_allowed": false,
+  "release_allowed": false,
+  "device_validation": "TOKEN_VAZIO",
+
+  "testing_matrix": {
+    "platforms": [
+      {
+        "name": "ARMv8 (ARM64)",
+        "arch": "aarch64",
+        "abi": "arm64-v8a",
+        "min_api": 24,
+        "status": "PLANNED",
+        "device_models": [
+          "Pixel 6+",
+          "Galaxy S21+",
+          "OnePlus 9"
+        ]
+      },
+      {
+        "name": "ARMv7",
+        "arch": "armv7l",
+        "abi": "armeabi-v7a",
+        "min_api": 21,
+        "status": "PLANNED",
+        "device_models": [
+          "Pixel 4",
+          "Galaxy S10",
+          "OnePlus 6T"
+        ]
+      }
+    ],
+    "total_device_matrix": "2 architectures × 3 devices = 6 configurations"
+  },
+
+  "bootstrap_probe": {
+    "name": "termux-bootstrap-probe.apk",
+    "purpose": "Minimal APK for runtime bootstrap validation",
+    "components": [
+      {
+        "name": "bootstrap-validator",
+        "type": "native",
+        "path": "src/native/bootstrap-validator.S",
+        "purpose": "ARM64/ARM32 bootstrap execution probe"
+      },
+      {
+        "name": "receipt-logger",
+        "type": "native",
+        "path": "src/native/receipt-logger.c",
+        "purpose": "Runtime receipt generation"
+      },
+      {
+        "name": "coherence-validator",
+        "type": "native",
+        "path": "src/native/coherence-validator.c",
+        "purpose": "phi_fst coherence verification at runtime"
+      }
+    ],
+    "minimal_size": "500KB",
+    "target_api": 24,
+    "supported_abis": ["arm64-v8a", "armeabi-v7a"]
+  },
+
+  "device_requirements": {
+    "minimum_android_version": 8,
+    "minimum_api_level": 24,
+    "required_storage": "100MB",
+    "required_ram": "512MB",
+    "network_access": "REQUIRED",
+    "root_access": "NOT_REQUIRED",
+    "adb_access": "REQUIRED"
+  },
+
+  "test_scenarios": [
+    {
+      "id": "boot-001",
+      "name": "Bootstrap Stage 0: PREFIX_EMPTY",
+      "description": "Validate empty prefix initialization",
+      "expected_outcome": "State machine in PREFIX_EMPTY, no errors",
+      "timeout_seconds": 5
+    },
+    {
+      "id": "boot-002",
+      "name": "Bootstrap Stage 1: PROOT_INITIALIZED",
+      "description": "Validate proot initialization",
+      "expected_outcome": "proot process running, watchdog armed",
+      "timeout_seconds": 10
+    },
+    {
+      "id": "boot-003",
+      "name": "Bootstrap Stage 2: PAYLOAD_EXTRACTED",
+      "description": "Validate payload extraction to /data/data/com.termux.rafacodephi",
+      "expected_outcome": "Prefix directory structure created, receipts logged",
+      "timeout_seconds": 15
+    },
+    {
+      "id": "boot-004",
+      "name": "Bootstrap Stage 3: DPKG_INSTALLED",
+      "description": "Validate dpkg installation and prefix binding",
+      "expected_outcome": "dpkg binary present, no glibc deps, prefix embedded",
+      "timeout_seconds": 10
+    },
+    {
+      "id": "boot-005",
+      "name": "Bootstrap Stage 4: APT_CONFIGURED",
+      "description": "Validate apt configuration with deterministic sources",
+      "expected_outcome": "sources.list correct, mirror order deterministic",
+      "timeout_seconds": 10
+    },
+    {
+      "id": "boot-006",
+      "name": "Bootstrap Stage 5: USER_PACKAGES_READY",
+      "description": "Validate user package availability",
+      "expected_outcome": "Package manager responsive, signatures validated",
+      "timeout_seconds": 10
+    },
+    {
+      "id": "cohere-001",
+      "name": "Coherence Validation: phi_fst Metric",
+      "description": "Validate geometric coherence at runtime",
+      "expected_outcome": "phi ∈ [0, 1], attractor ∈ [0, 41]",
+      "timeout_seconds": 5
+    },
+    {
+      "id": "determ-001",
+      "name": "Determinism Check: Multi-Boot Validation",
+      "description": "Boot device 3 times, verify identical receipts",
+      "expected_outcome": "CRC32C checksums match, reproducibility_index ≥ 0.95",
+      "timeout_seconds": 120,
+      "requires_reboot": true,
+      "boot_count": 3
+    },
+    {
+      "id": "sig-001",
+      "name": "Signature Validation: Package Verification",
+      "description": "Validate RAFCODEΦ package signatures",
+      "expected_outcome": "All installed packages verified, no signature failures",
+      "timeout_seconds": 30
+    },
+    {
+      "id": "perf-001",
+      "name": "Performance: Bootstrap Completion Time",
+      "description": "Measure total bootstrap time from Stage 0 to Stage 5",
+      "expected_outcome": "Total time < 60 seconds, no timeout triggers",
+      "timeout_seconds": 90
+    }
+  ],
+
+  "validation_gates": [
+    {
+      "gate_id": "G-DEV-001",
+      "name": "arm64_bootstrap_gate",
+      "description": "Validate ARM64 bootstrap probe execution",
+      "command": "adb push termux-bootstrap-probe.apk /data/local/tmp/ && adb shell am start -n com.termux.rafacodephi/.BootstrapValidator",
+      "expected_result": "Bootstrap receipt logged, exit code 0",
+      "platforms": ["arm64-v8a"]
+    },
+    {
+      "gate_id": "G-DEV-002",
+      "name": "armv7_bootstrap_gate",
+      "description": "Validate ARMv7 bootstrap probe execution",
+      "command": "adb push termux-bootstrap-probe.apk /data/local/tmp/ && adb shell am start -n com.termux.rafacodephi/.BootstrapValidator",
+      "expected_result": "Bootstrap receipt logged, exit code 0",
+      "platforms": ["armeabi-v7a"]
+    },
+    {
+      "gate_id": "G-DEV-003",
+      "name": "coherence_runtime_gate",
+      "description": "Validate phi_fst at runtime on device",
+      "command": "adb shell am start -n com.termux.rafacodephi/.CoherenceValidator",
+      "expected_result": "phi ∈ [0, 1], receipt with coherence scores",
+      "platforms": ["arm64-v8a", "armeabi-v7a"]
+    },
+    {
+      "gate_id": "G-DEV-004",
+      "name": "determinism_multiboot_gate",
+      "description": "Validate reproducibility across 3 device reboots",
+      "command": "for i in 1 2 3; do adb reboot && sleep 30 && adb shell logcat -d > /tmp/boot$i.log; done",
+      "expected_result": "Three identical receipt logs, reproducibility_index ≥ 0.95",
+      "platforms": ["arm64-v8a", "armeabi-v7a"],
+      "duration_minutes": 10
+    }
+  ],
+
+  "runtime_receipts": {
+    "schema": "raf.device-bootstrap-receipt.v1",
+    "sample": {
+      "device_id": "SHA256(model+serial)",
+      "platform": "arm64-v8a",
+      "android_version": 13,
+      "api_level": 33,
+      "timestamp": "2026-08-29T12:34:56Z",
+      "bootstrap_stages": [
+        {
+          "stage": 0,
+          "stage_name": "PREFIX_EMPTY",
+          "duration_ms": 100,
+          "crc32c": "0xdeadbeef",
+          "status": "PASS",
+          "phi_fst": 0.4567,
+          "attractor": 12
+        }
+      ],
+      "total_duration_seconds": 45,
+      "overall_coherence": 0.4523,
+      "reproducibility_score": 0.98,
+      "exit_code": 0,
+      "errors": []
+    }
+  },
+
+  "release_criteria": [
+    {
+      "id": "RC-001",
+      "criterion": "All bootstrap stages pass on ARM64",
+      "status": "BLOCKED",
+      "blocker": "Device validation not yet executed"
+    },
+    {
+      "id": "RC-002",
+      "criterion": "All bootstrap stages pass on ARMv7",
+      "status": "BLOCKED",
+      "blocker": "Device validation not yet executed"
+    },
+    {
+      "id": "RC-003",
+      "criterion": "Coherence validation passes on both architectures",
+      "status": "BLOCKED",
+      "blocker": "phi_fst runtime validation not yet executed"
+    },
+    {
+      "id": "RC-004",
+      "criterion": "Determinism reproducibility_index ≥ 0.95 on both architectures",
+      "status": "BLOCKED",
+      "blocker": "Multi-boot reproducibility testing not yet executed"
+    },
+    {
+      "id": "RC-005",
+      "criterion": "Package signature validation passes",
+      "status": "PLANNED",
+      "evidence_required": "Device receipt with signature_validation: PASS"
+    },
+    {
+      "id": "RC-006",
+      "criterion": "Bootstrap completion time < 60 seconds",
+      "status": "PLANNED",
+      "evidence_required": "Device receipt with total_duration_seconds < 60"
+    },
+    {
+      "id": "RC-007",
+      "criterion": "No timeout triggers on watchdog (max retries not exceeded)",
+      "status": "PLANNED",
+      "evidence_required": "Device receipt with retry_count < 2 per stage"
+    },
+    {
+      "id": "RC-008",
+      "criterion": "All security gates pass (no rollback conditions triggered)",
+      "status": "PLANNED",
+      "evidence_required": "Device receipt with rollback_count = 0"
+    },
+    {
+      "id": "RC-009",
+      "criterion": "APK signature validation (RAFCODEΦ cert chain)",
+      "status": "PLANNED",
+      "evidence_required": "Device receipt with signature_validation: PASS"
+    },
+    {
+      "id": "RC-010",
+      "criterion": "Code review and security audit complete",
+      "status": "BLOCKED",
+      "blocker": "Awaiting human review"
+    }
+  ],
+
+  "rollback_conditions": [
+    "Any bootstrap stage timeout (watchdog > 30 seconds)",
+    "Any stage retry count exceeds 2",
+    "Coherence phi_fst outside [0, 1]",
+    "Reproducibility score < 0.90",
+    "Package signature validation failure",
+    "glibc dependency detected at runtime",
+    "Global /data/data/com.termux reference detected",
+    "APT non-deterministic mirror selection observed"
+  ],
+
+  "testing_schedule": {
+    "phase": "Stage 4: Device Validation",
+    "day_11": "Setup device lab, deploy bootstrap probe APK",
+    "day_12": "Execute bootstrap scenarios on ARM64/ARMv7 matrix",
+    "day_13": "Execute determinism multi-boot validation (3 reboots × 2 archs)",
+    "day_14": "Generate device receipts, verify release criteria, decide release readiness"
+  },
+
+  "known_limitations": [
+    "Physical devices required (cannot be simulated in CI)",
+    "Testing depends on device availability and stability",
+    "Network access required for package manager testing",
+    "Root access not required but recommended for advanced debugging",
+    "Multi-boot testing requires extended lab access (>2 hours)"
+  ],
+
+  "success_metrics": {
+    "minimum_pass_rate": "100% on all architectures",
+    "coherence_target": "phi_fst ≥ 0.3 (convergence to attractor)",
+    "determinism_target": "reproducibility_index ≥ 0.95 across reboots",
+    "performance_target": "Bootstrap < 60 seconds total",
+    "timeout_target": "Zero timeout triggers"
+  }
+}
