@@ -19,7 +19,7 @@ jobs:
   assurance:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Validate fail-closed runtime/provenance contract
         run: python3 scripts/validate_runtime_provenance_assurance.py
       - name: Negative gate — CI build cannot be promoted to physical runtime
