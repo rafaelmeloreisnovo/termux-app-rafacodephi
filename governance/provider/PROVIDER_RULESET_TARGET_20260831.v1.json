@@ -1,0 +1,84 @@
+{
+  "schema": "rafaelia.provider_ruleset_target/v1",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "default_branch": "master",
+  "observed_date": "2026-08-31",
+  "observed_ruleset": {
+    "id": 21908888,
+    "name": "1",
+    "enforcement": "active",
+    "rules": [
+      "deletion",
+      "non_fast_forward",
+      "required_signatures",
+      "pull_request",
+      "code_quality",
+      "required_linear_history"
+    ],
+    "pull_request_observed": {
+      "required_approving_review_count": 0,
+      "require_code_owner_review": true,
+      "required_review_thread_resolution": true,
+      "require_last_push_approval": false
+    },
+    "codeowners_observed": false
+  },
+  "target": {
+    "ref_condition": "~DEFAULT_BRANCH",
+    "enforcement": "active",
+    "preserve_rules": [
+      "deletion",
+      "non_fast_forward",
+      "required_linear_history",
+      "required_signatures",
+      "code_quality",
+      "pull_request"
+    ],
+    "add_rules": [
+      "required_status_checks"
+    ],
+    "pull_request": {
+      "required_approving_review_count": 0,
+      "require_code_owner_review": false,
+      "required_review_thread_resolution": true,
+      "dismiss_stale_reviews_on_push": false,
+      "require_last_push_approval": false,
+      "allowed_merge_methods": [
+        "squash",
+        "rebase"
+      ],
+      "rationale": "solo-safe baseline; current require_code_owner_review has no CODEOWNERS file; human approval becomes mandatory after a second independent reviewer is configured"
+    },
+    "required_status_checks": {
+      "strict_required_status_checks_policy": true,
+      "contexts": [
+        "provider-protection"
+      ],
+      "always_run_workflow": ".github/workflows/provider-protection-gate.yml"
+    },
+    "path_scoped_checks": {
+      "state": "NOT_GLOBAL_REQUIRED",
+      "examples": [
+        "audit-action-references"
+      ],
+      "reason": "path-filtered checks must not be global required contexts unless wrapped by an always-run gate"
+    },
+    "bypass_review": {
+      "observed_integration_ids": [
+        20150,
+        29110,
+        73253,
+        1144995
+      ],
+      "state": "TOKEN_VAZIO_PENDING_IDENTITY_AND_JUSTIFICATION",
+      "policy": "do not expand bypass; identify and justify each always-bypass integration before claiming full enforcement"
+    }
+  },
+  "provider_apply_state": "TOKEN_VAZIO",
+  "claim_allowed": false,
+  "invariants": [
+    "FILE != PROVIDER_RULESET",
+    "CI_PASS != PROVIDER_ENFORCEMENT",
+    "TOKEN_VAZIO != PASS"
+  ]
+}
