@@ -1,0 +1,76 @@
+name: RAFCODEPHI Service Provenance Snapshot
+
+on:
+  pull_request:
+    paths:
+      - 'app/build.gradle'
+      - 'app/src/main/AndroidManifest.xml'
+      - 'app/src/main/java/com/termux/app/TermuxService.java'
+      - 'app/src/main/java/com/termux/app/RunCommandService.java'
+      - 'docs/audits/TERMINAL_SERVICE_BOOTSTRAP_GAP.md'
+      - 'docs/contracts/VECTRAS_TERMUX_PROVIDER_V3.md'
+      - 'docs/assurance/RAFCODEPHI_SERVICE_PROVENANCE_RECEIPT_20260901.v1.json'
+      - 'docs/assurance/RAFCODEPHI_SERVICE_DEPENDENCY_GRAPH_20260901.v1.json'
+      - 'scripts/verify_vectras_termux_provider_v3.py'
+      - 'tools/validate_terminal_service_bootstrap_gap.py'
+      - 'tools/validate_rafcodephi_service_provenance_receipt.py'
+      - '.github/workflows/rafcodephi-service-provenance-snapshot.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'app/build.gradle'
+      - 'app/src/main/AndroidManifest.xml'
+      - 'app/src/main/java/com/termux/app/TermuxService.java'
+      - 'app/src/main/java/com/termux/app/RunCommandService.java'
+      - 'docs/audits/TERMINAL_SERVICE_BOOTSTRAP_GAP.md'
+      - 'docs/contracts/VECTRAS_TERMUX_PROVIDER_V3.md'
+      - 'docs/assurance/RAFCODEPHI_SERVICE_PROVENANCE_RECEIPT_20260901.v1.json'
+      - 'docs/assurance/RAFCODEPHI_SERVICE_DEPENDENCY_GRAPH_20260901.v1.json'
+      - 'scripts/verify_vectras_termux_provider_v3.py'
+      - 'tools/validate_terminal_service_bootstrap_gap.py'
+      - 'tools/validate_rafcodephi_service_provenance_receipt.py'
+      - '.github/workflows/rafcodephi-service-provenance-snapshot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot-consistency:
+    name: service-provenance-snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v7
+
+      - name: Validate receipt schema and source bindings
+        run: |
+          python3 -m py_compile tools/validate_rafcodephi_service_provenance_receipt.py
+          python3 tools/validate_rafcodephi_service_provenance_receipt.py --self-test
+
+      - name: Validate dependency graph
+        run: |
+          python3 tools/validate_cross_domain_dependency_graph.py \
+            docs/assurance/RAFCODEPHI_SERVICE_DEPENDENCY_GRAPH_20260901.v1.json
+
+      - name: Validate static bootstrap guard
+        run: python3 tools/validate_terminal_service_bootstrap_gap.py
+
+      - name: Detect stale Vectras failure snapshot
+        shell: bash
+        run: |
+          set +e
+          output="$(python3 scripts/verify_vectras_termux_provider_v3.py --output "$RUNNER_TEMP/vectras-provider.json" 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          if [ "$status" -eq 0 ]; then
+            echo "Receipt is stale: Vectras verifier now passes; update the receipt before promotion."
+            exit 1
+          fi
+          if ! grep -q '"error_count": 25' <<< "$output"; then
+            echo "Receipt is stale: Vectras failure signature changed; update the receipt before promotion."
+            exit 1
+          fi
+          echo "PASS: snapshot still records the current Vectras static-contract failure; runtime promotion remains blocked."

@@ -1,0 +1,285 @@
+{
+  "schema": "rafaelia.rafcodephi.service-provenance-receipt.v1",
+  "receipt_id": "RAFCODEPHI-SVC-PROVENANCE-20260901T181446Z",
+  "parent_receipt": "TOKEN_VAZIO_EXACT_SERVICE_PREDECESSOR",
+  "observed_at": "2026-09-01T18:14:46Z",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "source": {
+    "ref": "master",
+    "commit": "7c82f57b338ed78a3b6ebb4ec641e90452d0f850",
+    "tree": "6b49bb180f0cacd6fc0efc4404fd7d0fd696021c"
+  },
+  "scope": {
+    "service_components": [
+      "com.termux.app.TermuxService",
+      "com.termux.app.RunCommandService",
+      "com.termux.rafacodephi.RUN_COMMAND",
+      "com.termux.rafacodephi.permission.RUN_COMMAND"
+    ],
+    "excluded_claims": [
+      "current APK identity",
+      "installed Android service execution",
+      "physical ARM32 or ARM64 execution",
+      "Vectras consumer or guest execution",
+      "release readiness"
+    ]
+  },
+  "authority": {
+    "producer": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "federated_router": "rafaelmeloreisnovo/Mapa",
+    "executor": "rafaelmeloreisnovo/RafGitTools",
+    "evidence_kernel": "rafaelmeloreisnovo/Recipt"
+  },
+  "evidence_boundary": {
+    "literal": [
+      "The manifest declares a non-exported TermuxService and an exported RunCommandService protected by the RUN_COMMAND permission.",
+      "RunCommandService creates an explicit execution intent for TermuxService.",
+      "The terminal-service structural validator passed on the pinned source checkout."
+    ],
+    "contextual": [
+      "The current source is intended to expose a protected provider-to-service command path.",
+      "This receipt reconciles a current source snapshot with the older runtime provenance assurance without replacing it."
+    ],
+    "latent": [
+      "An installed APK accepted and executed a real request.",
+      "A consumer received a real result bundle and a Vectras guest reached a terminal result.",
+      "The same path executed on both required device ABIs."
+    ]
+  },
+  "source_bindings": [
+    {
+      "path": "app/build.gradle",
+      "git_blob_sha": "b1901f2770201fe558a6c6cb0df361ceee6941e2",
+      "sha256": "102b34daa3cb5259c69999a2b934ff122c8f3d6a81bc4a5ebe56d86a18b933ec",
+      "evidence_class": "OBSERVED_STATIC",
+      "purpose": "Canonical application package default and manifest placeholder binding."
+    },
+    {
+      "path": "app/src/main/AndroidManifest.xml",
+      "git_blob_sha": "ea9ada54b30e903c76bc21adf61a8080b0f0d9be",
+      "sha256": "8d2e15cafe307da4d5645c9fdd89c5a21d54f89154bdd21db0ae7f9adb9cb977",
+      "evidence_class": "OBSERVED_STATIC",
+      "purpose": "RunCommandService declaration, action, permission, export state and TermuxService declaration."
+    },
+    {
+      "path": "app/src/main/java/com/termux/app/TermuxService.java",
+      "git_blob_sha": "ea8069931ac7292fd7212c17ea8f12802cae4b2d",
+      "sha256": "e2c4ceeccbcf3b5e921898b6c179d14b5bef7a2a7c74fea54cf965f2a3036006",
+      "evidence_class": "OBSERVED_STATIC",
+      "purpose": "Bootstrap-ready guard before terminal task/session execution paths."
+    },
+    {
+      "path": "app/src/main/java/com/termux/app/RunCommandService.java",
+      "git_blob_sha": "b1a91dd8a55dee75f89e88ba9f524a3c6c8de90a",
+      "sha256": "7166ce4cf18eb04f59a590b9bbe103a495b0636e2714beafa2418d0d1a99d941",
+      "evidence_class": "OBSERVED_STATIC",
+      "purpose": "Protected command intake and explicit dispatch to TermuxService."
+    },
+    {
+      "path": "docs/audits/TERMINAL_SERVICE_BOOTSTRAP_GAP.md",
+      "git_blob_sha": "8a87f3805e1fa3953f460f954385b431b14b859d",
+      "sha256": "d9b0c97adc97b8a03f1a251dad637f87a3b9e471d7b0e15b9107bb7932090594",
+      "evidence_class": "DOCUMENTED",
+      "purpose": "Declared boundary: static service guard implemented; device smoke pending."
+    },
+    {
+      "path": "tools/validate_terminal_service_bootstrap_gap.py",
+      "git_blob_sha": "f65d8b4f525d8721ceffe48fca03144ea56146ae",
+      "sha256": "9737e34e2b38a8f70f07282fa7c8d198829aa4cea6ff4aaad10a295718358ed1",
+      "evidence_class": "MEASURED_LOCAL",
+      "purpose": "Fail-closed structural check for bootstrap guards before service execution calls."
+    },
+    {
+      "path": "docs/contracts/VECTRAS_TERMUX_PROVIDER_V3.md",
+      "git_blob_sha": "4113c46e3bf6446cb69269aa18f44ebeaa7d6ddf",
+      "sha256": "68830255ac7c419ce9cc39ecf411402fc864acf49be813ff82a6a8f09ea90e1f",
+      "evidence_class": "DOCUMENTED",
+      "purpose": "Static provider contract and explicit physical/consumer evidence boundary."
+    },
+    {
+      "path": "scripts/verify_vectras_termux_provider_v3.py",
+      "git_blob_sha": "ec0edbc6b12f2ddd6ea781634a1066d3e91c759e",
+      "sha256": "0f81650dc21da4e0940df508236f28c664d7d8421ccb4f433cb184e720246154",
+      "evidence_class": "MEASURED_LOCAL",
+      "purpose": "Current static provider-contract verifier; its current 25-error failure is preserved as a gate failure."
+    }
+  ],
+  "gates": [
+    {
+      "id": "SVC_STATIC_BOOTSTRAP_GUARD",
+      "state": "PASS",
+      "evidence_class": "MEASURED_LOCAL",
+      "evidence": [
+        "python3 tools/validate_terminal_service_bootstrap_gap.py on source commit 7c82f57b338ed78a3b6ebb4ec641e90452d0f850"
+      ],
+      "falsifier": "The guard disappears or is ordered after AppShell.execute or TermuxSession.execute.",
+      "next_verifiable_action": "Run this structural check whenever a bound source file changes."
+    },
+    {
+      "id": "SVC_MANIFEST_RUN_COMMAND_DECLARATION",
+      "state": "PASS",
+      "evidence_class": "OBSERVED_STATIC",
+      "evidence": [
+        "app/src/main/AndroidManifest.xml@ea9ada54b30e903c76bc21adf61a8080b0f0d9be"
+      ],
+      "falsifier": "RunCommandService action, permission, export state, or package placeholder differs from the pinned source binding.",
+      "next_verifiable_action": "Inspect the merged manifest from a built APK before any runtime claim."
+    },
+    {
+      "id": "SVC_RUN_COMMAND_DISPATCH_LINK",
+      "state": "PASS",
+      "evidence_class": "OBSERVED_STATIC",
+      "evidence": [
+        "RunCommandService.java@b1a91dd8a55dee75f89e88ba9f524a3c6c8de90a explicitly targets TermuxService"
+      ],
+      "falsifier": "The source no longer constructs the explicit TermuxService execution intent.",
+      "next_verifiable_action": "Exercise a permission-granted request on an installed APK and preserve only redacted terminal metadata."
+    },
+    {
+      "id": "SVC_VECTRAS_STATIC_CONTRACT",
+      "state": "FAIL",
+      "evidence_class": "MEASURED_LOCAL",
+      "evidence": [
+        "python3 scripts/verify_vectras_termux_provider_v3.py returned state FAIL with error_count 25 on the pinned source checkout"
+      ],
+      "falsifier": "A revised verifier passes against a source-bound Vectras provider contract and receipt is updated to that exact source revision.",
+      "next_verifiable_action": "Reconcile the verifier expectations with the canonical package and source APIs, then rerun the verifier."
+    },
+    {
+      "id": "SVC_CURRENT_HEAD_CI",
+      "state": "FAIL",
+      "evidence_class": "DOCUMENTED_REMOTE",
+      "evidence": [
+        "GitHub Actions run 33372043490 failed the side-by-side package contract",
+        "GitHub Actions run 33372043049 failed native safety gates",
+        "GitHub Actions run 33372043212 failed the beta source-build/bootstrap gate"
+      ],
+      "falsifier": "A current source-bound CI run reports the required gates green and its artifacts are bound to the exact commit.",
+      "next_verifiable_action": "Repair the failing CI contracts before considering build or release promotion."
+    },
+    {
+      "id": "SVC_PROVIDER_RULESET_ENFORCEMENT",
+      "state": "FAIL",
+      "evidence_class": "DOCUMENTED_REMOTE",
+      "evidence": [
+        "GitHub ruleset 21908888 is active for master but lacks the required_status_checks rule type"
+      ],
+      "falsifier": "The live ruleset API reports strict required status checks with the intended context and documented bypass identities.",
+      "next_verifiable_action": "Apply and independently query the live ruleset target; do not treat workflow YAML as live enforcement."
+    },
+    {
+      "id": "SVC_APK_BOOTSTRAP_IDENTITY",
+      "state": "TOKEN_VAZIO",
+      "evidence_class": "TOKEN_VAZIO",
+      "evidence": [
+        "No exact current APK digest and consumed bootstrap digest are bound to this source commit."
+      ],
+      "falsifier": "A build receipt binds source, APK hash, bootstrap/archive hashes and ABI outputs.",
+      "next_verifiable_action": "Produce a source-to-APK/bootstrap receipt using the existing E2E receipt tooling."
+    },
+    {
+      "id": "SVC_PHYSICAL_DEVICE_RUNTIME",
+      "state": "TOKEN_VAZIO",
+      "evidence_class": "TOKEN_VAZIO",
+      "evidence": [
+        "No privacy-minimized device receipt proves an installed service process accepted and completed a request."
+      ],
+      "falsifier": "An exact installed-package, request, terminal-result and APK-digest receipt exists.",
+      "next_verifiable_action": "Collect a redacted physical-device receipt; do not publish device identifiers or private paths."
+    },
+    {
+      "id": "SVC_VECTRAS_CONSUMER_E2E",
+      "state": "TOKEN_VAZIO",
+      "evidence_class": "TOKEN_VAZIO",
+      "evidence": [
+        "No producer request/result receipt is joined to a Vectras consumer and guest terminal receipt."
+      ],
+      "falsifier": "A joined producer-consumer receipt carries matching request identity and terminal result evidence.",
+      "next_verifiable_action": "Join the provider receipt to consumer/guest evidence with bounded, privacy-minimized references."
+    },
+    {
+      "id": "SVC_ARM32_ARM64_DEVICE_RECEIPTS",
+      "state": "TOKEN_VAZIO",
+      "evidence_class": "TOKEN_VAZIO",
+      "evidence": [
+        "No current physical ARM32 and ARM64 service receipts are bound to this source snapshot."
+      ],
+      "falsifier": "Separate source/APK/device receipts demonstrate both required ABI paths.",
+      "next_verifiable_action": "Collect independently verifiable ARM32 and ARM64 receipts after the APK/bootstrap identity gate closes."
+    }
+  ],
+  "gaps": [
+    {
+      "id": "GAP-SVC-VECTRAS-STATIC-CONTRACT",
+      "priority": "P0",
+      "state": "OPEN",
+      "closure": "Make the provider verifier and canonical source contract agree, then record its exact passing commit and output."
+    },
+    {
+      "id": "GAP-SVC-CURRENT-CI",
+      "priority": "P0",
+      "state": "OPEN",
+      "closure": "Resolve the side-by-side, native-safety and beta-bootstrap failures with source-bound CI artifacts."
+    },
+    {
+      "id": "GAP-SVC-LIVE-RULESET",
+      "priority": "P0",
+      "state": "OPEN",
+      "closure": "Enforce strict required status checks on master and preserve an API readback receipt."
+    },
+    {
+      "id": "GAP-SVC-APK-BOOTSTRAP-BINDING",
+      "priority": "P0",
+      "state": "TOKEN_VAZIO",
+      "closure": "Bind exact source, signed APK, bootstrap/archive digests and ABI outputs."
+    },
+    {
+      "id": "GAP-SVC-PHYSICAL-DEVICE-RUNTIME",
+      "priority": "P0",
+      "state": "TOKEN_VAZIO",
+      "closure": "Collect a privacy-minimized installed-package service execution receipt with terminal result."
+    },
+    {
+      "id": "GAP-SVC-VECTRAS-CONSUMER-E2E",
+      "priority": "P0",
+      "state": "TOKEN_VAZIO",
+      "closure": "Join provider request/result, consumer observation and guest terminal evidence."
+    }
+  ],
+  "controls": {
+    "public_payload": "MINIMUM_METADATA_PLUS_HASH_OR_TYPED_REFERENCE",
+    "prohibited_public_payloads": [
+      "device identifiers",
+      "unredacted private filesystem paths",
+      "credentials or tokens",
+      "application payloads",
+      "private Drive identifiers"
+    ],
+    "graph": "docs/assurance/RAFCODEPHI_SERVICE_DEPENDENCY_GRAPH_20260901.v1.json"
+  },
+  "decision": {
+    "claim_allowed": false,
+    "release_allowed": false,
+    "promotion": "BLOCKED",
+    "falsifier": "A passing source-only validator, CI build, or graph is not physical runtime evidence; promotion stays blocked until all required gates are PASS with terminal receipts."
+  },
+  "r3": {
+    "F_ok": [
+      "Pinned source bindings hash-match the observed master snapshot.",
+      "Terminal-service bootstrap guard passed local structural validation.",
+      "The source declares the protected RunCommandService to TermuxService dispatch path."
+    ],
+    "F_gap": [
+      "Vectras static contract, current CI and live ruleset enforcement are failing.",
+      "APK/bootstrap identity and all physical runtime/consumer/dual-ABI receipts remain TOKEN_VAZIO."
+    ],
+    "F_next": [
+      "Repair source/CI/ruleset failures, then create an exact build receipt.",
+      "Only after that, collect redacted device and Vectras producer-consumer terminal receipts."
+    ]
+  },
+  "rollback": {
+    "available": true,
+    "procedure": "Revert the receipt-only commit or close its pull request; this snapshot changes neither Android runtime code, package identity, bootstrap, signing nor device state."
+  }
+}
