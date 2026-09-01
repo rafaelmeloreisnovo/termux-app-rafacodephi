@@ -1,0 +1,277 @@
+{
+  "graph_id": "rafcodephi.service-provenance.20260901.v1",
+  "schema_version": "1.0.0",
+  "generated_at": "2026-09-01T18:14:46Z",
+  "claim_allowed": false,
+  "nodes": [
+    {
+      "component_id": "termux:source:7c82f57b",
+      "name": "RAFCODEPHI pinned source snapshot",
+      "domain": "TERMUX_PACKAGE",
+      "version": "7c82f57b338ed78a3b6ebb4ec641e90452d0f850",
+      "lifecycle_state": "INVENTORIED",
+      "license": {
+        "state": "DECLARED"
+      },
+      "provenance": [
+        {
+          "source_type": "GIT",
+          "source_pointer": "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/commit/7c82f57b338ed78a3b6ebb4ec641e90452d0f850",
+          "revision": "7c82f57b338ed78a3b6ebb4ec641e90452d0f850",
+          "sha256": "TOKEN_VAZIO_GIT_COMMIT_CONTENT_DIGEST",
+          "observed_at": "2026-09-01T18:14:46Z",
+          "evidence_class": "DOCUMENTED"
+        }
+      ]
+    },
+    {
+      "component_id": "termux:manifest:run-command-service",
+      "name": "Protected RunCommandService manifest surface",
+      "domain": "ANDROID_APP",
+      "lifecycle_state": "INVENTORIED",
+      "provenance": [
+        {
+          "source_type": "FILE",
+          "source_pointer": "app/src/main/AndroidManifest.xml@ea9ada54b30e903c76bc21adf61a8080b0f0d9be",
+          "revision": "7c82f57b338ed78a3b6ebb4ec641e90452d0f850",
+          "sha256": "8d2e15cafe307da4d5645c9fdd89c5a21d54f89154bdd21db0ae7f9adb9cb977",
+          "observed_at": "2026-09-01T18:14:46Z",
+          "evidence_class": "OBSERVED_STATIC"
+        }
+      ]
+    },
+    {
+      "component_id": "termux:service:run-command",
+      "name": "RunCommandService protected command intake",
+      "domain": "ANDROID_APP",
+      "lifecycle_state": "INVENTORIED",
+      "provenance": [
+        {
+          "source_type": "FILE",
+          "source_pointer": "app/src/main/java/com/termux/app/RunCommandService.java@b1a91dd8a55dee75f89e88ba9f524a3c6c8de90a",
+          "revision": "7c82f57b338ed78a3b6ebb4ec641e90452d0f850",
+          "sha256": "7166ce4cf18eb04f59a590b9bbe103a495b0636e2714beafa2418d0d1a99d941",
+          "observed_at": "2026-09-01T18:14:46Z",
+          "evidence_class": "OBSERVED_STATIC"
+        }
+      ]
+    },
+    {
+      "component_id": "termux:service:terminal",
+      "name": "TermuxService bootstrap-guarded execution surface",
+      "domain": "ANDROID_APP",
+      "lifecycle_state": "INVENTORIED",
+      "provenance": [
+        {
+          "source_type": "TEST",
+          "source_pointer": "tools/validate_terminal_service_bootstrap_gap.py@f65d8b4f525d8721ceffe48fca03144ea56146ae",
+          "revision": "7c82f57b338ed78a3b6ebb4ec641e90452d0f850",
+          "sha256": "9737e34e2b38a8f70f07282fa7c8d198829aa4cea6ff4aaad10a295718358ed1",
+          "observed_at": "2026-09-01T18:14:46Z",
+          "evidence_class": "OBSERVED_STATIC"
+        }
+      ]
+    },
+    {
+      "component_id": "vectras:consumer:guest-e2e",
+      "name": "Vectras consumer and guest terminal result",
+      "domain": "RUNTIME",
+      "lifecycle_state": "TOKEN_VAZIO",
+      "provenance": [
+        {
+          "source_type": "DOCUMENTATION",
+          "source_pointer": "docs/contracts/VECTRAS_TERMUX_PROVIDER_V3.md@4113c46e3bf6446cb69269aa18f44ebeaa7d6ddf",
+          "revision": "7c82f57b338ed78a3b6ebb4ec641e90452d0f850",
+          "sha256": "68830255ac7c419ce9cc39ecf411402fc864acf49be813ff82a6a8f09ea90e1f",
+          "observed_at": "2026-09-01T18:14:46Z",
+          "evidence_class": "TOKEN_VAZIO"
+        }
+      ]
+    },
+    {
+      "component_id": "android:device:service-runtime",
+      "name": "Installed Android service execution on required ABIs",
+      "domain": "RUNTIME",
+      "lifecycle_state": "TOKEN_VAZIO",
+      "provenance": [
+        {
+          "source_type": "DEVICE_RECEIPT",
+          "source_pointer": "TOKEN_VAZIO_CURRENT_REDACTED_DEVICE_SERVICE_RECEIPT",
+          "sha256": "TOKEN_VAZIO_CURRENT_DEVICE_RECEIPT",
+          "observed_at": "2026-09-01T18:14:46Z",
+          "evidence_class": "TOKEN_VAZIO"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": "source-to-manifest",
+      "from": "termux:source:7c82f57b",
+      "to": "termux:manifest:run-command-service",
+      "relation": "PROVENANCE",
+      "evidence_state": "VERIFIED",
+      "promotion_gate": {
+        "compatibility": "PASS",
+        "tests": "NOT_APPLICABLE",
+        "license": "TOKEN_VAZIO",
+        "security": "TOKEN_VAZIO",
+        "provenance": "PASS",
+        "runtime_evidence": "TOKEN_VAZIO",
+        "promote_allowed": false
+      },
+      "provenance": [
+        {
+          "source_type": "GIT",
+          "source_pointer": "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/blob/7c82f57b338ed78a3b6ebb4ec641e90452d0f850/app/src/main/AndroidManifest.xml",
+          "revision": "ea9ada54b30e903c76bc21adf61a8080b0f0d9be",
+          "sha256": "8d2e15cafe307da4d5645c9fdd89c5a21d54f89154bdd21db0ae7f9adb9cb977",
+          "evidence_class": "OBSERVED_STATIC"
+        }
+      ]
+    },
+    {
+      "edge_id": "manifest-to-run-command",
+      "from": "termux:manifest:run-command-service",
+      "to": "termux:service:run-command",
+      "relation": "API",
+      "evidence_state": "VERIFIED",
+      "promotion_gate": {
+        "compatibility": "PASS",
+        "tests": "TOKEN_VAZIO",
+        "license": "NOT_APPLICABLE",
+        "security": "TOKEN_VAZIO",
+        "provenance": "PASS",
+        "runtime_evidence": "TOKEN_VAZIO",
+        "promote_allowed": false
+      },
+      "provenance": [
+        {
+          "source_type": "FILE",
+          "source_pointer": "app/src/main/AndroidManifest.xml#RunCommandService",
+          "revision": "7c82f57b338ed78a3b6ebb4ec641e90452d0f850",
+          "sha256": "8d2e15cafe307da4d5645c9fdd89c5a21d54f89154bdd21db0ae7f9adb9cb977",
+          "evidence_class": "OBSERVED_STATIC"
+        }
+      ]
+    },
+    {
+      "edge_id": "run-command-to-terminal-service",
+      "from": "termux:service:run-command",
+      "to": "termux:service:terminal",
+      "relation": "RUNTIME",
+      "evidence_state": "DECLARED",
+      "promotion_gate": {
+        "compatibility": "PASS",
+        "tests": "TOKEN_VAZIO",
+        "license": "NOT_APPLICABLE",
+        "security": "TOKEN_VAZIO",
+        "provenance": "PASS",
+        "runtime_evidence": "TOKEN_VAZIO",
+        "promote_allowed": false
+      },
+      "provenance": [
+        {
+          "source_type": "FILE",
+          "source_pointer": "app/src/main/java/com/termux/app/RunCommandService.java#onStartCommand",
+          "revision": "7c82f57b338ed78a3b6ebb4ec641e90452d0f850",
+          "sha256": "7166ce4cf18eb04f59a590b9bbe103a495b0636e2714beafa2418d0d1a99d941",
+          "evidence_class": "OBSERVED_STATIC"
+        }
+      ]
+    },
+    {
+      "edge_id": "terminal-service-to-device-runtime",
+      "from": "termux:service:terminal",
+      "to": "android:device:service-runtime",
+      "relation": "RUNTIME",
+      "evidence_state": "TOKEN_VAZIO",
+      "promotion_gate": {
+        "compatibility": "TOKEN_VAZIO",
+        "tests": "TOKEN_VAZIO",
+        "license": "NOT_APPLICABLE",
+        "security": "TOKEN_VAZIO",
+        "provenance": "PASS",
+        "runtime_evidence": "TOKEN_VAZIO",
+        "promote_allowed": false
+      },
+      "provenance": [
+        {
+          "source_type": "DEVICE_RECEIPT",
+          "source_pointer": "TOKEN_VAZIO_CURRENT_REDACTED_DEVICE_SERVICE_RECEIPT",
+          "sha256": "TOKEN_VAZIO_CURRENT_DEVICE_RECEIPT",
+          "evidence_class": "TOKEN_VAZIO"
+        }
+      ]
+    },
+    {
+      "edge_id": "run-command-to-vectras-consumer",
+      "from": "termux:service:run-command",
+      "to": "vectras:consumer:guest-e2e",
+      "relation": "API",
+      "evidence_state": "TOKEN_VAZIO",
+      "promotion_gate": {
+        "compatibility": "FAIL",
+        "tests": "FAIL",
+        "license": "NOT_APPLICABLE",
+        "security": "TOKEN_VAZIO",
+        "provenance": "TOKEN_VAZIO",
+        "runtime_evidence": "TOKEN_VAZIO",
+        "promote_allowed": false
+      },
+      "provenance": [
+        {
+          "source_type": "TEST",
+          "source_pointer": "scripts/verify_vectras_termux_provider_v3.py returned 25 errors on source commit 7c82f57b338ed78a3b6ebb4ec641e90452d0f850",
+          "revision": "ec0edbc6b12f2ddd6ea781634a1066d3e91c759e",
+          "sha256": "0f81650dc21da4e0940df508236f28c664d7d8421ccb4f433cb184e720246154",
+          "evidence_class": "OBSERVED_STATIC"
+        }
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "gap_id": "GAP-SVC-001",
+      "priority": "P0",
+      "state": "OPEN",
+      "description": "The current Vectras provider-contract validator fails with 25 source/static discrepancies.",
+      "next_verifiable_action": "Reconcile the verifier and canonical source contract, then store the exact passing output."
+    },
+    {
+      "gap_id": "GAP-SVC-002",
+      "priority": "P0",
+      "state": "OPEN",
+      "description": "Current head CI has failed side-by-side, native-safety and beta source-build/bootstrap gates.",
+      "next_verifiable_action": "Repair and bind green CI output to a new source snapshot."
+    },
+    {
+      "gap_id": "GAP-SVC-003",
+      "priority": "P0",
+      "state": "OPEN",
+      "description": "The active default-branch ruleset has no required status checks rule type.",
+      "next_verifiable_action": "Apply strict required status checks and query the live ruleset again."
+    },
+    {
+      "gap_id": "GAP-SVC-004",
+      "priority": "P0",
+      "state": "TOKEN_VAZIO",
+      "description": "No exact APK and consumed bootstrap identity is bound to the pinned source.",
+      "next_verifiable_action": "Create a source-to-APK/bootstrap receipt with exact artifact digests."
+    },
+    {
+      "gap_id": "GAP-SVC-005",
+      "priority": "P0",
+      "state": "TOKEN_VAZIO",
+      "description": "No redacted physical Android service execution receipt exists for either required ABI.",
+      "next_verifiable_action": "Run the installed package on ARM32 and ARM64 and collect terminal receipts without device identifiers."
+    },
+    {
+      "gap_id": "GAP-SVC-006",
+      "priority": "P0",
+      "state": "TOKEN_VAZIO",
+      "description": "No joined provider, consumer and Vectras guest terminal receipt exists.",
+      "next_verifiable_action": "Join matching request/result identities across producer, consumer and guest evidence."
+    }
+  ]
+}
