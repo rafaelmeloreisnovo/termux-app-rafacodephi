@@ -1,0 +1,143 @@
+{
+  "schema": "termux.rafacodephi.work-evolution-delivery.v1",
+  "decision_symbol": "‡",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "base_commit": "daf6a45f6251630b444cfd9c3b8d343c16709322",
+  "principle": "operational work delivery and experimental evolution are separate deliverables; promotion requires evidence",
+  "extends": "configs/system-finalization-contract.json",
+  "invariants": [
+    "VISION != ARTIFACT != BUILD != EXECUTION != EVIDENCE != CLAIM",
+    "index != authority",
+    "absence_of_evidence != evidence_of_absence",
+    "evolution_failure_must_not_break_work",
+    "work_stability_must_not_block_evolution",
+    "no_automatic_release_or_high_impact_claim"
+  ],
+  "common_base": {
+    "app_repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "package_repository": "rafaelmeloreisnovo/termux-packages",
+    "api_repository": "rafaelmeloreisnovo/termux-api_rafcodephi",
+    "application_id": "com.termux.rafacodephi",
+    "upstream_relation": "derived_from_termux_with_explicit_license_and_provenance_boundaries"
+  },
+  "deliveries": {
+    "work": {
+      "id": "RAFCODEPHI_WORK",
+      "maps_to_finalization_profile": "functional-distribution",
+      "purpose": "stable daily Android terminal and package environment",
+      "experimental_features_default": "disabled",
+      "release_allowed": false,
+      "claim_allowed": false,
+      "required_chain": [
+        "apk_build",
+        "bootstrap_identity",
+        "real_pkg_apt_dpkg_backend",
+        "package_repository_identity",
+        "package_install_on_device",
+        "device_runtime_receipt",
+        "rollback_path"
+      ],
+      "minimum_device_commands": [
+        "pkg update",
+        "pkg install <bounded-test-package>",
+        "apt --version",
+        "dpkg --version"
+      ],
+      "promotion_gate": "all_required_chain_items_must_have_observable_evidence_and_receipts"
+    },
+    "evolution": {
+      "id": "RAFCODEPHI_EVOLUTION",
+      "maps_to_finalization_profile": "full-platform",
+      "purpose": "continued research and implementation without destabilizing WORK",
+      "release_allowed": false,
+      "claim_allowed": false,
+      "allowed_open_research": [
+        "freestanding_runtime",
+        "RMR_low_level",
+        "ZIPRAF_logical_indexing",
+        "deterministic_VCPU_state_kernel",
+        "QEMU_VM_integration",
+        "custom_loader",
+        "custom_TLS",
+        "APKC_compilers",
+        "scheduler_and_memory_experiments"
+      ]
+    }
+  },
+  "promotion": {
+    "direction": "EVOLUTION->WORK",
+    "required_states": [
+      "IMPLEMENTED",
+      "BUILT",
+      "EXECUTED",
+      "TESTED_ON_TARGET_DEVICE",
+      "EVIDENCED",
+      "REGRESSION_CHECKED",
+      "REVIEWED"
+    ],
+    "required_receipt_fields": [
+      "promotion_id",
+      "component_id",
+      "source_repo",
+      "source_commit",
+      "artifact_hash",
+      "environment_fingerprint",
+      "test_protocol",
+      "raw_evidence_pointer",
+      "regression_result",
+      "known_limits",
+      "rollback_target",
+      "authority",
+      "decision"
+    ],
+    "automatic_promotion": false
+  },
+  "current_gaps": [
+    {
+      "gap_id": "TV-WORK-REAL-PACKAGE-STACK-DEVICE",
+      "state": "TOKEN_VAZIO",
+      "source_pointer": "docs/STATUS.md#bloqueadores-da-distribuicao-funcional",
+      "missing_field": "physical execution evidence for source-built pkg/apt/apt-get/dpkg/proot",
+      "blocking_dependency": "target-device execution with exact package/bootstrap identity",
+      "evidence_needed": "device transcript plus artifact/package hashes and environment fingerprint",
+      "falsifier": "any required command fails or resolves to a stub/wrapper rather than the intended backend",
+      "next_probe": "run bounded package-stack smoke test on target device using pinned app/package revisions",
+      "owner_authority": "functional-distribution gate",
+      "urgency": "P0",
+      "closure_gate": "all required package-stack commands execute successfully with receipt",
+      "claim_allowed": false
+    },
+    {
+      "gap_id": "TV-WORK-DUAL-ARM-DEVICE-EVIDENCE",
+      "state": "TOKEN_VAZIO",
+      "source_pointer": "docs/STATUS.md#rafaelia-zero-e-prova-fisica",
+      "missing_field": "paired ARM32 and ARM64 physical evidence",
+      "blocking_dependency": "validated installations on both required ABI roles",
+      "evidence_needed": "ARM32 receipt + ARM64 receipt + anti-replay dual-arm matrix",
+      "falsifier": "one ABI cannot reproduce the required WORK chain",
+      "next_probe": "capture exact-device receipts for armeabi-v7a and arm64-v8a",
+      "owner_authority": "functional-distribution gate",
+      "urgency": "P0",
+      "closure_gate": "arm32-legacy && arm64-modern && dual_arm_matrix",
+      "claim_allowed": false
+    },
+    {
+      "gap_id": "TV-WORK-REPOSITORY-SIGNING-RUNTIME",
+      "state": "TOKEN_VAZIO",
+      "source_pointer": "docs/STATUS.md#bloqueadores-da-distribuicao-funcional",
+      "missing_field": "published/signed RAFCODEPhi binary repository and on-device certificate/DNS/repository validation",
+      "blocking_dependency": "repository publication and signing authority",
+      "evidence_needed": "repository snapshot identity, signing receipt, device-side update/install transcript",
+      "falsifier": "signature, DNS, certificate, repository identity or package install validation fails",
+      "next_probe": "define a bounded repository snapshot and validate its signing/provenance chain before device use",
+      "owner_authority": "release/signing governance",
+      "urgency": "P0",
+      "closure_gate": "repository_identity && signing_receipt && device_repository_validation",
+      "claim_allowed": false
+    }
+  ],
+  "evidence_contract": "SOURCE->TRANSFORM->CLAIM->TEST/EVIDENCE->RECEIPT->INDEX->MEMORY",
+  "status": "PROPOSED_FOR_REVIEW",
+  "release_allowed": false,
+  "claim_allowed": false
+}
