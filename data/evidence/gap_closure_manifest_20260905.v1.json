@@ -1,0 +1,50 @@
+{
+  "schema": "rafaelia.termux-gap-closure/v1",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "wave_id": "GAP-CLOSURE-20260905",
+  "claim_allowed": false,
+  "observed_source_gates": [
+    "docs/RAFAELIA_ZERO_OPERATIONAL_EVIDENCE_GATE.md",
+    "docs/audits/APK_EVIDENCE_GATE_V1_20260814.md",
+    "scripts/build_apk_matrix_with_evidence.sh"
+  ],
+  "gaps": [
+    {
+      "id": "TV-TERMUX-APK-SOURCE-CONTRACT",
+      "class": "contract",
+      "state": "WIRED",
+      "producer": "repository_source",
+      "next_gate": "validate current source and APK evidence contract"
+    },
+    {
+      "id": "TV-TERMUX-APK-CURRENT-BUILD",
+      "class": "ci",
+      "state": "TOKEN_VAZIO",
+      "producer": "github_actions_or_reproducible_local_build",
+      "next_gate": "produce commit-bound APK digest and build receipt"
+    },
+    {
+      "id": "TV-TERMUX-PHYSICAL-EXECUTION",
+      "class": "physical_runtime",
+      "state": "TOKEN_VAZIO",
+      "producer": "physical_android_device",
+      "required_evidence": [
+        "device fingerprint",
+        "APK sha256",
+        "package/version identity",
+        "install receipt",
+        "launch receipt",
+        "runtime command transcript",
+        "exit/result status"
+      ]
+    },
+    {
+      "id": "TV-TERMUX-INDEPENDENT-REPRODUCTION",
+      "class": "reproduction",
+      "state": "TOKEN_VAZIO",
+      "producer": "independent_environment",
+      "next_gate": "rebuild and replay from declared inputs"
+    }
+  ],
+  "invariant": "build success is not device execution; device execution is not independent reproduction"
+}
