@@ -2,93 +2,122 @@
   "schema": "rafcodephi.work.v1",
   "decision_id": "DEC-RAFCODEPHI-WORK-V1-20260905",
   "symbol": "‡",
-  "state": "WORK_CANDIDATE_SPECIFIED",
+  "state": "WORK_CANDIDATE_RECONCILED_SOURCE_FIRST",
   "release_allowed": false,
   "claim_allowed": false,
-  "app": {
-    "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
-    "base_commit": "daf6a45f6251630b444cfd9c3b8d343c16709322",
-    "application_id": "com.termux.rafacodephi",
-    "compile_sdk": 35,
-    "target_sdk": 28,
-    "min_sdk": 21,
-    "required_abis": ["armeabi-v7a", "arm64-v8a"],
-    "universal_apk": true
+  "method": "TREE→SOURCE→BUILD_GRAPH→RUNTIME_GRAPH→CI_EVIDENCE→DOCUMENT_RECONCILIATION",
+  "sources": {
+    "app": {
+      "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+      "base_commit": "daf6a45f6251630b444cfd9c3b8d343c16709322",
+      "application_id": "com.termux.rafacodephi",
+      "code_package": "com.termux.app",
+      "required_abis": ["armeabi-v7a", "arm64-v8a"]
+    },
+    "vectras": {
+      "repository": "rafaelmeloreisnovo/Vectras-VM-Android",
+      "base_commit": "707350658092f030b441c37094037cf288736466",
+      "role": "integrated_consumer_vm_runtime",
+      "canonical_boundary_state": "TOKEN_VAZIO"
+    },
+    "packages": {
+      "repository": "rafaelmeloreisnovo/termux-packages",
+      "base_commit": "cdd3d68d89e1f6051a0798561a586e110d4004b4",
+      "pin_required": true,
+      "floating_main_allowed_for_release": false
+    }
   },
-  "packages": {
-    "repository": "rafaelmeloreisnovo/termux-packages",
-    "base_commit": "cdd3d68d89e1f6051a0798561a586e110d4004b4",
-    "pin_required": true,
-    "floating_main_allowed_for_release": false
-  },
-  "required_runtime_gates": [
+  "a_boundary_rule": "component belongs to A when operationally required and evidence-promoted; repository name does not define A/B",
+  "required_operational_domains": [
+    "side_by_side_identity",
     "apk_build",
     "device_install",
-    "shell_launch",
-    "bootstrap_install",
-    "dpkg_runtime",
-    "apt_runtime",
-    "pkg_update",
-    "pkg_install_test",
-    "package_repository_fetch",
-    "git_runtime",
-    "clang_compile_run",
-    "python_runtime",
+    "termux_shell_service",
+    "bootstrap_lineage",
+    "dpkg_apt_pkg_runtime",
+    "package_repository",
+    "work_toolchain",
+    "required_rmr_lowlevel",
+    "required_vectras_qemu_vm",
+    "consumer_guest_ipc_when_required",
+    "arm32_physical",
+    "arm64_physical",
     "artifact_hashes",
-    "device_receipt",
-    "rollback_probe"
+    "receipt_chain",
+    "rollback_recovery"
+  ],
+  "audit_findings": [
+    {
+      "finding_id": "FIND-SIDEBYSIDE-VALIDATOR-DRIFT",
+      "state": "CONTRADICTED",
+      "observation": "validator required hard-coded Java package literals while current source uses BuildConfig injection",
+      "source_binding": [
+        "scripts/validate_side_by_side_contract.py",
+        "app/build.gradle",
+        "termux-shared/build.gradle",
+        "termux-shared/src/main/java/com/termux/shared/termux/TermuxConstants.java"
+      ],
+      "next_gate": "run revised static validator in CI",
+      "claim_allowed": false
+    },
+    {
+      "finding_id": "FIND-CANONICAL-IMPLEMENTATION-BOUNDARY",
+      "state": "TOKEN_VAZIO",
+      "observation": "Termux/RafCodePhi implementation surfaces exist in both dedicated app and Vectras integration",
+      "evidence_needed": "explicit source_of_truth/consumer/shared_component/derived_from relation plus non-drift test",
+      "claim_allowed": false
+    }
   ],
   "current_gaps": [
     {
       "gap_id": "TV-WORK-ARM32-PHYSICAL",
       "state": "TOKEN_VAZIO",
-      "missing_field": "physical armeabi-v7a artifact and device receipt",
-      "closure_gate": "artifact_hash && install_receipt && runtime_receipt",
-      "claim_allowed": false
+      "closure_gate": "artifact_hash && install_receipt && runtime_receipt"
     },
     {
       "gap_id": "TV-WORK-ARM64-PHYSICAL",
       "state": "TOKEN_VAZIO",
-      "missing_field": "physical arm64-v8a artifact and device receipt",
-      "closure_gate": "artifact_hash && install_receipt && runtime_receipt",
-      "claim_allowed": false
+      "closure_gate": "artifact_hash && install_receipt && runtime_receipt"
     },
     {
       "gap_id": "TV-WORK-PACKAGE-STACK",
       "state": "TOKEN_VAZIO",
-      "missing_field": "source-built pkg/apt/apt-get/dpkg backend proven on device",
-      "closure_gate": "pkg_update && pkg_install && apt_update && dpkg_query",
-      "claim_allowed": false
+      "closure_gate": "pkg_update && pkg_install && apt_update && dpkg_query"
     },
     {
       "gap_id": "TV-WORK-PACKAGE-REPOSITORY",
       "state": "TOKEN_VAZIO",
-      "missing_field": "runtime-accessible indexed/signed RAFCODEPHI package repository",
-      "closure_gate": "repo_metadata_hash && device_fetch_receipt",
-      "claim_allowed": false
+      "closure_gate": "repo_metadata_hash && device_fetch_receipt"
+    },
+    {
+      "gap_id": "TV-WORK-CANONICAL-IMPLEMENTATION-BOUNDARY",
+      "state": "TOKEN_VAZIO",
+      "closure_gate": "canonical_relation_receipt && non_drift_test"
+    },
+    {
+      "gap_id": "TV-WORK-VECTRAS-QEMU-E2E",
+      "state": "TOKEN_VAZIO",
+      "closure_gate": "producer_consumer_guest_receipt && qemu_vm_runtime_receipt"
     },
     {
       "gap_id": "TV-WORK-SIGNING",
       "state": "TOKEN_VAZIO",
-      "missing_field": "production signing receipt and certificate fingerprint",
-      "closure_gate": "signed_apk_hash && cert_fingerprint && verification_receipt",
-      "claim_allowed": false
+      "closure_gate": "signed_apk_hash && cert_fingerprint && verification_receipt"
     },
     {
       "gap_id": "TV-WORK-ROLLBACK",
       "state": "PARTIAL",
-      "missing_field": "executed rollback proof for WORK-v1",
-      "closure_gate": "rollback_execution_receipt",
-      "claim_allowed": false
+      "closure_gate": "rollback_execution_receipt"
     }
   ],
-  "work_ready_expression": "APK_BUILD && DEVICE_INSTALL && SHELL && BOOTSTRAP && DPKG && APT && PKG && REPO && GIT && CLANG && PYTHON && HASHES && DEVICE_RECEIPT && ROLLBACK",
-  "excluded_from_work_v1_blocking_scope": [
-    "zipraf_research",
-    "full_vcpu_vm",
-    "custom_tls_research",
-    "experimental_loader",
-    "general_compiler_research",
+  "work_ready_expression": "SOURCE_GRAPH && IDENTITY && APK && DEVICE && SHELL && BOOTSTRAP && PACKAGE_STACK && TOOLCHAIN && REQUIRED_LOWLEVEL && REQUIRED_VECTRAS_VM && DUAL_ABI && HASHES && RECEIPTS && ROLLBACK",
+  "b_only_if_not_operationally_required": [
+    "experimental_zipraf_variants",
+    "alternative_unpromoted_vcpu_vm_backends",
+    "experimental_custom_tls",
+    "alternative_experimental_loaders",
+    "unpromoted_schedulers",
+    "experimental_compilers_beyond_required_toolchain",
     "global_superiority_benchmarks"
   ]
 }
