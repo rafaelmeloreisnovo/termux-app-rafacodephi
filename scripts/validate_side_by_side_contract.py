@@ -4,6 +4,10 @@ Validate canonical side-by-side contract for Termux RAFCODEΦ.
 
 This is a fast static gate that catches identity drift across build/runtime/manifest
 without requiring Android SDK installation.
+
+The runtime package constants are generated through BuildConfig. The validator
+therefore verifies the source of those values in Gradle and the Java binding to
+BuildConfig instead of requiring stale hard-coded literals in Java source.
 """
 
 from __future__ import annotations
@@ -15,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CANONICAL_PACKAGE = "com.termux.rafacodephi"
-LEGACY_CODE_PACKAGE = "com.termux"
+CANONICAL_CODE_PACKAGE = "com.termux.app"
 REQUIRED_PAGE_SIZE = "16384"
 PACKAGE_RE = re.compile(r"^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$")
 
@@ -39,34 +43,57 @@ def gradle_default(name: str, text: str) -> str | None:
     return match.group(1) if match else None
 
 
-def require_gradle_default(name: str, expected: str, text: str, errors: list[str]) -> None:
+def require_gradle_default(
+    label: str, name: str, expected: str, text: str, errors: list[str]
+) -> None:
     actual = gradle_default(name, text)
     if actual != expected:
-        errors.append(f"app/build.gradle: {name} default must be {expected}, got {actual!r}")
+        errors.append(f"{label}: {name} default must be {expected}, got {actual!r}")
 
 
 def require_valid_package(label: str, package_name: str | None, errors: list[str]) -> None:
     if not package_name or not PACKAGE_RE.fullmatch(package_name):
-        errors.append(f"app/build.gradle: {label} must be a concrete Android package name, got {package_name!r}")
+        errors.append(f"{label} must be a concrete Android package name, got {package_name!r}")
 
 
 def main() -> int:
     errors: list[str] = []
 
     build_gradle = read_text("app/build.gradle")
-    require_gradle_default("appPackageName", CANONICAL_PACKAGE, build_gradle, errors)
-    require_gradle_default("bootstrapMetadataPackageName", CANONICAL_PACKAGE, build_gradle, errors)
-    require_gradle_default("bootstrapRequiredPageSize", REQUIRED_PAGE_SIZE, build_gradle, errors)
+    require_gradle_default("app/build.gradle", "appPackageName", CANONICAL_PACKAGE, build_gradle, errors)
+    require_gradle_default(
+        "app/build.gradle", "appCodePackageName", CANONICAL_CODE_PACKAGE, build_gradle, errors
+    )
+    require_gradle_default(
+        "app/build.gradle", "bootstrapMetadataPackageName", CANONICAL_PACKAGE, build_gradle, errors
+    )
+    require_gradle_default(
+        "app/build.gradle", "bootstrapRequiredPageSize", REQUIRED_PAGE_SIZE, build_gradle, errors
+    )
 
     app_package = gradle_default("appPackageName", build_gradle)
+    app_code_package = gradle_default("appCodePackageName", build_gradle)
     bootstrap_package = gradle_default("bootstrapMetadataPackageName", build_gradle)
-    require_valid_package("appPackageName", app_package, errors)
-    require_valid_package("bootstrapMetadataPackageName", bootstrap_package, errors)
+    require_valid_package("app/build.gradle: appPackageName", app_package, errors)
+    require_valid_package("app/build.gradle: appCodePackageName", app_code_package, errors)
+    require_valid_package("app/build.gradle: bootstrapMetadataPackageName", bootstrap_package, errors)
     if app_package and bootstrap_package and app_package != bootstrap_package:
         errors.append(
             "app/build.gradle: appPackageName and bootstrapMetadataPackageName must match "
             "for side-by-side bootstrap paths"
         )
+
+    shared_gradle = read_text("termux-shared/build.gradle")
+    require_gradle_default(
+        "termux-shared/build.gradle", "appPackageName", CANONICAL_PACKAGE, shared_gradle, errors
+    )
+    require_gradle_default(
+        "termux-shared/build.gradle",
+        "appCodePackageName",
+        CANONICAL_CODE_PACKAGE,
+        shared_gradle,
+        errors,
+    )
 
     bootstrap_profile = read_text("scripts/build_bootstrap_profile.sh")
     bootstrap_builder = read_text("scripts/build_rafaelia_bootstraps.sh")
@@ -78,6 +105,26 @@ def main() -> int:
                 r'manifestPlaceholders\.TERMUX_PACKAGE_NAME\s*=\s*project\.ext\.appPackageName',
                 build_gradle,
                 "app/build.gradle: manifest TERMUX_PACKAGE_NAME must be derived from appPackageName",
+            ),
+            require(
+                r'buildConfigField\s+"String",\s*"TERMUX_PACKAGE_NAME",\s*buildConfigString\(project\.ext\.appPackageName\)',
+                build_gradle,
+                "app/build.gradle: TERMUX_PACKAGE_NAME BuildConfig must derive from appPackageName",
+            ),
+            require(
+                r'buildConfigField\s+"String",\s*"TERMUX_APP_CODE_PACKAGE_NAME",\s*buildConfigString\(project\.ext\.appCodePackageName\)',
+                build_gradle,
+                "app/build.gradle: TERMUX_APP_CODE_PACKAGE_NAME BuildConfig must derive from appCodePackageName",
+            ),
+            require(
+                r'buildConfigField\s+"String",\s*"TERMUX_PACKAGE_NAME",\s*buildConfigString\(project\.ext\.appPackageName\)',
+                shared_gradle,
+                "termux-shared/build.gradle: TERMUX_PACKAGE_NAME BuildConfig must derive from appPackageName",
+            ),
+            require(
+                r'buildConfigField\s+"String",\s*"TERMUX_APP_CODE_PACKAGE_NAME",\s*buildConfigString\(project\.ext\.appCodePackageName\)',
+                shared_gradle,
+                "termux-shared/build.gradle: TERMUX_APP_CODE_PACKAGE_NAME BuildConfig must derive from appCodePackageName",
             ),
             require(
                 rf'PACKAGE_NAME="\$\{{TERMUX_BOOTSTRAP_PACKAGE_NAME:-{re.escape(CANONICAL_PACKAGE)}\}}"',
@@ -122,14 +169,14 @@ def main() -> int:
         None,
         [
             require(
-                rf'TERMUX_PACKAGE_NAME\s*=\s*"{re.escape(CANONICAL_PACKAGE)}"',
+                r'TERMUX_PACKAGE_NAME\s*=\s*BuildConfig\.TERMUX_PACKAGE_NAME\s*;',
                 constants_java,
-                "TermuxConstants.java: TERMUX_PACKAGE_NAME is not canonical com.termux.rafacodephi",
+                "TermuxConstants.java: TERMUX_PACKAGE_NAME must bind to BuildConfig.TERMUX_PACKAGE_NAME",
             ),
             require(
-                rf'TERMUX_APP_CODE_PACKAGE_NAME\s*=\s*"{re.escape(LEGACY_CODE_PACKAGE)}"',
+                r'TERMUX_APP_CODE_PACKAGE_NAME\s*=\s*BuildConfig\.TERMUX_APP_CODE_PACKAGE_NAME\s*;',
                 constants_java,
-                "TermuxConstants.java: TERMUX_APP_CODE_PACKAGE_NAME missing or changed unexpectedly",
+                "TermuxConstants.java: TERMUX_APP_CODE_PACKAGE_NAME must bind to BuildConfig.TERMUX_APP_CODE_PACKAGE_NAME",
             ),
             require(
                 r'TERMUX_INTERNAL_PRIVATE_APP_DATA_DIR_PATH\s*=\s*"/data/data/" \+ TERMUX_PACKAGE_NAME[\s\S]*TERMUX_FILES_DIR_PATH\s*=\s*TERMUX_INTERNAL_PRIVATE_APP_DATA_DIR_PATH \+ "/files"[\s\S]*TERMUX_PREFIX_DIR_PATH\s*=\s*TERMUX_FILES_DIR_PATH \+ "/usr"',
