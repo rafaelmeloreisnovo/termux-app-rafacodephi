@@ -123,3 +123,78 @@ jobs:
         with:
           name: freestanding-runtime-${{ matrix.name }}
           path: build/freestanding/
+
+  dual-abi-runtime-receipt:
+    name: Aggregate dual-ABI emulated runtime receipt
+    needs:
+      - cold-start-builder-contract
+      - static-elf
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download both architecture evidence bundles
+        uses: actions/download-artifact@v4
+        with:
+          pattern: freestanding-runtime-*
+          merge-multiple: true
+          path: build/freestanding-matrix
+
+      - name: Require ARMv7 + AArch64 executed receipts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('build/freestanding-matrix')
+          required = {
+              'armv7': root / 'receipt-armv7.json',
+              'aarch64': root / 'receipt-aarch64.json',
+          }
+          receipts = {}
+          for arch, path in required.items():
+              if not path.is_file():
+                  raise SystemExit(f'missing dual-ABI runtime receipt: {path}')
+              doc = json.loads(path.read_text(encoding='utf-8'))
+              if doc.get('architecture') != arch:
+                  raise SystemExit(f'{arch}: architecture mismatch: {doc.get("architecture")}')
+              if doc.get('build_state') != 'BUILD_PROVEN':
+                  raise SystemExit(f'{arch}: build_state not proven')
+              if doc.get('host_emulated_runtime_state') != 'RUNTIME_PROVEN_EMULATED':
+                  raise SystemExit(f'{arch}: emulated runtime not proven')
+              if doc.get('device_runtime_state') != 'TOKEN_VAZIO':
+                  raise SystemExit(f'{arch}: device boundary widened')
+              if doc.get('package_payload_runtime_state') != 'TOKEN_VAZIO':
+                  raise SystemExit(f'{arch}: package payload boundary widened')
+              if doc.get('claim_allowed') is not False:
+                  raise SystemExit(f'{arch}: claim boundary widened')
+              receipts[arch] = {
+                  'binary_sha256': doc.get('binary_sha256'),
+                  'emulator': doc.get('emulator'),
+                  'tests': doc.get('tests'),
+              }
+
+          aggregate = {
+              'schema': 'raf.freestanding-runtime-gate.matrix/v1',
+              'architectures': ['armv7', 'aarch64'],
+              'matrix_state': 'RUNTIME_PROVEN_EMULATED_DUAL_ABI',
+              'build_state': 'BUILD_PROVEN_DUAL_ABI',
+              'device_runtime_state': 'TOKEN_VAZIO',
+              'package_payload_runtime_state': 'TOKEN_VAZIO',
+              'claim_allowed': False,
+              'receipts': receipts,
+              'boundary': (
+                  'Both freestanding control-gate ABIs executed under QEMU user-mode. '
+                  'This is not physical Android proof and does not promote package payload runtime.'
+              ),
+          }
+          out = root / 'freestanding-runtime-matrix.json'
+          out.write_text(json.dumps(aggregate, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          print(json.dumps(aggregate, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload dual-ABI custody receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: freestanding-runtime-matrix
+          path: build/freestanding-matrix/freestanding-runtime-matrix.json
