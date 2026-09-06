@@ -1,4 +1,6 @@
+from datetime import date
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -100,8 +102,16 @@ def test_real_pkg_workflow_is_a_fail_closed_same_observation_promotion_gate() ->
 
 def test_action_reference_policy_is_current_and_tracks_previously_unknown_actions() -> None:
     text = read("scripts/audit_github_actions_refs.py")
-    assert 'POLICY_VERIFIED_ON = "2026-08-08"' in text
+
+    # Freshness is a property of the policy date, not one frozen historical
+    # literal. The floor advances only when the policy itself is re-verified.
+    match = re.search(r'^POLICY_VERIFIED_ON = "(\d{4}-\d{2}-\d{2})"$', text, re.MULTILINE)
+    assert match is not None
+    verified_on = date.fromisoformat(match.group(1))
+    assert verified_on >= date(2026, 9, 6)
+
     assert '"actions/checkout": {"current": 7' in text
+    assert '"actions/setup-java": {"current": 6' in text
     assert '"actions/setup-python": {"current": 7' in text
     assert '"android-actions/setup-android": {"current": 4' in text
     assert '"softprops/action-gh-release": {"current": 3' in text

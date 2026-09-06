@@ -30,8 +30,6 @@
 static unsigned char __attribute__((aligned(64)))
     g_bm_arena_buf[BM_ARENA_SZ];
 
-static size_t g_bm_arena_off = 0;
-
 /* arena pública (exposta via header) */
 static mx_arena_t g_bm_arena_hdr = {
     .base = g_bm_arena_buf,
@@ -40,14 +38,13 @@ static mx_arena_t g_bm_arena_hdr = {
 };
 
 /* ============================================================================
- * HWCAP via /proc/self/auxv — sem pthread_once, sem lock
- * Usa flag atômica simples (suficiente para single-thread init)
+ * HWCAP / CPUID — sem pthread/libc, init atômico one-time
  * ========================================================================== */
 typedef struct {
     uint32_t caps_rt;
     uint32_t caps_bin;
     int      valid;
-    int      done;   /* 0 = não inicializado */
+    int      done;   /* 0=uninit, 1=initializing, 2=published */
 } bm_caps_t;
 
 static bm_caps_t g_caps = {0,0,0,0};
@@ -87,42 +84,111 @@ static int bm_read_auxv(unsigned long *hwcap, unsigned long *hwcap2) {
     return (got & 1) != 0;
 }
 
+#if defined(__i386__) || defined(__x86_64__) || defined(__amd64__)
+static void bm_cpuid(uint32_t leaf, uint32_t subleaf,
+                     uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx) {
+    uint32_t a, b, c, d;
+#if defined(__i386__) && defined(__PIC__)
+    __asm__ volatile(
+        "xchgl %%ebx, %1\n\t"
+        "cpuid\n\t"
+        "xchgl %%ebx, %1\n\t"
+        : "=a"(a), "=&r"(b), "=c"(c), "=d"(d)
+        : "0"(leaf), "2"(subleaf));
+#else
+    __asm__ volatile(
+        "cpuid"
+        : "=a"(a), "=b"(b), "=c"(c), "=d"(d)
+        : "0"(leaf), "2"(subleaf));
+#endif
+    *eax = a; *ebx = b; *ecx = c; *edx = d;
+}
+
+static uint64_t bm_xgetbv(uint32_t xcr) {
+    uint32_t eax, edx;
+    __asm__ volatile("xgetbv" : "=a"(eax), "=d"(edx) : "c"(xcr));
+    return ((uint64_t)edx << 32) | eax;
+}
+
+static uint32_t bm_detect_x86_caps(int *valid) {
+    uint32_t eax = 0, ebx = 0, ecx = 0, edx = 0;
+    bm_cpuid(0u, 0u, &eax, &ebx, &ecx, &edx);
+    if (eax == 0u) { *valid = 0; return 0u; }
+    const uint32_t max_leaf = eax;
+    uint32_t caps = 0u;
+
+    bm_cpuid(1u, 0u, &eax, &ebx, &ecx, &edx);
+    if (edx & (1u << 25)) caps |= CAP_SSE;
+    if (edx & (1u << 26)) caps |= CAP_SSE2;
+    if (ecx & (1u << 20)) caps |= CAP_SSE42;
+
+    int avx_usable = 0;
+    if ((ecx & (1u << 27)) && (ecx & (1u << 28))) {
+        const uint64_t xcr0 = bm_xgetbv(0u);
+        avx_usable = ((xcr0 & 0x6u) == 0x6u);
+        if (avx_usable) caps |= CAP_AVX;
+    }
+    if (max_leaf >= 7u) {
+        bm_cpuid(7u, 0u, &eax, &ebx, &ecx, &edx);
+        if (avx_usable && (ebx & (1u << 5))) caps |= CAP_AVX2;
+    }
+    *valid = 1;
+    return caps;
+}
+#endif
+
 static void bm_init_caps(void) {
-    if (g_caps.done) return;
+    if (__atomic_load_n(&g_caps.done, __ATOMIC_ACQUIRE) == 2) return;
+
+    int expected = 0;
+    if (!__atomic_compare_exchange_n(
+            &g_caps.done, &expected, 1, 0, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)) {
+        while (__atomic_load_n(&g_caps.done, __ATOMIC_ACQUIRE) != 2) { }
+        return;
+    }
 
     uint32_t bin = 0;
-#if defined(HAS_NEON) || defined(__ARM_NEON) || defined(__ARM_NEON__)
-    bin |= CAP_NEON | CAP_ASIMD;
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
+    bin |= CAP_NEON;
+#if defined(__aarch64__) || defined(__arm64__)
+    bin |= CAP_ASIMD;
 #endif
-#if defined(HAS_AVX2)
-    bin |= CAP_AVX2;
+#endif
+#if defined(__AVX2__)
+    bin |= CAP_AVX2 | CAP_AVX;
+#elif defined(__AVX__)
     bin |= CAP_AVX;
 #endif
-#if defined(HAS_AVX)
-    bin |= CAP_AVX;
+#if defined(__SSE4_2__)
+    bin |= CAP_SSE42 | CAP_SSE2 | CAP_SSE;
+#elif defined(__SSE2__)
+    bin |= CAP_SSE2 | CAP_SSE;
+#elif defined(__SSE__)
+    bin |= CAP_SSE;
 #endif
-#if defined(HAS_SSE42)
-    bin |= CAP_SSE42 | CAP_SSE2;
-#endif
-#if defined(HAS_SSE2)
-    bin |= CAP_SSE2;
-#endif
-    g_caps.caps_bin = bin;
 
+    uint32_t rt = 0;
+    int valid = 0;
+#if defined(__aarch64__) || defined(__arm64__) || defined(__arm__)
     unsigned long hc = 0, hc2 = 0;
     if (bm_read_auxv(&hc, &hc2)) {
-        uint32_t rt = 0;
 #if defined(__aarch64__) || defined(__arm64__)
         if (hc & HWCAP_ASIMD) rt |= CAP_NEON | CAP_ASIMD;
-        if (hc & HWCAP_SVE)   rt |= CAP_SVE;
+        if (hc & HWCAP_SVE) rt |= CAP_SVE;
         if (hc2 & HWCAP2_SVE2) rt |= CAP_SVE2;
 #else
-        if (hc & HWCAP_NEON)  rt |= CAP_NEON;
+        if (hc & HWCAP_NEON) rt |= CAP_NEON;
 #endif
-        g_caps.caps_rt = rt;
-        g_caps.valid   = 1;
+        valid = 1;
     }
-    g_caps.done = 1;
+#elif defined(__i386__) || defined(__x86_64__) || defined(__amd64__)
+    rt = bm_detect_x86_caps(&valid);
+#endif
+
+    g_caps.caps_bin = bin;
+    g_caps.caps_rt = rt;
+    g_caps.valid = valid;
+    __atomic_store_n(&g_caps.done, 2, __ATOMIC_RELEASE);
 }
 
 /* ============================================================================
@@ -221,7 +287,9 @@ int bstr_cmp(const char *a, const char *b) {
     return *(const unsigned char *)a - *(const unsigned char *)b;
 }
 char *bstr_cpy(char *d, const char *s) {
-    char *p = d; while ((*p++ = *s++)); return d;
+    char *p = d;
+    while ((*p++ = *s++)) { }
+    return d;
 }
 
 /* ============================================================================
@@ -702,6 +770,23 @@ static uint32_t bm_parse_online(const char *s) {
     return cnt;
 }
 
+static int bm_parse_u32(const char *s, uint32_t *out) {
+    if (!s || !out) return 0;
+    uint32_t value = 0u;
+    uint32_t digits = 0u;
+    while (*s == ' ' || *s == '\t' || *s == '\n') s++;
+    while (*s >= '0' && *s <= '9') {
+        const uint32_t digit = (uint32_t)(*s - '0');
+        if (value > (UINT32_MAX - digit) / 10u) return 0;
+        value = value * 10u + digit;
+        digits++;
+        s++;
+    }
+    if (digits == 0u) return 0;
+    *out = value;
+    return 1;
+}
+
 static void bm_append(char *out, size_t cap, const char *txt) {
     size_t l=0; while(l<cap&&out[l]) l++;
     size_t i=0;
@@ -715,7 +800,7 @@ void get_hw_profile(hw_profile_t *p) {
     bstr_cpy(p->abi, ARCH_NAME);
     p->access_flags |= HW_ACCESS_HAS_ABI;
 
-    /* hwcap via auxv (sem getauxval para evitar libc pesada) */
+    /* hwcap bruto via auxv; interpretação arquitetural é feita por bm_init_caps. */
     unsigned long hc=0, hc2=0;
     if (bm_read_auxv(&hc, &hc2)) {
         p->hwcap  = (uint64_t)hc;
@@ -783,18 +868,21 @@ void get_hw_profile(hw_profile_t *p) {
     }
     if (found) p->access_flags |= HW_ACCESS_HAS_CPU_CLUSTER_FREQ;
 
-    /* page size — Android default 4096, 16384 on newer versions
-     * Hardcoded fallback since sysconf is from libc */
-    uint32_t pg = 4096u;
-#ifdef __ANDROID__
-    /* Android 15+ uses 16KB pages */
-    pg = 16384u;
-#endif
-    if (pg > 0) { p->page_size = pg; p->access_flags|=HW_ACCESS_HAS_PAGE_SIZE; }
+    /* Nunca adivinhar page size: hw_profile_pagesize_wrap.c promove AT_PAGESZ
+     * somente quando observado no auxv do processo. */
+    p->page_size = 0u;
+    p->access_flags &= ~HW_ACCESS_HAS_PAGE_SIZE;
 
-    /* cache line size — typical L1 cache line is 64 bytes on ARM */
-    uint32_t cl = 64u;
-    if (cl > 0) { p->cache_line = cl; p->access_flags|=HW_ACCESS_HAS_CACHE_LINE; }
+    /* Cache-line vem de sysfs quando observável; ausência permanece sem claim. */
+    char clbuf[32];
+    uint32_t cl = 0u;
+    if (bm_read_file("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size",
+                     clbuf, sizeof(clbuf)) > 0 &&
+        bm_parse_u32(clbuf, &cl) &&
+        cl >= 16u && cl <= 4096u && (cl & (cl - 1u)) == 0u) {
+        p->cache_line = cl;
+        p->access_flags |= HW_ACCESS_HAS_CACHE_LINE;
+    }
 
     p->access_flags |= HW_ACCESS_NO_PHYS_REG_ACCESS;
     p->access_flags |= HW_ACCESS_NO_GPIO_PIN_ACCESS;
