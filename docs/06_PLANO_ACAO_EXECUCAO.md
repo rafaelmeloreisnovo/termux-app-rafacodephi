@@ -1,223 +1,254 @@
-# Plano de Ação — RAFAELIA/VECTRA_OS Bug Resolution
-> Ordem de execução baseada no grafo de dependências
-> Todos os itens abaixo devem ser executados na ordem indicada
+# Plano de Ação Documental e de Evidência — RAFAELIA/VECTRA_OS
 
----
+> Repository atual: `rafaelmeloreisnovo/termux-app-rafacodephi`
+> Baseline auditado: `b207970fc7a8630a534956cb544350cfd61ba33a`
+> A versão histórica deste arquivo prescrevia implementação de BUG-01..08. Várias dessas prescrições já foram superadas pelo source atual. Este plano agora é **evidence-driven** e não manda reaplicar patches históricos.
 
-## FASE 0 — Triagem imediata (hoje, sem código)
+## 1. Regra central
 
-### 0.1 Verificar CVE world-readable
-```bash
-git log --oneline | grep -iE "world.readable|CVE|permission|security"
-# Se nenhum resultado: APLICAR PATCH DO UPSTREAM IMEDIATAMENTE
+```text
+OBSERVAR SOURCE → LOCALIZAR GATE → LER RECEIPT → CLASSIFICAR CLAIM → ATUALIZAR DOC
 ```
 
-### 0.2 Verificar ZrManifest em stack
-```bash
-grep -rn "ZrManifest " . --include="*.c" --include="*.h" \
-  | grep -v "static\|extern\|\*\|&\|typedef\|struct"
-# Cada linha é um stack allocation — BUG CRÍTICO
+Nunca:
+
+```text
+grep vazio → concluir patch ausente → aplicar patch automaticamente
 ```
 
-### 0.3 Verificar BLAKE3 exit code
-```bash
-grep -n "b3sum\|blake3\|BLAKE3" hotfix_ate_compilar.sh build_apk_matrix.sh
-# Verificar se há exit 1 após mismatch
+A ausência de uma string não prova ausência semântica de uma correção.
+
+## 2. Itens históricos já superados
+
+Não executar como plano corrente:
+
+- gerar uma nova `attractor_table[42]` a partir de valores hipotéticos deste Markdown;
+- adicionar state #22 dual-mode conforme proposta histórica;
+- aplicar novamente os quatro fixes de `vectra_pulse.S` descritos no documento antigo;
+- adicionar `_Atomic int scan_idx` apenas porque o exemplo inferido o sugeria;
+- adicionar `VECTRA_ASSERT_LYAPUNOV` apenas porque o exemplo hipotético o sugeria;
+- substituir `sharedUserId` presumido sem antes observar o manifest/test atual;
+- editar `hotfix_ate_compilar.sh` com base no snippet BLAKE3 inventado no documento antigo.
+
+Essas instruções eram hipóteses/planos históricos, não autoridade atual.
+
+## 3. Estado estrutural corrente observado
+
+### Attractor table
+
+```text
+rmr/Rrr/attractor_table.c
+rmr/Rrr/attractor_table.h
+rmr/Rrr/attractor_table_validator.c
 ```
 
----
+Cardinalidade corrente documentada no header: 41, índices `[0..40]`.
 
-## FASE 1 — Resolução teórica BUG-02 (Semana 1)
+### AArch64 pulse
 
-**Nenhum código antes desta fase estar concluída.**
-
-### 1.1 Decisão sobre Resolução do VOID paradox #22
-
-Escolher UMA das resoluções documentadas em `02_BUG_VOID_PARADOX_ATRATOR_22.md`:
-
-| Opção | Descrição | Complexidade | Recomendação |
-|-------|-----------|--------------|--------------|
-| A | Quantum bypass (pula #22) | Baixa | ❌ Viola period=42 |
-| B | State merge com #13 | Média | ⚠️ Requer prova de hash |
-| C | Dual-mode state | Alta | ✅ Preserva todos invariantes |
-| D | Redefinir R=43 | Máxima | ❌ Quebra tudo |
-
-**Recomendação: Resolução C (Dual-mode state)**
-
-```c
-// Especificação de state[22] com Resolução C:
-attractor_table[22] = {
-    .id         = 22,
-    .delta_r    = 1,      // modo FIBONACCI (padrão)
-    .phase_mask = 0x8000, // bit 15: indica dual-mode
-    .coherence  = Q16(0.500),
-    .entropy    = Q16(0.500),
-    .lyapunov   = Q16(0.250),
-    .fnv_hash   = FNV1A(22, 1) ^ FNV1A(22, 13),
-};
-// vectra_pulse.S: verificar phase_mask[15] para state[22] e usar Δr=13 em TOROID_MODE
+```text
+rmr/Rrr/vectra_pulse.S
 ```
 
-### 1.2 Formalizar matematicamente
-Escrever prova de que com Resolução C:
-- `|A| = 42` ✓ (42 estados, nenhum fundido)
-- `period(BitOmega) = 42` ✓ (state[22] participativo)
-- `gcd(Δr, 42) = 1` ✓ (Δr=1 e Δr=13 ambos coprimos com 42)
-- Hash chain Merkle sem colisões ✓
+O source declara e contém as quatro correções estruturais BUG-03-A..D.
 
----
+### CTI
 
-## FASE 2 — Implementação BUG-01 (Semana 1-2)
-
-### 2.1 Gerar attractor_table.c completa
-
-Usar como base o código em `01_BUG_ATTRACTOR_TABLE_INCOMPLETA.md`,
-completando state[22] com a resolução escolhida na Fase 1.
-
-### 2.2 Implementar verify_attractor_table()
-
-```c
-// vectra_attractor_verify.c
-int verify_attractor_table(void);  // retorna 0 se OK, negativo se erro
+```text
+rmr/Rrr/cti_raw_reader.c
+rmr/Rrr/cti_scanner_barrier.h
+rmr/Rrr/cti_race_condition_validator.c
 ```
 
-### 2.3 Rodar verificação no build pipeline
+### Lyapunov
 
-```bash
-# Adicionar em hotfix_ate_compilar.sh:
-./tools/verify_attractor < /dev/null
-if [ $? -ne 0 ]; then
-    echo "FATAL: attractor_table inválida" >&2
-    exit 1
-fi
+```text
+rmr/Rrr/lyapunov_convergence.c
+rmr/Rrr/lyapunov_convergence_validator.c
 ```
 
----
+### ZrManifest
 
-## FASE 3 — Fix BUG-03: vectra_pulse.S (Semana 2)
-
-Aplicar os 4 fixes em ordem:
-
-```
-3-A: load-use hazard         → inserir instrução independente
-3-B: sizeof=20 + bounds      → fix offset e bound check
-3-C: dmb ish barrier         → adicionar após writes de estado
-3-D: udiv → subs/csel        → eliminar divisão do hot path
+```text
+rmr/Rrr/zipraf_index.h
+rmr/Rrr/zipraf_manifest_pool.h
+rmr/Rrr/zipraf_manifest_pool.c
 ```
 
-### Assembly completo de referência
+### Termux API identity
 
-Ver seção 5 do arquivo `03_BUG_VECTRA_PULSE_AARCH64.md`.
+`tests/test_termux_api_access_contract.py` exige permissão `signature` e ausência de `android:sharedUserId` no manifest principal.
 
-### Teste em QEMU
+## 4. Gates estruturais a usar como referência
+
+O `Makefile` possui gates específicos, incluindo:
+
+```text
+attractor-table-complete-gate
+lyapunov-convergence-gate
+cti-race-condition-gate
+```
+
+A existência do target é `GATE_WIRED`; o resultado de uma execução só é PASS quando houver execução/receipt correspondente.
+
+## 5. Bootstrap/package stack
+
+### Contrato semântico
+
+```text
+data/contracts/termux-packages-rafcodephi-pin.v1.json
+```
+
+No baseline:
+
+```text
+canonical = 837afec42ecf5f9ac1bd8b00e65d143bc23a380b
+candidate = 0ffb24a5a6be58316236383a6d249544c39eb3e3
+```
+
+### Resolver
 
 ```bash
-# qemu_rafaelia integration test:
-cd qemu_rafaelia/
-./run_vectra_test.sh --state-count=42 --cycles=10000
-# Deve completar sem SIGILL, SIGSEGV, ou assertion failure
+python3 scripts/resolve_termux_packages_pin.py canonical --json
+python3 scripts/resolve_termux_packages_pin.py candidate --json
 ```
 
----
+### Workflow de candidate/libLLVM18
 
-## FASE 4 — Fixes independentes em paralelo (Semanas 1-2)
+`.github/workflows/beta-build-libllvm18-unblock.yml` deve ser lido como cadeia:
 
-Podem ser feitos em paralelo com Fases 1-3:
-
-### 4.1 BUG-05: ZrManifest static
-```bash
-# Encontrar e corrigir todos os stack allocations
-grep -rn "ZrManifest " . --include="*.c" | grep -v static
-# Para cada ocorrência: adicionar 'static' ou mover para arena
+```text
+resolve pin
+→ checkout exact SHA
+→ preflight source capabilities
+→ source-build ARM/AArch64 + manifest
+→ gate bootstrap pair
+→ import/semantic validation
+→ APK matrix
+→ strict receipt on success
 ```
 
-### 4.2 BUG-07: BLAKE3 exit 1
-```bash
-# hotfix_ate_compilar.sh e build_apk_matrix.sh
-# Substituir "echo WARN" por "echo FATAL; exit 1"
+Se houver falha upstream:
+
+```text
+UPSTREAM_FAILURE_EVIDENCE_INCOMPLETE
 ```
 
-### 4.3 BUG-04: Bootstrap package name
-```bash
-# TermuxConstants.java:
-# Substituir "com.termux" hardcoded por BuildConfig.APPLICATION_ID
+preserva o primeiro erro e registra evidências downstream faltantes sem mascarar a causa.
+
+## 6. Plano corrente de fechamento documental
+
+### D1 — identidade/proveniência
+
+Todo documento normativo deve usar:
+
+```text
+rafaelmeloreisnovo/termux-app-rafacodephi
 ```
 
----
+Owners antigos só podem permanecer qualificados como históricos.
 
-## FASE 5 — Fixes que requerem Fase 3 concluída (Semana 3)
+### D2 — eliminar código inferido como autoridade
 
-### 5.1 BUG-06: CtiScanner race condition
-```c
-// Após vectra_pulse.S estável:
-// Adicionar _Atomic int scan_idx em CtiScanner
-// Testar com ThreadSanitizer
+Para todo Markdown que use `inferido`, `provável`, `presumido`:
+
+- preservar como `HYPOTHESIS` quando tiver valor histórico;
+- apontar o source atual correspondente;
+- nunca deixar snippet inferido parecer implementação corrente.
+
+### D3 — claims
+
+Todo claim técnico ativo deve carregar uma classe:
+
+```text
+SOURCE_OBSERVED
+TEST_ENFORCED
+WORKFLOW_WIRED
+BUILD_PROVEN
+RUNTIME_PROVEN
+DEVICE_PROVEN
+REPRODUCED
+HISTORICAL
+HYPOTHESIS
+STALE
+TOKEN_VAZIO
 ```
 
-### 5.2 BUG-08: Lyapunov assert em runtime
-```c
-// Adicionar VECTRA_ASSERT_LYAPUNOV após cada vectra_pulse_step
-// Testar com attractor_table completa (Fase 2)
+### D4 — produtor/consumidor de artefatos
+
+Documentar sempre:
+
+```text
+producer → artifact → consumer → validator → receipt
 ```
 
----
+para impedir erro secundário de arquivo ausente virar falsa causa-raiz.
 
-## FASE 6 — Problemas estruturais (Semana 3-4)
+### D5 — pinning
 
-### 6.1 SR=144000 Hz — resolução da discrepância
+Nunca documentar apenas "pin atual". Registrar:
 
-Duas opções:
-- **A:** Aceitar SR=48000 e recalcular constantes `f_geom` para esse SR
-- **B:** Implementar resampling software de 48000→144000 no pipeline STFT
-
-```c
-// Opção A (mais simples):
-#define RAFAELIA_SR         48000u    // SR real do hardware Android
-#define RAFAELIA_SR_SPEC    144000u   // SR da especificação matemática
-#define SR_SCALE_FACTOR     ((float)RAFAELIA_SR_SPEC / RAFAELIA_SR)
-// Multiplicar f_geom(n) por SR_SCALE_FACTOR ao calcular
+```text
+workflow
+selector_or_exact_ref
+resolved_commit
+contract/schema
 ```
 
-### 6.2 Test suite mínimo
+### D6 — runtime físico
 
-Implementar `tests/test_vectra_invariants.c` (ver seção 5 do arquivo 05).
+Não promover estrutura/CI para device:
 
-### 6.3 Pisano period mismatch
-
-Documentar formalmente em `RAFAELIA_MATH_FORMULAS.md`:
-- Por que `period(BitOmega) = 42` apesar de `π(42) = 48`
-- Quais 6 estados do período Pisano são fundidos/mapeados
-- Confirmação de que Resolução C do BUG-02 cobre esses 6 estados
-
----
-
-## Checklist final de release
-
-```
-□ verify_attractor_table() retorna 0 para todos os 42 estados
-□ vectra_pulse_step: 4 bugs corrigidos, cycle count ≤ 30
-□ ZrManifest: zero stack allocations (grep limpo)
-□ Bootstrap: BuildConfig.APPLICATION_ID usado em todo lugar
-□ BLAKE3: todo mismatch causa exit 1
-□ CtiScanner: _Atomic int scan_idx
-□ Lyapunov: VECTRA_ASSERT_LYAPUNOV em todo vectra_pulse_step
-□ CVE world-readable: patch do upstream aplicado
-□ SR discrepância: documentada e resolvida
-□ Test suite: test_vectra_invariants passa sem falhas
-□ QEMU integration test: 10000 ciclos sem crash
-□ Page alignment: ZrManifest com aligned(16384)
-□ Period Pisano mismatch: documentado em RAFAELIA_MATH_FORMULAS.md
-□ hiddenapibypass: versão 6.1+ (crash Android 16 QPR1)
-□ AGENTS.md atualizado: bugs 01-04 marcados como resolvidos
+```text
+physical_android=TOKEN_VAZIO
 ```
 
----
+até receipt físico atual.
 
-## Timeline estimado
+## 7. Checklist documental de release
 
+Antes de uma documentação dizer que existe release funcional, exigir apontamentos para:
+
+```text
+[ ] app commit exato
+[ ] workflow exato
+[ ] termux-packages ref/commit exato
+[ ] bootstrap manifest + ARM ZIP + ARM64 ZIP
+[ ] hashes/receipt do bootstrap
+[ ] APK receipt
+[ ] assinatura aplicável
+[ ] package repository state
+[ ] ARM32 physical receipt
+[ ] ARM64 physical receipt
+[ ] runtime/package smoke
+[ ] claim_allowed correspondente
 ```
-Semana 1: FASE 0 (triagem) + FASE 1 (decisão teórica) + início FASE 4
-Semana 2: FASE 2 (attractor_table) + FASE 3 (vectra_pulse.S)
-Semana 3: FASE 5 (CTI race, Lyapunov) + FASE 6 início
-Semana 4: FASE 6 completo + QA + release candidate
+
+Qualquer item ausente é `TOKEN_VAZIO` ou `BLOCKED`, conforme o contrato; não deve ser preenchido por linguagem otimista.
+
+## 8. Estado do plano antigo
+
+```text
+HISTORICAL_IMPLEMENTATION_PLAN = SUPERSEDED
+CURRENT_PLAN = DOCUMENTATION_AND_EVIDENCE_ALIGNMENT
 ```
+
+O histórico permanece disponível no Git para cadeia de custódia.
+
+## 9. Documentos normativos para navegação
+
+- `docs/AUDIT_CLAIMS_POLICY.md`
+- `docs/00_BUG_MASTER_INDEX.md`
+- `docs/BOOTSTRAP_SOURCE_CONTRACT.md`
+- `docs/ENGINEERING_RUNBOOK_RAFCODEPHI.md`
+- `docs/RUNTIME_TRUTH_TABLE.md`
+- `docs/audits/DOCUMENTATION_CODE_ALIGNMENT_AUDIT_20260906.md`
+
+## 10. Invariante final
+
+```text
+PLANO_ATUAL(t) = source_current(t) + evidence_current(t)
+                 - stale_instruction(t)
+```
+
+`TOKEN_VAZIO` permanece estado válido até a evidência existir.
