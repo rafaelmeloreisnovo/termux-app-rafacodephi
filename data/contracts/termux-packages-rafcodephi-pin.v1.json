@@ -17,10 +17,14 @@
       "physical_android": "TOKEN_VAZIO"
     },
     "candidate": {
-      "commit": "1fc540b0c296581c5793c109e3834589f85a0114",
-      "pull_request": 89,
-      "state": "CI_VALIDATION_IN_PROGRESS",
+      "commit": "0ffb24a5a6be58316236383a6d249544c39eb3e3",
+      "branch": "main",
+      "state": "CURRENT_MAIN_PIN_VALIDATION",
       "promotion_target": "canonical",
+      "supersedes_commit": "1fc540b0c296581c5793c109e3834589f85a0114",
+      "historical_pull_request": 89,
+      "historical_pull_request_merged": true,
+      "historical_merge_commit": "8a3587789c415912c04b83fc4bb82fe69c55d595",
       "equivalent_duplicate_closed": 90,
       "claim_allowed": false,
       "physical_android": "TOKEN_VAZIO"
@@ -32,6 +36,8 @@
     "candidate_is_not_canonical_until_merged_and_rebound": true,
     "equivalent_candidates_must_converge_to_one_active_identity": true,
     "bridge_is_not_final_success": true,
-    "device_runtime_requires_exact_apk_receipt": true
+    "device_runtime_requires_exact_apk_receipt": true,
+    "stale_merged_pr_must_not_remain_active_candidate": true,
+    "candidate_source_capabilities_must_preflight_before_expensive_build": true
   }
 }
