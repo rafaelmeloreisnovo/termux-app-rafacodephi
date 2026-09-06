@@ -1,219 +1,159 @@
-/* P0.1: proot initialization — real implementation, freestanding */
+/*
+ * RAFCODEPHI RAF-NINJA proot controller.
+ *
+ * This translation unit is freestanding.  It launches and supervises the
+ * source-built proot payload but does not misclassify proot.real itself as a
+ * freestanding artifact.
+ */
 
 #include "freestanding.h"
-#include "syscall_arm64.h"
+#include "syscall_arm.h"
 
-#define PROOT_BIN "/system/bin/proot"
-#define TERMUX_PREFIX "/data/data/com.termux.rafacodephi"
+#ifndef RAFCODEPHI_PREFIX
+#define RAFCODEPHI_PREFIX "/data/data/com.termux.rafacodephi/files/usr"
+#endif
 
-/* Bootstrap state machine */
-enum BootstrapState {
-    STATE_PREFIX_EMPTY = 0,
-    STATE_PROOT_INITIALIZED = 1,
-    STATE_PAYLOAD_EXTRACTED = 2,
-    STATE_DPKG_INSTALLED = 3,
-    STATE_APT_CONFIGURED = 4,
-    STATE_USER_PACKAGES_READY = 5
+#define PROOT_REAL_BIN RAFCODEPHI_PREFIX "/bin/proot.real"
+#define PROOT_BIN      RAFCODEPHI_PREFIX "/bin/proot"
+#define RAF_CLOCK_MONOTONIC 1
+#define RAF_WNOHANG 1
+#define RAF_SIGKILL 9
+
+struct ProotNinjaReceipt {
+    int64_t pid;
+    uint64_t start_ns;
+    uint64_t finish_ns;
+    int32_t raw_wait_status;
+    int32_t timed_out;
+    int32_t used_real_binary;
 };
 
-struct BootstrapContext {
-    enum BootstrapState state;
-    pid_t proot_pid;
-    int watchdog_fd;
-    uint64_t start_time_ns;
-    struct Receipt receipt;
-};
-
-/* Watchdog timer using CLOCK_MONOTONIC (nanoseconds) */
-static int64_t get_monotonic_ns(void) {
-    struct timespec ts;
-    ts.tv_sec = 0;
-    ts.tv_nsec = 0;
-
-    int64_t ret = syscall_clock_gettime(0, &ts);  /* CLOCK_MONOTONIC = 1 on ARM64 */
-    if (SYSCALL_ERR(ret)) return -1;
-
-    return (ts.tv_sec * 1000000000LL) + ts.tv_nsec;
-}
-
-/* Check if watchdog exceeded 30 seconds */
-static int watchdog_exceeded(struct BootstrapContext *ctx) {
-    int64_t now = get_monotonic_ns();
-    if (now < 0) return 1;  /* Error → treat as timeout */
-
-    uint64_t elapsed_ns = now - ctx->start_time_ns;
-    uint64_t timeout_ns = 30ULL * 1000000000ULL;  /* 30 seconds */
-
-    return elapsed_ns > timeout_ns;
-}
-
-/* Write to stderr (fd=2) for logging */
 static int64_t log_message(const char *msg, uint32_t len) {
     return syscall_write(2, msg, len);
 }
 
-/* Initialize proot process in PREFIX_EMPTY state */
-static int proot_init(struct BootstrapContext *ctx) {
-    ctx->state = STATE_PREFIX_EMPTY;
-    ctx->start_time_ns = get_monotonic_ns();
-
-    if (ctx->start_time_ns < 0) {
-        log_message("ERROR: clock_gettime failed\n", 31);
-        return EFAIL;
-    }
-
-    /* Transition to PROOT_INITIALIZED state */
-    ctx->state = STATE_PROOT_INITIALIZED;
-
-    log_message("BOOTSTRAP: PREFIX_EMPTY → PROOT_INITIALIZED\n", 45);
-    return EOK;
+static int64_t get_monotonic_ns(void) {
+    struct timespec ts;
+    ts.tv_sec = 0;
+    ts.tv_nsec = 0;
+    if (SYSCALL_ERR(syscall_clock_gettime(RAF_CLOCK_MONOTONIC, &ts))) return -1;
+    if (ts.tv_sec < 0 || ts.tv_nsec < 0 || ts.tv_nsec >= 1000000000LL) return -1;
+    return (ts.tv_sec * 1000000000LL) + ts.tv_nsec;
 }
 
-/* Spawn proot child process */
-static int spawn_proot_child(struct BootstrapContext *ctx,
-                             const char *prefix_path,
-                             const char *proot_binary) {
-    /* Simple fork + execve pattern (no libc clone) */
-    int64_t pid = syscall_fork();
-
-    if (SYSCALL_ERR(pid)) {
-        log_message("ERROR: fork failed\n", 20);
-        return EFAIL;
+static void cpu_relax_bounded(void) {
+    volatile uint32_t i;
+    for (i = 0; i < 32768u; ++i) {
+#if defined(__aarch64__) || defined(__arm__)
+        __asm__ volatile("yield" ::: "memory");
+#else
+        __asm__ volatile("" ::: "memory");
+#endif
     }
+}
+
+static const char *select_proot_binary(int *used_real) {
+    if (syscall_access(PROOT_REAL_BIN, 1) == 0) {
+        *used_real = 1;
+        return PROOT_REAL_BIN;
+    }
+    if (syscall_access(PROOT_BIN, 1) == 0) {
+        *used_real = 0;
+        return PROOT_BIN;
+    }
+    return (const char *)0;
+}
+
+static int run_version_probe(const char *binary, struct ProotNinjaReceipt *receipt, uint32_t timeout_s) {
+    char *argv[] = {
+        (char *)binary,
+        (char *)"--version",
+        (char *)0
+    };
+    char *envp[] = {
+        (char *)"PATH=" RAFCODEPHI_PREFIX "/bin:/system/bin",
+        (char *)"PREFIX=" RAFCODEPHI_PREFIX,
+        (char *)"TMPDIR=" RAFCODEPHI_PREFIX "/tmp",
+        (char *)"HOME=/data/data/com.termux.rafacodephi/files/home",
+        (char *)0
+    };
+
+    int64_t start = get_monotonic_ns();
+    if (start < 0) return -2;
+
+    int64_t pid = syscall_fork();
+    if (SYSCALL_ERR(pid)) return -3;
 
     if (pid == 0) {
-        /* Child: prepare to execve proot */
-        char *argv[] = {
-            (char *)proot_binary,
-            (char *)"-r",
-            (char *)prefix_path,
-            (char *)"-w", (char *)"/",
-            (char *)"/bin/sh",
-            NULL
-        };
-
-        char *env[] = {
-            (char *)"TERMUX_PREFIX=/",
-            (char *)"HOME=/root",
-            NULL
-        };
-
-        /* Replace child image with proot */
-        int64_t ret = syscall_execve(proot_binary, argv, env);
-        if (SYSCALL_ERR(ret)) {
-            log_message("ERROR: execve proot failed\n", 29);
-            syscall_exit(1);
-        }
-    } else {
-        /* Parent: store child PID */
-        ctx->proot_pid = (pid_t)pid;
-        log_message("BOOTSTRAP: proot spawned\n", 26);
+        int64_t exec_rc = syscall_execve(binary, argv, envp);
+        (void)exec_rc;
+        syscall_exit(127);
     }
 
-    return EOK;
-}
+    receipt->pid = pid;
+    receipt->start_ns = (uint64_t)start;
+    receipt->finish_ns = 0;
+    receipt->raw_wait_status = -1;
+    receipt->timed_out = 0;
 
-/* Wait for proot child with watchdog timeout */
-static int wait_proot_with_watchdog(struct BootstrapContext *ctx, int timeout_s) {
-    int wstatus = 0;
+    const uint64_t timeout_ns = (uint64_t)timeout_s * 1000000000ULL;
+    for (;;) {
+        int status = 0;
+        int64_t waited = syscall_wait4((int)pid, &status, RAF_WNOHANG, (void *)0);
+        if (waited == pid) {
+            int64_t finish = get_monotonic_ns();
+            receipt->finish_ns = finish < 0 ? 0u : (uint64_t)finish;
+            receipt->raw_wait_status = status;
+            return status == 0 ? 0 : -4;
+        }
+        if (SYSCALL_ERR(waited)) return -5;
 
-    uint64_t timeout_ns = (uint64_t)timeout_s * 1000000000ULL;
-    uint64_t deadline_ns = ctx->start_time_ns + timeout_ns;
-
-    while (1) {
-        /* Timeout check */
         int64_t now = get_monotonic_ns();
-        if (now < 0 || (uint64_t)now > deadline_ns) {
-            log_message("WATCHDOG: timeout exceeded, killing proot\n", 43);
-            syscall_kill(ctx->proot_pid, 9);  /* SIGKILL */
-            return EFAIL;
+        if (now < 0 || (uint64_t)(now - start) >= timeout_ns) {
+            receipt->timed_out = 1;
+            (void)syscall_kill((int)pid, RAF_SIGKILL);
+            (void)syscall_wait4((int)pid, &status, 0, (void *)0);
+            receipt->raw_wait_status = status;
+            receipt->finish_ns = now < 0 ? 0u : (uint64_t)now;
+            return -6;
         }
-
-        /* Wait4 with WNOHANG — non-blocking check */
-        int64_t ret = syscall_wait4(ctx->proot_pid, &wstatus, 4, NULL);  /* 4 = WNOHANG */
-
-        if (ret == ctx->proot_pid) {
-            /* Child exited */
-            if (wstatus == 0) {
-                return EOK;
-            } else {
-                log_message("ERROR: proot exited with non-zero\n", 35);
-                return EFAIL;
-            }
-        } else if (SYSCALL_ERR(ret)) {
-            log_message("ERROR: wait4 failed\n", 20);
-            return EFAIL;
-        }
-
-        /* Spin-wait briefly (freestanding, no nanosleep) */
-        for (volatile uint32_t i = 0; i < 10000000; i++);
+        cpu_relax_bounded();
     }
 }
 
-/* Kill and restart proot (P0.3 real implementation) */
-static int restart_proot_real(struct BootstrapContext *ctx) {
-    log_message("BOOTSTRAP: restarting proot\n", 29);
+int proot_ninja_probe_real(struct ProotNinjaReceipt *receipt) {
+    if (!receipt) return -1;
+    receipt->pid = 0;
+    receipt->start_ns = 0;
+    receipt->finish_ns = 0;
+    receipt->raw_wait_status = -1;
+    receipt->timed_out = 0;
+    receipt->used_real_binary = 0;
 
-    /* Kill current process */
-    if (ctx->proot_pid > 0) {
-        syscall_kill(ctx->proot_pid, 9);  /* SIGKILL */
+    int used_real = 0;
+    const char *binary = select_proot_binary(&used_real);
+    if (!binary) {
+        log_message("RAF-NINJA: proot payload missing\n", 33);
+        return -7;
     }
+    receipt->used_real_binary = used_real;
 
-    /* Wait for it to die */
-    int wstatus = 0;
-    syscall_wait4(ctx->proot_pid, &wstatus, 0, NULL);
-
-    /* Reset state machine to PROOT_INITIALIZED for retry */
-    ctx->state = STATE_PROOT_INITIALIZED;
-    ctx->proot_pid = 0;
-    ctx->start_time_ns = get_monotonic_ns();
-
-    if (ctx->start_time_ns < 0) {
-        return EFAIL;
+    int rc = run_version_probe(binary, receipt, 10u);
+    if (rc == 0) {
+        log_message("RAF-NINJA: proot payload probe PASS\n", 36);
+    } else {
+        log_message("RAF-NINJA: proot payload probe FAIL\n", 36);
     }
-
-    return EOK;
+    return rc;
 }
 
-/* Main bootstrap entry point */
+/* Historical entry point retained as an adapter.  Payload extraction and dpkg
+ * initialization are intentionally owned by the orchestrator and happen first. */
 int bootstrap_main(void) {
-    struct BootstrapContext ctx;
-    ctx.state = STATE_PREFIX_EMPTY;
-    ctx.proot_pid = 0;
-    ctx.watchdog_fd = -1;
-    ctx.start_time_ns = 0;
-
-    /* Initialize */
-    if (proot_init(&ctx) != EOK) {
-        return 1;
-    }
-
-    /* Spawn proot child */
-    if (spawn_proot_child(&ctx, TERMUX_PREFIX, PROOT_BIN) != EOK) {
-        return 2;
-    }
-
-    /* Wait for completion with 30-second watchdog */
-    if (wait_proot_with_watchdog(&ctx, 30) != EOK) {
-        /* On timeout, attempt restart (once) */
-        if (restart_proot_real(&ctx) != EOK) {
-            return 3;
-        }
-        /* After restart, wait again */
-        if (wait_proot_with_watchdog(&ctx, 30) != EOK) {
-            return 4;
-        }
-    }
-
-    ctx.state = STATE_PAYLOAD_EXTRACTED;
-    log_message("BOOTSTRAP: PROOT_INITIALIZED → PAYLOAD_EXTRACTED\n", 50);
-
-    return 0;
+    struct ProotNinjaReceipt receipt;
+    return proot_ninja_probe_real(&receipt);
 }
 
-/* Exit wrapper */
 void _exit_bootstrap(int code) {
     syscall_exit(code);
-    /* unreachable */
-    for (;;);
 }
