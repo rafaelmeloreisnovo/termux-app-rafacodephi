@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:rafcodephi:freestanding-runtime-evidence:v1",
+  "title": "RAFCODEPHI Freestanding Runtime Evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "receipt_id",
+    "created_unix",
+    "architecture",
+    "prefix",
+    "gate_sha256",
+    "phase",
+    "runtime_state",
+    "device_state",
+    "reproduced_state",
+    "claim_allowed",
+    "checks"
+  ],
+  "properties": {
+    "schema": {"const": "raf.freestanding-runtime-evidence.v1"},
+    "receipt_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{8,160}$"},
+    "created_unix": {"type": "integer", "minimum": 1},
+    "architecture": {"enum": ["aarch64", "armv7", "arm", "unknown"]},
+    "prefix": {"type": "string", "minLength": 1},
+    "gate_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "candidate_apk_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "phase": {"enum": ["probe", "bootstrap", "vectras", "full"]},
+    "runtime_state": {"enum": ["RUNTIME_PROVEN", "TOKEN_VAZIO"]},
+    "device_state": {"enum": ["DEVICE_PROVEN", "TOKEN_VAZIO"]},
+    "reproduced_state": {"enum": ["REPRODUCED", "TOKEN_VAZIO"]},
+    "claim_allowed": {"type": "boolean"},
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gate_probe", "pkg", "proot", "proot_distro", "ninja", "clang", "cmake", "qemu_system_x86_64", "qemu_img"],
+      "properties": {
+        "gate_probe": {"$ref": "#/$defs/check"},
+        "pkg": {"$ref": "#/$defs/check"},
+        "proot": {"$ref": "#/$defs/check"},
+        "proot_distro": {"$ref": "#/$defs/check"},
+        "ninja": {"$ref": "#/$defs/check"},
+        "clang": {"$ref": "#/$defs/check"},
+        "cmake": {"$ref": "#/$defs/check"},
+        "qemu_system_x86_64": {"$ref": "#/$defs/check"},
+        "qemu_img": {"$ref": "#/$defs/check"}
+      }
+    }
+  },
+  "$defs": {
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "exit_code", "state"],
+      "properties": {
+        "required": {"type": "boolean"},
+        "exit_code": {"type": "integer", "minimum": -1, "maximum": 255},
+        "state": {"enum": ["PASS", "TOKEN_VAZIO", "NOT_SELECTED"]}
+      }
+    }
+  }
+}
