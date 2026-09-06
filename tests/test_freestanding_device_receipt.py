@@ -78,6 +78,21 @@ class ReceiptValidationTest(unittest.TestCase):
             result = validator.validate_receipt(path, verify_sidecar=False)
             self.assertTrue(result["valid"], result["errors"])
 
+    def test_full_phase_without_apk_binding_stays_token_vazio_and_valid(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = receipt("receipt-unbound", 103, claim=False, apk=None)
+            path = self.write(Path(tmp), "unbound.json", payload)
+            result = validator.validate_receipt(path, verify_sidecar=False)
+            self.assertTrue(result["valid"], result["errors"])
+
+    def test_full_phase_cannot_claim_without_apk_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = receipt("receipt-unbound-claim", 104, claim=True, apk=None)
+            path = self.write(Path(tmp), "unbound-claim.json", payload)
+            result = validator.validate_receipt(path, verify_sidecar=False)
+            self.assertFalse(result["valid"])
+            self.assertTrue(any("promotion invariant" in item for item in result["errors"]))
+
     def test_two_distinct_bound_receipts_promote_reproduced(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
