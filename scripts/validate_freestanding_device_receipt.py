@@ -135,13 +135,19 @@ def validate_receipt(path: Path, verify_sidecar: bool = True) -> dict[str, Any]:
         and (not checks[name].get("required") or checks[name].get("state") == "PASS")
         for name in ALL_CHECKS
     )
+    artifact_binding_pass = phase != "full" or apk_sha is not None
+    expected_promoted = selected_required_pass and artifact_binding_pass
     promoted = (
         data.get("runtime_state") == "RUNTIME_PROVEN"
         and data.get("device_state") == "DEVICE_PROVEN"
         and data.get("claim_allowed") is True
     )
-    if promoted != selected_required_pass:
-        error(errors, "promotion invariant violated: claim/runtime/device must exactly match required PASS set")
+    if promoted != expected_promoted:
+        error(
+            errors,
+            "promotion invariant violated: claim/runtime/device require all required PASS checks"
+            " and full phase requires candidate_apk_sha256",
+        )
     if data.get("runtime_state") == "RUNTIME_PROVEN" and data.get("device_state") != "DEVICE_PROVEN":
         error(errors, "RUNTIME_PROVEN physical receipt requires DEVICE_PROVEN")
     if data.get("reproduced_state") == "REPRODUCED":
