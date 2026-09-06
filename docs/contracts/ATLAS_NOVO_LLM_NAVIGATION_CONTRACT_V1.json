@@ -1,0 +1,151 @@
+{
+  "schema": "rafaelia.atlas_novo_llm_navigation.v1",
+  "state": "CONTRACT_MATERIALIZED_EXECUTION_PENDING",
+  "claim_allowed": false,
+  "append_only": true,
+  "orchestration_authority": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "route": ["ATLAS:X", "NOVO:X", "L:X", "LEARN:X"],
+  "authorities": {
+    "atlas": "rafaelmeloreisnovo/Mapa",
+    "dataset": "GoogleDrive/NOVOexport",
+    "llm_memory": "rafaelmeloreisnovo/llamaRafaelia/rmrCti",
+    "voynich_private": "rafaelmeloreisnovo/Rafaelia_Private/native/voynich_impl",
+    "gaia": "rafaelmeloreisnovo/GAIA_phi",
+    "rll_image_rigor": "instituto-Rafael/relativity-living-light",
+    "optional_runtime": "rafaelmeloreisnovo/Vectras-VM-Android"
+  },
+  "backend": {
+    "canonical": {
+      "id": "LLAMA_LOCAL_RMRCTI",
+      "engine": "llama-server",
+      "memory_mode": "cti-memory",
+      "default_transport": "127.0.0.1"
+    },
+    "external_gpt": "TOKEN_VAZIO_UNTIL_EXPLICIT_PROVIDER_BINDING",
+    "gaia_nanogpt": "RETRIEVAL_DEMO_ONLY",
+    "vectras": "OPTIONAL_EXECUTION_BACKEND"
+  },
+  "data_modes": {
+    "retrieve_read_only": "ALLOWED_CANDIDATE_DEFAULT",
+    "curate_derived_index": "APPEND_ONLY_WITH_SOURCE_IDS_AND_HASHES",
+    "train_or_finetune_weights": "DISABLED_UNTIL_EXPLICIT_GATES"
+  },
+  "training_gates": [
+    "dataset_manifest",
+    "privacy_review",
+    "license_review",
+    "deterministic_split",
+    "model_identity",
+    "hyperparameters",
+    "device_budget",
+    "reproducible_training_receipt"
+  ],
+  "rmrcti": {
+    "canonical_chain": [
+      "raw_or_zip_or_conversations_json",
+      "rafa_cti_scan",
+      "bitstack_jsonl_csv",
+      "triad_cti_couple",
+      "coupled_artifacts",
+      "omega_forest_omega_search_fast_omega_frames_export",
+      "omega_msgs_forest_frames_seed",
+      "llama_server_cti_memory"
+    ],
+    "delta_p": {
+      "target": 0.18,
+      "classification": "MEASURED_ASSOCIATION_CANDIDATE",
+      "required_label": "[RMRCTI Delta-P report: measured association; attractor not established]",
+      "missing_report": "TOKEN_VAZIO",
+      "not_equivalent_to": ["semantic_relevance", "causality", "universality", "dynamical_attractor"]
+    }
+  },
+  "voynich": {
+    "route": ["SOURCE_PROVENANCE", "EXECUTION_REPLAY", "INTERPRETATION_CLAIM_BOUNDARY"],
+    "private_body_public_copy": false,
+    "adapter_output": ["stable_id", "hash", "derived_descriptor", "approved_excerpt", "evidence_state"]
+  },
+  "rll_image": {
+    "pipeline": ["source_image", "immutable_id_hash", "deterministic_descriptor_or_classification", "recurrent_replay", "contradiction_falsifier", "evidence_label", "optional_context"],
+    "invariants": [
+      "source_image != processed_image",
+      "feature_vector != classification",
+      "classification != physical_claim",
+      "visual_similarity != physical_equivalence",
+      "image_edge != causal_edge"
+    ]
+  },
+  "gaia_adapter": {
+    "state": "CANDIDATE_READ_ONLY",
+    "pipeline": ["semantic_hash_djb2", "hash_to_vector", "shift_attention", "resolve_memory_content"],
+    "generator_semantics": "DEMO_NOT_TRAINED_MODEL_PROOF"
+  },
+  "query_state_machine": [
+    "Q0_USER_QUERY",
+    "Q1_ATLAS_ROUTE",
+    "Q2_NOVO_SOURCE_FIRST",
+    "Q3_LONGITUDINAL_RECOVERY",
+    "Q4_ADAPTER_FANOUT",
+    "Q5_EVIDENCE_NORMALIZE",
+    "Q6_CONTEXT_BUNDLE",
+    "Q7_MODEL_GENERATE",
+    "Q8_RESPONSE_WITH_PROVENANCE",
+    "Q9_LEARN_APPEND_ONLY"
+  ],
+  "failure_states": [
+    "TOKEN_VAZIO_SOURCE",
+    "TOKEN_VAZIO_BINDING",
+    "TOKEN_VAZIO_RUNTIME",
+    "CLAIM_BLOCKED",
+    "PRIVATE_WITHHELD",
+    "CONTRADICTED"
+  ],
+  "ranking": {
+    "canonical_replacement": false,
+    "channels_separate": ["retrieval_score", "evidence_weight", "scientific_confidence"],
+    "candidate_tuple": ["keyword_score", "curated_bonus", "longitudinal_fit", "provenance_quality", "reproducibility", "contradiction_penalty"]
+  },
+  "learn_delta_required_fields": [
+    "learning_id",
+    "predecessor_ids",
+    "source_ids",
+    "query_hash",
+    "route_id",
+    "selected_context_ids",
+    "model_id",
+    "response_hash",
+    "corrections",
+    "contradictions",
+    "unresolved_token_vazio",
+    "next_verifiable_step"
+  ],
+  "gates": {
+    "G1_ROUTE_DETERMINISM": "OPEN",
+    "G2_SOURCE_CUSTODY": "OPEN",
+    "G3_CTI_CAUSAL_USE": "OPEN",
+    "G4_DELTA_P_BOUNDARY": "CONTRACTED",
+    "G5_VOYNICH_PRIVACY_AND_CLAIM": "CONTRACTED",
+    "G6_RLL_IMAGE_RECURRENCE": "OPEN",
+    "G7_LEARN_APPEND_ONLY": "OPEN"
+  },
+  "token_vazio": [
+    "TV-ATLAS-LLM-NOVO-LIVE-BINDING",
+    "TV-NOVO-CURRENT-MANIFEST-EXACT-SCOPE",
+    "TV-GAIA-RMRCTI-ADAPTER-RUNTIME",
+    "TV-PRIVATE-BOUNDED-ADAPTER-RUNTIME",
+    "TV-RLL-IMAGE-ADAPTER-REPLAY",
+    "TV-VECTRAS-OPTIONAL-BACKEND-DEVICE-PROOF",
+    "TV-EXTERNAL-GPT-PROVIDER-BINDING",
+    "TV-TRAINING-DATASET-GOVERNANCE-AND-REPRODUCTION"
+  ],
+  "invariants": [
+    "ATLAS_ROUTE != SOURCE_BODY",
+    "NOVOEXPORT_SOURCE != DERIVED_CTI_INDEX",
+    "RETRIEVAL != TRAINING",
+    "MODEL_OUTPUT != EVIDENCE",
+    "REPETITION != CAUSALITY",
+    "MEASURED_DELTA_P != ATTRACTOR",
+    "PRIVATE_POINTER != PUBLIC_DISCLOSURE",
+    "SOURCE_PRESENT != BUILD_PROVEN != RUNTIME_PROVEN != DEVICE_PROVEN",
+    "TOKEN_VAZIO != 0"
+  ]
+}

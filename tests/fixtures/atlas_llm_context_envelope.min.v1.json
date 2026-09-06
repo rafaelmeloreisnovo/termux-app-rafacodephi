@@ -1,0 +1,52 @@
+{
+  "envelope_id": "atlas-novo-fixture-v1",
+  "route": {
+    "atlas": "ATLAS:X",
+    "novo": "NOVO:X",
+    "longitudinal": "L:X",
+    "learn": "LEARN:X",
+    "resolved_route_id": null
+  },
+  "query": {
+    "text_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "language": "pt-BR"
+  },
+  "source_refs": [
+    {
+      "source_id": "fixture-novo-source",
+      "authority": "GoogleDrive/NOVOexport",
+      "kind": "synthetic_fixture_pointer",
+      "provider_id": null,
+      "path": null,
+      "object_id": null,
+      "content_sha256": null,
+      "state": "TOKEN_VAZIO"
+    }
+  ],
+  "cti_hits": [],
+  "delta_p_evidence": {
+    "report_ref": null,
+    "observed_value": null,
+    "classification": "TOKEN_VAZIO",
+    "attractor_established": false
+  },
+  "image_evidence": [],
+  "private_refs": [],
+  "gaia_refs": [],
+  "scientific_boundaries": [
+    "MODEL_OUTPUT != EVIDENCE",
+    "MEASURED_DELTA_P != ATTRACTOR",
+    "VISUAL_SIMILARITY != PHYSICAL_EQUIVALENCE"
+  ],
+  "learning_predecessors": [],
+  "model_backend": {
+    "backend_id": "LLAMA_LOCAL_RMRCTI",
+    "model_id": null,
+    "model_hash": null,
+    "training_mode": "NO_WEIGHT_UPDATE"
+  },
+  "token_vazio": [
+    "TV-NOVO-CURRENT-MANIFEST-EXACT-SCOPE"
+  ],
+  "claim_allowed": false
+}
