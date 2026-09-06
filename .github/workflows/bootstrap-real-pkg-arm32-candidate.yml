@@ -93,7 +93,7 @@ jobs:
             '{"schema":"rafcodephi-real-pkg-preflight/v1","state":"PASS","claim_allowed":false,"release_allowed":false}' \
             > dist/bootstrap-real-pkg-arm32/preflight-state.json
 
-      - name: Build raw ARM32 real-pkg payload and package ownership map
+      - name: Build raw ARM32 real-pkg payload without unsafe promotion and map package ownership
         run: |
           mkdir -p dist/bootstrap-real-pkg-arm32
           # First create deterministic bridge siblings. Then replace only ARM32
