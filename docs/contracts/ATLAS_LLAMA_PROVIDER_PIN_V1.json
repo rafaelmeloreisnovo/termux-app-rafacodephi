@@ -1,0 +1,13 @@
+{
+  "schema": "rafaelia.atlas_llama_provider_pin.v1",
+  "repository": "rafaelmeloreisnovo/llamaRafaelia",
+  "commit": "7a667531b3411c63349a22b24ed5a7d7a314f79a",
+  "path": "rmrCti/atlas_intent_provider_v1.py",
+  "provider_role": "LOCAL_INTENT_PROVIDER",
+  "runtime_content_sha256": "REQUIRED_AT_INVOCATION",
+  "runtime_content_sha256_enforced_by": "tools/atlas_llama_governance_bridge.py",
+  "state": "PROVIDER_GIT_PINNED",
+  "model_runtime_proven": false,
+  "device_reproduction_proven": false,
+  "claim_allowed": false
+}
