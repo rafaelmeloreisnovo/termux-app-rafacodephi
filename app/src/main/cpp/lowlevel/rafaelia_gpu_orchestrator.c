@@ -30,7 +30,6 @@ static atomic_uint g_thermal_state;
 static wsq_t g_wsq;
 
 static rgpu_state_t g_gpu_state = GPU_UNKNOWN;
-static void* g_opencl_handle = 0;
 static volatile int g_gpu_probe_initialized = 0;
 
 static uint32_t g_crc32_tbl[256];

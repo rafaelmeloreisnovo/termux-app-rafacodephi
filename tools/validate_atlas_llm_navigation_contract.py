@@ -13,6 +13,8 @@ import json
 from pathlib import Path
 import sys
 
+from atlas_contract_io import load_json, validate_shape
+
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "docs/contracts/ATLAS_NOVO_LLM_NAVIGATION_CONTRACT_V1.json"
 SCHEMA = ROOT / "docs/contracts/atlas_llm_context_envelope.schema.json"
@@ -22,17 +24,15 @@ EXPECTED_ROUTE = ["ATLAS:X", "NOVO:X", "L:X", "LEARN:X"]
 EXPECTED_BACKEND = "LLAMA_LOCAL_RMRCTI"
 
 
-def load_json(path: Path):
-    with path.open("r", encoding="utf-8") as fh:
-        return json.load(fh)
-
-
 def require(condition: bool, message: str, errors: list[str]) -> None:
     if not condition:
         errors.append(message)
 
 
 def validate_contract(doc: dict, errors: list[str]) -> None:
+    if not isinstance(doc, dict):
+        errors.append("contract must be an object")
+        return
     require(doc.get("schema") == "rafaelia.atlas_novo_llm_navigation.v1",
             "contract.schema mismatch", errors)
     require(doc.get("claim_allowed") is False,
@@ -80,6 +80,9 @@ def validate_contract(doc: dict, errors: list[str]) -> None:
 
 
 def validate_schema(doc: dict, errors: list[str]) -> None:
+    if not isinstance(doc, dict):
+        errors.append("schema must be an object")
+        return
     require(doc.get("$id") == "rafaelia.atlas_llm_context_envelope.v1",
             "context envelope schema id mismatch", errors)
     required = set(doc.get("required", []))
@@ -92,6 +95,10 @@ def validate_schema(doc: dict, errors: list[str]) -> None:
 
 
 def validate_fixture(doc: dict, errors: list[str]) -> None:
+    before = len(errors)
+    validate_shape(doc, load_json(SCHEMA), errors)
+    if len(errors) != before:
+        return
     require(doc.get("claim_allowed") is False,
             "fixture claim_allowed must be false", errors)
     route = doc.get("route", {})
@@ -106,6 +113,13 @@ def validate_fixture(doc: dict, errors: list[str]) -> None:
     if dp is not None:
         require(dp.get("attractor_established") is False,
                 "fixture cannot establish Delta-P attractor", errors)
+    refs = [ref["source_id"] for ref in doc["source_refs"]]
+    require(len(refs) == len(set(refs)), "duplicate source identity", errors)
+    for hit in doc.get("cti_hits", []):
+        require(hit["source_ref"] in refs, "unresolved CTI source_ref", errors)
+    for ref in doc["source_refs"]:
+        if ref["state"] in {"STRUCTURE_VERIFIED", "RUNTIME_OBSERVED"}:
+            require(bool(ref.get("content_sha256")), "verified source needs hash", errors)
 
 
 def main() -> int:
@@ -118,13 +132,16 @@ def main() -> int:
         contract = load_json(CONTRACT)
         schema = load_json(SCHEMA)
         fixture = load_json(args.fixture)
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError, RecursionError) as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 2
 
-    validate_contract(contract, errors)
-    validate_schema(schema, errors)
-    validate_fixture(fixture, errors)
+    try:
+        validate_contract(contract, errors)
+        validate_schema(schema, errors)
+        validate_fixture(fixture, errors)
+    except (TypeError, AttributeError, ValueError, RecursionError):
+        errors.append("malformed contract/schema/envelope")
 
     if errors:
         for err in errors:

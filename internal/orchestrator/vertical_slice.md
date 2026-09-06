@@ -125,3 +125,16 @@ The pipeline is correctly implemented if and only if:
 - An invalid intent (wrong schema, blocked capability, or `risk: "critical"`)
   is rejected **before** any subprocess is spawned.
 - A federated context envelope that violates source/private/claim constraints is rejected or carries an explicit `TOKEN_VAZIO`/blocked state before model interaction.
+
+## Executable retrieval successor
+
+`tools/atlas_novo_context_adapter.py` now implements the pre-context path using
+the pinned producer CTI implementation. See
+[`ATLAS_NOVO_CONTEXT_ADAPTER_V1.md`](../../docs/contracts/ATLAS_NOVO_CONTEXT_ADAPTER_V1.md).
+
+It emits the existing ContextBundle schema only for usable, privacy-gated hits.
+No-hit/disabled controls emit no bundle. Input sources remain read-only; new
+derived outputs and LEARN records are written outside the acted-on repository.
+The Python/C++ adapter is a hosted pre-context stage; the v1 execution engine's
+capability allowlist is unchanged. IntentIR extraction, model generation and
+physical runtime still require their own receipts.

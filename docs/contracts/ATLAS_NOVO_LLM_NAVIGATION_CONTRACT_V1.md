@@ -362,3 +362,16 @@ source_present != build_proven != runtime_proven != device_proven
 VISÃO != ARTEFATO != EXECUÇÃO != EVIDÊNCIA != CLAIM
 TOKEN_VAZIO != 0
 ```
+
+## 19. Executable successor and ordering clarification
+
+The successor is [`ATLAS_NOVO_CONTEXT_ADAPTER_V1.md`](ATLAS_NOVO_CONTEXT_ADAPTER_V1.md).
+The command list in section 1 is a navigation index, not temporal execution
+order: `LEARN:X` follows retrieval/interaction and its receipt. The executable
+retrieval path is `ATLAS -> NOVO snapshot -> L -> RMRCTI -> ContextBundle -> LEARN`.
+The full model path still requires `IntentIR -> Governance -> LLM -> LEARN`.
+
+Section 5's fail-open behavior belongs to ordinary upstream model completion
+without memory. The local context adapter fails closed on malformed inputs,
+hash drift, ambiguous source identity or producer-binding failure; it never
+turns those failures into successful retrieval evidence.

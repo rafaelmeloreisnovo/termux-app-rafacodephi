@@ -1,0 +1,32 @@
+{
+  "schema": "rafaelia.gp_placeholder_failclosed.v1",
+  "predecessor_commit": "950bfd09edff5cbe7cdfa267469d607120fd0b22",
+  "baseline_ci_run": 34050897524,
+  "baseline_ci_job": 101534208853,
+  "baseline": {
+    "strict_compile_exit": 1,
+    "valid_input_timeout": true,
+    "timeout_seconds": 1,
+    "source_sha256": "9bc7df3dbb391bc94e381bcefb4f9cbe84649b7eace476462292f5d33dcc4d79"
+  },
+  "change": "Replace nonterminating, hardcoded numeric placeholder with explicit RAF_GP_UNIMPLEMENTED; preserve invalid-input error and clear writable output.",
+  "callers_found_in_inspected_app_code": 0,
+  "verification": {
+    "compiler": "GCC x86_64",
+    "strict_compile_exit": 0,
+    "runtime_exit": 0,
+    "termination_timeout_seconds": 1,
+    "checks": 9,
+    "mode": "Hosted test harness calling freestanding-compatible error path"
+  },
+  "source_sha256": {
+    "app/src/main/cpp/lowlevel/raf_gp_dimension.c": "4ce5fc0bf9624acbacfceef914fc3e8c262fc512310a35e16e5e76232c26755e",
+    "app/src/main/cpp/lowlevel/raf_gp_dimension.h": "8b5bf3820f1c15337c42deaa7afe03bf1a1a98c4a784db65b2660d0cc0e0ca4c"
+  },
+  "numerical_estimator_implemented": false,
+  "token_vazio": [
+    "TV-GP-DIMENSION-ESTIMATOR-AND-NUMERICAL-GATE"
+  ],
+  "claim_allowed": false,
+  "rollback": "Revert only this isolated API error-path fix; preserve baseline timeout and scientific gap receipt."
+}

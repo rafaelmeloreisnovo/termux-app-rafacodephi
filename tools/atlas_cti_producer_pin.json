@@ -1,0 +1,14 @@
+{
+  "repository": "rafaelmeloreisnovo/llamaRafaelia",
+  "commit": "3dac5fd2c23a9c55361672d5d593d3e875146da3",
+  "git_blobs": {
+    "common/cti_memory.cpp": "34380acf6c1451aeade27d7472346d7bc00b3b9b",
+    "common/cti_memory.h": "f810ab85230181de40f016b2f1f875aae9aa9ae0",
+    "common/cti_privacy.cpp": "283207e0afd24258699122983ed3e1a1becd6daa",
+    "common/cti_privacy.h": "3ec5b5da2189b97d63f12893c1f6fcef44c45319",
+    "common/cti_layersbit.h": "dafa7c72263478a3662b43d21d8f48c0a6444d49",
+    "common/cti_lb_tables.h": "2f1daa06135b9d24999e8887c6a0d18d835e49ff",
+    "vendor/nlohmann/json.hpp": "82d69f7c5d044c9887c96b90c97f5639083ecd14",
+    "rmrCti/novoexport_chat_adapter_v2.py": "c70d7a396cc23b407234919b9e5b289d9f1b8929"
+  }
+}
