@@ -159,7 +159,7 @@ jobs:
         run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_validator_rejects_binary_zip_entry_with_legacy_prefix
 
       - name: Validate package bridge scope
-        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_bridge_targets_the_pinned_arm_core_package_set_including_termux_api
+        run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_bridge_targets_semantically_pinned_arm_core_package_set_including_termux_api
 
       - name: Validate pkg installation promotion sequence
         run: python3 -m pytest -q tests/test_real_arm_bootstrap_core.py::test_runbook_requires_pkg_install_promotion_sequence
