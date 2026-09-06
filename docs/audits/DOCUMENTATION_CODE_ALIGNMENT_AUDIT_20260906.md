@@ -7,17 +7,13 @@
 
 ## 1. Role separation
 
-This repository must keep three activities distinct:
-
-1. **Audit — Class A:** inspect source, workflows, tests, contracts and receipts; identify contradictions, stale claims and missing evidence.
+1. **Audit — Class A:** inspect source, workflows, tests, contracts and receipts; identify contradictions, stale claims, scope collisions and missing evidence.
 2. **Review — Class B:** normalize terminology, references, status language and navigation without widening technical claims.
 3. **Technical writing — Class B:** update normative documentation so it describes what the current source actually does.
 
 Documentation changes MUST NOT silently become implementation claims.
 
-## 2. Evidence hierarchy for documentation
-
-Use this precedence when documents disagree:
+## 2. Evidence hierarchy
 
 ```text
 CURRENT SOURCE / TEST / WORKFLOW
@@ -28,71 +24,105 @@ CURRENT SOURCE / TEST / WORKFLOW
     > HYPOTHESIS / INFERRED EXAMPLE
 ```
 
-An inferred snippet is not evidence that the snippet exists in the repository.
-A historical bug report is not evidence that the bug remains open.
-A CI structural PASS is not device/runtime proof.
+An inferred snippet is not evidence that the snippet exists in the repository. A historical bug report is not evidence that the bug remains open. A CI structural PASS is not physical-device proof.
 
 ## 3. Source observations from baseline
 
 ### 3.1 Termux-packages source contract
 
-`data/contracts/termux-packages-rafcodephi-pin.v1.json` defines two named channels:
+`data/contracts/termux-packages-rafcodephi-pin.v1.json` defines:
 
 - `canonical`: `837afec42ecf5f9ac1bd8b00e65d143bc23a380b`, state `MERGED_BASELINE`;
 - `candidate`: `0ffb24a5a6be58316236383a6d249544c39eb3e3`, state `CURRENT_MAIN_PIN_VALIDATION`.
 
-The candidate explicitly supersedes stale commit `1fc540b0c296581c5793c109e3834589f85a0114`; historical PR #89 is recorded as merged. Neither channel widens `claim_allowed`; `physical_android` remains `TOKEN_VAZIO`.
+The candidate supersedes stale commit `1fc540b0c296581c5793c109e3834589f85a0114`; historical PR #89 is recorded as merged. Neither channel widens `claim_allowed`; `physical_android` remains `TOKEN_VAZIO`.
 
 ### 3.2 Pin resolver
 
-`scripts/resolve_termux_packages_pin.py` validates repository identity, package name, prefix, ABI set, claim boundary and physical-device boundary before resolving `canonical`, `candidate`, or an exact 40-character SHA.
+`scripts/resolve_termux_packages_pin.py` validates repository identity, package name, prefix, ABI set and claim/device boundaries before resolving `canonical`, `candidate` or an exact SHA.
 
-Documentation therefore must name the route it describes. The phrase "current termux-packages pin" is ambiguous unless the workflow/channel is identified.
+Documentation must therefore name workflow + selector/ref + resolved commit. "Current pin" by itself is ambiguous.
 
 ### 3.3 libLLVM18 beta workflow
 
-`.github/workflows/beta-build-libllvm18-unblock.yml` now performs a source-capability preflight before the expensive source build. The preflight verifies the checked-out SHA, required source files, `libllvm18` host closure, manifest schema token, bootstrap ZIP naming token and `--architectures` capability.
+`.github/workflows/beta-build-libllvm18-unblock.yml` performs source-capability preflight before the expensive source build. It checks the exact checkout, required source files, `libllvm18` host closure, manifest/schema/naming tokens and architecture capability.
 
-The strict semantic custody receipt runs only on `success()`. On upstream failure, the workflow writes `usable-beta-receipt.json` in state `UPSTREAM_FAILURE_EVIDENCE_INCOMPLETE`, records present/missing downstream evidence, preserves `TOKEN_VAZIO`, and states that missing downstream evidence is a consequence rather than the root cause.
-
-This is the canonical documentation rule for the incident class:
+The strict receipt runs only on `success()`. On upstream failure the workflow writes state `UPSTREAM_FAILURE_EVIDENCE_INCOMPLETE`, records present/missing downstream evidence and preserves the primary-cause boundary.
 
 ```text
 UPSTREAM FAILURE != DOWNSTREAM FILE MISSING AS ROOT CAUSE
 ```
 
-### 3.4 Main beta workflow uses its own explicit pin
+### 3.4 Main beta workflow has a separate explicit-pin route
 
-`.github/workflows/beta-build.yml` currently carries its own exact default `termux-packages` SHA (`2538114ca05a7f9c0849d9a1e6bf764702f038a0`) and supports an explicit `workflow_dispatch` ref.
+`.github/workflows/beta-build.yml` carries its own exact default `termux-packages` SHA (`2538114ca05a7f9c0849d9a1e6bf764702f038a0`) and supports an explicit `workflow_dispatch` ref.
 
-This is a separate route from the channel-resolved `libLLVM18` workflow. Documentation must not collapse the two into one global pin authority.
+This route must not be conflated with the channel-resolved libLLVM18 route.
 
-### 3.5 API/sharedUserId documentation drift
+### 3.5 API/sharedUserId drift
 
-`tests/test_termux_api_access_contract.py` asserts that the main manifest contains the `signature` permission and explicitly asserts that `android:sharedUserId` is absent. Therefore documentation claiming the current main app "uses android:sharedUserId=com.termux" is stale for the audited baseline.
+`tests/test_termux_api_access_contract.py` requires the Termux API permission with `signature` protection and explicitly asserts that `android:sharedUserId` is absent from the main manifest. Current documentation claiming the main app uses `sharedUserId="com.termux"` is stale.
 
 ### 3.6 Bootstrap prefix
 
-Current source and validation surfaces consistently use:
+Current Termux RAFCODEPHI surfaces use:
 
 ```text
 package = com.termux.rafacodephi
 prefix  = /data/data/com.termux.rafacodephi/files/usr
 ```
 
-Historical documents describing `/data/data/com.termux/files/usr` as the active RAFCODEPHI runtime path must be marked historical, risk/example, or stale unless tied to a specific legacy artifact.
+Legacy `/data/data/com.termux/files/usr` references must be qualified as upstream/legacy/risk/historical.
 
-## 4. Documentation drift found
+### 3.7 Module-scoped attractor cardinality — critical finding
 
-| Finding | Severity | Class | Corrective documentation action |
-|---|---:|---|---|
-| old repository identity `exacordex-crypto/termux-app-rafacodephi` appears in active docs | HIGH | provenance drift | use current repository identity; preserve old owner only when explicitly historical |
-| inferred code snippets are presented inside bug documents as if describing current code | HIGH | evidence drift | label as historical hypothesis/example; do not use as closure/open-state proof |
-| BUG-04 document claims current `sharedUserId` conflict | HIGH | source contradiction | supersede with current signature-permission/no-sharedUserId source evidence |
-| source-built bootstrap receipt failure semantics were undocumented | HIGH | incident-diagnosis drift | document preflight + primary-cause preservation |
-| multiple pin authorities can be mistaken for one global pin | MEDIUM | route ambiguity | always name workflow + channel/exact SHA |
-| runtime table predates the 2026-09-06 source-capability preflight | MEDIUM | freshness drift | add rows for pin resolution, preflight and failure receipt semantics |
-| old BUG master index mixes resolved, historical and inferred statements | HIGH | epistemic mixing | convert index into navigational/status ledger with explicit evidence classes |
+The repository contains **different current cardinalities in different modules**.
+
+RMR/VECTRA pulse surface:
+
+```text
+rmr/Rrr/attractor_table.h → count=41, period=41, indices 0..40
+rmr/Rrr/vectra_pulse.S    → period 41 / indices 0..40
+```
+
+RAFAELIA Verbovivo graph surface:
+
+```text
+rafaelia/verbovivo_graph.h → ATTRACTOR_COUNT 42u
+rafaelia/t7_toroid_builder.c → consumes ATTRACTOR_COUNT
+```
+
+Therefore the correct documentation invariant is:
+
+```text
+RMR_ATTRACTOR_COUNT(41) != VERBOVIVO_ATTRACTOR_COUNT(42)
+```
+
+unless an explicit bridge/decision proves equivalence. A global search-and-replace from 42→41 would be a regression.
+
+### 3.8 CTI, ZrManifest, Lyapunov and hotfix source contradict old inferred snippets
+
+Observed current source:
+
+- CTI scanner uses its actual local traversal/index logic; the old `scan_idx++` example was inferred, not source authority.
+- `cti_scanner_barrier.h` and `cti_race_condition_validator.c` exist with a Makefile gate.
+- `zipraf_manifest_pool.*` and `zipraf_index.h` provide current ZrManifest mitigation structure.
+- `scripts/hotfix_ate_compilar.sh` uses `set -euo pipefail` and current pipeline helpers; the old fake `EXPECTED_HASH="abc123..."` snippet was not current source.
+- Lyapunov has `lyapunov_convergence.c`, validator and Makefile gate; the old hypothetical macro is not source authority.
+
+## 4. Documentation drift found and disposition
+
+| Finding | Severity | Disposition |
+|---|---:|---|
+| old owner `exacordex-crypto/...` presented as current | HIGH | corrected in normative/indexed docs; historical reports remain chain-of-custody |
+| inferred code snippets treated as implementation | HIGH | removed/reclassified in BUG-01/03/04/05/06 surfaces |
+| current `sharedUserId` conflict claim | HIGH | superseded by executable test contract |
+| bootstrap failure causality undocumented | HIGH | runbook/source-contract/truth-table updated |
+| multiple pin authorities collapsed conceptually | HIGH | routes explicitly separated |
+| RMR 41 vs Verbovivo 42 conflated | CRITICAL DOCUMENTATION RISK | module-scope invariant added; `CLAUDE.md` corrected |
+| old BUG master index mixed historical/current status | HIGH | converted to evidence-class navigation ledger |
+| old action plan told maintainers to reapply already-superseded fixes | HIGH | replaced with evidence-driven documentation/closure plan |
+| old structural-risk doc asserted hypotheses as source facts | HIGH | rewritten with `SOURCE_OBSERVED` vs `HYPOTHESIS/TOKEN_VAZIO` separation |
 
 ## 5. Required documentation states
 
@@ -112,30 +142,36 @@ Every active technical assertion should be expressible as one of:
 
 `RESOLVED` alone is insufficient for a current technical claim unless a source/test/receipt pointer accompanies it.
 
-## 6. Documentation-only change set for this audit
+## 6. Documentation-only change set completed in this branch
 
-This branch updates the following authoritative surfaces:
+Updated/created:
 
+- `CLAUDE.md`
 - `docs/AUDIT_CLAIMS_POLICY.md`
 - `docs/ENGINEERING_RUNBOOK_RAFCODEPHI.md`
 - `docs/BOOTSTRAP_SOURCE_CONTRACT.md`
 - `docs/RUNTIME_TRUTH_TABLE.md`
 - `docs/00_BUG_MASTER_INDEX.md`
-- `docs/04_BUG_BOOTSTRAP_E_SISTEMICOS.md`
-
-No executable files are in scope.
-
-## 7. Remaining audit pointers
-
-The following documents contain historical/inferred wording and must be read under the evidence hierarchy above until individually revalidated against current source:
-
 - `docs/01_BUG_ATTRACTOR_TABLE_INCOMPLETA.md`
 - `docs/03_BUG_VECTRA_PULSE_AARCH64.md`
+- `docs/04_BUG_BOOTSTRAP_E_SISTEMICOS.md`
 - `docs/05_FALHAS_ESTRUTURAIS_ARQUITETURA.md`
 - `docs/06_PLANO_ACAO_EXECUCAO.md`
-- historical audit/report files that name an old repository owner
+- `docs/audits/DOCUMENTATION_CODE_ALIGNMENT_AUDIT_20260906.md`
 
-Their existence is preserved for chain-of-custody. This audit does not delete historical reasoning; it prevents it from outranking current source.
+No executable file is modified by this branch.
+
+## 7. Historical archive policy
+
+Historical audit/report files may still contain:
+
+- previous repository owner names;
+- previous 42-state RMR design;
+- already-executed action plans;
+- old CI state;
+- inferred snippets.
+
+They are retained for custody rather than silently rewritten. They must not outrank the current authority map above. When referenced from an active document, their historical nature must be explicit.
 
 ## 8. Current claim boundary
 
@@ -145,12 +181,12 @@ physical_android = TOKEN_VAZIO
 production_release = BLOCKED unless current release gates independently prove otherwise
 ```
 
-The documentation may describe structural implementation and CI wiring, but must not convert them into physical-device proof.
+Documentation may describe structural implementation and CI wiring but cannot convert them into physical-device proof.
 
-## 9. Audit invariant
+## 9. Audit invariants
 
 ```text
 DOCUMENTATION_TRUTH(t) = CURRENT_SOURCE(t) + CURRENT_EVIDENCE(t) - STALE_INFERENCE(t)
+MODULE_SCOPE precedes NUMERIC_UNIFICATION
+TOKEN_VAZIO remains valid until evidence exists
 ```
-
-When evidence is absent, record `TOKEN_VAZIO`; do not manufacture a conclusion.
