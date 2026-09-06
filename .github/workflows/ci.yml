@@ -26,20 +26,20 @@ jobs:
             -fsyntax-only -nostdlib -nostdinc -ffreestanding \
             -I rmr/Rrr -I rmr/include \
             rmr/Rrr/*.c rmr/Rrr/*.S 2>&1 || true
-          echo "✓ Syntax check complete (warnings may be expected in freestanding mode)"
+          echo "Syntax check attempted; this step is observational because failures are not promoted by this workflow."
 
-      - name: Freestanding compliance gate (lowlevel modules)
+      - name: Freestanding include-policy gate (lowlevel modules)
         run: |
-          echo "=== Phase 2D: Validating freestanding lowlevel modules ==="
+          echo "=== Phase 2D: Validating lowlevel include policy ==="
           echo "Checking for non-freestanding includes in app/src/main/cpp/lowlevel/*.c..."
 
           # Check for stdlib.h, stdio.h, string.h, time.h, unistd.h, sys/*, pthread.h, math.h, assert.h
           NON_FREE=$(grep -l "^#include <stdlib.h>\|^#include <stdio.h>\|^#include <string.h>\|^#include <time.h>\|^#include <unistd.h>\|^#include <sys/\|^#include <pthread.h>\|^#include <math.h>\|^#include <assert.h>" app/src/main/cpp/lowlevel/*.c 2>/dev/null | wc -l)
 
           if [ "$NON_FREE" -eq 0 ]; then
-            echo "✅ All lowlevel files are freestanding-compliant (zero non-freestanding includes detected)"
+            echo "PASS: zero forbidden lowlevel includes detected"
           else
-            echo "❌ Found $NON_FREE lowlevel files with non-freestanding includes"
+            echo "FAIL: found $NON_FREE lowlevel files with forbidden includes"
             grep -l "^#include <stdlib.h>\|^#include <stdio.h>\|^#include <string.h>\|^#include <time.h>\|^#include <unistd.h>\|^#include <sys/\|^#include <pthread.h>\|^#include <math.h>\|^#include <assert.h>" app/src/main/cpp/lowlevel/*.c
             exit 1
           fi
@@ -50,31 +50,38 @@ jobs:
           echo "  • Freestanding headers used in: $FS_USED files"
 
           echo ""
-          echo "✅ Phase 2D milestone: Lowlevel freestanding compliance verified"
+          echo "PASS: include policy only. This does not prove compilation, ABI correctness, runtime behavior, or physical-device execution."
+
+      - name: Freestanding syscall header guard gate
+        run: |
+          grep -q '^#ifndef FREESTANDING_SYSCALLS_H$' src/bootstrap/freestanding_syscalls.h
+          grep -q '^#define FREESTANDING_SYSCALLS_H$' src/bootstrap/freestanding_syscalls.h
+          grep -q '^#endif /\* FREESTANDING_SYSCALLS_H \*/$' src/bootstrap/freestanding_syscalls.h
+          echo "PASS: freestanding_syscalls.h has an explicit matched include guard"
 
       - name: BUG-01 Attractor Table Complete Gate
         run: |
           echo "Running: make attractor-table-complete-gate"
           cd /home/runner/work/termux-app-rafacodephi/termux-app-rafacodephi
-          make attractor-table-complete-gate 2>&1 || echo "Note: Gate requires specific build environment"
+          make attractor-table-complete-gate 2>&1 || echo "TOKEN_VAZIO: gate not promoted; environment-specific failure or unavailable prerequisite"
 
       - name: BUG-03 AArch64 Vectorpulse Gate
         run: |
           echo "Running: make aarch64-vectorpulse-gate"
           cd /home/runner/work/termux-app-rafacodephi/termux-app-rafacodephi
-          make aarch64-vectorpulse-gate 2>&1 || echo "Note: Gate requires specific build environment"
+          make aarch64-vectorpulse-gate 2>&1 || echo "TOKEN_VAZIO: gate not promoted; environment-specific failure or unavailable prerequisite"
 
       - name: BUG-08 Lyapunov Convergence Gate
         run: |
           echo "Running: make lyapunov-convergence-gate"
           cd /home/runner/work/termux-app-rafacodephi/termux-app-rafacodephi
-          make lyapunov-convergence-gate 2>&1 || echo "Note: Gate requires specific build environment"
+          make lyapunov-convergence-gate 2>&1 || echo "TOKEN_VAZIO: gate not promoted; environment-specific failure or unavailable prerequisite"
 
       - name: BUG-06 CtiScanner Race Condition Gate
         run: |
           echo "Running: make cti-race-condition-gate"
           cd /home/runner/work/termux-app-rafacodephi/termux-app-rafacodephi
-          make cti-race-condition-gate 2>&1 || echo "Note: Gate requires pthread support"
+          make cti-race-condition-gate 2>&1 || echo "TOKEN_VAZIO: gate not promoted; environment-specific failure or unavailable prerequisite"
 
       - name: Validate documentation structure
         run: |
@@ -90,23 +97,15 @@ jobs:
         run: |
           echo ""
           echo "╔═══════════════════════════════════════════════════════════╗"
-          echo "║         SAFETY CASCADE CI REPORT — 2026-08-29              ║"
+          echo "║              SAFETY CASCADE CI REPORT                    ║"
           echo "╠═══════════════════════════════════════════════════════════╣"
-          echo "║ Status: Safety cascade locally validated                  ║"
-          echo "║ All 8 bugs (BUG-01 through BUG-08): ✅ RESOLVED           ║"
+          echo "║ Scope: structural/include-policy checks + gate attempts  ║"
           echo "║                                                           ║"
-          echo "║ Gates Status (attempt):                                   ║"
-          echo "║   • BUG-01 Attractor table:      Local ✅ | CI: Env dep  ║"
-          echo "║   • BUG-03 AArch64 assembly:    Local ✅ | CI: Env dep  ║"
-          echo "║   • BUG-08 Lyapunov convergence: Local ✅ | CI: Env dep  ║"
-          echo "║   • BUG-06 CtiScanner barriers:  Local ✅ | CI: Env dep  ║"
+          echo "║ Truth boundary:                                           ║"
+          echo "║   • include-policy PASS != compile PASS                   ║"
+          echo "║   • attempted gate != resolved bug                        ║"
+          echo "║   • CI observation != physical Android runtime           ║"
+          echo "║   • swallowed/env-dependent failure = TOKEN_VAZIO        ║"
           echo "║                                                           ║"
-          echo "║ CI Environment Status:                                    ║"
-          echo "║   • Ubuntu runner available: ✅                           ║"
-          echo "║   • clang/gcc available: ✅                               ║"
-          echo "║   • pthread support: ✅                                   ║"
-          echo "║   • Full Android NDK: Not available (expected)            ║"
-          echo "║                                                           ║"
-          echo "║ Documentation: ✅ All critical docs present              ║"
-          echo "║ Next: Physical device validation (requires hardware)      ║"
+          echo "║ Device validation remains a separate evidence gate.      ║"
           echo "╚═══════════════════════════════════════════════════════════╝"
