@@ -50,12 +50,44 @@ jobs:
           java-version: '21'
 
       - name: Validate YAML and bootstrap evidence source contracts
+        shell: bash
         run: |
+          set -euo pipefail
+          mkdir -p dist/bootstrap-real-pkg-arm32
+          printf '%s\n' \
+            '{"schema":"rafcodephi-real-pkg-preflight/v1","state":"STARTED","claim_allowed":false,"release_allowed":false}' \
+            > dist/bootstrap-real-pkg-arm32/preflight-state.json
+
           python3 -m pip install --disable-pip-version-check pytest
+
+          set +e
           python3 -m pytest -q \
             tests/test_bootstrap_evidence_contract.py \
-            tests/test_real_arm_bootstrap_validator_runtime.py
-          python3 scripts/audit_github_actions_refs.py --strict --json /tmp/action-reference-audit.json
+            tests/test_real_arm_bootstrap_validator_runtime.py \
+            2>&1 | tee dist/bootstrap-real-pkg-arm32/preflight-pytest.log
+          pytest_rc=${PIPESTATUS[0]}
+          set -e
+          if [[ "$pytest_rc" -ne 0 ]]; then
+            printf '{"schema":"rafcodephi-real-pkg-preflight/v1","state":"FAILED_TESTS","pytest_exit":%d,"claim_allowed":false,"release_allowed":false}\n' \
+              "$pytest_rc" > dist/bootstrap-real-pkg-arm32/preflight-state.json
+            exit "$pytest_rc"
+          fi
+
+          set +e
+          python3 scripts/audit_github_actions_refs.py --strict \
+            --json dist/bootstrap-real-pkg-arm32/action-reference-audit.json \
+            2>&1 | tee dist/bootstrap-real-pkg-arm32/action-reference-audit.log
+          action_rc=${PIPESTATUS[0]}
+          set -e
+          if [[ "$action_rc" -ne 0 ]]; then
+            printf '{"schema":"rafcodephi-real-pkg-preflight/v1","state":"FAILED_ACTION_REFERENCE_AUDIT","action_audit_exit":%d,"claim_allowed":false,"release_allowed":false}\n' \
+              "$action_rc" > dist/bootstrap-real-pkg-arm32/preflight-state.json
+            exit "$action_rc"
+          fi
+
+          printf '%s\n' \
+            '{"schema":"rafcodephi-real-pkg-preflight/v1","state":"PASS","claim_allowed":false,"release_allowed":false}' \
+            > dist/bootstrap-real-pkg-arm32/preflight-state.json
 
       - name: Build raw ARM32 real-pkg payload without unsafe promotion
         run: |
@@ -98,7 +130,6 @@ jobs:
 
       - name: Bind prefix audit to raw bootstrap receipt
         run: |
-          cp /tmp/action-reference-audit.json dist/bootstrap-real-pkg-arm32/action-reference-audit.json
           python3 scripts/write_bootstrap_promotion_gate_receipt.py \
             --audit dist/bootstrap-real-pkg-arm32/prefix-audit.json \
             --bootstrap app/src/main/cpp/rewritten-bootstrap-arm.zip \
@@ -158,31 +189,52 @@ jobs:
           python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
           from pathlib import Path
-          audit_path = Path('dist/bootstrap-real-pkg-arm32/prefix-audit.json')
-          receipt_path = Path('dist/bootstrap-real-pkg-arm32/promotion-gate-receipt.json')
+
+          root = Path('dist/bootstrap-real-pkg-arm32')
+          preflight_path = root / 'preflight-state.json'
+          audit_path = root / 'prefix-audit.json'
+          receipt_path = root / 'promotion-gate-receipt.json'
+          candidate_path = root / 'candidate-receipt.json'
+
           print('## ARM32 real-pkg promotion gate')
           print()
-          if not audit_path.exists() or not receipt_path.exists():
-              print('**FAIL** — promotion evidence was not materialized.')
-              raise SystemExit(1)
-          audit = json.loads(audit_path.read_text())
-          receipt = json.loads(receipt_path.read_text())
+
+          if preflight_path.exists():
+              preflight = json.loads(preflight_path.read_text())
+              preflight_state = preflight.get('state', 'UNKNOWN')
+          else:
+              preflight_state = 'TOKEN_VAZIO_NO_PREFLIGHT_RECEIPT'
+
           print('| Gate | State |')
           print('|---|---|')
-          print('| YAML/action reference policy | PASS |')
-          print('| bootstrap evidence source contract | PASS |')
-          print(f"| upstream prefix compatibility | {audit['state']} |")
-          print(f"| binary legacy-prefix entries | {audit.get('binary_risk_entry_count', 0)} |")
-          print(f"| text legacy-prefix entries | {audit.get('text_risk_entry_count', 0)} |")
-          print(f"| APK real-pkg candidate | {'OBSERVED' if Path('dist/bootstrap-real-pkg-arm32/candidate-receipt.json').exists() else 'BLOCKED'} |")
-          print('| physical device install | TOKEN_VAZIO |')
-          print('| pkg update | NOT_MEASURED |')
-          print('| pkg install nano/python/git | NOT_MEASURED |')
-          print('| release_allowed | false |')
-          print()
-          print(f"Next required action: `{receipt.get('next_required_action', 'UNAVAILABLE')}`")
-          print()
-          print('A BLOCKED prefix gate is a valid safety observation; it is not a real-pkg PASS.')
+          print(f'| preflight evidence contract | {preflight_state} |')
+
+          if not audit_path.exists() or not receipt_path.exists():
+              print('| upstream prefix compatibility | NOT_MATERIALIZED |')
+              print('| APK real-pkg candidate | NOT_MATERIALIZED |')
+              print('| physical device install | TOKEN_VAZIO |')
+              print('| pkg update | NOT_MEASURED |')
+              print('| pkg install nano/python/git | NOT_MEASURED |')
+              print('| release_allowed | false |')
+              print()
+              print('Promotion evidence was not reached. The preflight receipt above is the authoritative blocker for this run.')
+          else:
+              audit = json.loads(audit_path.read_text())
+              receipt = json.loads(receipt_path.read_text())
+              print('| YAML/action reference policy | PASS |')
+              print('| bootstrap evidence source contract | PASS |')
+              print(f"| upstream prefix compatibility | {audit['state']} |")
+              print(f"| binary legacy-prefix entries | {audit.get('binary_risk_entry_count', 0)} |")
+              print(f"| text legacy-prefix entries | {audit.get('text_risk_entry_count', 0)} |")
+              print(f"| APK real-pkg candidate | {'OBSERVED' if candidate_path.exists() else 'BLOCKED'} |")
+              print('| physical device install | TOKEN_VAZIO |')
+              print('| pkg update | NOT_MEASURED |')
+              print('| pkg install nano/python/git | NOT_MEASURED |')
+              print('| release_allowed | false |')
+              print()
+              print(f"Next required action: `{receipt.get('next_required_action', 'UNAVAILABLE')}`")
+              print()
+              print('A BLOCKED prefix gate is a valid safety observation; it is not a real-pkg PASS.')
           PY
 
       - name: Upload promotion evidence
