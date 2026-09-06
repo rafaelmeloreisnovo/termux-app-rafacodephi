@@ -1,7 +1,8 @@
 # ENGINEERING_RUNBOOK_RAFCODEPHI
 
 > Repository: `rafaelmeloreisnovo/termux-app-rafacodephi`
-> Documentation baseline: `b207970fc7a8630a534956cb544350cfd61ba33a`
+> Initial documentation audit baseline: `b207970fc7a8630a534956cb544350cfd61ba33a`
+> Reconciled with current `master`: `3f97ef42ae9756b9f7fb4965b941b5b3048fc8d1` (PR #415 freestanding gate; no overlap with prior 12-file documentation patch).
 > Claim boundary: `claim_allowed=false`; `physical_android=TOKEN_VAZIO` until physical evidence exists.
 
 ## 1. Ordem de autoridade
@@ -62,19 +63,11 @@ scripts/generate-bootstraps.sh
 packages/libxml2/build.sh
 ```
 
-Também são exigidos:
-
-- fechamento host contendo `libllvm18` em `packages/libxml2/build.sh`;
-- token `RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt` no builder;
-- schema `rafcodephi.real-bootstrap-sourcebuild/v1`;
-- geração `rafcodephi-bootstrap-${arch}.zip`;
-- suporte a `--architectures`.
-
-Falha aqui é **falha de capacidade da fonte** e deve encerrar cedo.
+Também são exigidos `libllvm18`, token/schema do manifest, naming do bootstrap e `--architectures`. Falha aqui é **falha de capacidade da fonte** e deve encerrar cedo.
 
 ## 4. Fonte do manifest e do par ARM
 
-O manifest NÃO é input arbitrário a ser criado manualmente para satisfazer o receipt. Ele é evidência produzida pelo source-build de `termux-packages` junto com:
+O manifest NÃO é input arbitrário a ser criado manualmente para satisfazer o receipt. Ele é produzido pelo source-build de `termux-packages` junto com:
 
 ```text
 artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
@@ -82,9 +75,7 @@ artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
 artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
 ```
 
-Se o source-build falhar antes, a ausência desses três artefatos é consequência.
-
-Invariante de diagnóstico:
+Se o source-build falhar antes, a ausência desses artefatos é consequência.
 
 ```text
 UPSTREAM FAILURE != DOWNSTREAM MISSING FILE AS ROOT CAUSE
@@ -94,11 +85,11 @@ UPSTREAM FAILURE != DOWNSTREAM MISSING FILE AS ROOT CAUSE
 
 ### Sucesso
 
-`scripts/generate_usable_beta_receipt.py` só deve receber o conjunto completo depois de todas as etapas anteriores terem sucesso. O workflow `beta-build-libllvm18-unblock.yml` chama o receipt estrito com `if: success()`.
+`scripts/generate_usable_beta_receipt.py` recebe o conjunto completo apenas após sucesso das etapas anteriores; o workflow estrito usa `if: success()`.
 
 ### Falha upstream
 
-Quando qualquer etapa anterior falha, o workflow grava um receipt diagnóstico com:
+O workflow grava receipt diagnóstico:
 
 ```text
 schema=rafcodephi.usable-beta-build/v2
@@ -110,16 +101,14 @@ present_evidence=[...]
 missing_evidence=[...]
 ```
 
-Esse receipt existe para preservar a causa primária, não para transformar arquivos downstream ausentes em causa-raiz.
+Esse receipt preserva a causa primária.
 
-## 6. Ordem única de execução local do ferreiro RAFCODEΦ
-
-Para a rota local genérica:
+## 6. Ordem local genérica
 
 1. `./scripts/validate_side_by_side_contract.py`
 2. `./scripts/validate_abi_policy_consistency.sh`
 3. `./scripts/bootstrap_lowlevel_sync_check.sh`
-4. resolver e registrar a origem de `termux-packages` quando a rota depender dela;
+4. resolver e registrar `termux-packages` quando aplicável;
 5. `./scripts/prepare_bootstrap_env.sh`
 6. `./scripts/verify_bootstrap_contract.sh`
 7. `./scripts/build_apk_matrix.sh`
@@ -129,13 +118,64 @@ Para a rota local genérica:
 
 A execução física não pode ser simulada por documentação ou CI host-side.
 
-## 7. Floresta de hotfixes
+## 7. Gate freestanding `pkg` / PRoot / Ninja
 
-A ordem estratégica completa dos hotfixes vive em:
+A partir do `master` `3f97ef42...`, existe uma superfície separada para testar payloads por um **control gate freestanding**, documentada em:
 
-- `docs/HOTFIX_EXECUTION_FOREST.md`
+```text
+docs/FREESTANDING_PROOT_PKG_GATE_V1.md
+bootstrap/proot_freestanding.c
+bootstrap/proot_syscall_bridge.h
+scripts/build_freestanding_real_arm_bootstrap.py
+.github/workflows/freestanding-runtime-gate.yml
+```
 
-Cada hotfix deve manter:
+### O que é freestanding
+
+O gate `rafproot-fs` é compilado sem libc/heap/GC/CRT/stdio, usa syscalls e deve resultar em ELF estático sem `PT_INTERP`, `DT_NEEDED` ou símbolos externos indefinidos.
+
+### O que NÃO vira freestanding por associação
+
+```text
+pkg
+apt/dpkg
+PRoot
+Ninja
+Clang
+CMake
+QEMU
+```
+
+continuam payloads externos. O gate só cria uma fronteira de execução/auditoria para observá-los e acioná-los.
+
+### Build/cold-start
+
+```bash
+python3 scripts/build_freestanding_real_arm_bootstrap.py --arch all
+```
+
+O builder injeta `libexec/rafproot-fs` nos bootstraps ARM/AArch64 e registra SHA/receipt. O workflow host-side pode promover a propriedade do binário para `BUILD_PROVEN`, mas mantém:
+
+```text
+device_runtime_state=TOKEN_VAZIO
+claim_allowed=false
+```
+
+### Probes
+
+```bash
+"$PREFIX/libexec/rafproot-fs" --probe
+"$PREFIX/libexec/rafproot-fs" --pkg-bootstrap
+"$PREFIX/libexec/rafproot-fs" --pkg-vectras
+"$PREFIX/libexec/rafproot-fs" --run ninja --version
+"$PREFIX/libexec/rafproot-fs" --run proot --version
+```
+
+Ausência de executável é evidência `TOKEN_VAZIO`; não é convertida em PASS.
+
+## 8. Floresta de hotfixes
+
+A ordem estratégica vive em `docs/HOTFIX_EXECUTION_FOREST.md`.
 
 ```text
 vetor → lacuna → hotfix → prova mínima → artefato → promoção epistêmica
@@ -143,7 +183,7 @@ vetor → lacuna → hotfix → prova mínima → artefato → promoção epist�
 
 Nenhum estado sai de `TOKEN_VAZIO` para `DEVICE_PROVEN` sem device real, receipt e comando reproduzível.
 
-## 8. Modo device bloqueante
+## 9. Modo device bloqueante
 
 ```bash
 DEVICE_SMOKE_REQUIRED=true ./scripts/device_runtime_smoke.sh path/to/app.apk
@@ -151,26 +191,15 @@ DEVICE_SMOKE_REQUIRED=true ./scripts/device_runtime_smoke.sh path/to/app.apk
 
 O modo obrigatório falha quando `final_status != DEVICE_VALIDATED`.
 
-## 9. Camada mínima de `pkg`
+## 10. Camada mínima de `pkg`
 
 ```bash
 ./scripts/device_pkg_smoke.sh
 ```
 
-A camada mínima inspeciona pelo menos:
+Um PASS estrutural/bridge/freestanding-host não prova `pkg update` nem `pkg install` físicos.
 
-```bash
-cat --help
-ls "$HOME"
-clear
-grep x /dev/null
-pkg help
-apt help
-```
-
-Um PASS estrutural/bridge não prova `pkg update` nem `pkg install`.
-
-## 10. Payload source-built RAFCODEPHI ARM/ARM64
+## 11. Payload source-built RAFCODEPHI ARM/ARM64
 
 No checkout correto e pinado de `termux-packages`:
 
@@ -178,19 +207,9 @@ No checkout correto e pinado de `termux-packages`:
 ./scripts/build-rafcodephi-real-bootstrap.sh --architectures arm,aarch64
 ```
 
-Depois importe o par:
+Depois importe o par com `RAF_BOOTSTRAP_SOURCE=source-built-real` e os caminhos de ZIP/manifest correspondentes. O importador valida identidade/prefixo/par ARM; o estado físico continua separado.
 
-```bash
-export RAF_BOOTSTRAP_SOURCE=source-built-real
-export RAF_REAL_BOOTSTRAP_ZIP_ARM=../termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
-export RAF_REAL_BOOTSTRAP_ZIP_AARCH64=../termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
-export RAF_REAL_BOOTSTRAP_MANIFEST=../termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
-./scripts/prepare_bootstrap_env.sh --print-env
-```
-
-O importador exige identidade/prefixo corretos e valida o par ARM/AArch64. O estado físico continua separado.
-
-## 11. Repositório binário custom
+## 12. Repositório binário custom
 
 Enquanto o manifesto declarar:
 
@@ -198,21 +217,21 @@ Enquanto o manifesto declarar:
 package_repo_runtime_state=BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED
 ```
 
-não declarar `pkg update`/`pkg install` como funcional em device. O bloqueio é intencional para impedir consumo de binários upstream incompatíveis com o prefixo RAFCODEPHI.
+não declarar `pkg update`/`pkg install` como funcional em device.
 
-## 12. Processo/zumbi e hot path RAFAELIA
+## 13. Processo/zumbi e hot path RAFAELIA
 
 Antes de afirmar ganho geral:
 
 1. medir execuções comparáveis;
 2. separar shell/processo de JNI/VCPU;
 3. capturar latência p50/p95/p99 e memória;
-4. guardar receipts em `reports/`;
-5. manter `TOKEN_VAZIO` ou `PARCIAL` quando a vantagem não estiver demonstrada.
+4. guardar receipts;
+5. manter `TOKEN_VAZIO`/`PARCIAL` onde a vantagem não estiver demonstrada.
 
-## 13. Regra para manutenção deste documento
+## 14. Regra de manutenção documental
 
-Toda alteração de workflow que mude produtor, consumidor, nome, schema ou condição de execução de artefato deve atualizar este runbook e `docs/BOOTSTRAP_SOURCE_CONTRACT.md` no mesmo ciclo documental.
+Toda alteração de workflow que mude produtor, consumidor, nome, schema, condição de execução ou ladder de evidência deve atualizar a superfície normativa correspondente no mesmo ciclo documental.
 
 Auditoria relacionada:
 
