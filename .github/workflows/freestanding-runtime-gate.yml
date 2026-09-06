@@ -3,11 +3,12 @@ name: Freestanding runtime gate
 on:
   push:
     branches:
-      - 'rafaelia/freestanding-proot-pkg-gate-*'
+      - 'rafaelia/freestanding-*'
     paths:
       - 'bootstrap/proot_freestanding.c'
       - 'bootstrap/proot_syscall_bridge.h'
       - 'scripts/build_freestanding_real_arm_bootstrap.py'
+      - 'scripts/validate_freestanding_gate_emulated_runtime.py'
       - '.github/workflows/freestanding-runtime-gate.yml'
   pull_request:
     paths:
@@ -15,6 +16,7 @@ on:
       - 'bootstrap/proot_syscall_bridge.h'
       - 'bootstrap_src/common/bin/proot'
       - 'scripts/build_freestanding_real_arm_bootstrap.py'
+      - 'scripts/validate_freestanding_gate_emulated_runtime.py'
       - '.github/workflows/freestanding-runtime-gate.yml'
 
 jobs:
@@ -22,13 +24,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate cold-start builder syntax
+      - name: Validate cold-start and runtime-validator syntax
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/build_freestanding_real_arm_bootstrap.py
+          python3 -m py_compile \
+            scripts/build_freestanding_real_arm_bootstrap.py \
+            scripts/validate_freestanding_gate_emulated_runtime.py
           python3 scripts/build_freestanding_real_arm_bootstrap.py --help >/dev/null
+          python3 scripts/validate_freestanding_gate_emulated_runtime.py --help >/dev/null
           grep -q 'libexec/rafproot-fs' scripts/build_freestanding_real_arm_bootstrap.py
           grep -q 'DEVICE=TOKEN_VAZIO' scripts/build_freestanding_real_arm_bootstrap.py
+          grep -q 'RUNTIME_PROVEN_EMULATED' scripts/validate_freestanding_gate_emulated_runtime.py
+          grep -q 'device_runtime_state.*TOKEN_VAZIO' scripts/validate_freestanding_gate_emulated_runtime.py
 
   static-elf:
     runs-on: ubuntu-latest
@@ -38,15 +45,21 @@ jobs:
         include:
           - target: aarch64-linux-android21
             name: aarch64
+            emulator: qemu-aarch64
             extra: ''
           - target: armv7a-linux-androideabi21
             name: armv7
+            emulator: qemu-arm
             extra: '-marm'
 
     steps:
       - uses: actions/checkout@v4
-      - name: Install LLVM tools
-        run: sudo apt-get update && sudo apt-get install -y clang lld binutils file
+
+      - name: Install LLVM and QEMU user-mode tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld binutils file qemu-user
+
       - name: Build freestanding static ELF
         shell: bash
         run: |
@@ -76,14 +89,36 @@ jobs:
             exit 1
           fi
           sha256sum "$OUT" > "$OUT.sha256"
-          printf '%s\n' \
-            '{' \
-            '  "schema": "raf.freestanding-runtime-gate.v1",' \
-            '  "target": "${{ matrix.name }}",' \
-            '  "build_state": "BUILD_PROVEN",' \
-            '  "device_runtime_state": "TOKEN_VAZIO",' \
-            '  "claim_allowed": false' \
-            '}' > "build/freestanding/receipt-${{ matrix.name }}.json"
+
+      - name: Execute gate and validate fail-closed probe semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/validate_freestanding_gate_emulated_runtime.py \
+            --binary "build/freestanding/rafproot-fs-${{ matrix.name }}" \
+            --arch '${{ matrix.name }}' \
+            --emulator '${{ matrix.emulator }}' \
+            --output "build/freestanding/receipt-${{ matrix.name }}.json"
+
+      - name: Assert evidence boundary remains narrow
+        shell: bash
+        run: |
+          set -euo pipefail
+          RECEIPT="build/freestanding/receipt-${{ matrix.name }}.json"
+          python3 - "$RECEIPT" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          doc = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+          assert doc['build_state'] == 'BUILD_PROVEN'
+          assert doc['host_emulated_runtime_state'] == 'RUNTIME_PROVEN_EMULATED'
+          assert doc['device_runtime_state'] == 'TOKEN_VAZIO'
+          assert doc['package_payload_runtime_state'] == 'TOKEN_VAZIO'
+          assert doc['claim_allowed'] is False
+          print('RAFCODEPHI_EMULATED_RUNTIME_BOUNDARY=PASS')
+          PY
+
       - uses: actions/upload-artifact@v4
         with:
           name: freestanding-runtime-${{ matrix.name }}
