@@ -13,7 +13,7 @@ def test_device_pkg_smoke_separates_minimal_layer_from_real_pkg() -> None:
 
     for token in (
         "MINIMAL_PKG_LAYER=PASS",
-        "DEVICE_MINIMAL_PKG_LAYER_VALIDATED",
+        "DEVICE_LOCAL_PKG_CANDIDATE_VALIDATED",
         "REQUIRE_REAL_PKG",
         "DEVICE_REAL_PKG_VALIDATED",
         "pkg update -y",
@@ -37,6 +37,8 @@ def test_device_pkg_smoke_keeps_minimal_commands_as_gate() -> None:
         "grep x /dev/null",
         "check pkg_help pkg help",
         "check apt_help apt help",
+        'check proot_real "$PREFIX/bin/proot.real" --version',
+        '"$PREFIX/var/lib/rafcodephi/repo/dists/stable/Release"',
     ):
         assert token in text
 
