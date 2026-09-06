@@ -1,0 +1,202 @@
+name: RAFCODEPHI Local Pkg E2E
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/rafcodephi-local-pkg-e2e.yml'
+      - 'scripts/import_rafcodephi_local_pkg_pair.py'
+      - 'scripts/device_pkg_smoke.sh'
+      - 'src/bootstrap/**'
+      - 'Makefile.freestanding'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rafcodephi-local-pkg-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  TERMUX_PACKAGES_REF: codex/rafcodephi-source-pkg-core-v1
+  CLAIM_ALLOWED: 'false'
+  PHYSICAL_ANDROID: 'TOKEN_VAZIO'
+
+jobs:
+  source-to-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+      - name: Checkout app candidate
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Checkout package-source candidate
+        uses: actions/checkout@v7
+        with:
+          repository: rafaelmeloreisnovo/termux-packages
+          ref: ${{ env.TERMUX_PACKAGES_REF }}
+          path: termux-packages
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Bind cross-repository identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          APP_SHA="$(git rev-parse HEAD)"
+          PKG_SHA="$(git -C termux-packages rev-parse HEAD)"
+          printf 'app=%s\ntermux_packages=%s\ntermux_packages_ref=%s\nclaim_allowed=false\nphysical_android=TOKEN_VAZIO\n' \
+            "$APP_SHA" "$PKG_SHA" "$TERMUX_PACKAGES_REF" \
+            | tee build/reports/local-pkg-cross-repo-identity.txt
+
+      - name: Static source-factory preflight
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/build-rafcodephi-local-pkg-candidate.sh
+          python3 -m py_compile scripts/promote-rafcodephi-local-pkg-candidate.py
+          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-local-pkg-candidate.sh
+
+      - name: Build source-built ARM32 ARM64 local-pkg pair
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          set +e
+          ./scripts/run-docker.sh \
+            ./scripts/build-rafcodephi-local-pkg-candidate.sh \
+              --architectures arm,aarch64 \
+              --out artifacts/rafcodephi-local-pkg \
+            2>&1 | tee build/reports/local-pkg-source-build.log
+          rc="${PIPESTATUS[0]}"
+          set -e
+          python3 - "$rc" > build/reports/local-pkg-source-build-state.json <<'PY'
+          import json, sys
+          rc = int(sys.argv[1])
+          print(json.dumps({
+              'schema':'rafcodephi.local-pkg-source-build-state/v1',
+              'state':'PASS' if rc == 0 else 'BLOCKED',
+              'exit_code':rc,
+              'claim_allowed_pkg_runtime':False,
+              'claim_allowed_device_runtime':False,
+              'device_validation':'TOKEN_VAZIO',
+          }, sort_keys=True))
+          PY
+          test "$rc" -eq 0
+
+      - name: Validate then transactionally import ARM pair
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="$GITHUB_WORKSPACE/termux-packages/artifacts/rafcodephi-local-pkg"
+          python3 scripts/import_rafcodephi_local_pkg_pair.py \
+            --arm-zip "$BASE/candidate/rafcodephi-bootstrap-arm.zip" \
+            --arm-receipt "$BASE/receipts/local-pkg-arm.json" \
+            --aarch64-zip "$BASE/candidate/rafcodephi-bootstrap-aarch64.zip" \
+            --aarch64-receipt "$BASE/receipts/local-pkg-aarch64.json" \
+            --dest-arm app/src/main/cpp/rewritten-bootstrap-arm.zip \
+            --dest-aarch64 app/src/main/cpp/rewritten-bootstrap-aarch64.zip \
+            --report build/reports/local-pkg-import-validation.json \
+            --validate-only
+          python3 scripts/import_rafcodephi_local_pkg_pair.py \
+            --arm-zip "$BASE/candidate/rafcodephi-bootstrap-arm.zip" \
+            --arm-receipt "$BASE/receipts/local-pkg-arm.json" \
+            --aarch64-zip "$BASE/candidate/rafcodephi-bootstrap-aarch64.zip" \
+            --aarch64-receipt "$BASE/receipts/local-pkg-aarch64.json" \
+            --dest-arm app/src/main/cpp/rewritten-bootstrap-arm.zip \
+            --dest-aarch64 app/src/main/cpp/rewritten-bootstrap-aarch64.zip \
+            --report build/reports/local-pkg-import-pair.json
+
+      - name: Setup Android build environment without replacing candidate bootstraps
+        uses: ./.github/actions/rafaelia-android-setup
+        with:
+          java-version: '17'
+          prepare-bootstrap: 'false'
+
+      - name: Bind exact embedded bootstrap hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --target build/python-deps blake3
+          export PYTHONPATH="$GITHUB_WORKSPACE/build/python-deps"
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          from pathlib import Path
+          from blake3 import blake3
+          import hashlib
+          base = Path('app/src/main/cpp')
+          files = {
+              'AARCH64':'rewritten-bootstrap-aarch64.zip',
+              'ARM':'rewritten-bootstrap-arm.zip',
+              'I686':'rewritten-bootstrap-i686.zip',
+              'X86_64':'rewritten-bootstrap-x86_64.zip',
+          }
+          for arch, name in files.items():
+              data = (base / name).read_bytes()
+              print(f'TERMUX_BOOTSTRAP_SHA256_{arch}={hashlib.sha256(data).hexdigest()}')
+              print(f'TERMUX_BOOTSTRAP_BLAKE3_{arch}={blake3(data).hexdigest()}')
+          PY
+
+      - name: Build debug APK from exact local-pkg pair
+        shell: bash
+        run: |
+          set -euo pipefail
+          export TERMUX_APP_VERSION_NAME="0.118.0-rafcodephi-local-pkg"
+          export TERMUX_APK_VERSION_TAG="rafcodephi-local-pkg-${GITHUB_SHA::12}"
+          ./gradlew :app:assembleDebug --no-daemon --warning-mode all
+          find app/build/outputs/apk -type f -name '*.apk' -print0 | sort -z | xargs -0 sha256sum \
+            > build/reports/local-pkg-apk.sha256
+          test -s build/reports/local-pkg-apk.sha256
+
+      - name: Emit bounded E2E receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          def sha(p):
+              p=Path(p); h=hashlib.sha256()
+              with p.open('rb') as f:
+                  for b in iter(lambda:f.read(1<<20),b''): h.update(b)
+              return h.hexdigest()
+          identity = Path('build/reports/local-pkg-cross-repo-identity.txt')
+          import_pair = Path('build/reports/local-pkg-import-pair.json')
+          apk_hashes = Path('build/reports/local-pkg-apk.sha256')
+          payload = {
+              'schema':'rafcodephi.local-pkg-e2e/v1',
+              'identity_sha256':sha(identity) if identity.exists() else 'TOKEN_VAZIO',
+              'import_pair_sha256':sha(import_pair) if import_pair.exists() else 'TOKEN_VAZIO',
+              'apk_hash_receipt_sha256':sha(apk_hashes) if apk_hashes.exists() else 'TOKEN_VAZIO',
+              'physical_android':'TOKEN_VAZIO',
+              'claim_allowed_pkg_runtime':False,
+              'claim_allowed_device_runtime':False,
+              'release_allowed':False,
+              'next_required_action':'INSTALL_EXACT_APK_AND_RUN_REQUIRE_REAL_PKG_DEVICE_SMOKE',
+          }
+          Path('build/reports/local-pkg-e2e.json').write_text(json.dumps(payload,sort_keys=True,indent=2)+'\n')
+          print(json.dumps(payload,sort_keys=True))
+          PY
+
+      - name: Upload APK source handoff and receipts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rafcodephi-local-pkg-${{ github.run_id }}
+          path: |
+            build/reports/local-pkg-*
+            app/build/outputs/apk/**/*.apk
+            app/build/outputs/apk/**/output-metadata.json
+            termux-packages/build/reports/local-pkg-*
+            termux-packages/artifacts/rafcodephi-local-pkg/matrix.v1.json
+            termux-packages/artifacts/rafcodephi-local-pkg/receipts/*.json
+            termux-packages/artifacts/rafcodephi-local-pkg/candidate/*.zip
+          if-no-files-found: warn
+          retention-days: 30
