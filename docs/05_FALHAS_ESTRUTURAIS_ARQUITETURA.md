@@ -1,276 +1,199 @@
-# Falhas Estruturais e Arquiteturais — RAFAELIA/VECTRA_OS
-> Análise além dos bugs catalogados no AGENTS.md
-> Foco: problemas de design, contratos implícitos não documentados,
->       riscos de manutenibilidade e consistência de invariantes
+# Falhas Estruturais e Arquiteturais — RAFAELIA/VECTRA_OS — registro auditado
 
----
+> Repository atual: `rafaelmeloreisnovo/termux-app-rafacodephi`
+> Baseline auditado: `b207970fc7a8630a534956cb544350cfd61ba33a`
+> Escopo desta revisão: documentação. Hipóteses antigas são preservadas como categorias de investigação, mas não são apresentadas como fatos do source atual sem evidência.
 
-## 1. Fragmentação do fork chain
+## 1. Método
 
-### Problema
-
-Existe uma cadeia de 3 forks sem rastreabilidade formal:
-
-```
-termux/termux-app (upstream)
-    └─→ rafaelmeloreisnovo/termux-app-rafacodephi
-           └─→ wojcikiewicz17/... (presumido)
-                  └─→ exacordex-crypto/termux-app-rafacodephi (atual)
+```text
+CURRENT SOURCE / TEST / WORKFLOW
+  > CURRENT CONTRACT
+  > CURRENT RECEIPT
+  > NORMATIVE DOC
+  > HISTORICAL / INFERRED ANALYSIS
 ```
 
-Cada fork acumula divergências. O upstream `termux/termux-app` está em
-`v0.119.0-beta.3` com fixes críticos (incluindo **world-readable
-vulnerability** corrigida em v0.118.0). Este fork provavelmente não
-recebeu esse patch de segurança.
+Para qualquer afirmação não verificada diretamente no baseline, usar `HYPOTHESIS` ou `TOKEN_VAZIO`.
 
-### Risco
+## 2. Proveniência e fork chain
 
-```
-CVE: world-readable vulnerability (termux upstream, pré-v0.118.0)
-Impact: arquivos em $PREFIX podem ser lidos por qualquer app no dispositivo
-Fix upstream: https://github.com/termux/termux-app (v0.118.0+)
-Status neste fork: DESCONHECIDO — verificar se patch foi aplicado
+A identidade atual observada é:
+
+```text
+rafaelmeloreisnovo/termux-app-rafacodephi
 ```
 
-### Ação requerida
+A cadeia antiga que terminava em `exacordex-crypto/termux-app-rafacodephi (atual)` não é válida como identidade corrente e passa a ser tratada como `HISTORICAL/STALE`.
 
-```bash
-# Verificar se o patch foi aplicado:
-git log --oneline | grep -i "world.readable\|permission\|CVE"
-# Se vazio: aplicar patch do upstream manualmente
+Qualquer comparação de segurança com upstream deve citar commit/patch concreto no fork atual. A ausência de uma mensagem encontrada por `grep git log` não prova ausência de um patch; portanto instruções antigas do tipo "se grep vazio, aplicar patch imediatamente" não são método de auditoria suficiente.
+
+## 3. Modelo matemático vs implementação
+
+A versão histórica deste documento apresentava várias hipóteses — sample rate de 144 kHz, STFT, período de Pisano, relação com VOID e outros vínculos — como se fossem falhas verificadas do runtime.
+
+Nesta revisão elas são separadas em duas classes:
+
+### 3.1 SOURCE_OBSERVED
+
+Há source atual para o espaço de atratores de 41 estados:
+
+```text
+rmr/Rrr/attractor_table.c
+rmr/Rrr/attractor_table.h
+rmr/Rrr/attractor_table_validator.c
 ```
 
----
+`attractor_table.h` declara `count=41`, `period=41`, `dim=7` e range `[0..40]`.
 
-## 2. Inconsistência entre modelo matemático e implementação
+`rmr/Rrr/vectra_pulse.S` também opera com período 41 no path AArch64 auditado.
 
-### O pipeline ψ→χ→ρ→Δ→Σ→Ω
+### 3.2 HYPOTHESIS / RESEARCH QUESTION
 
-O `RAFAELIA_MATH_FORMULAS.md` especifica o pipeline com precisão matemática.
-Porém existem discrepâncias entre a spec e o que é implementável:
+Sem apontamento source/receipt específico neste documento, permanecem como perguntas de pesquisa e NÃO como bugs demonstrados:
 
-#### 2.1 SR=144000 Hz vs capacidade do hardware
+- relação de um sample rate simbólico/especulativo de 144 kHz com AudioRecord real;
+- erro percentual de frequências geométricas derivado de fallback de hardware;
+- mapeamento Fibonacci/Pisano como causa do antigo VOID;
+- qualquer equivalência direta entre uma fórmula matemática e comportamento físico de áudio;
+- claims de resampling não observados no source auditado.
 
-```
-Spec: SR = 144000 Hz (sample rate para STFT)
-Realidade Android:
-  - AudioRecord suporta: 8000, 11025, 16000, 22050, 44100, 48000 Hz
-  - 144000 Hz NÃO é suportado nativamente pelo AudioFlinger Android
-  - Resultado: STFT em 144000 Hz requer resampling software
-```
+Se esses tópicos forem retomados, devem ter documento próprio com fonte matemática, source consumidor e experimento reproduzível.
 
-Se o código usa `AudioRecord` com `SAMPLE_RATE=144000`, ele
-silenciosamente faz downgrade para 48000 Hz (comportamento de fallback
-do Android), quebrando todas as frequências geométricas calculadas:
+## 4. CTI
 
-```
-f_geom(n) = c × √n  onde c é calculado assumindo SR=144000
-Se SR=48000: erro de fator = √(144000/48000) = √3 ≈ 1.732
-```
+O source atual `rmr/Rrr/cti_raw_reader.c` documenta cinco modos e implementa `CTI_DELTA_MISS` diretamente no scanner. O algoritmo atual calcula um `expected` determinístico a partir de `prev_crc`, índice físico e `seed`, depois produz `miss_score` a partir da diferença contra o CRC atual.
 
-**Todas as frequências geométricas têm erro de 73%** se SR não é honrado.
+Portanto a afirmação histórica de que `DELTA_MISS` "provavelmente divide por C_expected da attractor_table" é `STALE/HYPOTHESIS` e não descreve o código corrente.
 
-#### 2.2 block_size = 65536 bytes vs n_fft
+O source também contém:
 
-```
-Spec: block_size = 65536 bytes, n_fft = 4096..8192 (Hann window)
-
-Inconsistência: se block_size = 65536 bytes e cada sample é int16 (2 bytes):
-  → 65536 / 2 = 32768 samples por bloco
-  → n_fft máximo sem zero-padding = 32768
-  → n_fft = 8192 processa apenas 25% do bloco por janela (overlap correto)
-  → n_fft = 4096 processa 12.5% por janela
-
-Isso é matematicamente correto COM overlap, mas a spec não especifica
-o hop_size (tamanho do salto entre janelas STFT).
+```text
+rmr/Rrr/cti_scanner_barrier.h
+rmr/Rrr/cti_race_condition_validator.c
+Makefile: cti-race-condition-gate
 ```
 
-Sem `hop_size` especificado, implementações independentes do mesmo
-spec produzirão resultados diferentes.
+Isso permite afirmar wiring estrutural de um gate de concorrência; execução física continua separada.
 
----
+## 5. Testes e gates
 
-## 3. Sequência Fibonacci-Rafael: período de Pisano vs tabela de atratores
+A frase histórica "não há evidência de test suite automatizado" é `STALE` como afirmação geral do baseline atual.
 
-### Análise do período de Pisano
+O `Makefile` atual contém gates específicos, incluindo ao menos:
 
-```
-π(42) = π(2×3×7) = lcm(π(2), π(3), π(7))
-      = lcm(3, 8, 16)
-      = 48
-
-Mas: period(BitOmega) = 42  (spec do VECTRA_OS)
+```text
+attractor-table-complete-gate
+lyapunov-convergence-gate
+cti-race-condition-gate
 ```
 
-**Contradição:** O período natural de Fibonacci mod 42 é **48**, não 42.
-O sistema especifica período 42 mas a matemática implica período 48.
+Além disso, o repositório possui diretório `tests/` com contratos, incluindo o contrato de acesso Termux API.
 
-Isso significa que a `attractor_table[42]` com `period=42` requer
-que a sequência Fibonacci-Rafael **não seja** Fibonacci puro —
-ela deve ter uma transformação Δ_Rafael que altera o período.
+Isso não significa que toda propriedade do sistema tenha cobertura completa. A classificação correta é:
 
-A transformação semântica Δ_Rafael (substituição de caracteres Voynich +
-Fibonacci reverso + XOR) pode reduzir o período de 48 para 42 se os
-6 estados "extras" do período 48 forem mapeados para estados existentes.
-Mas isso cria colisões — e o estado #22 pode ser exatamente um desses
-6 estados extras que não têm mapeamento limpo.
-
-**Esta é provavelmente a raiz matemática profunda do VOID paradox.**
-
-```
-Período Fibonacci mod 42: 48
-Período BitOmega spec'd:  42
-Diferença:                 6 estados "sobrando"
-Desses 6, state[22] é o mais problemático (posição pós-antipodal)
+```text
+TEST/GATE INFRASTRUCTURE = SOURCE_OBSERVED
+GLOBAL EXHAUSTIVE COVERAGE = TOKEN_VAZIO
 ```
 
----
+## 6. Android/package identity
 
-## 4. Falta de contrato formal para o modo CTI_SCAN_DELTA_MISS
+A afirmação histórica de que o manifest principal "provavelmente ainda usa sharedUserId=com.termux" é `STALE`.
 
-### O modo DELTA_MISS não tem spec
+`tests/test_termux_api_access_contract.py` exige ausência de `android:sharedUserId` no manifest principal e presença da permissão Termux API com `protectionLevel="signature"`.
 
-```c
-// cti_raw_reader.h define 5 modos:
-typedef enum {
-    CTI_SCAN_SEQ,         // sequencial
-    CTI_SCAN_SPIRAL,      // espiral
-    CTI_SCAN_TOROID,      // toroidal
-    CTI_SCAN_RANDOM_PERM, // permutação aleatória
-    CTI_SCAN_DELTA_MISS   // ??? — sem documentação formal
-} ScanMode;
+Prefixo corrente normativo:
+
+```text
+/data/data/com.termux.rafacodephi/files/usr
 ```
 
-O modo `DELTA_MISS` é mencionado no header mas **não há spec** de como
-ele calcula o "delta de missão". Pela lógica do sistema:
+## 7. ZrManifest
 
-```
-DELTA_MISS provavelmente calcula:
-    δ_miss = (C_atual - C_expected) / C_expected
-    onde C_expected vem da attractor_table
+O risco histórico de stack allocation não deve ser tratado como ausência de mitigação atual. O baseline contém:
 
-→ Com attractor_table[22]=0: δ_miss = (C - 0) / 0 = ∞  (divisão por zero)
-```
-
-**DELTA_MISS divide por zero quando passa pelo state #22** com a tabela
-incompleta atual.
-
----
-
-## 5. Ausência de test suite formal
-
-### Estado atual
-
-Não há evidência de test suite automatizado para:
-- Invariantes matemáticos (`gcd(Δr,R)=1`, `period=42`)
-- Integridade da attractor_table
-- vectra_pulse_step correctness
-- ZIPRAF round-trip (comprimir → descomprimir = original)
-- CTI scan completeness (todos os 1024 entries processados)
-
-### O que existe
-
-Scripts de build (`hotfix_ate_compilar.sh`, `build_apk_matrix.sh`)
-que compilam mas não testam corretude.
-
-### Test suite mínimo recomendado
-
-```c
-// tests/test_vectra_invariants.c
-#include <assert.h>
-#include "vectra_attractor.h"
-#include "cti_raw_reader.h"
-#include "zipraf_index.h"
-
-void test_gcd_invariant(void) {
-    for (int i = 0; i < 42; i++) {
-        if (i == 22) continue;  // VOID — skip
-        uint8_t dr = attractor_table[i].delta_r;
-        uint8_t a = dr, b = 42;
-        while (b) { uint8_t t = b; b = a%b; a = t; }
-        assert(a == 1 && "gcd(delta_r, 42) must be 1");
-    }
-}
-
-void test_lyapunov_invariant(void) {
-    for (int i = 0; i < 42; i++) {
-        if (i == 22) continue;
-        const AttractorState *s = &attractor_table[i];
-        uint32_t phi_calc = ((uint64_t)((1u<<16) - s->entropy) * s->coherence) >> 16;
-        assert(phi_calc == s->lyapunov && "Lyapunov phi=(1-H)*C violated");
-    }
-}
-
-void test_period_42(void) {
-    // Verificar que trajetória com Δr=1 percorre todos os 42 estados
-    int visited[42] = {0};
-    int state = 0;
-    for (int i = 0; i < 42; i++) {
-        visited[state] = 1;
-        state = (state + 1) % 42;
-    }
-    for (int i = 0; i < 42; i++) {
-        assert(visited[i] && "State not visited in period-42 traversal");
-    }
-}
-
-int main(void) {
-    test_gcd_invariant();
-    test_lyapunov_invariant();
-    test_period_42();
-    // adicionar: zipraf round-trip, cti scan completeness
-    return 0;
-}
+```text
+rmr/Rrr/zipraf_index.h
+rmr/Rrr/zipraf_manifest_pool.h
+rmr/Rrr/zipraf_manifest_pool.c
 ```
 
----
+com guard/pool estático relacionado a `ZrManifest`.
 
-## 6. Android 15/16 compatibility gaps
+Classificação:
 
-### 6.1 16KB page size (obrigatório em Android 15+)
-
-```
-Status: flag -Wl,-z,max-page-size=16384 configurada ✓
-Problema: ZrManifest static sem __attribute__((aligned(16384)))
-          pode cruzar fronteira de página em dispositivos com 16KB pages
+```text
+MITIGATION_STRUCTURE = SOURCE_OBSERVED
+UNIVERSAL_RUNTIME_ABSENCE_OF_STACK_FAULT = TOKEN_VAZIO unless independently proven
 ```
 
-### 6.2 `android:sharedUserId` deprecated
+## 8. BLAKE3/build pipeline
 
+O exemplo histórico de mismatch silencioso em `hotfix_ate_compilar.sh` era inferido e não corresponde ao script corrente auditado.
+
+O arquivo real:
+
+```text
+scripts/hotfix_ate_compilar.sh
 ```
-Android 11+ (API 30): sharedUserId deprecated
-Android 13+ (API 33): removal em andamento
-Este fork provavelmente ainda usa sharedUserId="com.termux"
-Resultado: warnings de Play Store e potencial incompatibilidade futura
+
+usa `set -euo pipefail` e delega preflight/hashes/build para scripts reais do pipeline. Claims de integridade devem apontar aos verificadores/receipts atuais e aos artefatos materializados.
+
+## 9. Bootstrap e falhas em cascata
+
+A rota `beta-build-libllvm18-unblock.yml` agora possui source-capability preflight antes do source-build caro e separa:
+
+```text
+SUCCESS → strict semantic receipt
+FAILURE → UPSTREAM_FAILURE_EVIDENCE_INCOMPLETE diagnostic receipt
 ```
 
-### 6.3 `hiddenapibypass` version
+A ausência de manifest/ZIP após falha do produtor não deve substituir a primeira falha como causa-raiz.
 
-O upstream termux usa `org.lsposed.hiddenapibypass:hiddenapibypass:6.1`
-para fix de crash no Android 16 QPR1. Este fork pode ter versão mais antiga,
-causando crash no Android 16 QPR1.
+## 10. Matriz de risco documental atual
 
----
+| Área | Estado auditado | O que pode ser afirmado | O que continua aberto |
+|---|---|---|---|
+| attractor table | SOURCE_OBSERVED | 41-state API/source/validator existem | device/performance geral |
+| AArch64 vectra pulse | SOURCE_OBSERVED | quatro correções estão presentes no source | benchmark e hardware real |
+| CTI | SOURCE_OBSERVED + GATE_WIRED | algoritmo atual e gate existem | cobertura/race em todos ambientes |
+| ZrManifest | SOURCE_OBSERVED | guard/pool estrutural existem | prova runtime universal |
+| Termux API identity | TEST_ENFORCED | signature permission e no-main-sharedUserId | instalação/chamada física |
+| bootstrap source build | WORKFLOW_WIRED | produtor/gates/preflight/receipts existem | run/artifact/device específico |
+| package repository custom | BLOCKED | fail-closed documentado | publicação/assinatura/runtime |
+| physical Android | TOKEN_VAZIO | instrumentos podem existir | receipts físicos atuais |
+| cobertura global | TOKEN_VAZIO | múltiplos gates existem | exaustividade não demonstrada |
 
-## 7. Mapa de risco resumido
+## 11. Regra para análises futuras
 
+Nunca escrever:
+
+```text
+"provavelmente o código faz X"
 ```
-RISCO IMEDIATO (pode causar crash em prod):
-    BUG-01 + BUG-02: attractor_table nula → vectra_pulse crash
-    BUG-05: ZrManifest em stack → stack overflow silencioso
-    BUG-03-B: sizeof errado → leitura fora da tabela → SIGSEGV
 
-RISCO FUNCIONAL (comportamento incorreto sem crash):
-    BUG-03-D: udiv lento mas correto funcionalmente
-    BUG-08: φ não verificado → divergência não detectada
-    SR=144000 sem suporte → frequências geométricas com erro de 73%
+como se fosse finding de auditoria.
 
-RISCO DE SEGURANÇA:
-    CVE world-readable (herança do upstream pré-v0.118.0) — verificar
-    BUG-07: APKs com hash inválido distribuídos silenciosamente
+Escrever:
 
-RISCO DE MANUTENIBILIDADE:
-    Período Pisano 48 vs spec 42 — contradição matemática profunda
-    DELTA_MISS sem spec — comportamento indefinido para state #22
-    Ausência de test suite — regressões não detectadas
+```text
+HYPOTHESIS: X
+SOURCE_POINTER: TOKEN_VAZIO
+NEXT_VERIFIABLE_CHECK: <arquivo/comando/teste>
 ```
+
+até o source ser observado.
+
+## 12. Fronteira de claim
+
+```text
+claim_allowed=false
+physical_android=TOKEN_VAZIO
+```
+
+Auditoria relacionada:
+
+- `docs/AUDIT_CLAIMS_POLICY.md`
+- `docs/00_BUG_MASTER_INDEX.md`
+- `docs/audits/DOCUMENTATION_CODE_ALIGNMENT_AUDIT_20260906.md`
