@@ -7,15 +7,29 @@ on:
     paths:
       - 'bootstrap/proot_freestanding.c'
       - 'bootstrap/proot_syscall_bridge.h'
+      - 'scripts/build_freestanding_real_arm_bootstrap.py'
       - '.github/workflows/freestanding-runtime-gate.yml'
   pull_request:
     paths:
       - 'bootstrap/proot_freestanding.c'
       - 'bootstrap/proot_syscall_bridge.h'
       - 'bootstrap_src/common/bin/proot'
+      - 'scripts/build_freestanding_real_arm_bootstrap.py'
       - '.github/workflows/freestanding-runtime-gate.yml'
 
 jobs:
+  cold-start-builder-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate cold-start builder syntax
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/build_freestanding_real_arm_bootstrap.py
+          python3 scripts/build_freestanding_real_arm_bootstrap.py --help >/dev/null
+          grep -q 'libexec/rafproot-fs' scripts/build_freestanding_real_arm_bootstrap.py
+          grep -q 'DEVICE=TOKEN_VAZIO' scripts/build_freestanding_real_arm_bootstrap.py
+
   static-elf:
     runs-on: ubuntu-latest
     strategy:
