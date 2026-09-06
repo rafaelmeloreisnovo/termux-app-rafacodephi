@@ -1,6 +1,6 @@
 # ci_track: ops
 # ci_abis: arm32,arm64
-# trigger_generation: 7
+# trigger_generation: 8
 name: RafCodePhi Beta Build - libLLVM18 Unblock
 
 on:
@@ -77,6 +77,49 @@ jobs:
           path: termux-packages
           persist-credentials: false
           fetch-depth: 1
+
+      - name: Preflight complete candidate source capability set
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TERMUX_PACKAGES_SHA"
+          required=(
+            scripts/properties.sh
+            scripts/apply-rafcodephi-build-properties.py
+            scripts/validate-rafcodephi-build-properties.sh
+            scripts/run-docker.sh
+            scripts/build-rafcodephi-real-bootstrap.sh
+            scripts/generate-bootstraps.sh
+            packages/libxml2/build.sh
+          )
+          missing=()
+          for path in "${required[@]}"; do
+            [[ -f "$path" ]] || missing+=("$path")
+          done
+          if ((${#missing[@]})); then
+            printf 'RAFCODEPHI_CANDIDATE_PREFLIGHT=FAIL\n' >&2
+            printf 'missing_source_capability=%s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+          grep -Fq 'libllvm18' packages/libxml2/build.sh || {
+            echo 'RAFCODEPHI_CANDIDATE_PREFLIGHT=FAIL missing libllvm18 host closure' >&2
+            exit 1
+          }
+          python3 - <<'PY'
+          from pathlib import Path
+          builder = Path('scripts/build-rafcodephi-real-bootstrap.sh').read_text(encoding='utf-8')
+          required_tokens = (
+              'RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt',
+              'rafcodephi.real-bootstrap-sourcebuild/v1',
+              'rafcodephi-bootstrap-arm.zip',
+              'rafcodephi-bootstrap-aarch64.zip',
+          )
+          missing = [token for token in required_tokens if token not in builder]
+          if missing:
+              raise SystemExit('bootstrap builder capability drift: ' + ','.join(missing))
+          print('RAFCODEPHI_CANDIDATE_PREFLIGHT=PASS')
+          PY
 
       - name: Bind RAFCODEPhi package identity
         working-directory: termux-packages
@@ -176,7 +219,7 @@ jobs:
         run: ./scripts/build_apk_matrix.sh
 
       - name: Generate fail-closed semantic custody receipt
-        if: always()
+        if: success()
         shell: bash
         run: |
           set -euo pipefail
@@ -189,6 +232,49 @@ jobs:
             --source-contract dist/source-contract/TERMUX_PACKAGES_RAFCODEPHI_SOURCE.env \
             --packages-sha "$TERMUX_PACKAGES_SHA" \
             --output build/reports/usable-beta-receipt.json
+
+      - name: Capture upstream failure without masking primary cause
+        if: failure()
+        shell: bash
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -u
+          mkdir -p build/reports
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          expected = [
+              'termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt',
+              'termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip',
+              'termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip',
+              'build/reports/beta-embedded-arm.json',
+              'build/reports/beta-embedded-aarch64.json',
+              'dist/source-contract/TERMUX_PACKAGES_RAFCODEPHI_SOURCE.env',
+              'dist/apk-matrix',
+          ]
+          present = [p for p in expected if Path(p).exists()]
+          missing = [p for p in expected if not Path(p).exists()]
+          doc = {
+              'schema': 'rafcodephi.usable-beta-build/v2',
+              'state': 'UPSTREAM_FAILURE_EVIDENCE_INCOMPLETE',
+              'job_status': os.environ.get('JOB_STATUS', 'failure'),
+              'packages_sha': os.environ.get('TERMUX_PACKAGES_SHA', 'TOKEN_VAZIO'),
+              'pin_channel': os.environ.get('TERMUX_PACKAGES_PIN_CHANNEL', 'TOKEN_VAZIO'),
+              'present_evidence': present,
+              'missing_evidence': missing,
+              'physical_android': 'TOKEN_VAZIO',
+              'claim_allowed': False,
+              'release_allowed': False,
+              'diagnostic': 'Primary failure occurred upstream. Missing downstream evidence is consequence, not root cause.',
+          }
+          Path('build/reports/usable-beta-receipt.json').write_text(
+              json.dumps(doc, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(doc, indent=2, sort_keys=True))
+          PY
 
       - name: Upload usable beta artifacts and custody evidence
         if: always()
