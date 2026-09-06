@@ -1,117 +1,101 @@
-# Freestanding bootstrap build — P0.1-P0.5 implementation
-# No Python, no libc, no external dependencies
+# RAFCODEPHI freestanding build matrix
+# Controller scope only: bootstrap/extractor/pkg probes/RAF-NINJA.
+# Platform payloads (apt/dpkg/proot.real) are validated/exec'd, not relabelled freestanding.
 
-CC := clang
-CFLAGS := -target aarch64-linux-gnu -ffreestanding -nostdlib -fno-builtin \
-          -I./src/bootstrap -I./src/elf -I./src/dex \
-          -Wall -O2 -fPIC
-ASFLAGS := -target aarch64-linux-gnu -nostdlib -fno-integrated-as
+CC ?= clang
+READELF ?= llvm-readelf
+NM ?= llvm-nm
 
-# Output directories
-BUILD_DIR := build
-BIN_DIR := bin
+BUILD_DIR := build/freestanding
+BIN_DIR := bin/freestanding
 
-# Source files
-BOOTSTRAP_SRCS := src/bootstrap/proot_freestanding_real.c \
-                  src/bootstrap/receipt_sealer_real.c \
-                  src/bootstrap/extract_payload_real.c \
-                  src/bootstrap/dpkg_install_real.c \
-                  src/bootstrap/bootstrap_orchestrator.c
+COMMON_CFLAGS := -ffreestanding -nostdlib -nostdinc -fno-builtin \
+	-fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
+	-ffunction-sections -fdata-sections -fPIE -O2 -Wall -Wextra -Werror \
+	-I./src/bootstrap
+COMMON_LDFLAGS := -nostdlib -fuse-ld=lld -Wl,-static,-pie,-e,_start,--gc-sections,--build-id=none \
+	-Wl,-z,max-page-size=16384
 
-NATIVE_SRCS := src/native/bootstrap-validator.S
+TARGET_aarch64 := aarch64-linux-android21
+TARGET_arm := armv7a-linux-androideabi21
 
-ELF_SRCS := src/elf/elf64_builder.c
+BOOTSTRAP_C := \
+	src/bootstrap/bootstrap_orchestrator.c \
+	src/bootstrap/proot_freestanding_real.c \
+	src/bootstrap/extract_payload_real.c \
+	src/bootstrap/dpkg_install_real.c \
+	src/bootstrap/package_stack_real.c
+BOOTSTRAP_S := src/bootstrap/start_arm.S
 
-DEX_SRCS := src/dex/dex_builder.c
+A64_OBJS := $(patsubst src/%.c,$(BUILD_DIR)/aarch64/%.o,$(BOOTSTRAP_C)) \
+	$(patsubst src/%.S,$(BUILD_DIR)/aarch64/%.o,$(BOOTSTRAP_S))
+ARM_OBJS := $(patsubst src/%.c,$(BUILD_DIR)/arm/%.o,$(BOOTSTRAP_C)) \
+	$(patsubst src/%.S,$(BUILD_DIR)/arm/%.o,$(BOOTSTRAP_S))
 
-# Object files
-BOOTSTRAP_OBJS := $(BOOTSTRAP_SRCS:src/%.c=$(BUILD_DIR)/%.o)
-NATIVE_OBJS := $(NATIVE_SRCS:src/%.S=$(BUILD_DIR)/%.o)
-ELF_OBJS := $(ELF_SRCS:src/%.c=$(BUILD_DIR)/%.o)
-DEX_OBJS := $(DEX_SRCS:src/%.c=$(BUILD_DIR)/%.o)
+.PHONY: all bootstrap bootstrap-aarch64 bootstrap-arm verify-freestanding verify-elf clean size-report help
 
-ALL_OBJS := $(BOOTSTRAP_OBJS) $(NATIVE_OBJS) $(ELF_OBJS) $(DEX_OBJS)
+all: bootstrap verify-freestanding verify-elf
 
-# Targets
-.PHONY: all clean bootstrap native elf dex
+bootstrap: bootstrap-aarch64 bootstrap-arm
 
-all: bootstrap native elf dex
-	@echo "[DONE] All P0.1-P0.5 modules built"
+bootstrap-aarch64: $(BIN_DIR)/aarch64/raf-bootstrap-ninja
+bootstrap-arm: $(BIN_DIR)/arm/raf-bootstrap-ninja
 
-bootstrap: $(BIN_DIR)/bootstrap-orchestrator
-	@echo "[✓] Bootstrap orchestrator built"
-
-native: $(BIN_DIR)/bootstrap-validator.o
-	@echo "[✓] Native bootstrap validator built"
-
-elf: $(BIN_DIR)/elf64-test
-	@echo "[✓] ELF64 builder built"
-
-dex: $(BIN_DIR)/dex-test
-	@echo "[✓] DEX builder built"
-
-# Compilation rules
-$(BUILD_DIR)/%.o: src/%.c
+$(BUILD_DIR)/aarch64/%.o: src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
-	@echo "[CC] $< → $@"
+	$(CC) -target $(TARGET_aarch64) $(COMMON_CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/%.o: src/%.S
+$(BUILD_DIR)/aarch64/%.o: src/%.S
 	@mkdir -p $(dir $@)
-	$(CC) $(ASFLAGS) -c $< -o $@
-	@echo "[AS] $< → $@"
+	$(CC) -target $(TARGET_aarch64) $(COMMON_CFLAGS) -c $< -o $@
 
-# Linking
-$(BIN_DIR)/bootstrap-orchestrator: $(BOOTSTRAP_OBJS) $(ELF_OBJS) $(DEX_OBJS)
-	@mkdir -p $(BIN_DIR)
-	$(CC) -nostdlib -fPIC -Wl,-static $^ -o $@
-	@echo "[LD] $@ built ($(shell wc -c < $@) bytes)"
+$(BUILD_DIR)/arm/%.o: src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) -target $(TARGET_arm) -march=armv7-a -mfloat-abi=softfp $(COMMON_CFLAGS) -c $< -o $@
 
-$(BIN_DIR)/bootstrap-validator.o: $(BUILD_DIR)/native/bootstrap-validator.o
-	@mkdir -p $(BIN_DIR)
-	cp $< $@
+$(BUILD_DIR)/arm/%.o: src/%.S
+	@mkdir -p $(dir $@)
+	$(CC) -target $(TARGET_arm) -march=armv7-a -mfloat-abi=softfp $(COMMON_CFLAGS) -c $< -o $@
 
-$(BIN_DIR)/elf64-test: $(BUILD_DIR)/elf/elf64_builder.o
-	@mkdir -p $(BIN_DIR)
-	@echo "[INFO] ELF64 builder object file: $@"
-	cp $< $@
+$(BIN_DIR)/aarch64/raf-bootstrap-ninja: $(A64_OBJS)
+	@mkdir -p $(dir $@)
+	$(CC) -target $(TARGET_aarch64) $(COMMON_LDFLAGS) $^ -o $@
 
-$(BIN_DIR)/dex-test: $(BUILD_DIR)/dex/dex_builder.o
-	@mkdir -p $(BIN_DIR)
-	@echo "[INFO] DEX builder object file: $@"
-	cp $< $@
+$(BIN_DIR)/arm/raf-bootstrap-ninja: $(ARM_OBJS)
+	@mkdir -p $(dir $@)
+	$(CC) -target $(TARGET_arm) -march=armv7-a -mfloat-abi=softfp $(COMMON_LDFLAGS) $^ -o $@
 
-# Clean
+verify-freestanding:
+	@echo '[CHECK] source freestanding/no hosted headers'
+	@! grep -REn '^#include[[:space:]]*<(stdio|stdlib|string|unistd|fcntl|pthread|time|sys/|android/|jni)' \
+		$(BOOTSTRAP_C) src/bootstrap/freestanding.h src/bootstrap/syscall_arm.h
+	@! grep -REn '(^|[^A-Za-z0-9_])(malloc|calloc|realloc|free|printf|fprintf|pthread_[A-Za-z0-9_]+)[[:space:]]*\(' \
+		$(BOOTSTRAP_C)
+	@echo 'FREESTANDING_SOURCE_POLICY=PASS'
+
+verify-elf: bootstrap
+	@set -eu; \
+	for f in $(BIN_DIR)/aarch64/raf-bootstrap-ninja $(BIN_DIR)/arm/raf-bootstrap-ninja; do \
+		echo "[ELF] $$f"; \
+		$(READELF) -hW "$$f" | grep -Eq 'Machine:[[:space:]]+(AArch64|ARM)'; \
+		if $(READELF) -dW "$$f" 2>/dev/null | grep -q '(NEEDED)'; then \
+			echo "ERROR: DT_NEEDED present in $$f" >&2; exit 1; \
+		fi; \
+		undef="$$( $(NM) -u "$$f" 2>/dev/null || true )"; \
+		if [ -n "$$undef" ]; then echo "ERROR: undefined symbols in $$f: $$undef" >&2; exit 1; fi; \
+	done
+	@echo 'FREESTANDING_DUAL_ARM_ELF=PASS'
+
+size-report: bootstrap
+	@wc -c $(BIN_DIR)/aarch64/raf-bootstrap-ninja $(BIN_DIR)/arm/raf-bootstrap-ninja
+
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
-	@echo "[CLEAN] Build artifacts removed"
 
-# Verify freestanding compliance
-verify-freestanding:
-	@echo "[CHECK] Verifying no libc dependencies..."
-	@for f in $(BOOTSTRAP_SRCS) $(ELF_SRCS) $(DEX_SRCS); do \
-		if grep -q "#include <" $$f; then \
-			echo "ERROR: libc include found in $$f"; \
-			exit 1; \
-		fi; \
-	done
-	@echo "[✓] No libc includes detected"
-
-# Size report
-size-report: all
-	@echo "[SIZE] Binary sizes:"
-	@ls -lh $(BIN_DIR)/* | awk '{print "  " $$9 ": " $$5}'
-
-# Help
 help:
-	@echo "Freestanding Bootstrap Build (P0.1-P0.5)"
-	@echo ""
-	@echo "Targets:"
-	@echo "  all                 - Build all modules (default)"
-	@echo "  bootstrap           - Build P0.1-P0.4 bootstrap orchestrator"
-	@echo "  native              - Build P0.5 ARM64 validator"
-	@echo "  elf                 - Build ELF64 builder"
-	@echo "  dex                 - Build DEX builder"
-	@echo "  clean               - Remove build artifacts"
-	@echo "  verify-freestanding - Check for libc includes"
-	@echo "  size-report         - Show binary sizes"
+	@echo 'RAFCODEPHI freestanding controller matrix'
+	@echo '  make -f Makefile.freestanding all'
+	@echo '  make -f Makefile.freestanding bootstrap-aarch64'
+	@echo '  make -f Makefile.freestanding bootstrap-arm'
+	@echo '  make -f Makefile.freestanding verify-freestanding'
+	@echo '  make -f Makefile.freestanding verify-elf'

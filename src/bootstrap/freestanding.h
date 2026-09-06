@@ -1,50 +1,60 @@
 #ifndef FREESTANDING_H
 #define FREESTANDING_H
 
-/* Freestanding C bootstrap — no libc, no malloc, syscalls only */
+/*
+ * RAFCODEPHI freestanding primitive types.
+ * No libc, POSIX, Android, NDK or hosted headers.
+ */
 
-#include <stdint.h>
-#include <stddef.h>
+typedef __UINT8_TYPE__   uint8_t;
+typedef __UINT16_TYPE__  uint16_t;
+typedef __UINT32_TYPE__  uint32_t;
+typedef __UINT64_TYPE__  uint64_t;
+typedef __INT8_TYPE__    int8_t;
+typedef __INT16_TYPE__   int16_t;
+typedef __INT32_TYPE__   int32_t;
+typedef __INT64_TYPE__   int64_t;
+typedef __UINTPTR_TYPE__ uintptr_t;
+typedef __INTPTR_TYPE__  intptr_t;
+typedef __SIZE_TYPE__    size_t;
+typedef __PTRDIFF_TYPE__ ptrdiff_t;
+typedef __INTPTR_TYPE__  ssize_t;
+typedef int32_t           pid_t;
+typedef uint32_t          mode_t;
+typedef int64_t           off_t;
 
-/* Standard type aliases (avoid conflicts with system headers) */
-typedef int32_t ssize_t;
-typedef int32_t pid_t;
-typedef uint32_t mode_t;
-typedef uint64_t off_t;
+#ifndef NULL
+#define NULL ((void *)0)
+#endif
 
-/* Minimal timespec structure */
 struct timespec {
     int64_t tv_sec;
     int64_t tv_nsec;
 };
 
-/* Error convention */
 #define EFAIL (-1)
 #define EOK   (0)
 
-/* Memory layout — stack-only buffers, no heap */
-#define MAX_RECEIPT_JSON    2048
-#define MAX_DEVICE_INFO     512
-#define MAX_SCENARIO_RESULT 1024
-#define MAX_PATHS           256
-#define MAX_COMMAND_ARGS    32
+#define MAX_RECEIPT_JSON    2048u
+#define MAX_DEVICE_INFO     512u
+#define MAX_SCENARIO_RESULT 1024u
+#define MAX_PATHS           256u
+#define MAX_COMMAND_ARGS    32u
 
-/* Receipt structure — stack-allocated */
 struct Receipt {
-    uint32_t magic;           /* 0xDEADBEEF */
+    uint32_t magic;
     uint32_t stage;
-    uint64_t timestamp;       /* CLOCK_MONOTONIC */
-    uint32_t crc32c;          /* Castagnoli polynomial */
-    uint8_t  sha256[32];      /* SHA-256 digest */
-    uint32_t phi_fst;         /* Coherence Q16 fixed-point */
-    uint32_t attractor;       /* T^7 attractor slot [0..40] (41-state toroid) */
-    uint32_t entropy_norm;    /* H_norm Q16 */
-    uint32_t coherence_norm;  /* C_norm Q16 */
+    uint64_t timestamp;
+    uint32_t crc32c;
+    uint8_t  sha256[32];
+    uint32_t phi_fst;
+    uint32_t attractor;
+    uint32_t entropy_norm;
+    uint32_t coherence_norm;
     int32_t  exit_code;
     char     log[MAX_RECEIPT_JSON];
 };
 
-/* Bootstrap progress tracking */
 struct BootstrapProgress {
     int extracted;
     int dpkg_installed;
@@ -53,16 +63,13 @@ struct BootstrapProgress {
     int skip_count;
 };
 
-/* Syscall return value macro */
 #define SYSCALL_OK(x)       ((x) >= 0)
 #define SYSCALL_ERR(x)      ((x) < 0)
 #define SYSCALL_ERR_VAL(x)  (-(x))
 
-/* Assembly markers (ARM64/ARM32 neutral) */
 #define LIKELY(x)     __builtin_expect(!!(x), 1)
 #define UNLIKELY(x)   __builtin_expect(!!(x), 0)
 
-/* Byte-order neutral (assume little-endian ARM) */
 #define LE32(x) (x)
 #define LE64(x) (x)
 

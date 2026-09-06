@@ -1,3 +1,16 @@
+/*
+ * freestanding_syscalls.h — Freestanding syscall wrappers for ARM64
+ *
+ * Direct syscall wrappers (no libc layer) for common operations:
+ * read, write, open, close, stat, fstat, mmap, brk, etc.
+ *
+ * Replaces unistd.h, fcntl.h, sys/stat.h syscall abstractions.
+ * No external dependencies: pure ARM64 SVC-based syscalls.
+ */
+
+#ifndef FREESTANDING_SYSCALLS_H
+#define FREESTANDING_SYSCALLS_H
+
 #pragma once
 #include <stdint.h>
 #include <stddef.h>

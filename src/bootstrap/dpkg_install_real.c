@@ -1,158 +1,144 @@
-/* P0.3.2: dpkg installation — real implementation */
+/*
+ * RAFCODEPHI dpkg adapter for the freestanding bootstrap controller.
+ *
+ * dpkg is a platform payload, not a freestanding artifact.  This unit proves
+ * the expected ELF ABI, creates only the minimum database skeleton when absent,
+ * and executes a real --version probe without fabricating package state.
+ */
 
 #include "freestanding.h"
-#include "syscall_arm64.h"
+#include "syscall_arm.h"
 
-#define DPKG_BINARY_PATH "/data/data/com.termux.rafacodephi/bin/dpkg"
-#define DPKG_LIB_DIR "/data/data/com.termux.rafacodephi/lib"
-#define DPKG_STATUS_FILE "/data/data/com.termux.rafacodephi/var/lib/dpkg/status"
+#ifndef RAFCODEPHI_PREFIX
+#define RAFCODEPHI_PREFIX "/data/data/com.termux.rafacodephi/files/usr"
+#endif
 
-/* Check if dpkg binary is accessible */
+#define DPKG_BINARY_PATH RAFCODEPHI_PREFIX "/bin/dpkg"
+#define DPKG_VAR_DIR     RAFCODEPHI_PREFIX "/var"
+#define DPKG_LIB_VAR_DIR RAFCODEPHI_PREFIX "/var/lib"
+#define DPKG_DB_DIR      RAFCODEPHI_PREFIX "/var/lib/dpkg"
+#define DPKG_STATUS_FILE RAFCODEPHI_PREFIX "/var/lib/dpkg/status"
+#define RAF_WNOHANG 1
+
+static int mkdir_existing_ok(const char *path, int mode) {
+    int64_t rc = syscall_mkdir(path, mode);
+    if (rc == 0) return 0;
+    return SYSCALL_ERR_VAL(rc) == 17 ? 0 : -1;
+}
+
 static int check_dpkg_binary(void) {
-    int64_t ret = syscall_open(DPKG_BINARY_PATH, 0, 0);  /* O_RDONLY */
-    if (SYSCALL_ERR(ret)) {
-        return -1;  /* dpkg not found */
-    }
-    syscall_close((int)ret);
-    return 0;  /* dpkg found */
+    return syscall_access(DPKG_BINARY_PATH, 1) == 0 ? 0 : -1;
 }
 
-/* Check if binary is statically linked (no dynamic section) */
-static int verify_static_binary(const char *binary_path) {
-    uint8_t elf_header[64];
-
-    int64_t fd = syscall_open(binary_path, 0, 0);
-    if (SYSCALL_ERR(fd)) {
-        return -1;
-    }
-
-    int64_t nread = syscall_read((int)fd, elf_header, sizeof(elf_header));
-    syscall_close((int)fd);
-
-    if (nread < 64) {
-        return -2;  /* Too short */
-    }
-
-    /* ELF header: 7f 45 4c 46 */
-    if (elf_header[0] != 0x7f ||
-        elf_header[1] != 'E' ||
-        elf_header[2] != 'L' ||
-        elf_header[3] != 'F') {
-        return -3;  /* Not ELF */
-    }
-
-    /* TODO: Parse ELF to verify no dynamic section
-       For now, trust that pre-built dpkg is static */
-
+static int verify_dpkg_elf_abi(void) {
+    uint8_t h[64];
+    int64_t fd = syscall_open(DPKG_BINARY_PATH, RAF_O_RDONLY | RAF_O_CLOEXEC, 0);
+    if (fd < 0) return -1;
+    int64_t n = syscall_read((int)fd, h, sizeof(h));
+    (void)syscall_close((int)fd);
+    if (n < 20) return -2;
+    if (h[0] != 0x7f || h[1] != 'E' || h[2] != 'L' || h[3] != 'F') return -3;
+    if (h[5] != 1) return -4; /* little endian */
+    uint32_t machine = (uint32_t)h[18] | ((uint32_t)h[19] << 8);
+#if defined(__aarch64__)
+    if (h[4] != 2 || machine != 183u) return -5; /* ELF64 / EM_AARCH64 */
+#elif defined(__arm__)
+    if (h[4] != 1 || machine != 40u) return -5;  /* ELF32 / EM_ARM */
+#endif
     return 0;
 }
 
-/* Initialize dpkg status database */
 static int init_dpkg_status_db(void) {
-    char status_header[] = "Package: dpkg\n"
-                           "Version: 1.22.6\n"
-                           "Status: install ok installed\n"
-                           "\n";
+    if (mkdir_existing_ok(DPKG_VAR_DIR, 0700) != 0) return -1;
+    if (mkdir_existing_ok(DPKG_LIB_VAR_DIR, 0700) != 0) return -2;
+    if (mkdir_existing_ok(DPKG_DB_DIR, 0700) != 0) return -3;
 
-    /* Create status file */
-    int64_t fd = syscall_open(DPKG_STATUS_FILE, 0x0241, 0644);  /* O_CREAT | O_WRONLY | O_TRUNC */
-    if (SYSCALL_ERR(fd)) {
-        return -1;
+    if (syscall_access(DPKG_STATUS_FILE, 0) == 0) return 0;
+
+    int64_t fd = syscall_open(DPKG_STATUS_FILE,
+                              RAF_O_WRONLY | RAF_O_CREAT | RAF_O_EXCL | RAF_O_CLOEXEC,
+                              0600);
+    if (fd < 0) {
+        /* A concurrent/previous initializer may have created it. */
+        return syscall_access(DPKG_STATUS_FILE, 0) == 0 ? 0 : -4;
     }
-
-    int64_t written = syscall_write((int)fd, status_header, 65);
-    syscall_close((int)fd);
-
-    if (written != 65) {
-        return -2;
+    if (syscall_fsync((int)fd) < 0) {
+        (void)syscall_close((int)fd);
+        return -5;
     }
-
-    return 0;
+    return syscall_close((int)fd) == 0 ? 0 : -6;
 }
 
-/* Install dpkg: verify binary, initialize database */
+static int run_dpkg_version(void) {
+    char *argv[] = {
+        (char *)DPKG_BINARY_PATH,
+        (char *)"--version",
+        (char *)0
+    };
+    char *envp[] = {
+        (char *)"PREFIX=" RAFCODEPHI_PREFIX,
+        (char *)"PATH=" RAFCODEPHI_PREFIX "/bin:/system/bin",
+        (char *)"TMPDIR=" RAFCODEPHI_PREFIX "/tmp",
+        (char *)"HOME=/data/data/com.termux.rafacodephi/files/home",
+        (char *)"LANG=C.UTF-8",
+        (char *)0
+    };
+
+    int64_t pid = syscall_fork();
+    if (pid < 0) return -1;
+    if (pid == 0) {
+        (void)syscall_execve(DPKG_BINARY_PATH, argv, envp);
+        syscall_exit(127);
+    }
+
+    int status = 0;
+    int64_t waited = syscall_wait4((int)pid, &status, 0, (void *)0);
+    if (waited != pid) return -2;
+    return status == 0 ? 0 : -3;
+}
+
 int dpkg_install_real(void) {
-    /* Step 1: Verify dpkg binary exists */
-    if (check_dpkg_binary() != 0) {
-        return -1;  /* dpkg binary not found */
-    }
-
-    /* Step 2: Verify static linking */
-    if (verify_static_binary(DPKG_BINARY_PATH) != 0) {
-        return -2;  /* Binary verification failed */
-    }
-
-    /* Step 3: Initialize dpkg status database */
-    if (init_dpkg_status_db() != 0) {
-        return -3;  /* Status database init failed */
-    }
-
-    return 0;  /* Success */
-}
-
-/* Verify dpkg is correctly installed */
-int dpkg_verify_installation(void) {
-    int ret = check_dpkg_binary();
-    if (ret != 0) {
-        return -1;
-    }
-
-    /* Verify status file exists */
-    int64_t fd = syscall_open(DPKG_STATUS_FILE, 0, 0);
-    if (SYSCALL_ERR(fd)) {
-        return -2;
-    }
-    syscall_close((int)fd);
-
+    if (check_dpkg_binary() != 0) return -1;
+    if (verify_dpkg_elf_abi() != 0) return -2;
+    if (init_dpkg_status_db() != 0) return -3;
+    if (run_dpkg_version() != 0) return -4;
     return 0;
 }
 
-/* Run dpkg command (via execve) */
+int dpkg_verify_installation(void) {
+    if (check_dpkg_binary() != 0) return -1;
+    if (verify_dpkg_elf_abi() != 0) return -2;
+    if (syscall_access(DPKG_STATUS_FILE, 0) != 0) return -3;
+    return 0;
+}
+
 int dpkg_run_command(const char *cmd_arg) {
+    if (!cmd_arg) return -1;
     char *argv[] = {
         (char *)DPKG_BINARY_PATH,
         (char *)cmd_arg,
-        NULL
+        (char *)0
     };
-
-    char *env[] = {
-        (char *)"TERMUX_PREFIX=/data/data/com.termux.rafacodephi",
-        (char *)"PATH=/bin:/usr/bin",
-        NULL
+    char *envp[] = {
+        (char *)"PREFIX=" RAFCODEPHI_PREFIX,
+        (char *)"PATH=" RAFCODEPHI_PREFIX "/bin:/system/bin",
+        (char *)"TMPDIR=" RAFCODEPHI_PREFIX "/tmp",
+        (char *)"HOME=/data/data/com.termux.rafacodephi/files/home",
+        (char *)"LANG=C.UTF-8",
+        (char *)0
     };
-
-    /* Fork and execve */
     int64_t pid = syscall_fork();
-
-    if (SYSCALL_ERR(pid)) {
-        return -1;  /* Fork failed */
-    }
-
+    if (pid < 0) return -2;
     if (pid == 0) {
-        /* Child: exec dpkg */
-        int64_t ret = syscall_execve(DPKG_BINARY_PATH, argv, env);
-        if (SYSCALL_ERR(ret)) {
-            syscall_exit(127);  /* execve failed */
-        }
-    } else {
-        /* Parent: wait for child */
-        int wstatus = 0;
-        int64_t ret = syscall_wait4((int)pid, &wstatus, 0, NULL);
-
-        if (SYSCALL_ERR(ret)) {
-            return -2;  /* wait4 failed */
-        }
-
-        /* Check exit status */
-        if (wstatus != 0) {
-            return -3;  /* dpkg exited with error */
-        }
+        (void)syscall_execve(DPKG_BINARY_PATH, argv, envp);
+        syscall_exit(127);
     }
-
-    return 0;
+    int status = 0;
+    int64_t waited = syscall_wait4((int)pid, &status, 0, (void *)0);
+    if (waited != pid) return -3;
+    return status == 0 ? 0 : -4;
 }
 
-/* Get dpkg status (installed, version, etc.) */
 typedef struct {
     int installed;
     uint32_t version_major;
@@ -161,22 +147,14 @@ typedef struct {
 } DpkgStatus;
 
 int dpkg_get_status(DpkgStatus *status) {
+    if (!status) return -1;
     status->installed = 0;
     status->version_major = 0;
     status->version_minor = 0;
     status->version_patch = 0;
-
-    /* Check if dpkg binary exists */
-    if (check_dpkg_binary() != 0) {
-        return -1;
-    }
-
+    if (dpkg_verify_installation() != 0) return -2;
     status->installed = 1;
-
-    /* Version: 1.22.6 (hard-coded for now) */
-    status->version_major = 1;
-    status->version_minor = 22;
-    status->version_patch = 6;
-
+    /* Version numbers are intentionally not invented.  The executable probe is
+     * the authority until a bounded parser is added. */
     return 0;
 }

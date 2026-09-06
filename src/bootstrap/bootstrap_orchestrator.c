@@ -1,131 +1,113 @@
-/* Bootstrap orchestrator — P0.1-P0.4 integration */
+/*
+ * RAFCODEPHI freestanding bootstrap orchestrator v2.
+ *
+ * Order is intentionally causal:
+ *   materialize payload -> validate dpkg -> probe apt/pkg -> probe proot.
+ * A missing/skipped stage can never be promoted to success.
+ */
 
 #include "freestanding.h"
-#include "syscall_arm64.h"
+#include "syscall_arm.h"
 
-/* External functions from modules */
-extern int bootstrap_main(void);
 extern int extract_bootstrap_payload(void);
 extern int dpkg_install_real(void);
-extern int seal_receipt_complete(struct Receipt *receipt, const char *json_data, uint32_t json_len);
-extern int verify_receipt_sha256(struct Receipt *receipt, const char *json_data, uint32_t json_len);
-
-#define LOG_TAG "BOOTSTRAP-ORCH"
+extern int package_stack_probe_real(void);
+extern int package_stack_local_repo_present(void);
+extern int bootstrap_main(void); /* RAF-NINJA proot probe adapter */
 
 static int64_t log_message(const char *msg, uint32_t len) {
     return syscall_write(2, msg, len);
 }
 
-/* P0.4: Validate receipt — block fake "success" on skip paths */
-typedef struct {
-    int extracted;
-    int dpkg_installed;
-    int apt_configured;
-    int restart_count;
-    int skip_count;
-} BootstrapProgress;
+enum RafBootstrapStage {
+    RAF_STAGE_BEGIN = 0,
+    RAF_STAGE_PAYLOAD = 1,
+    RAF_STAGE_DPKG = 2,
+    RAF_STAGE_PKG = 3,
+    RAF_STAGE_PROOT = 4,
+    RAF_STAGE_READY_FOR_DEVICE_SMOKE = 5,
+};
 
-static int validate_receipt_state(struct Receipt *receipt, BootstrapProgress *progress) {
-    /* If restart_count > 2, receipt is invalid */
-    if (progress->restart_count > 2) {
-        log_message("ERROR: restart count exceeded\n", 31);
-        return -1;
+struct RafBootstrapReceipt {
+    uint32_t stage;
+    int32_t payload_preexisting;
+    int32_t local_repo_present;
+    int32_t failure_stage;
+    int32_t failure_code;
+    int32_t claim_allowed_pkg_runtime;
+    int32_t claim_allowed_device_runtime;
+};
+
+static void receipt_init(struct RafBootstrapReceipt *r) {
+    r->stage = RAF_STAGE_BEGIN;
+    r->payload_preexisting = 0;
+    r->local_repo_present = 0;
+    r->failure_stage = 0;
+    r->failure_code = 0;
+    r->claim_allowed_pkg_runtime = 0;
+    r->claim_allowed_device_runtime = 0;
+}
+
+static int fail(struct RafBootstrapReceipt *r, int stage, int code, const char *msg, uint32_t len) {
+    r->failure_stage = stage;
+    r->failure_code = code;
+    (void)log_message(msg, len);
+    return code ? code : -1;
+}
+
+int bootstrap_orchestrator_run(struct RafBootstrapReceipt *receipt) {
+    if (!receipt) return -100;
+    receipt_init(receipt);
+
+    (void)log_message("RAF-BOOTSTRAP: materialize payload\n", 35);
+    int rc = extract_bootstrap_payload();
+    if (rc != 0 && rc != 1) {
+        return fail(receipt, RAF_STAGE_PAYLOAD, rc,
+                    "RAF-BOOTSTRAP: payload FAIL\n", 28);
     }
+    receipt->payload_preexisting = (rc == 1);
+    receipt->stage = RAF_STAGE_PAYLOAD;
 
-    /* If skip_count > 0 but marked as "success", reject */
-    if (progress->skip_count > 0 && receipt->exit_code == 0) {
-        log_message("ERROR: receipt marked success but stages skipped\n", 51);
-        return -2;
+    (void)log_message("RAF-BOOTSTRAP: validate dpkg\n", 29);
+    rc = dpkg_install_real();
+    if (rc != 0) {
+        return fail(receipt, RAF_STAGE_DPKG, rc,
+                    "RAF-BOOTSTRAP: dpkg FAIL\n", 25);
     }
+    receipt->stage = RAF_STAGE_DPKG;
 
-    /* Validate phi_fst coherence range [0, 1] in Q16 */
-    if (receipt->phi_fst > 0x10000) {
-        log_message("ERROR: phi_fst out of range\n", 30);
-        return -3;
+    (void)log_message("RAF-BOOTSTRAP: probe apt/pkg\n", 29);
+    rc = package_stack_probe_real();
+    if (rc != 0) {
+        return fail(receipt, RAF_STAGE_PKG, rc,
+                    "RAF-BOOTSTRAP: pkg stack FAIL\n", 30);
     }
+    receipt->local_repo_present = package_stack_local_repo_present();
+    receipt->stage = RAF_STAGE_PKG;
 
-    /* Validate attractor range [0, 40] — 41-state toroid (BUG-02 resolved) */
-    if (receipt->attractor > 40) {
-        log_message("ERROR: attractor out of range [0..40]\n", 39);
-        return -4;
+    (void)log_message("RAF-BOOTSTRAP: RAF-NINJA proot\n", 32);
+    rc = bootstrap_main();
+    if (rc != 0) {
+        return fail(receipt, RAF_STAGE_PROOT, rc,
+                    "RAF-BOOTSTRAP: proot FAIL\n", 26);
     }
+    receipt->stage = RAF_STAGE_PROOT;
 
+    /* Structural readiness is not pkg runtime proof.  The device smoke owns
+     * pkg update/install promotion. */
+    receipt->stage = RAF_STAGE_READY_FOR_DEVICE_SMOKE;
+    receipt->claim_allowed_pkg_runtime = 0;
+    receipt->claim_allowed_device_runtime = 0;
+    (void)log_message("RAF-BOOTSTRAP: READY_FOR_DEVICE_SMOKE\n", 38);
     return 0;
 }
 
-/* Main bootstrap orchestration */
 int bootstrap_orchestrator_main(void) {
-    struct Receipt receipt;
-    struct BootstrapProgress progress;
-
-    /* Initialize */
-    receipt.magic = 0;
-    receipt.stage = 0;
-    receipt.exit_code = 1;  /* Assume failure until proven otherwise */
-    progress.extracted = 0;
-    progress.dpkg_installed = 0;
-    progress.apt_configured = 0;
-    progress.restart_count = 0;
-    progress.skip_count = 0;
-
-    log_message("[ORCH] Starting bootstrap orchestration\n", 40);
-
-    /* P0.1: Initialize proot */
-    log_message("[ORCH] P0.1: Bootstrap main\n", 29);
-    int ret = bootstrap_main();
-    if (ret != 0) {
-        log_message("[ORCH] P0.1 failed\n", 19);
-        progress.skip_count++;
-    }
-
-    /* P0.3.1: Extract payload */
-    log_message("[ORCH] P0.3.1: Extract payload\n", 32);
-    ret = extract_bootstrap_payload();
-    if (ret == 0) {
-        progress.extracted = 1;
-        log_message("[ORCH] Payload extracted\n", 26);
-    } else if (ret == -3) {
-        log_message("[ORCH] Gzip decompression not implemented, skipping\n", 52);
-        progress.skip_count++;
-    } else {
-        log_message("[ORCH] Extract failed\n", 22);
-        progress.skip_count++;
-    }
-
-    /* P0.3.2: Install dpkg */
-    log_message("[ORCH] P0.3.2: Install dpkg\n", 29);
-    ret = dpkg_install_real();
-    if (ret == 0) {
-        progress.dpkg_installed = 1;
-        log_message("[ORCH] dpkg installed\n", 22);
-    } else {
-        log_message("[ORCH] dpkg install failed\n", 28);
-        progress.skip_count++;
-    }
-
-    /* P0.4: Validate receipt state */
-    log_message("[ORCH] P0.4: Validate receipt state\n", 36);
-    ret = validate_receipt_state(&receipt, &progress);
-    if (ret != 0) {
-        log_message("[ORCH] Receipt validation failed\n", 33);
-        receipt.exit_code = 1;
-        return ret;
-    }
-
-    /* Mark success if critical paths completed */
-    if (progress.dpkg_installed && progress.skip_count == 0) {
-        receipt.exit_code = 0;
-        log_message("[ORCH] Bootstrap successful\n", 28);
-    } else {
-        log_message("[ORCH] Bootstrap incomplete (skip_count > 0)\n", 45);
-    }
-
-    return receipt.exit_code;
+    struct RafBootstrapReceipt receipt;
+    return bootstrap_orchestrator_run(&receipt);
 }
 
-/* Entry point */
 int main(void) {
-    int ret = bootstrap_orchestrator_main();
-    syscall_exit(ret);
-    return ret;  /* unreachable */
+    int rc = bootstrap_orchestrator_main();
+    syscall_exit(rc == 0 ? 0 : 1);
 }
