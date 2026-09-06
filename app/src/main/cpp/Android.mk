@@ -1,5 +1,9 @@
 LOCAL_PATH:= $(call my-dir)
 
+# RAFCODEPHI default: use the repository's drop-in no-malloc implementation.
+# Set RAFAELIA_NO_MALLOC=0 explicitly to exercise the legacy heap-capable path.
+RAFAELIA_NO_MALLOC ?= 1
+
 # Bootstrap library
 include $(CLEAR_VARS)
 LOCAL_MODULE := libtermux-bootstrap
