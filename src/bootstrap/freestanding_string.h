@@ -7,7 +7,8 @@
  * No external dependencies: pure freestanding C, no libc.
  */
 
-#pragma once
+#ifndef FREESTANDING_STRING_H
+#define FREESTANDING_STRING_H
 
 #include <stdint.h>
 #include <stddef.h>
