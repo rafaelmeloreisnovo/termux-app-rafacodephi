@@ -1,120 +1,191 @@
 # RAFAELIA / VECTRA_OS — Bug Master Index
-> Repositório: `exacordex-crypto/termux-app-rafacodephi`
-> Fork chain: `termux/termux-app` → `rafaelmeloreisnovo` → `exacordex-crypto`
-> Data da análise: 2025-06
-> Commits analisados: 2.499 (branch `master`)
 
----
+> Repository atual: `rafaelmeloreisnovo/termux-app-rafacodephi`
+> Baseline documental auditado: `b207970fc7a8630a534956cb544350cfd61ba33a`
+> Este arquivo é um índice navegável. Documentos antigos podem preservar estados históricos, hipóteses e nomes de forks anteriores; eles não ultrapassam o source atual.
 
-## Sumário executivo
+## 1. Regra de leitura
 
-O repositório contém **4 bugs críticos catalogados no AGENTS.md** e **N bugs estruturais
-inferidos** da análise de código. Nenhum dos 4 pode ser fechado com patch simples — todos
-requerem intervenção cirúrgica nos invariantes do sistema.
+Use a seguinte precedência:
 
-| ID | Componente | Tipo | Severidade | Estado |
-|----|-----------|------|------------|--------|
-| **BUG-01** | **`attractor_table`** | **Faltante** | **✅ RESOLVED** | **41 attractors generated + validated (SHA-256: 21bd04e6...)** |
-| **BUG-02** | **Atrator #22** | **Estrutural/Teórico** | **✅ RESOLVED** | **Option 1: Removed #22 (41-state toroid)** |
-| **BUG-03** | **`vectra_pulse.S`** | **AArch64 ASM** | **✅ RESOLVED** | **All 4 bugs fixed: load-use hazard, indexing, barrier, phase wrap** |
-| **BUG-04** | **Bootstrap** | **Hardcode** | **🟡 MÉDIO** | **✅ RESOLVED** |
-| **BUG-05** | **`ZrManifest`** | **Stack overflow** | **🔴 CRÍTICO** | **✅ RESOLVED** |
-| **BUG-06** | **`CtiScanner`** | **Race condition** | **✅ RESOLVED** | **Memory barriers for TOROID mode (dmb ish)** |
-| **BUG-07** | **Build pipeline** | **Hash mismatch** | **🟡 MÉDIO** | **✅ RESOLVED** |
-| **BUG-08** | **RAFAELIA pipeline** | **Invariante** | **✅ RESOLVED** | **φ = (1-H)·C validated φ ∈ [0, 1]** |
-
----
-
-## Invariantes do sistema (referência)
-
-```
-gcd(Δr, R) = 1      onde R = 41 (corrigido de 42 → 41, via BUG-02 Option 1)
-|A| = 41             tamanho da attractor_table (41 attractors, índices 0-40)
-period(BitOmega) = 41
-φ = (1 - H) · C     Lyapunov (convergência)
-x0 = state ptr
-x1 = C   (coerência)
-x2 = H   (entropia)
-x3 = phase
-x4 = attractor [0..40]
+```text
+CURRENT SOURCE / TEST / WORKFLOW
+  > CURRENT CONTRACT
+  > CURRENT RECEIPT / REPORT
+  > NORMATIVE DOC
+  > HISTORICAL DOC
+  > INFERRED / HYPOTHETICAL SNIPPET
 ```
 
----
+Estados aceitos neste índice:
 
-## Dependências entre bugs
-
+```text
+SOURCE_OBSERVED
+TEST_ENFORCED
+WORKFLOW_WIRED
+BUILD_PROVEN
+RUNTIME_PROVEN
+DEVICE_PROVEN
+REPRODUCED
+HISTORICAL
+HYPOTHESIS
+STALE
+TOKEN_VAZIO
 ```
-BUG-02 (VOID #22)
-    └─→ bloqueia BUG-01 (attractor_table incompleta)
-           └─→ bloqueia BUG-03 (vectra_pulse.S sem tabela válida)
-                  └─→ bloqueia validação de φ = (1-H)·C (BUG-08)
 
-BUG-04 (bootstrap) é independente — pode ser resolvido em paralelo
-BUG-05 (ZrManifest stack) é independente — fix cirúrgico
-BUG-06 (race condition CtiScanner) depende de BUG-03 ser estável
-BUG-07 (BLAKE3 skip) é independente
+`RESOLVED` sem apontamento de evidência não é suficiente para afirmar estado corrente.
+
+## 2. Regra crítica de escopo — 41 e 42 coexistem em módulos diferentes
+
+A auditoria do baseline encontrou duas cardinalidades reais em superfícies distintas:
+
+### RMR/VECTRA pulse
+
+```text
+rmr/Rrr/attractor_table.h
+rmr/Rrr/attractor_table.c
+rmr/Rrr/vectra_pulse.S
 ```
 
-**Ordem de resolução obrigatória:**
-1. BUG-02 → resolução teórica do VOID paradox
-2. BUG-01 → geração completa da attractor_table com os 42 estados
-3. BUG-03 → fix dos 4 bugs AArch64 com tabela válida como base
-4. BUG-04, BUG-05, BUG-06, BUG-07, BUG-08 em paralelo
+Estado observado:
 
----
+```text
+count/period = 41
+index range  = 0..40
+```
 
-## Módulos em estado Production (não tocar)
+### RAFAELIA Verbovivo graph
 
-| Módulo | Arquivo | Status |
-|--------|---------|--------|
-| CTI BITSTACK | `rmr/Rrr/cti_raw_reader.h/.c` | ✅ Production (PR #190) |
-| ZIPRAF core | `rmr/Rrr/zipraf_index.h/.c` | ✅ Production (PR #190) |
-| RAFAELIA_MATH_FORMULAS | `rmr/Rrr/RAFAELIA_MATH_FORMULAS.md` | ✅ Spec canônica |
+```text
+rafaelia/verbovivo_graph.h
+rafaelia/verbovivo_graph.c
+rafaelia/t7_toroid_builder.c
+```
 
----
+Estado observado:
 
-## Áreas de risco não catalogadas formalmente
+```text
+ATTRACTOR_COUNT = 42
+```
 
-### 1. Sequência Fibonacci-Rafael e alinhamento de estados
-O mapeamento Δ_Rafael das sementes Fibonacci para estados do atrator
-não está explicitamente provado ser bijetivo para os 42 estados.
-F(8)=21, F(9)=34 — o intervalo [22..33] não tem semente Fibonacci
-direta, o que implica que ~12 estados do atrator dependem de
-interpolação não especificada.
+Portanto:
 
-### 2. ZrManifest em uso dinâmico
-O manifesto ZIPRAF de ~59KB **deve ser `static`**. Qualquer uso em
-stack de thread causará stack overflow silencioso no Android
-(stack size padrão de thread = 1MB em NDK, mas em Termux pode ser
-menor). Ver BUG-05.
+```text
+RMR_ATTRACTOR_COUNT(41) != VERBOVIVO_ATTRACTOR_COUNT(42)
+```
 
-### 3. Page alignment 16KB em Android 15/16
-`-Wl,-z,max-page-size=16384` está configurado, mas segmentos de
-dados do `ZrManifest` estático precisam de `__attribute__((aligned(16384)))`
-para garantir que não cruzem fronteiras de página.
+Não existe autorização para "uniformizar" os dois por documentação. Toda claim de cardinalidade deve nomear o módulo.
 
-### 4. Modo DELTA_MISS do CtiScanner
-O modo de varredura `DELTA_MISS` do CTI depende implicitamente do
-`attractor_table` para calcular o delta de missão. Com 40/42 estados
-ausentes, o modo DELTA_MISS produz comportamento indefinido.
+## 3. Índice dos BUG-01..08
 
----
+| ID | Componente | Documento histórico/específico | Estado documental atual | Evidência/apontamento atual |
+|---|---|---|---|---|
+| BUG-01 | `rmr/Rrr/attractor_table` | `docs/01_BUG_ATTRACTOR_TABLE_INCOMPLETA.md` | narrativa antiga 42-state/stub é `STALE`; implementação RMR atual é `SOURCE_OBSERVED` | `rmr/Rrr/attractor_table.c`, `.h`, `attractor_table_validator.c`, `attractor-table-complete-gate` |
+| BUG-02 | cardinalidade/VOID histórico do RMR | `docs/02_BUG_VOID_PARADOX_ATRATOR_22.md`, `docs/BUG02_DECISION_RECORD.md` | decisão histórica deve ser lida junto do RMR source atual | RMR usa 41; isso não altera automaticamente Verbovivo 42 |
+| BUG-03 | `rmr/Rrr/vectra_pulse.S` AArch64 | `docs/03_BUG_VECTRA_PULSE_AARCH64.md` | implementação atual é `SOURCE_OBSERVED`; snippets inferidos antigos foram superseded | `rmr/Rrr/vectra_pulse.S` + gates/testes correspondentes |
+| BUG-04 | bootstrap/package/prefix | `docs/04_BUG_BOOTSTRAP_E_SISTEMICOS.md` | narrativa antiga de hardcode/sharedUserId parcialmente `STALE`; contrato atual source-built/prefix-safe estrutural | `docs/BOOTSTRAP_SOURCE_CONTRACT.md`, API access test, workflows beta |
+| BUG-05 | `ZrManifest` / stack | `docs/04_BUG_BOOTSTRAP_E_SISTEMICOS.md` | mitigação estrutural observada | `zipraf_index.h`, `zipraf_manifest_pool.*`, records específicos |
+| BUG-06 | CTI / concorrência | `docs/04_BUG_BOOTSTRAP_E_SISTEMICOS.md` | exemplo `scan_idx` inferido não descreve o scanner corrente | `cti_raw_reader.c`, `cti_scanner_barrier.h`, race validator/gate |
+| BUG-07 | integridade/hash | `docs/04_BUG_BOOTSTRAP_E_SISTEMICOS.md` | snippet BLAKE3 inferido é `STALE/HYPOTHESIS` | scripts/workflows/receipts reais são autoridade |
+| BUG-08 | invariante `φ=(1-H)·C` | `docs/04_BUG_BOOTSTRAP_E_SISTEMICOS.md` | macro hipotética antiga não é autoridade; implementação/gate atuais existem | `lyapunov_convergence.c`, validator, Makefile gate |
 
-## Checksums de arquivos críticos (para validação futura)
+## 4. Contradições documentais já detectadas
 
-| Arquivo | Tamanho esperado | Observação |
-|---------|-----------------|------------|
-| `cti_raw_reader.h` | 89 linhas | Especificação completa |
-| `zipraf_index.h` | ~120 linhas | 8 modos × 33 níveis |
-| `attractor_table.c` | **FALTANTE** | Deve ter 42 entradas |
-| `vectra_pulse.S` | Parcial | 4 bugs conhecidos |
+### 4.1 BUG-01
 
----
+O documento antigo descrevia `attractor_table` como ausente/stub, mas o baseline contém o source/validator RMR. Logo, "arquivo faltante" é `STALE` como descrição do baseline atual.
 
-## Referências
+### 4.2 Cardinalidade
 
-- `AGENTS.md` (root do repositório) — fonte primária dos BUG-01..04
-- `rmr/Rrr/RAFAELIA_MATH_FORMULAS.md` — especificação matemática canônica
-- `rmr/Rrr/cti_raw_reader.h` — contrato CTI BITSTACK
-- PR #190 — merge de CTI BITSTACK + ZIPRAF
-- VECTRA_OS.md — especificação ABI AArch64
+"42-state" não é globalmente errado: é source real do módulo Verbovivo. O erro é usar 42 como autoridade sobre o RMR atual, ou usar 41 para reescrever Verbovivo sem source-level decision.
+
+### 4.3 BUG-04 / sharedUserId
+
+O teste corrente `tests/test_termux_api_access_contract.py` exige:
+
+```text
+android:sharedUserId NOT present in main manifest
+TERMUX_API permission protectionLevel=signature
+```
+
+Logo, a afirmação de presença atual de `sharedUserId="com.termux"` é `STALE` no baseline auditado.
+
+### 4.4 Prefixo
+
+Prefixo corrente normativo da superfície Termux RAFCODEPHI:
+
+```text
+/data/data/com.termux.rafacodephi/files/usr
+```
+
+`/data/data/com.termux/files/usr` só deve aparecer como upstream/legacy/risk ou registro histórico.
+
+### 4.5 Pin de termux-packages
+
+Não existe um único "pin global" documentalmente seguro. Há:
+
+- canais `canonical`/`candidate` no contrato semântico;
+- workflow beta principal com SHA exato próprio;
+- possibilidade de exact SHA no `workflow_dispatch`.
+
+Sempre registrar rota + selector/ref + commit resolvido.
+
+## 5. Bootstrap/CI — incidente de falha tardia
+
+O workflow `.github/workflows/beta-build-libllvm18-unblock.yml` foi endurecido para:
+
+1. resolver candidate pelo contrato;
+2. preflight da capacidade da fonte antes do build caro;
+3. receipt estrito somente em `success()`;
+4. em falha upstream, `UPSTREAM_FAILURE_EVIDENCE_INCOMPLETE`;
+5. não mascarar a primeira falha com downstream evidence ausente.
+
+```text
+producer failed → produced artifact absent = consequence
+not automatically root cause
+```
+
+## 6. Áreas que permanecem sem promoção automática
+
+Exigem evidência própria:
+
+- runtime físico ARM32;
+- runtime físico ARM64;
+- package repository custom publicado/assinado;
+- `pkg update` real em device;
+- `pkg install` real em device;
+- dual-ARM matrix física;
+- release final assinada/reproduzida independentemente.
+
+Enquanto não observados:
+
+```text
+physical_android=TOKEN_VAZIO
+claim_allowed=false
+```
+
+## 7. Documentos históricos e normativos
+
+Os antigos documentos BUG-01, BUG-03, BUG-04, análise estrutural e plano de ação foram reclassificados/revisados na auditoria documental de 2026-09-06. Outros relatórios antigos podem preservar owner anterior, estado 42-state do RMR histórico ou instruções já executadas.
+
+Preservar história não significa dar a ela precedência sobre o source atual.
+
+Documentos normativos para começar:
+
+- `AGENTS.md`
+- `CLAUDE.md`
+- `docs/AUDIT_CLAIMS_POLICY.md`
+- `docs/BOOTSTRAP_SOURCE_CONTRACT.md`
+- `docs/ENGINEERING_RUNBOOK_RAFCODEPHI.md`
+- `docs/RUNTIME_TRUTH_TABLE.md`
+- `docs/audits/DOCUMENTATION_CODE_ALIGNMENT_AUDIT_20260906.md`
+
+## 8. Invariantes do índice
+
+```text
+BUG_STATUS_CURRENT = evidence(current_source, current_test, current_receipt)
+BUG_STATUS_CURRENT != historical_sentence
+MODULE_A_CONSTANT != MODULE_B_CONSTANT unless an explicit bridge says so
+```
+
+Se o source atual ainda não foi examinado para um claim específico, usar `TOKEN_VAZIO`/`HYPOTHESIS`, não preencher por memória.
