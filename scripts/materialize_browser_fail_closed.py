@@ -50,8 +50,9 @@ NEW_BLOCK = """            PS(\"  [TLS] NOTA: crypto incompleto — HTTPS será 
         return-2;
 """.rstrip("\n")
 
+# A configuração inicial `port=80/use_tls=0` é válida para URLs HTTP. O que é
+# proibido é a sequência de *downgrade após uma tentativa HTTPS* e suas marcas.
 FORBIDDEN = (
-    "ctx->port=80u;ctx->use_tls=0;",
     "[FALLBACK] Usando HTTP para demo",
     "crypto não implementado — usando HTTP para demo",
 )
@@ -87,11 +88,13 @@ def materialize(source_path: Path, output_path: Path) -> dict[str, object]:
         1,
     )
 
+    downgrade_block_present = OLD_BLOCK in secured
     forbidden_present = [token for token in FORBIDDEN if token in secured]
     required_missing = [token for token in REQUIRED if token not in secured]
-    if forbidden_present or required_missing:
+    if downgrade_block_present or forbidden_present or required_missing:
         raise ValueError(
-            f"fail-closed materialization invariant failed: "
+            "fail-closed materialization invariant failed: "
+            f"downgrade_block_present={downgrade_block_present}, "
             f"forbidden={forbidden_present}, missing={required_missing}"
         )
 
@@ -104,6 +107,7 @@ def materialize(source_path: Path, output_path: Path) -> dict[str, object]:
         "source": str(source_path),
         "output": str(output_path),
         "plaintext_downgrade_removed": True,
+        "http_default_preserved": True,
         "tls_implemented": False,
         "https_policy": "FAIL_CLOSED",
         "claim_allowed_tls": False,

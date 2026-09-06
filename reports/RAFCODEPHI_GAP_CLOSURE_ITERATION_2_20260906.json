@@ -1,0 +1,98 @@
+{
+  "schema": "rafcodephi-gap-closure-iteration/v2",
+  "iteration": 2,
+  "observed_on": "2026-09-06",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "work_branch": "audit/close-value-evidence-gaps-20260906",
+  "checkpoint_before_receipt": "de87aacc849c704265eb161e8a7d92f04d436e8b",
+  "contract": {
+    "vision_ne_code": true,
+    "code_ne_artifact": true,
+    "artifact_ne_execution": true,
+    "execution_ne_evidence": true,
+    "evidence_ne_claim": true,
+    "token_vazio_ne_zero": true
+  },
+  "closures": [
+    {
+      "id": "GAP-AUDITOR-FALSE-GREEN",
+      "state": "IMPLEMENTED_WITH_REGRESSION_GUARD",
+      "evidence": "shell command-substitution defect removed; regression guard added"
+    },
+    {
+      "id": "GAP-ACTION-REF-POLICY",
+      "state": "CI_PROVEN_ON_PREVIOUS_CHECKPOINT",
+      "evidence": "GitHub Actions Reference Audit passed after setup-java v6 policy update"
+    },
+    {
+      "id": "GAP-BROWSER-FAIL-CLOSED-FALSE-POSITIVE",
+      "state": "CI_PROVEN_ON_PREVIOUS_CHECKPOINT",
+      "evidence": "Rafaelia Native Safety passed after Browser/protection correction"
+    },
+    {
+      "id": "GAP-FREESTANDING-SYSCALL-MULTI-ABI",
+      "state": "IMPLEMENTED_AWAITING_TARGET_BUILD_PROOF",
+      "architectures": ["armeabi-v7a", "arm64-v8a", "x86", "x86_64"]
+    },
+    {
+      "id": "GAP-BAREMETAL-LIBC-ORPHANS",
+      "state": "IMPLEMENTED_DEFAULT_NOMALLOC_PATH_AWAITING_TARGET_BUILD_PROOF",
+      "evidence": "default termux-baremetal source moved to baremetal_nomalloc.c"
+    },
+    {
+      "id": "GAP-FREESTANDING-LOGGER-DUPLICATE-SYSCALL",
+      "state": "IMPLEMENTED_AWAITING_TARGET_BUILD_PROOF",
+      "evidence": "logger now reuses canonical multi-ABI freestanding_syscalls.h"
+    },
+    {
+      "id": "GAP-NEON-INTRINSICS-DECLARATION",
+      "state": "IMPLEMENTED_AWAITING_TARGET_BUILD_PROOF",
+      "evidence": "ARM lanes explicitly include arm_neon.h; intentional empty assignment loop no longer promoted to fatal style error"
+    },
+    {
+      "id": "GAP-PAGE-SIZE-RUNTIME-ASSUMPTION",
+      "state": "IMPLEMENTED_AWAITING_RUNTIME_PROOF",
+      "evidence": "get_hw_profile interposed with AT_PAGESZ read from /proc/self/auxv; failure clears page-size claim instead of guessing"
+    },
+    {
+      "id": "GAP-ACTION-POLICY-FROZEN-DATE-TEST",
+      "state": "IMPLEMENTED_AWAITING_CURRENT_RUN_PROOF",
+      "evidence": "test validates ISO policy date >= 2026-09-06 and current tracked majors rather than requiring obsolete literal"
+    },
+    {
+      "id": "GAP-REAL-PKG-PREFLIGHT-NO-RECEIPT",
+      "state": "IMPLEMENTED_AWAITING_CURRENT_RUN_PROOF",
+      "evidence": "preflight-state.json and logs are created before gates; always-summary and artifact preserve fail-closed evidence"
+    }
+  ],
+  "external_configuration_gaps": [
+    {
+      "id": "GAP-PROVIDER-PROTECTION-RULESET",
+      "state": "OPEN_EXTERNAL_CONFIGURATION",
+      "ruleset_id": 21908888,
+      "observed_failures": [
+        "missing required_status_checks rule",
+        "pull_request rule is not solo-safe plus thread-resolution enforced",
+        "required status context provider-protection is absent"
+      ],
+      "always_bypass_integrations_observed": []
+    }
+  ],
+  "token_vazio": [
+    "ARM32_PHYSICAL_DEVICE_EXECUTION",
+    "ARM64_PHYSICAL_DEVICE_EXECUTION",
+    "DUAL_ARM_PHYSICAL_MATRIX",
+    "DEVICE_REAL_PKG_VALIDATED",
+    "PHYSICAL_PKG_UPDATE",
+    "PHYSICAL_PKG_INSTALL_SMOKE",
+    "PHYSICAL_DNS_TLS_REPOSITORY_RECEIPT",
+    "INDEPENDENT_EXTERNAL_REPRODUCTION",
+    "VERIFIED_COMMERCIAL_TRACTION"
+  ],
+  "claims": {
+    "all_ci_proven": false,
+    "device_proven": false,
+    "release_allowed": false,
+    "market_value_certified": false
+  }
+}

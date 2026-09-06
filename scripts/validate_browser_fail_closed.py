@@ -13,8 +13,12 @@ ROOT = Path(__file__).resolve().parents[1]
 MATERIALIZER = ROOT / "scripts/materialize_browser_fail_closed.py"
 MATRIX = ROOT / "configs/operational-technical-coherence.json"
 
+# HTTP URLs legitimately begin with port=80/use_tls=0. The forbidden condition
+# is the reconnect-to-HTTP sequence that occurs after an HTTPS attempt.
+DOWNGRADE_SIGNATURE = """CLOSE(ctx->fd);
+        ctx->port=80u;ctx->use_tls=0;
+        ctx->fd=SOCKET();"""
 FORBIDDEN = (
-    "ctx->port=80u;ctx->use_tls=0;",
     "[FALLBACK] Usando HTTP para demo",
     "crypto não implementado — usando HTTP para demo",
 )
@@ -49,10 +53,19 @@ def main() -> int:
         check("materializer_exit_zero", completed.returncode == 0, completed.stdout + completed.stderr)
 
         materialized = output.read_text(encoding="utf-8") if output.is_file() else ""
+        downgrade_evidence = []
+        if DOWNGRADE_SIGNATURE in materialized:
+            downgrade_evidence.append("https_reconnect_to_http_signature")
+        downgrade_evidence.extend(token for token in FORBIDDEN if token in materialized)
         check(
             "plaintext_downgrade_absent",
-            all(token not in materialized for token in FORBIDDEN),
-            [token for token in FORBIDDEN if token in materialized],
+            not downgrade_evidence,
+            downgrade_evidence,
+        )
+        check(
+            "http_default_preserved",
+            "ctx->port=80u;ctx->use_tls=0;" in materialized,
+            "HTTP default initialization remains valid and is not itself a downgrade",
         )
         check(
             "fail_closed_markers_present",

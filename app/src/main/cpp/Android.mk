@@ -1,5 +1,9 @@
 LOCAL_PATH:= $(call my-dir)
 
+# RAFCODEPHI default: use the repository's drop-in no-malloc implementation.
+# Set RAFAELIA_NO_MALLOC=0 explicitly to exercise the legacy heap-capable path.
+RAFAELIA_NO_MALLOC ?= 1
+
 # Bootstrap library
 include $(CLEAR_VARS)
 LOCAL_MODULE := libtermux-bootstrap
@@ -34,19 +38,20 @@ else
 LOCAL_SRC_FILES := lowlevel/baremetal.c
 endif
 endif
-LOCAL_SRC_FILES += lowlevel/baremetal_jni.c lowlevel/rafaelia_gpu_orchestrator.c lowlevel/rafaelia_commit_gate_ll.c lowlevel/bootstrap_baremetal_guard.c lowlevel/bootstrap_baremetal_jni.c
+LOCAL_SRC_FILES += lowlevel/baremetal_jni.c lowlevel/rafaelia_gpu_orchestrator.c lowlevel/rafaelia_commit_gate_ll.c lowlevel/bootstrap_baremetal_guard.c lowlevel/bootstrap_baremetal_jni.c lowlevel/hw_profile_pagesize_wrap.c
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
     LOCAL_SRC_FILES += lowlevel/baremetal_asm.S
-    LOCAL_CFLAGS += -DHAS_BM_NEON_ASM=1
+    LOCAL_CFLAGS += -DHAS_BM_NEON_ASM=1 -include arm_neon.h
 endif
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
     LOCAL_SRC_FILES += lowlevel/baremetal_asm.S
-    LOCAL_CFLAGS += -DHAS_BM_NEON_ASM=1
+    LOCAL_CFLAGS += -DHAS_BM_NEON_ASM=1 -include arm_neon.h
 endif
 LOCAL_CFLAGS += -std=c11 -Wall -Wextra -Werror -Os -fno-stack-protector -fno-common
 LOCAL_CFLAGS += -ffast-math
 LOCAL_CFLAGS += -ffunction-sections -fdata-sections
 LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
+LOCAL_LDFLAGS += -Wl,--wrap=get_hw_profile
 
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
     LOCAL_CFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=neon -ftree-vectorize

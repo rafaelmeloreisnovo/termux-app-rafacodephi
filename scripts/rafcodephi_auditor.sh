@@ -279,7 +279,7 @@ module_report() {
     echo
     echo "- Medição local, sem root e sem alteração agressiva de governor/scheduler."
     echo "- Benchmarks são leves para preservar aparelhos ARMv7 e ambientes com pouca RAM."
-    echo "- Métricas `skipped` indicam ausência de ferramenta ou permissão, não falha estrutural."
+    echo '- Métricas `skipped` indicam ausência de ferramenta ou permissão, não falha estrutural.'
     echo "- Regressão real exige histórico e múltiplas rodadas em condições térmicas comparáveis."
     echo
     echo "## Retroalimentação R3"

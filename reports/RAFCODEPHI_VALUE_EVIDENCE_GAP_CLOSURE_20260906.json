@@ -1,0 +1,49 @@
+{
+  "schema": "rafcodephi-value-evidence-gap-closure/v1",
+  "generated_at_utc": "2026-09-06T11:00:00Z",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "base_branch": "master",
+  "base_sha": "73c9397094c91470a68231a0646ce1e1a33c436f",
+  "work_branch": "audit/close-value-evidence-gaps-20260906",
+  "evidence": {
+    "source_observed": true,
+    "license_boundary_observed": true,
+    "ci_observed": true,
+    "base_check_runs_observed": 28,
+    "auditor_job": {
+      "run_id": 34028794355,
+      "job_id": 101474437919,
+      "base_conclusion": "success",
+      "artifact_id": 9987913462,
+      "artifact_sha256": "9098463fbfe05c3a0c17eaba34cfd8d831fde162aae054e39d0d6962093b9891",
+      "defect_observed": "scripts/rafcodephi_auditor.sh: line 282: skipped: command not found",
+      "defect_class": "false_green_shell_command_substitution_in_markdown_echo",
+      "fix_implemented": true,
+      "regression_guard_implemented": true,
+      "fix_ci_proven": "TOKEN_VAZIO"
+    }
+  },
+  "gates": {
+    "apk_sha_bound_to_target_commit": "TOKEN_VAZIO",
+    "arm32_device_receipt": "TOKEN_VAZIO",
+    "arm64_device_receipt": "TOKEN_VAZIO",
+    "dual_arm_matrix": "TOKEN_VAZIO",
+    "device_real_pkg_validated": "TOKEN_VAZIO",
+    "production_release_signing": "TOKEN_VAZIO",
+    "external_reproduction": "TOKEN_VAZIO",
+    "verified_active_users": "TOKEN_VAZIO",
+    "verified_revenue_or_contracts": "TOKEN_VAZIO"
+  },
+  "claims": {
+    "market_value_certified": false,
+    "all_ci_proven": false,
+    "device_proven": false,
+    "reproduced_externally": false
+  },
+  "invariants": [
+    "VISÃO != CÓDIGO != ARTEFATO != EXECUÇÃO != EVIDÊNCIA != CLAIM",
+    "TOKEN_VAZIO != 0",
+    "RECONSTRUCTION_COST != TRANSACTION_PRICE",
+    "UPSTREAM_CODE != EXCLUSIVE_RAFCODEPHI_IP"
+  ]
+}

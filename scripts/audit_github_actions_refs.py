@@ -18,18 +18,20 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-POLICY_VERIFIED_ON = "2026-08-08"
+POLICY_VERIFIED_ON = "2026-09-06"
 POLICY_SOURCES = {
     "actions/checkout": "https://github.com/actions/checkout/releases",
+    "actions/setup-java": "https://github.com/actions/setup-java/releases",
     "actions/setup-python": "https://github.com/actions/setup-python/releases",
     "android-actions/setup-android": "https://github.com/android-actions/setup-android/releases",
     "softprops/action-gh-release": "https://github.com/softprops/action-gh-release/releases",
 }
 POLICY: dict[str, dict[str, Any]] = {
-    # checkout v7.0.1 was the current release observed on 2026-08-08. v4/v6
-    # remain explicitly accepted for existing controlled workflows.
+    # Dated policy: current majors are verified against official action repositories.
+    # Older explicitly-compatible majors may remain in controlled workflows; this is
+    # reference compatibility only and never proves that a workflow executed.
     "actions/checkout": {"current": 7, "compatible": {4, 6, 7}},
-    "actions/setup-java": {"current": 5, "compatible": {4, 5}},
+    "actions/setup-java": {"current": 6, "compatible": {4, 5, 6}},
     "actions/setup-python": {"current": 7, "compatible": {6, 7}},
     "actions/upload-artifact": {"current": 7, "compatible": {4, 5, 6, 7}},
     "actions/download-artifact": {"current": 8, "compatible": {4, 5, 6, 7, 8}},
