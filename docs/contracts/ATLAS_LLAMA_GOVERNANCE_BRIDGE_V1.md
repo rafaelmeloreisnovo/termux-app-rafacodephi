@@ -1,6 +1,6 @@
 # Atlas × LLaMA × Governance Bridge V1
 
-Status: `CONTRACT_WIRED_PENDING_CI_AND_LOCAL_MODEL_EVIDENCE`
+Status: `CONTRACT_WIRED_PROVIDER_GIT_PINNED_LOCAL_MODEL_EVIDENCE_PENDING`
 
 ## Closed route
 
@@ -22,7 +22,7 @@ The bridge does **not** execute the final read-only runner. This is deliberate s
 
 ## Provider binding
 
-`tools/atlas_llama_governance_bridge.py` requires both a provider file path and its exact SHA-256. A changed provider cannot run under a stale pin.
+`tools/atlas_llama_governance_bridge.py` requires both a provider file path and its exact SHA-256. A changed provider cannot run under a stale runtime pin.
 
 The canonical provider is maintained in `rafaelmeloreisnovo/llamaRafaelia` as:
 
@@ -30,7 +30,13 @@ The canonical provider is maintained in `rafaelmeloreisnovo/llamaRafaelia` as:
 rmrCti/atlas_intent_provider_v1.py
 ```
 
-The exact repository commit is pinned only after that provider change is merged and CI evidence is available. Until then, repository-level pinning remains `TOKEN_VAZIO`; content-level SHA-256 binding is already enforced by the bridge.
+The merged repository identity is pinned by `ATLAS_LLAMA_PROVIDER_PIN_V1.json` to commit:
+
+```text
+7a667531b3411c63349a22b24ed5a7d7a314f79a
+```
+
+This closes the repository-level provider identity gap. The bridge independently requires the exact provider file SHA-256 at invocation time, so a local file cannot gain authority merely by claiming the pinned Git commit.
 
 ## Authority boundaries
 
@@ -83,7 +89,6 @@ absence of evidence != PASS
 
 ## TOKEN_VAZIO retained
 
-- `TV-LLAMA-PROVIDER-MERGED-COMMIT-PIN` until provider PR merge
 - `TV-LLAMA-LOCAL-MODEL-RUNTIME` until exact binary/model hashes and runtime receipt exist
 - `TV-LLAMA-DEVICE-REPRODUCTION` until physical Termux reproduction exists
 - `TV-ATLAS-END-TO-END-MODEL-CAUSAL-USE` until an off/on context causal test is captured
