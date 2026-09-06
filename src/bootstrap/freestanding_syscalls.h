@@ -8,6 +8,9 @@
  * No external dependencies: pure ARM64 SVC-based syscalls.
  */
 
+#ifndef FREESTANDING_SYSCALLS_H
+#define FREESTANDING_SYSCALLS_H
+
 #pragma once
 
 #include <stdint.h>
