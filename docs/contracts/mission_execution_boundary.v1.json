@@ -1,0 +1,86 @@
+{
+  "schema": "rafaelia.mission_execution_boundary/v1",
+  "contract_id": "RAFAELIA-MISSION-EXECUTION-BOUNDARY-V1",
+  "claim_allowed": false,
+  "authorities": {
+    "routing": "rafaelmeloreisnovo/Mapa:ATLAS:X",
+    "orchestration": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "corpus": "source repositories + Drive/NOVOexport",
+    "model_retrieval": "rafaelmeloreisnovo/llamaRafaelia/rmrCti",
+    "longitudinal": "MemRafcode + Drive custody"
+  },
+  "invariants": [
+    "SOURCE!=DERIVED_INDEX!=EXECUTION!=EVIDENCE!=CLAIM",
+    "TOKEN_VAZIO!=0",
+    "DATASET_INFORMS!=MISSION_AUTHORITY",
+    "RETRIEVAL_CONTEXT!=WEIGHT_UPDATE",
+    "LEARN_APPEND_ONLY!=ONLINE_SELF_TRAINING",
+    "CONTINUE_APPROVED_SCOPE!=AUTONOMOUS_GOAL_CREATION",
+    "EXTERNAL_AUTHORITY_REQUIREMENT!=ORCHESTRATOR_PERMISSION",
+    "GREEN_GATE_PROMOTES_ONLY_MEASURED_SCOPE"
+  ],
+  "route": [
+    "MISSION",
+    "ATLAS:X",
+    "NOVO:X",
+    "L:X",
+    "O:X",
+    "T:X",
+    "REL:X",
+    "EVID:X",
+    "GAP:X",
+    "AtlasLLMContextEnvelope",
+    "ContextBundle",
+    "IntentIR",
+    "Governance",
+    "ExecutionPlan",
+    "AuthorizedAction",
+    "ExecutionResult",
+    "ProvenanceReceipt",
+    "LEARN:X"
+  ],
+  "data_modes": {
+    "RETRIEVE_READ_ONLY": "ALLOWED_IF_PROVENANCE_RULES_PASS",
+    "CURATE_DERIVED_INDEX": "ALLOWED_APPEND_ONLY_WITH_SOURCE_IDENTITY",
+    "TRAIN_OR_FINETUNE_WEIGHTS": "DISABLED_UNTIL_SEPARATELY_EXPLICITLY_AUTHORIZED"
+  },
+  "continuation": {
+    "allowed": [
+      "continue_already_authorized_work",
+      "switch_to_independent_safe_lane_when_blocked",
+      "minimal_reversible_evidence_backed_hotfix",
+      "append_receipt_index_and_longitudinal_successor"
+    ],
+    "forbidden": [
+      "invent_new_goal",
+      "invent_permission_or_reviewer",
+      "bypass_provider_or_repository_gate",
+      "promote_missing_runtime_or_device_evidence",
+      "silent_weight_training",
+      "merge_by_implementation_existence_alone"
+    ]
+  },
+  "states": [
+    "SOURCE_BLOCKED",
+    "IMPLEMENTED_PENDING_GATE",
+    "REMOTE_EXECUTION_TOKEN_VAZIO",
+    "EXTERNAL_AUTHORITY_REQUIRED",
+    "RUNTIME_TOKEN_VAZIO",
+    "PHYSICAL_DEVICE_TOKEN_VAZIO",
+    "INDEPENDENT_REVIEW_REQUIRED",
+    "PROVEN_WITHIN_SCOPE",
+    "FINISHED_WITH_EXTERNAL_GATES"
+  ],
+  "priority": [
+    "localized_correctness_or_safety_defect",
+    "provenance_custody_rollback_fail_closed",
+    "execution_build_runtime_binding",
+    "anti_regression_ratchet",
+    "documentation_or_index_drift",
+    "non_correctness_style_debt"
+  ],
+  "learn_semantics": {
+    "sequence": ["observation", "action", "result_evidence", "F_ok", "F_gap", "F_next", "successor_receipt"],
+    "updates_model_weights": false
+  }
+}
