@@ -305,3 +305,5 @@ static inline int64_t freestanding_access(const char *path, int mode) {
 static inline int64_t freestanding_sync(void) { return (int64_t)fs_sc0(FS_NR_sync); }
 static inline int64_t freestanding_fsync(int fd) { return (int64_t)fs_sc1(FS_NR_fsync, fd); }
 static inline int64_t freestanding_fdatasync(int fd) { return (int64_t)fs_sc1(FS_NR_fdatasync, fd); }
+
+#endif /* FREESTANDING_SYSCALLS_H */
