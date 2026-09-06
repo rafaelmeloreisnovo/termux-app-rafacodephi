@@ -1,347 +1,239 @@
-#include "proot_config.h"
 #include "proot_syscall_bridge.h"
-#include "receipt_sealer.c"
-#include "rollback.c"
-#include "watchdog.c"
-#include <stdint.h>
-#include <string.h>
 
-/* RAFCODEΦ Freestanding proot Bootstrap */
-/* Minimal proot: no malloc, no libc, no fork, single-threaded */
-/* Entry point for Android Termux bootstrap pipeline */
+/*
+ * RAFCODEPHI freestanding runtime gate.
+ *
+ * This is deliberately smaller than PRoot/Ninja/pkg themselves. It is the
+ * dependency-free control boundary that probes and execs those package
+ * payloads without libc, malloc, fork, threads, stdio, JNI or shell-command
+ * concatenation.
+ *
+ * Evidence rule:
+ *   found/executable -> OBSERVED
+ *   absent           -> TOKEN_VAZIO
+ * No probe result is promoted to RUNTIME_PROVEN here.
+ */
 
-/* Bootstrap context (stack-allocated, no heap) */
+#define RAF_FD_STDOUT 1
+#define RAF_FD_STDERR 2
+#define RAF_MAX_PATH  384
+#define RAF_MAX_ARGV   64
+
+static const char RAF_FALLBACK_PREFIX[] =
+    "/data/data/com.termux.rafacodephi/files/usr";
+
 typedef struct {
-    char prefix_path[256];              /* /data/data/com.termux.rafacodephi */
-    char payload_path[512];             /* /data/data/.../bootstrap.tar.gz */
-    uint32_t state_machine_version;     /* Deterministic versioning */
-    uint8_t bootstrap_state[256];       /* State snapshot for sealing */
-    uint64_t bootstrap_state_size;      /* Size of state snapshot */
-} bootstrap_ctx_t;
+    const char *name;
+    int required;
+} raf_tool_t;
 
-static bootstrap_ctx_t _ctx = {0};
+static const raf_tool_t RAF_TOOLS[] = {
+    {"pkg", 1},
+    {"proot", 1},
+    {"proot-distro", 1},
+    {"ninja", 1},
+    {"clang", 1},
+    {"cmake", 1},
+    {"qemu-system-x86_64", 0}
+};
 
-/* Syslog-like output buffer (freestanding, no stdio) */
-#define SYSLOG_MAX 1024
-static char _syslog_buf[SYSLOG_MAX];
-
-int _syslog(const char *format, ...) {
-    /* Simplified: write directly to fd 2 (stderr) */
-    /* In production, use proper varargs handling */
-    int fd = 2;
-    int written = snprintf(_syslog_buf, SYSLOG_MAX, format, NULL);
-    if (written > 0) {
-        proot_sys_write(fd, _syslog_buf, written);
-        proot_sys_write(fd, "\n", 1);
-    }
-    return written;
+static raf_word_t raf_strlen(const char *s) {
+    raf_word_t n = 0;
+    if (!s) return 0;
+    while (s[n]) ++n;
+    return n;
 }
 
-/* Stage 0: Verify prefix directory exists or create it */
-static int _stage_prefix_init(void) {
-    _syslog("[STAGE 0] Initializing prefix directory");
+static int raf_streq(const char *a, const char *b) {
+    raf_word_t i = 0;
+    if (!a || !b) return 0;
+    while (a[i] && b[i] && a[i] == b[i]) ++i;
+    return a[i] == 0 && b[i] == 0;
+}
 
-    const char *prefix = "/data/data/com.termux.rafacodephi";
-    strncpy(_ctx.prefix_path, prefix, sizeof(_ctx.prefix_path) - 1);
-
-    /* Try to create prefix directory */
-    int result = proot_sys_mkdir(prefix, 0755);
-    if (result < 0) {
-        /* Directory might already exist; that's OK */
-        _syslog("[STAGE 0] mkdir failed (may exist): %ld", result);
+static int raf_starts(const char *s, const char *prefix) {
+    raf_word_t i = 0;
+    if (!s || !prefix) return 0;
+    while (prefix[i]) {
+        if (s[i] != prefix[i]) return 0;
+        ++i;
     }
+    return 1;
+}
 
-    /* Verify we can access it */
-    result = proot_sys_chdir(prefix);
-    if (result < 0) {
-        _syslog("[STAGE 0] ERROR: Cannot chdir to prefix: %ld", result);
-        return -1;
+static void raf_write_text(int fd, const char *s) {
+    raf_word_t n = raf_strlen(s);
+    while (n) {
+        raf_sysret_t r = proot_sys_write(fd, s, n);
+        if (r <= 0) return;
+        s += (raf_word_t)r;
+        n -= (raf_word_t)r;
     }
+}
 
-    _syslog("[STAGE 0] Prefix initialized: %s", prefix);
+static void raf_line3(const char *a, const char *b, const char *c) {
+    raf_write_text(RAF_FD_STDOUT, a);
+    raf_write_text(RAF_FD_STDOUT, b);
+    raf_write_text(RAF_FD_STDOUT, c);
+    raf_write_text(RAF_FD_STDOUT, "\n");
+}
+
+static const char *raf_env_prefix(char *const envp[]) {
+    raf_word_t i = 0;
+    if (!envp) return RAF_FALLBACK_PREFIX;
+    while (envp[i]) {
+        if (raf_starts(envp[i], "PREFIX=") && envp[i][7]) return envp[i] + 7;
+        ++i;
+    }
+    return RAF_FALLBACK_PREFIX;
+}
+
+static int raf_tool_path(char *out, raf_word_t cap,
+                         const char *prefix, const char *tool) {
+    raf_word_t i = 0, j = 0;
+    const char suffix[] = "/bin/";
+    if (!out || cap < 2 || !prefix || !tool) return -1;
+
+    while (prefix[i]) {
+        if (j + 1 >= cap) return -1;
+        out[j++] = prefix[i++];
+    }
+    i = 0;
+    while (suffix[i]) {
+        if (j + 1 >= cap) return -1;
+        out[j++] = suffix[i++];
+    }
+    i = 0;
+    while (tool[i]) {
+        if (j + 1 >= cap) return -1;
+        out[j++] = tool[i++];
+    }
+    out[j] = 0;
     return 0;
 }
 
-/* Stage 1: Initialize proot subprocess (single-threaded) */
-static int _stage_proot_init(void) {
-    _syslog("[STAGE 1] Initializing proot process");
-
-    /* In freestanding mode, we do not fork */
-    /* proot runs inline in the bootstrap context */
-    /* Single-threaded execution, no fork syscalls allowed */
-
-    /* Verify proot config: no fork, no threads */
-    if (!PROOT_NO_FORK || !PROOT_NO_THREADS) {
-        _syslog("[STAGE 1] ERROR: proot config violated");
-        return -1;
-    }
-
-    _syslog("[STAGE 1] proot initialized (freestanding, single-threaded)");
-    return 0;
+static int raf_probe_tool(const char *prefix, const char *tool) {
+    char path[RAF_MAX_PATH];
+    if (raf_tool_path(path, sizeof(path), prefix, tool) != 0) return 0;
+    return proot_sys_access_exec(path) == 0;
 }
 
-/* Stage 2: Extract bootstrap payload (tar.gz → prefix) */
-static int _stage_extract_payload(void) {
-    _syslog("[STAGE 2] Extracting bootstrap payload");
+static int raf_probe_all(char *const envp[]) {
+    raf_word_t i;
+    int missing_required = 0;
+    const char *prefix = raf_env_prefix(envp);
 
-    /* Locate bootstrap payload */
-    const char *payload_candidates[] = {
-        "/data/data/com.termux.rafacodephi/bootstrap.tar.gz",
-        "/data/local/tmp/bootstrap.tar.gz",
-        "/dev/shm/bootstrap.tar.gz",
-        NULL
+    raf_line3("RAFCODEPHI prefix=", prefix, "");
+    for (i = 0; i < (sizeof(RAF_TOOLS) / sizeof(RAF_TOOLS[0])); ++i) {
+        int ok = raf_probe_tool(prefix, RAF_TOOLS[i].name);
+        if (ok) {
+            raf_line3("OBSERVED executable: ", RAF_TOOLS[i].name, "");
+        } else {
+            raf_line3("TOKEN_VAZIO executable: ", RAF_TOOLS[i].name,
+                      RAF_TOOLS[i].required ? " [required]" : " [optional]");
+            if (RAF_TOOLS[i].required) ++missing_required;
+        }
+    }
+    return missing_required ? 20 + missing_required : 0;
+}
+
+static int raf_exec_named(const char *name, int tailc, char *const *tailv,
+                          char *const envp[]) {
+    char path[RAF_MAX_PATH];
+    char *execv[RAF_MAX_ARGV];
+    int i;
+    const char *prefix = raf_env_prefix(envp);
+
+    if (!name || tailc < 0 || tailc + 2 > RAF_MAX_ARGV) return 64;
+    if (raf_tool_path(path, sizeof(path), prefix, name) != 0) return 65;
+    if (proot_sys_access_exec(path) != 0) {
+        raf_line3("TOKEN_VAZIO executable: ", name, "");
+        return 126;
+    }
+
+    execv[0] = (char *)name;
+    for (i = 0; i < tailc; ++i) execv[i + 1] = tailv[i];
+    execv[tailc + 1] = (char *)0;
+
+    raf_line3("EXEC boundary: ", name, " (claim remains runtime-pending)");
+    (void)proot_sys_execve(path, execv, (char *const *)envp);
+    raf_line3("EXEC_FAILED: ", name, "");
+    return 127;
+}
+
+static int raf_pkg_bootstrap(char *const envp[]) {
+    static char *const args[] = {
+        "install", "-y",
+        "x11-repo",
+        "proot", "proot-distro",
+        "ninja", "clang", "lld", "cmake", "make", "binutils",
+        "file", "patchelf",
+        (char *)0
     };
-
-    const char *payload_path = NULL;
-    for (int i = 0; payload_candidates[i]; i++) {
-        int fd = proot_sys_open(payload_candidates[i], 0, 0);
-        if (fd >= 0) {
-            proot_sys_close(fd);
-            payload_path = payload_candidates[i];
-            break;
-        }
-    }
-
-    if (!payload_path) {
-        _syslog("[STAGE 2] ERROR: Payload not found");
-        return -1;
-    }
-
-    strncpy(_ctx.payload_path, payload_path, sizeof(_ctx.payload_path) - 1);
-    _syslog("[STAGE 2] Found payload: %s", payload_path);
-
-    /* In production: extract tar.gz using freestanding tar logic */
-    /* For now: validate file is readable */
-    int fd = proot_sys_open(payload_path, 0, 0);
-    if (fd < 0) {
-        _syslog("[STAGE 2] ERROR: Cannot open payload");
-        return -1;
-    }
-    proot_sys_close(fd);
-
-    _syslog("[STAGE 2] Payload extraction complete");
-    return 0;
+    return raf_exec_named("pkg", 13, args, envp);
 }
 
-/* Stage 3: Install dpkg from payload */
-static int _stage_dpkg_install(void) {
-    _syslog("[STAGE 3] Installing dpkg");
-
-    /* In production: extract dpkg binary, verify signature, install */
-    /* Validation checks:
-     * - Binary must be ARM64 ELF
-     * - No glibc dependencies (musl or freestanding)
-     * - Prefix must be com.termux.rafacodephi (no upstream references)
-     */
-
-    /* Placeholder: verify dpkg exists in payload */
-    const char *dpkg_paths[] = {
-        "/data/data/com.termux.rafacodephi/dpkg",
-        "/data/data/com.termux.rafacodephi/bin/dpkg",
-        NULL
+static int raf_pkg_vectras(char *const envp[]) {
+    static char *const args[] = {
+        "install", "-y",
+        "qemu-common", "qemu-system-x86-64-headless", "qemu-utils",
+        (char *)0
     };
+    return raf_exec_named("pkg", 5, args, envp);
+}
 
-    int dpkg_found = 0;
-    for (int i = 0; dpkg_paths[i]; i++) {
-        int fd = proot_sys_open(dpkg_paths[i], 0, 0);
-        if (fd >= 0) {
-            proot_sys_close(fd);
-            dpkg_found = 1;
-            _syslog("[STAGE 3] Found dpkg: %s", dpkg_paths[i]);
-            break;
+static int raf_main(int argc, char **argv, char *const envp[]) {
+    if (argc <= 1 || raf_streq(argv[1], "--probe")) {
+        return raf_probe_all(envp);
+    }
+
+    if (raf_streq(argv[1], "--pkg-bootstrap")) {
+        return raf_pkg_bootstrap(envp);
+    }
+
+    if (raf_streq(argv[1], "--pkg-vectras")) {
+        return raf_pkg_vectras(envp);
+    }
+
+    if (raf_streq(argv[1], "--run")) {
+        if (argc < 3) {
+            raf_write_text(RAF_FD_STDERR, "usage: rafproot-fs --run TOOL [args...]\n");
+            return 64;
         }
+        return raf_exec_named(argv[2], argc - 3, argv + 3, envp);
     }
 
-    if (!dpkg_found) {
-        _syslog("[STAGE 3] WARNING: dpkg not found (may install later)");
-        /* Don't fail stage; dpkg is optional for minimal bootstrap */
+    if (raf_streq(argv[1], "--help")) {
+        raf_write_text(RAF_FD_STDOUT,
+            "rafproot-fs --probe | --pkg-bootstrap | --pkg-vectras | --run TOOL [args...]\n");
+        return 0;
     }
 
-    _syslog("[STAGE 3] dpkg installation complete");
-    return 0;
+    raf_write_text(RAF_FD_STDERR, "unknown mode; use --help\n");
+    return 64;
 }
 
-/* Stage 4: Configure APT package manager */
-static int _stage_apt_configure(void) {
-    _syslog("[STAGE 4] Configuring APT");
-
-    /* Create APT configuration directory */
-    int result = proot_sys_mkdir("/data/data/com.termux.rafacodephi/etc", 0755);
-    if (result < 0) {
-        /* May already exist */
-    }
-
-    result = proot_sys_mkdir("/data/data/com.termux.rafacodephi/etc/apt", 0755);
-    if (result < 0) {
-        _syslog("[STAGE 4] WARNING: Cannot create /etc/apt");
-    }
-
-    /* In production: write deterministic sources.list (no random mirrors) */
-    /* Verify no references to global /data/data/com.termux */
-
-    _syslog("[STAGE 4] APT configuration complete");
-    return 0;
+__attribute__((noreturn, used, noinline))
+void raf_entry(raf_word_t *initial_sp) {
+    int argc = (int)initial_sp[0];
+    char **argv = (char **)(initial_sp + 1);
+    char **envp = argv + argc + 1;
+    int rc = raf_main(argc, argv, envp);
+    proot_sys_exit(rc);
 }
 
-/* Stage 5: Verify system ready for user packages */
-static int _stage_system_ready(void) {
-    _syslog("[STAGE 5] Verifying system ready");
-
-    /* Final verification checks */
-    int checks_passed = 0;
-
-    /* Check prefix exists */
-    int fd = proot_sys_open("/data/data/com.termux.rafacodephi", 0, 0);
-    if (fd >= 0) {
-        proot_sys_close(fd);
-        checks_passed++;
-        _syslog("[STAGE 5] ✓ Prefix directory accessible");
-    } else {
-        _syslog("[STAGE 5] ✗ Prefix directory not accessible");
-    }
-
-    /* Check package manager state */
-    fd = proot_sys_open("/data/data/com.termux.rafacodephi/var/lib/dpkg/status", 0, 0);
-    if (fd >= 0) {
-        proot_sys_close(fd);
-        checks_passed++;
-        _syslog("[STAGE 5] ✓ dpkg status file found");
-    } else {
-        _syslog("[STAGE 5] ✗ dpkg status file not found (non-critical)");
-    }
-
-    _syslog("[STAGE 5] System readiness: %d/2 checks passed", checks_passed);
-    return 0;
+#if defined(__aarch64__)
+__attribute__((naked, noreturn, used))
+void _start(void) {
+    __asm__ volatile(
+        "mov x0, sp\n"
+        "b raf_entry\n");
 }
-
-/* Execute one bootstrap stage with watchdog and rollback */
-static int _execute_stage_with_protection(
-    int stage_num,
-    int (*stage_func)(void),
-    proot_state_t state
-) {
-    _syslog("[WATCHDOG] Starting stage %d with %us timeout", stage_num, PROOT_WATCHDOG_TIMEOUT_SECONDS);
-    watchdog_start();
-
-    /* Execute stage */
-    int result = stage_func();
-
-    if (result != 0) {
-        /* Stage failed: check for timeout or other error */
-        int timeout = watchdog_check_timeout();
-        watchdog_stop();
-
-        if (timeout) {
-            _syslog("[WATCHDOG] TIMEOUT on stage %d, triggering restart", stage_num);
-            int restart_result = restart_proot_process();
-            if (restart_result != 0) {
-                _syslog("[WATCHDOG] FATAL: Max restarts exceeded (exit code %d)", restart_result);
-                rollback_to_empty();
-                return restart_result;
-            }
-            /* Restart successful, retry stage */
-            return _execute_stage_with_protection(stage_num, stage_func, state);
-        }
-
-        /* Non-timeout failure: trigger rollback */
-        _syslog("[STAGE %d] FAILURE, rolling back to PREFIX_EMPTY", stage_num);
-        rollback_to_empty();
-        return result;
-    }
-
-    watchdog_stop();
-
-    /* Seal receipt for this stage */
-    receipt_t receipt;
-    _ctx.bootstrap_state_size = snprintf((char *)_ctx.bootstrap_state, sizeof(_ctx.bootstrap_state),
-        "{\"stage\":%d,\"state\":\"%s\"}", stage_num, get_state_name(state));
-
-    int seal_result = seal_receipt(state, 1, _ctx.bootstrap_state, _ctx.bootstrap_state_size, &receipt);
-    if (seal_result == 0) {
-        log_receipt(&receipt);
-        _syslog("[STAGE %d] Receipt sealed (CRC32C: 0x%08x)", stage_num, receipt.state_crc);
-    }
-
-    /* Transition state machine */
-    transition_state(state, _ctx.bootstrap_state, _ctx.bootstrap_state_size);
-    _syslog("[STAGE %d] COMPLETE → %s", stage_num, get_state_name(state));
-
-    return 0;
+#elif defined(__arm__)
+__attribute__((naked, noreturn, used))
+void _start(void) {
+    __asm__ volatile(
+        "mov r0, sp\n"
+        "b raf_entry\n");
 }
-
-/* Main bootstrap routine */
-int proot_bootstrap(void) {
-    _syslog("=== RAFCODEΦ Freestanding proot Bootstrap ===");
-    _syslog("Version: %s", PROOT_CONFIG_SCHEMA);
-    _syslog("Single-threaded: %d, No-fork: %d, Freestanding: %d",
-        PROOT_SINGLE_THREADED, PROOT_NO_FORK, PROOT_NO_MALLOC);
-
-    int result = 0;
-
-    /* Stage 0: Prefix initialization */
-    result = _execute_stage_with_protection(0, _stage_prefix_init, PROOT_STATE_PREFIX_EMPTY);
-    if (result != 0) {
-        _syslog("[BOOTSTRAP] FAILED at stage 0");
-        return result;
-    }
-
-    /* Stage 1: proot init */
-    result = _execute_stage_with_protection(1, _stage_proot_init, PROOT_STATE_INITIALIZED);
-    if (result != 0) {
-        _syslog("[BOOTSTRAP] FAILED at stage 1");
-        return result;
-    }
-
-    /* Stage 2: Extract payload */
-    result = _execute_stage_with_protection(2, _stage_extract_payload, PROOT_STATE_PAYLOAD_EXTRACTED);
-    if (result != 0) {
-        _syslog("[BOOTSTRAP] FAILED at stage 2");
-        return result;
-    }
-
-    /* Stage 3: dpkg install */
-    result = _execute_stage_with_protection(3, _stage_dpkg_install, PROOT_STATE_DPKG_INSTALLED);
-    if (result != 0) {
-        _syslog("[BOOTSTRAP] FAILED at stage 3");
-        return result;
-    }
-
-    /* Stage 4: APT configure */
-    result = _execute_stage_with_protection(4, _stage_apt_configure, PROOT_STATE_APT_CONFIGURED);
-    if (result != 0) {
-        _syslog("[BOOTSTRAP] FAILED at stage 4");
-        return result;
-    }
-
-    /* Stage 5: System ready */
-    result = _execute_stage_with_protection(5, _stage_system_ready, PROOT_STATE_USER_PACKAGES_READY);
-    if (result != 0) {
-        _syslog("[BOOTSTRAP] FAILED at stage 5");
-        return result;
-    }
-
-    /* Write receipt and state logs */
-    write_receipt_log("/data/data/com.termux.rafacodephi/.bootstrap-receipt");
-    write_state_log("/data/data/com.termux.rafacodephi/.state-machine-log");
-    watchdog_write_status("/data/data/com.termux.rafacodephi/.watchdog-status");
-
-    _syslog("=== BOOTSTRAP COMPLETE ===");
-    _syslog("Final state: %s", get_state_name(get_current_state()));
-    _syslog("Receipt log entries: %u", get_receipt_log()->count);
-
-    return 0;
-}
-
-/* Bootstrap entry point (called from Android/Termux app) */
-int main(int argc, char *argv[]) {
-    (void)argc;
-    (void)argv;
-
-    int result = proot_bootstrap();
-    if (result != 0) {
-        proot_sys_exit(result);
-    }
-
-    proot_sys_exit(0);
-    return 0;  /* Unreachable */
-}
+#endif
