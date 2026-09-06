@@ -1,0 +1,90 @@
+name: Freestanding runtime gate
+
+on:
+  push:
+    branches:
+      - 'rafaelia/freestanding-proot-pkg-gate-*'
+    paths:
+      - 'bootstrap/proot_freestanding.c'
+      - 'bootstrap/proot_syscall_bridge.h'
+      - 'scripts/build_freestanding_real_arm_bootstrap.py'
+      - '.github/workflows/freestanding-runtime-gate.yml'
+  pull_request:
+    paths:
+      - 'bootstrap/proot_freestanding.c'
+      - 'bootstrap/proot_syscall_bridge.h'
+      - 'bootstrap_src/common/bin/proot'
+      - 'scripts/build_freestanding_real_arm_bootstrap.py'
+      - '.github/workflows/freestanding-runtime-gate.yml'
+
+jobs:
+  cold-start-builder-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate cold-start builder syntax
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/build_freestanding_real_arm_bootstrap.py
+          python3 scripts/build_freestanding_real_arm_bootstrap.py --help >/dev/null
+          grep -q 'libexec/rafproot-fs' scripts/build_freestanding_real_arm_bootstrap.py
+          grep -q 'DEVICE=TOKEN_VAZIO' scripts/build_freestanding_real_arm_bootstrap.py
+
+  static-elf:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-linux-android21
+            name: aarch64
+            extra: ''
+          - target: armv7a-linux-androideabi21
+            name: armv7
+            extra: '-marm'
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM tools
+        run: sudo apt-get update && sudo apt-get install -y clang lld binutils file
+      - name: Build freestanding static ELF
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/freestanding
+          OUT="build/freestanding/rafproot-fs-${{ matrix.name }}"
+          clang --target='${{ matrix.target }}' ${{ matrix.extra }} \
+            -std=c11 -Wall -Wextra -Werror \
+            -ffreestanding -fno-builtin -fno-stack-protector -fomit-frame-pointer \
+            -nostdlib -static \
+            -Wl,-no-pie,-e,_start,--gc-sections \
+            bootstrap/proot_freestanding.c -o "$OUT"
+          file "$OUT"
+          readelf -h "$OUT"
+          if readelf -l "$OUT" | grep -q 'INTERP'; then
+            echo 'dynamic interpreter detected' >&2
+            exit 1
+          fi
+          if readelf -d "$OUT" 2>/dev/null | grep -q 'NEEDED'; then
+            echo 'dynamic dependency detected' >&2
+            exit 1
+          fi
+          if readelf -Ws "$OUT" | awk '$7=="UND" && $8!="" {bad=1} END{exit bad}'; then
+            :
+          else
+            echo 'undefined external symbol detected' >&2
+            exit 1
+          fi
+          sha256sum "$OUT" > "$OUT.sha256"
+          printf '%s\n' \
+            '{' \
+            '  "schema": "raf.freestanding-runtime-gate.v1",' \
+            '  "target": "${{ matrix.name }}",' \
+            '  "build_state": "BUILD_PROVEN",' \
+            '  "device_runtime_state": "TOKEN_VAZIO",' \
+            '  "claim_allowed": false' \
+            '}' > "build/freestanding/receipt-${{ matrix.name }}.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: freestanding-runtime-${{ matrix.name }}
+          path: build/freestanding/

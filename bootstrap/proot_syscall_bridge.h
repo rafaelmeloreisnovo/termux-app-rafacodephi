@@ -1,138 +1,191 @@
 #ifndef PROOT_SYSCALL_BRIDGE_H
 #define PROOT_SYSCALL_BRIDGE_H
 
-#include <stdint.h>
-#include "proot_config.h"
+/*
+ * RAFCODEPHI freestanding Linux syscall bridge.
+ * Contract:
+ *   - no libc
+ *   - no heap
+ *   - no TLS
+ *   - no crt
+ *   - architecture-specific syscall numbers
+ * Supported: AArch64 Android/Linux and ARM EABI (armv7).
+ */
 
-/* ARM64 Syscall Invocation Layer (freestanding, no libc) */
-/* SVC #0 instruction: ARM64 syscall ABI */
-/* Arguments: x0-x5 (syscall args), x8 (syscall number) */
-/* Return: x0 (result) */
+typedef signed long raf_sysret_t;
+typedef unsigned long raf_word_t;
 
-typedef int64_t syscall_result_t;
+#define RAF_AT_FDCWD (-100)
+#define RAF_X_OK 1
 
-/* ARM64 Syscall Numbers (relevant to bootstrap) */
-#define SYSCALL_OPEN           56
-#define SYSCALL_CLOSE          57
-#define SYSCALL_READ           63
-#define SYSCALL_WRITE          64
-#define SYSCALL_LSEEK          62
-#define SYSCALL_STAT           106
-#define SYSCALL_FSTAT          80
-#define SYSCALL_LSTAT          107
-#define SYSCALL_POLL           72
-#define SYSCALL_IOCTL          29
-#define SYSCALL_FCNTL          25
-#define SYSCALL_MKDIR          34
-#define SYSCALL_RMDIR          35
-#define SYSCALL_UNLINK         35
-#define SYSCALL_UNLINKAT       35
-#define SYSCALL_CHDIR          49
-#define SYSCALL_GETCWD         17
-#define SYSCALL_MMAP           222
-#define SYSCALL_MPROTECT       226
-#define SYSCALL_MUNMAP         215
-#define SYSCALL_BRKS           214  /* brk — not used in freestanding */
-#define SYSCALL_RT_SIGACTION   134
-#define SYSCALL_RT_SIGPROCMASK 135
-#define SYSCALL_PRCTL          167
-#define SYSCALL_ARCH_PRCTL     158
-#define SYSCALL_EXIT           93
-#define SYSCALL_EXIT_GROUP     94
-#define SYSCALL_FUTEX          98
-#define SYSCALL_SCHED_GETAFFINITY 123
-#define SYSCALL_SCHED_SETAFFINITY 122
-#define SYSCALL_GETPID         39
-#define SYSCALL_GETTID         224
-#define SYSCALL_GETTIMEOFDAY   169
-#define SYSCALL_CLOCK_GETTIME  113
-#define SYSCALL_NANOSLEEP      101
-#define SYSCALL_SEM_TIMEDWAIT  (SEM_TIMEDWAIT_FUTEX_BASED)  /* futex-backed */
+#if defined(__aarch64__)
 
-/* ARM64 Direct Syscall Macro */
-/* Inline assembler: call syscall via SVC #0 */
-/* Clobbers: x0-x15, cc (condition codes) */
-static inline syscall_result_t __proot_syscall(
-    uint64_t nr,      /* syscall number (x8) */
-    uint64_t a0,      /* arg 1 (x0) */
-    uint64_t a1,      /* arg 2 (x1) */
-    uint64_t a2,      /* arg 3 (x2) */
-    uint64_t a3,      /* arg 4 (x3) */
-    uint64_t a4,      /* arg 5 (x4) */
-    uint64_t a5       /* arg 6 (x5) */
-) {
-    syscall_result_t result;
+#define RAF_NR_OPENAT          56
+#define RAF_NR_CLOSE           57
+#define RAF_NR_READ            63
+#define RAF_NR_WRITE           64
+#define RAF_NR_MKDIRAT         34
+#define RAF_NR_UNLINKAT        35
+#define RAF_NR_FACCESSAT       48
+#define RAF_NR_CHDIR           49
+#define RAF_NR_CLOCK_GETTIME  113
+#define RAF_NR_PRCTL          167
+#define RAF_NR_GETPID         172
+#define RAF_NR_MMAP           222
+#define RAF_NR_MPROTECT       226
+#define RAF_NR_MUNMAP         215
+#define RAF_NR_EXECVE         221
+#define RAF_NR_EXIT_GROUP      94
 
-    __asm__ volatile (
-        "mov x8, %[nr]\n"
-        "mov x0, %[a0]\n"
-        "mov x1, %[a1]\n"
-        "mov x2, %[a2]\n"
-        "mov x3, %[a3]\n"
-        "mov x4, %[a4]\n"
-        "mov x5, %[a5]\n"
-        "svc #0\n"
-        "mov %[result], x0\n"
-        : [result] "=r" (result)
-        : [nr] "r" (nr), [a0] "r" (a0), [a1] "r" (a1),
-          [a2] "r" (a2), [a3] "r" (a3), [a4] "r" (a4), [a5] "r" (a5)
-        : "x0", "x1", "x2", "x3", "x4", "x5", "x8", "cc"
-    );
-
-    return result;
+static __inline__ __attribute__((always_inline))
+raf_sysret_t raf_syscall6(raf_word_t nr,
+                          raf_word_t a0, raf_word_t a1, raf_word_t a2,
+                          raf_word_t a3, raf_word_t a4, raf_word_t a5) {
+    register raf_word_t x0 __asm__("x0") = a0;
+    register raf_word_t x1 __asm__("x1") = a1;
+    register raf_word_t x2 __asm__("x2") = a2;
+    register raf_word_t x3 __asm__("x3") = a3;
+    register raf_word_t x4 __asm__("x4") = a4;
+    register raf_word_t x5 __asm__("x5") = a5;
+    register raf_word_t x8 __asm__("x8") = nr;
+    __asm__ volatile(
+        "svc 0"
+        : "+r"(x0)
+        : "r"(x1), "r"(x2), "r"(x3), "r"(x4), "r"(x5), "r"(x8)
+        : "memory", "cc");
+    return (raf_sysret_t)x0;
 }
 
-/* Convenience wrappers for common bootstrap syscalls */
+#elif defined(__arm__)
 
-static inline syscall_result_t proot_sys_open(const char *path, int flags, int mode) {
-    return __proot_syscall(SYSCALL_OPEN, (uint64_t)path, flags, mode, 0, 0, 0);
+#define RAF_NR_OPENAT         322
+#define RAF_NR_CLOSE            6
+#define RAF_NR_READ             3
+#define RAF_NR_WRITE            4
+#define RAF_NR_MKDIRAT        323
+#define RAF_NR_UNLINKAT       328
+#define RAF_NR_FACCESSAT      334
+#define RAF_NR_CHDIR           12
+#define RAF_NR_CLOCK_GETTIME  263
+#define RAF_NR_PRCTL          172
+#define RAF_NR_GETPID          20
+#define RAF_NR_MMAP2          192
+#define RAF_NR_MPROTECT       125
+#define RAF_NR_MUNMAP          91
+#define RAF_NR_EXECVE          11
+#define RAF_NR_EXIT_GROUP     248
+
+static __inline__ __attribute__((always_inline))
+raf_sysret_t raf_syscall6(raf_word_t nr,
+                          raf_word_t a0, raf_word_t a1, raf_word_t a2,
+                          raf_word_t a3, raf_word_t a4, raf_word_t a5) {
+    register raf_word_t r0 __asm__("r0") = a0;
+    register raf_word_t r1 __asm__("r1") = a1;
+    register raf_word_t r2 __asm__("r2") = a2;
+    register raf_word_t r3 __asm__("r3") = a3;
+    register raf_word_t r4 __asm__("r4") = a4;
+    register raf_word_t r5 __asm__("r5") = a5;
+    register raf_word_t r7 __asm__("r7") = nr;
+    __asm__ volatile(
+        "svc 0"
+        : "+r"(r0)
+        : "r"(r1), "r"(r2), "r"(r3), "r"(r4), "r"(r5), "r"(r7)
+        : "memory", "cc");
+    return (raf_sysret_t)r0;
 }
 
-static inline syscall_result_t proot_sys_close(int fd) {
-    return __proot_syscall(SYSCALL_CLOSE, fd, 0, 0, 0, 0, 0);
+#else
+#error "RAFCODEPHI freestanding syscall bridge supports only __aarch64__ or __arm__"
+#endif
+
+#define RAF_PTR(p) ((raf_word_t)(p))
+
+static __inline__ raf_sysret_t proot_sys_open(const char *path, int flags, int mode) {
+    return raf_syscall6(RAF_NR_OPENAT, (raf_word_t)RAF_AT_FDCWD, RAF_PTR(path),
+                        (raf_word_t)flags, (raf_word_t)mode, 0, 0);
 }
 
-static inline syscall_result_t proot_sys_read(int fd, void *buf, uint64_t count) {
-    return __proot_syscall(SYSCALL_READ, fd, (uint64_t)buf, count, 0, 0, 0);
+static __inline__ raf_sysret_t proot_sys_close(int fd) {
+    return raf_syscall6(RAF_NR_CLOSE, (raf_word_t)fd, 0, 0, 0, 0, 0);
 }
 
-static inline syscall_result_t proot_sys_write(int fd, const void *buf, uint64_t count) {
-    return __proot_syscall(SYSCALL_WRITE, fd, (uint64_t)buf, count, 0, 0, 0);
+static __inline__ raf_sysret_t proot_sys_read(int fd, void *buf, raf_word_t count) {
+    return raf_syscall6(RAF_NR_READ, (raf_word_t)fd, RAF_PTR(buf), count, 0, 0, 0);
 }
 
-static inline syscall_result_t proot_sys_mkdir(const char *path, int mode) {
-    return __proot_syscall(SYSCALL_MKDIR, (uint64_t)path, mode, 0, 0, 0, 0);
+static __inline__ raf_sysret_t proot_sys_write(int fd, const void *buf, raf_word_t count) {
+    return raf_syscall6(RAF_NR_WRITE, (raf_word_t)fd, RAF_PTR(buf), count, 0, 0, 0);
 }
 
-static inline syscall_result_t proot_sys_chdir(const char *path) {
-    return __proot_syscall(SYSCALL_CHDIR, (uint64_t)path, 0, 0, 0, 0, 0);
+static __inline__ raf_sysret_t proot_sys_mkdir(const char *path, int mode) {
+    return raf_syscall6(RAF_NR_MKDIRAT, (raf_word_t)RAF_AT_FDCWD, RAF_PTR(path),
+                        (raf_word_t)mode, 0, 0, 0);
 }
 
-static inline syscall_result_t proot_sys_exit(int code) {
-    return __proot_syscall(SYSCALL_EXIT_GROUP, code, 0, 0, 0, 0, 0);
+static __inline__ raf_sysret_t proot_sys_unlink(const char *path, int flags) {
+    return raf_syscall6(RAF_NR_UNLINKAT, (raf_word_t)RAF_AT_FDCWD, RAF_PTR(path),
+                        (raf_word_t)flags, 0, 0, 0);
 }
 
-static inline syscall_result_t proot_sys_clock_gettime(int clockid, void *tp) {
-    return __proot_syscall(SYSCALL_CLOCK_GETTIME, clockid, (uint64_t)tp, 0, 0, 0, 0);
+static __inline__ raf_sysret_t proot_sys_access_exec(const char *path) {
+    return raf_syscall6(RAF_NR_FACCESSAT, (raf_word_t)RAF_AT_FDCWD, RAF_PTR(path),
+                        RAF_X_OK, 0, 0, 0);
 }
 
-static inline syscall_result_t proot_sys_prctl(int op, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) {
-    return __proot_syscall(SYSCALL_PRCTL, op, arg2, arg3, arg4, arg5, 0);
+static __inline__ raf_sysret_t proot_sys_chdir(const char *path) {
+    return raf_syscall6(RAF_NR_CHDIR, RAF_PTR(path), 0, 0, 0, 0, 0);
 }
 
-static inline syscall_result_t proot_sys_mmap(void *addr, uint64_t length, int prot, int flags, int fd, uint64_t offset) {
-    return __proot_syscall(SYSCALL_MMAP, (uint64_t)addr, length, prot, flags, fd, offset);
+static __inline__ raf_sysret_t proot_sys_clock_gettime(int clockid, void *tp) {
+    return raf_syscall6(RAF_NR_CLOCK_GETTIME, (raf_word_t)clockid, RAF_PTR(tp),
+                        0, 0, 0, 0);
 }
 
-static inline syscall_result_t proot_sys_mprotect(void *addr, uint64_t length, int prot) {
-    return __proot_syscall(SYSCALL_MPROTECT, (uint64_t)addr, length, prot, 0, 0, 0);
+static __inline__ raf_sysret_t proot_sys_prctl(int op, raf_word_t arg2,
+                                               raf_word_t arg3, raf_word_t arg4,
+                                               raf_word_t arg5) {
+    return raf_syscall6(RAF_NR_PRCTL, (raf_word_t)op, arg2, arg3, arg4, arg5, 0);
 }
 
-static inline syscall_result_t proot_sys_munmap(void *addr, uint64_t length) {
-    return __proot_syscall(SYSCALL_MUNMAP, (uint64_t)addr, length, 0, 0, 0, 0);
+static __inline__ raf_sysret_t proot_sys_getpid(void) {
+    return raf_syscall6(RAF_NR_GETPID, 0, 0, 0, 0, 0, 0);
 }
 
-/* Error code detection */
-#define IS_SYSCALL_ERROR(result) ((int64_t)(result) < 0 && (int64_t)(result) >= -4096)
+static __inline__ raf_sysret_t proot_sys_mmap(void *addr, raf_word_t length,
+                                              int prot, int flags, int fd,
+                                              raf_word_t offset) {
+#if defined(__aarch64__)
+    return raf_syscall6(RAF_NR_MMAP, RAF_PTR(addr), length, (raf_word_t)prot,
+                        (raf_word_t)flags, (raf_word_t)fd, offset);
+#else
+    if (offset & 4095UL) return -22; /* EINVAL: mmap2 offset is in 4 KiB pages. */
+    return raf_syscall6(RAF_NR_MMAP2, RAF_PTR(addr), length, (raf_word_t)prot,
+                        (raf_word_t)flags, (raf_word_t)fd, offset >> 12);
+#endif
+}
+
+static __inline__ raf_sysret_t proot_sys_mprotect(void *addr, raf_word_t length, int prot) {
+    return raf_syscall6(RAF_NR_MPROTECT, RAF_PTR(addr), length, (raf_word_t)prot,
+                        0, 0, 0);
+}
+
+static __inline__ raf_sysret_t proot_sys_munmap(void *addr, raf_word_t length) {
+    return raf_syscall6(RAF_NR_MUNMAP, RAF_PTR(addr), length, 0, 0, 0, 0);
+}
+
+static __inline__ raf_sysret_t proot_sys_execve(const char *path,
+                                                char *const argv[],
+                                                char *const envp[]) {
+    return raf_syscall6(RAF_NR_EXECVE, RAF_PTR(path), RAF_PTR(argv), RAF_PTR(envp),
+                        0, 0, 0);
+}
+
+__attribute__((noreturn))
+static __inline__ void proot_sys_exit(int code) {
+    (void)raf_syscall6(RAF_NR_EXIT_GROUP, (raf_word_t)code, 0, 0, 0, 0, 0);
+    for (;;) { __asm__ volatile("" ::: "memory"); }
+}
+
+#define IS_SYSCALL_ERROR(result) ((raf_sysret_t)(result) < 0 && (raf_sysret_t)(result) >= -4095)
 
 #endif /* PROOT_SYSCALL_BRIDGE_H */
