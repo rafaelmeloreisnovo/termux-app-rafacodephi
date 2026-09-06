@@ -1,0 +1,194 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rafaelia.atlas_llm_context_envelope.v1",
+  "title": "AtlasLLMContextEnvelope",
+  "description": "Federated, provenance-bearing context selected by ATLAS/NOVO/L routes before conversion into the existing ContextBundle and IntentIR pipeline.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "envelope_id",
+    "route",
+    "query",
+    "source_refs",
+    "model_backend",
+    "token_vazio",
+    "claim_allowed"
+  ],
+  "properties": {
+    "envelope_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.:-]{8,128}$"
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["atlas", "novo", "longitudinal", "learn"],
+      "properties": {
+        "atlas": { "type": "string", "const": "ATLAS:X" },
+        "novo": { "type": "string", "const": "NOVO:X" },
+        "longitudinal": { "type": "string", "const": "L:X" },
+        "learn": { "type": "string", "const": "LEARN:X" },
+        "resolved_route_id": { "type": ["string", "null"] }
+      }
+    },
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text_sha256"],
+      "properties": {
+        "text": { "type": ["string", "null"] },
+        "text_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "language": { "type": ["string", "null"] }
+      }
+    },
+    "source_refs": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/sourceRef" }
+    },
+    "cti_hits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source_ref", "status"],
+        "properties": {
+          "source_ref": { "type": "string" },
+          "conv_i": { "type": ["integer", "null"], "minimum": 0 },
+          "role": { "type": ["string", "null"] },
+          "model": { "type": ["string", "null"] },
+          "retrieval_score": { "type": ["number", "null"] },
+          "curation_path": { "type": ["string", "null"] },
+          "content_signature": { "type": ["string", "null"] },
+          "status": {
+            "type": "string",
+            "enum": ["HIT", "NO_HIT", "UNAVAILABLE", "TOKEN_VAZIO"]
+          }
+        }
+      }
+    },
+    "delta_p_evidence": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "report_ref": { "type": ["string", "null"] },
+        "observed_value": { "type": ["number", "null"] },
+        "classification": {
+          "type": "string",
+          "enum": ["MEASURED_ASSOCIATION", "TOKEN_VAZIO", "CONTRADICTED"]
+        },
+        "attractor_established": { "type": "boolean", "const": false }
+      }
+    },
+    "image_evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["image_id", "source_hash", "claim_state"],
+        "properties": {
+          "image_id": { "type": "string" },
+          "source_hash": { "type": "string" },
+          "transform_id": { "type": ["string", "null"] },
+          "descriptor_version": { "type": ["string", "null"] },
+          "class_label": { "type": ["string", "null"] },
+          "score": { "type": ["number", "null"] },
+          "repetition_count": { "type": "integer", "minimum": 0 },
+          "stability": { "type": ["number", "null"] },
+          "contradictions": { "type": "array", "items": { "type": "string" } },
+          "claim_state": {
+            "type": "string",
+            "enum": ["OBSERVED", "REPRODUCED", "HYPOTHESIS", "CLAIM_BLOCKED", "TOKEN_VAZIO"]
+          }
+        }
+      }
+    },
+    "private_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repository", "path", "disclosure_class", "evidence_state"],
+        "properties": {
+          "repository": { "type": "string" },
+          "ref": { "type": ["string", "null"] },
+          "path": { "type": "string" },
+          "content_hash": { "type": ["string", "null"] },
+          "artifact_class": { "type": ["string", "null"] },
+          "disclosure_class": {
+            "type": "string",
+            "enum": ["POINTER_ONLY", "APPROVED_EXCERPT", "PRIVATE_WITHHELD"]
+          },
+          "evidence_state": { "type": "string" }
+        }
+      }
+    },
+    "gaia_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["adapter_version", "source_ref", "status"],
+        "properties": {
+          "adapter_version": { "type": "string" },
+          "source_ref": { "type": "string" },
+          "vector_dimension": { "type": ["integer", "null"], "minimum": 1 },
+          "attention_score": { "type": ["number", "null"] },
+          "status": {
+            "type": "string",
+            "enum": ["CANDIDATE", "RUNTIME_OBSERVED", "TOKEN_VAZIO"]
+          }
+        }
+      }
+    },
+    "scientific_boundaries": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "learning_predecessors": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "model_backend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend_id", "training_mode"],
+      "properties": {
+        "backend_id": {
+          "type": "string",
+          "enum": ["LLAMA_LOCAL_RMRCTI", "EXTERNAL_PROVIDER_TOKEN_VAZIO", "GAIA_NANOGPT_DEMO", "VECTRAS_OPTIONAL_RUNTIME"]
+        },
+        "model_id": { "type": ["string", "null"] },
+        "model_hash": { "type": ["string", "null"] },
+        "training_mode": {
+          "type": "string",
+          "enum": ["NO_WEIGHT_UPDATE", "TOKEN_VAZIO_UNTIL_TRAINING_GATES"]
+        }
+      }
+    },
+    "token_vazio": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "claim_allowed": { "type": "boolean", "const": false }
+  },
+  "definitions": {
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "authority", "kind", "state"],
+      "properties": {
+        "source_id": { "type": "string" },
+        "authority": { "type": "string" },
+        "kind": { "type": "string" },
+        "provider_id": { "type": ["string", "null"] },
+        "path": { "type": ["string", "null"] },
+        "object_id": { "type": ["string", "null"] },
+        "content_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "state": {
+          "type": "string",
+          "enum": ["SOURCE_OBSERVED", "STRUCTURE_VERIFIED", "RUNTIME_OBSERVED", "TOKEN_VAZIO", "PRIVATE_WITHHELD"]
+        }
+      }
+    }
+  }
+}
