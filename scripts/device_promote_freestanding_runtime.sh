@@ -2,6 +2,7 @@
 # RAFCODEPHI physical-device evidence producer.
 # Fixed command surface only; no eval and no free-form package interpolation.
 set -u
+umask 077
 
 SCHEMA="raf.freestanding-runtime-evidence.v1"
 PHASE="${1:-probe}"
@@ -14,6 +15,9 @@ PREFIX_DIR="${PREFIX:-/data/data/com.termux.rafacodephi/files/usr}"
 case "$PREFIX_DIR" in
   /data/data/*/files/usr|/data/user/0/*/files/usr) ;;
   *) echo "unsafe/unexpected PREFIX: $PREFIX_DIR" >&2; exit 65 ;;
+esac
+case "$PREFIX_DIR" in
+  *[!A-Za-z0-9._/-]*) echo "unsafe character in PREFIX: $PREFIX_DIR" >&2; exit 65 ;;
 esac
 
 GATE="$PREFIX_DIR/libexec/rafproot-fs"
@@ -43,19 +47,29 @@ fi
 
 GATE_SHA="$(sha256sum "$GATE" | awk '{print $1}')"
 case "$GATE_SHA" in
-  [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) ;;
-  *) echo "invalid gate sha256" >&2; exit 68 ;;
+  *[!0-9a-f]*) echo "invalid gate sha256" >&2; exit 68 ;;
 esac
 [ "${#GATE_SHA}" -eq 64 ] || { echo "invalid gate sha256 length" >&2; exit 68; }
 
 APK_SHA="${RAFCODEPHI_CANDIDATE_APK_SHA256:-}"
+APK_BIND_OK=true
 case "$APK_SHA" in
-  '') APK_JSON="null" ;;
+  '')
+    APK_JSON="null"
+    if [ "$PHASE" = "full" ]; then
+      APK_BIND_OK=false
+      echo "TOKEN_VAZIO: full phase requires RAFCODEPHI_CANDIDATE_APK_SHA256" >&2
+    fi
+    ;;
   *[!0-9a-f]*) echo "invalid RAFCODEPHI_CANDIDATE_APK_SHA256" >&2; exit 69 ;;
-  *) [ "${#APK_SHA}" -eq 64 ] || { echo "invalid candidate APK sha256 length" >&2; exit 69; }; APK_JSON="\"$APK_SHA\"" ;;
+  *)
+    [ "${#APK_SHA}" -eq 64 ] || { echo "invalid candidate APK sha256 length" >&2; exit 69; }
+    APK_JSON="\"$APK_SHA\""
+    ;;
 esac
 
-RECEIPT_ID="${NOW}-${ARCH}-${GATE_SHA%%????????????????????????????????????????????????????}"
+GATE_SHORT="$(printf '%.12s' "$GATE_SHA")"
+RECEIPT_ID="${NOW}-${ARCH}-${GATE_SHORT}"
 RUN_DIR="$EVIDENCE_ROOT/$RECEIPT_ID"
 mkdir -p "$RUN_DIR" || exit 70
 
@@ -69,41 +83,42 @@ if [ "$INSTALL_RC" -eq 0 ] && { [ "$PHASE" = "vectras" ] || [ "$PHASE" = "full" 
 fi
 
 run_check() {
-  key="$1"; required="$2"; shift 2
+  key="$1"
+  shift
   out="$RUN_DIR/$key.stdout"
   err="$RUN_DIR/$key.stderr"
   rc=0
   "$@" >"$out" 2>"$err" || rc=$?
-  state="PASS"
-  [ "$rc" -eq 0 ] || state="TOKEN_VAZIO"
-  eval "RC_$key=$rc"
-  eval "STATE_$key=$state"
-  eval "REQ_$key=$required"
+  return "$rc"
 }
 
-run_check gate_probe true "$GATE" --probe
-run_check pkg true "$GATE" --run pkg list-installed
-run_check proot true "$GATE" --run proot --version
-run_check proot_distro true "$GATE" --run proot-distro --help
-run_check ninja true "$GATE" --run ninja --version
-run_check clang true "$GATE" --run clang --version
-run_check cmake true "$GATE" --run cmake --version
+run_check gate_probe "$GATE" --probe; RC_GATE_PROBE=$?
+run_check pkg "$GATE" --run pkg list-installed; RC_PKG=$?
+run_check proot "$GATE" --run proot --version; RC_PROOT=$?
+run_check proot_distro "$GATE" --run proot-distro --help; RC_PROOT_DISTRO=$?
+run_check ninja "$GATE" --run ninja --version; RC_NINJA=$?
+run_check clang "$GATE" --run clang --version; RC_CLANG=$?
+run_check cmake "$GATE" --run cmake --version; RC_CMAKE=$?
 
+QEMU_REQUIRED=false
+RC_QEMU_X86_64=-1
+RC_QEMU_IMG=-1
 if [ "$PHASE" = "vectras" ] || [ "$PHASE" = "full" ]; then
-  run_check qemu_system_x86_64 true "$GATE" --run qemu-system-x86_64 --version
-  run_check qemu_img true "$GATE" --run qemu-img --version
-else
-  RC_qemu_system_x86_64=-1; STATE_qemu_system_x86_64=NOT_SELECTED; REQ_qemu_system_x86_64=false
-  RC_qemu_img=-1; STATE_qemu_img=NOT_SELECTED; REQ_qemu_img=false
+  QEMU_REQUIRED=true
+  run_check qemu_system_x86_64 "$GATE" --run qemu-system-x86_64 --version; RC_QEMU_X86_64=$?
+  run_check qemu_img "$GATE" --run qemu-img --version; RC_QEMU_IMG=$?
 fi
 
 ALL_OK=true
 [ "$INSTALL_RC" -eq 0 ] || ALL_OK=false
-for key in gate_probe pkg proot proot_distro ninja clang cmake qemu_system_x86_64 qemu_img; do
-  eval "required=\$REQ_$key"
-  eval "state=\$STATE_$key"
-  if [ "$required" = "true" ] && [ "$state" != "PASS" ]; then ALL_OK=false; fi
+[ "$APK_BIND_OK" = "true" ] || ALL_OK=false
+for rc in "$RC_GATE_PROBE" "$RC_PKG" "$RC_PROOT" "$RC_PROOT_DISTRO" "$RC_NINJA" "$RC_CLANG" "$RC_CMAKE"; do
+  [ "$rc" -eq 0 ] || ALL_OK=false
 done
+if [ "$QEMU_REQUIRED" = "true" ]; then
+  [ "$RC_QEMU_X86_64" -eq 0 ] || ALL_OK=false
+  [ "$RC_QEMU_IMG" -eq 0 ] || ALL_OK=false
+fi
 
 if [ "$ALL_OK" = "true" ]; then
   RUNTIME_STATE="RUNTIME_PROVEN"
@@ -117,13 +132,20 @@ fi
 
 check_json() {
   key="$1"
-  eval "required=\$REQ_$key"
-  eval "rc=\$RC_$key"
-  eval "state=\$STATE_$key"
+  required="$2"
+  rc="$3"
+  if [ "$required" = "false" ]; then
+    state="NOT_SELECTED"
+  elif [ "$rc" -eq 0 ]; then
+    state="PASS"
+  else
+    state="TOKEN_VAZIO"
+  fi
   printf '    "%s": {"required": %s, "exit_code": %s, "state": "%s"}' "$key" "$required" "$rc" "$state"
 }
 
 RECEIPT="$RUN_DIR/receipt.json"
+RECEIPT_TMP="$RUN_DIR/.receipt.json.tmp.$$"
 {
   echo '{'
   echo "  \"schema\": \"$SCHEMA\","
@@ -139,25 +161,28 @@ RECEIPT="$RUN_DIR/receipt.json"
   echo '  "reproduced_state": "TOKEN_VAZIO",'
   echo "  \"claim_allowed\": $CLAIM,"
   echo '  "checks": {'
-  check_json gate_probe; echo ','
-  check_json pkg; echo ','
-  check_json proot; echo ','
-  check_json proot_distro; echo ','
-  check_json ninja; echo ','
-  check_json clang; echo ','
-  check_json cmake; echo ','
-  check_json qemu_system_x86_64; echo ','
-  check_json qemu_img; echo
+  check_json gate_probe true "$RC_GATE_PROBE"; echo ','
+  check_json pkg true "$RC_PKG"; echo ','
+  check_json proot true "$RC_PROOT"; echo ','
+  check_json proot_distro true "$RC_PROOT_DISTRO"; echo ','
+  check_json ninja true "$RC_NINJA"; echo ','
+  check_json clang true "$RC_CLANG"; echo ','
+  check_json cmake true "$RC_CMAKE"; echo ','
+  check_json qemu_system_x86_64 "$QEMU_REQUIRED" "$RC_QEMU_X86_64"; echo ','
+  check_json qemu_img "$QEMU_REQUIRED" "$RC_QEMU_IMG"; echo
   echo '  }'
   echo '}'
-} >"$RECEIPT"
+} >"$RECEIPT_TMP" || exit 71
+mv "$RECEIPT_TMP" "$RECEIPT" || exit 72
 
-sha256sum "$RECEIPT" >"$RECEIPT.sha256"
+SIDECAR_TMP="$RUN_DIR/.receipt.json.sha256.tmp.$$"
+sha256sum "$RECEIPT" >"$SIDECAR_TMP" || exit 73
+mv "$SIDECAR_TMP" "$RECEIPT.sha256" || exit 74
 printf '%s\n' "$RECEIPT"
 
 if [ "$ALL_OK" = "true" ]; then
   echo "DEVICE_PROVEN: $RECEIPT" >&2
   exit 0
 fi
-echo "TOKEN_VAZIO: one or more required physical checks failed; receipt retained: $RECEIPT" >&2
+echo "TOKEN_VAZIO: one or more required physical checks or bindings failed; receipt retained: $RECEIPT" >&2
 exit 1
