@@ -2,7 +2,9 @@
 # Controller scope only: bootstrap/extractor/pkg probes/RAF-NINJA.
 # Platform payloads (apt/dpkg/proot.real) are validated/exec'd, not relabelled freestanding.
 
-CC ?= clang
+ifeq ($(origin CC), default)
+CC := clang
+endif
 READELF ?= llvm-readelf
 NM ?= llvm-nm
 
