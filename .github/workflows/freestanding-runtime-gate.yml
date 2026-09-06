@@ -3,6 +3,7 @@ name: Freestanding runtime gate
 on:
   push:
     branches:
+      - 'master'
       - 'rafaelia/freestanding-*'
     paths:
       - 'bootstrap/proot_freestanding.c'
