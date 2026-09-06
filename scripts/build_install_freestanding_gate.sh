@@ -1,23 +1,24 @@
-#!/data/data/com.termux/files/usr/bin/bash
-set -euo pipefail
+#!/system/bin/sh
+set -eu
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SRC="$ROOT_DIR/bootstrap/proot_freestanding.c"
 OUT_DIR="${RAF_FS_BUILD_DIR:-$ROOT_DIR/build/freestanding-runtime}"
 PREFIX_DIR="${PREFIX:-/data/data/com.termux.rafacodephi/files/usr}"
 INSTALL_DIR="$PREFIX_DIR/libexec"
 ARCH="${1:-$(uname -m)}"
+EXTRA=""
 
 case "$ARCH" in
   aarch64|arm64|arm64-v8a)
     TARGET="aarch64-linux-android21"
     NAME="aarch64"
-    EXTRA=()
     ;;
   armv7l|armv7|armeabi-v7a|arm)
     TARGET="armv7a-linux-androideabi21"
     NAME="armv7"
-    EXTRA=(-marm)
+    EXTRA="-marm"
     ;;
   *)
     printf 'TOKEN_VAZIO: unsupported local ABI for freestanding gate: %s\n' "$ARCH" >&2
@@ -28,7 +29,9 @@ esac
 mkdir -p "$OUT_DIR" "$INSTALL_DIR"
 OUT="$OUT_DIR/rafproot-fs-$NAME"
 
-clang --target="$TARGET" "${EXTRA[@]}" \
+# EXTRA is intentionally one trusted compile flag selected by the ABI case.
+# shellcheck disable=SC2086
+clang --target="$TARGET" $EXTRA \
   -std=c11 -Wall -Wextra -Werror \
   -ffreestanding -fno-builtin -fno-stack-protector -fomit-frame-pointer \
   -nostdlib -static \
@@ -46,7 +49,8 @@ if command -v readelf >/dev/null 2>&1; then
   fi
 fi
 
-install -m 700 "$OUT" "$INSTALL_DIR/rafproot-fs"
+cp "$OUT" "$INSTALL_DIR/rafproot-fs"
+chmod 700 "$INSTALL_DIR/rafproot-fs"
 
 SHA="TOKEN_VAZIO"
 if command -v sha256sum >/dev/null 2>&1; then
