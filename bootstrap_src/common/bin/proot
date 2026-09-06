@@ -1,4 +1,16 @@
 #!/system/bin/sh
-# RAFCODEPHI local bootstrap compatibility stub.
-echo "RAFCODEPHI bootstrap proot stub"
-exit 0
+# Compatibility shim only. Never report a successful PRoot execution unless a
+# real executable exists. The freestanding gate is preferred when packaged.
+PREFIX="${PREFIX:-/data/data/com.termux.rafacodephi/files/usr}"
+REAL_FS="$PREFIX/libexec/rafproot-fs"
+REAL_PROOT="$PREFIX/bin/proot.real"
+
+if [ -x "$REAL_FS" ]; then
+    exec "$REAL_FS" --run proot "$@"
+fi
+if [ -x "$REAL_PROOT" ]; then
+    exec "$REAL_PROOT" "$@"
+fi
+
+printf '%s\n' 'TOKEN_VAZIO: real PRoot payload is not installed; refusing compatibility-stub success' >&2
+exit 126
