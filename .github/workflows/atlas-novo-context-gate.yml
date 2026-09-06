@@ -1,0 +1,34 @@
+name: Atlas NOVO Context Contract Gate
+
+"on":
+  pull_request:
+    branches: [master]
+    paths:
+      - 'tools/atlas_*'
+      - 'tools/build_atlas_cti_bridge.py'
+      - 'tools/validate_atlas_llm_navigation_contract.py'
+      - 'docs/contracts/*atlas*'
+      - 'docs/contracts/ATLAS_*'
+      - 'tests/test_atlas_novo_context_adapter.py'
+      - '.github/workflows/atlas-novo-context-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  envelope-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate V1 contract and adversarial envelope controls
+        run: |
+          python3 tools/validate_atlas_llm_navigation_contract.py
+          PYTHONPATH=tools:tests python3 -m unittest test_atlas_novo_context_adapter.EnvelopeGate -v
+      - name: Preserve native boundary
+        run: |
+          echo 'Native producer, generation and device gates require their own receipts.'
+          echo 'claim_allowed=false'

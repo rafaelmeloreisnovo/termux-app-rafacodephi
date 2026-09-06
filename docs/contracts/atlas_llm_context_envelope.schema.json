@@ -53,6 +53,8 @@
         "required": ["source_ref", "status"],
         "properties": {
           "source_ref": { "type": "string" },
+          "conversation_id": { "type": ["string", "null"] },
+          "message_id": { "type": ["string", "null"] },
           "conv_i": { "type": ["integer", "null"], "minimum": 0 },
           "role": { "type": ["string", "null"] },
           "model": { "type": ["string", "null"] },

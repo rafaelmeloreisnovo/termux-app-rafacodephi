@@ -1,0 +1,401 @@
+{
+  "schema": "rafaelia.atlas_novo_local_gate.v1",
+  "receipt_id": "EVID:ATLAS-NOVO-CTI-LOCAL-20260906",
+  "observed_at": "2026-09-06T17:56:31.534770Z",
+  "state": "IMPLEMENTED_MEASURED_LOCAL",
+  "claim_allowed": false,
+  "model_executed": false,
+  "weights_modified": false,
+  "scope": "Hosted Python/C++ CTI retrieval and ContextBundle assembly on x86_64; no LLaMA generation, Android device, full corpus or physical equivalence claim.",
+  "predecessors": [
+    "ATLAS:X-NOVO-RMRCTI-LLM-NAV-20260906",
+    "L:ATLAS-NOVO-RMRCTI-LLM-NAV-20260906",
+    "LEARN:ATLAS-NOVO-RMRCTI-LLM-NAV-20260906"
+  ],
+  "authority": {
+    "orchestration": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "memory_and_ranking": "rafaelmeloreisnovo/llamaRafaelia",
+    "federation": "rafaelmeloreisnovo/Mapa",
+    "source": "UserProvided/Export"
+  },
+  "baseline": {
+    "termux_commit": "d679f4d464cd835ff194942a760027565e55c068",
+    "mapa_original_commit": "b7a155d00e8309a4f51aa6f8c6c3eb9a3b6f199c",
+    "mapa_route_commit": "9535ca98c8d87a35ac97f87283014b1ea5179078",
+    "termux_pr": 422,
+    "mapa_pr": 533,
+    "draft": true
+  },
+  "implementation_sha256": {
+    ".github/workflows/atlas-novo-context-gate.yml": "4fc1a8af53f9d007927c164c740a6ce7c3dcae2d214f3ffc9c08e047090d8577",
+    "app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c": "b08023f9bbaa82080f7ab750784ae26515886246cf146384759d232cd45b5672",
+    "docs/contracts/ATLAS_NOVO_CONTEXT_ADAPTER_V1.md": "3c240ee6e6f336c8dd580515f5ca9ffa970b1260a089e0e40bc87528489c0f29",
+    "docs/contracts/ATLAS_NOVO_LLM_NAVIGATION_CONTRACT_V1.json": "1c3a566fde447daf89fa4112548049d6a554dc86f83090e1b6d8ef824e98ca1f",
+    "docs/contracts/ATLAS_NOVO_LLM_NAVIGATION_CONTRACT_V1.md": "d4e0ca286b5414933fb76855a6a21f06edf2502797d19a74c30185a072fd6b83",
+    "docs/contracts/atlas_llm_context_envelope.schema.json": "dcf71ed2a25e36543fa2d89e36587efc7b5dc593101d16385576cb2a4f54e304",
+    "internal/orchestrator/vertical_slice.md": "07ab9df83eef73c608549c881c7e0d4492b41fc2157c4bc38f1c13a8efe5dc32",
+    "tests/test_atlas_novo_context_adapter.py": "4eba46c2ca08ae0c88a7bf6b7d7780114b25c19470f4a18077ab9cee2fd41a72",
+    "tools/atlas_contract_io.py": "185add8940f443701405c70ef5ddd0ebb5f24dcd35471712a725432947eaec2b",
+    "tools/atlas_cti_bridge.cpp": "06ea8936dca86ed3de7e9625e3305555e81d8e182f088d4fe578fa594faeaa43",
+    "tools/atlas_cti_producer_pin.json": "82044206f6f1a6971e1e76d4fcf2d39d48a6c646186a2a72b46ab06cc972cfb5",
+    "tools/atlas_novo_context_adapter.py": "a452943f293189f5cf6656741e0454d32a5c7aacbe0f8dc31c93926144108e65",
+    "tools/build_atlas_cti_bridge.py": "0328147aecbf24e3736fbbe16de93d4aaa057c3fed68566ee34e0e7c4f44e7e2",
+    "tools/validate_atlas_llm_navigation_contract.py": "90c063037047a9833696cbb0404045f61bc6d18db3f77494823149e1da6d0a78"
+  },
+  "native_build": {
+    "binary_sha256": "152da492a0e1c8649f09052ab301302c8956f28bf126ac7d3d7d84ea94e91929",
+    "claim_allowed": false,
+    "compiler": "c++ (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0",
+    "exit_code": 0,
+    "machine": "x86_64",
+    "platform": "Linux-6.18.35-x86_64-with-glibc2.39",
+    "producer": {
+      "commit": "3dac5fd2c23a9c55361672d5d593d3e875146da3",
+      "git_blobs": {
+        "common/cti_layersbit.h": "dafa7c72263478a3662b43d21d8f48c0a6444d49",
+        "common/cti_lb_tables.h": "2f1daa06135b9d24999e8887c6a0d18d835e49ff",
+        "common/cti_memory.cpp": "34380acf6c1451aeade27d7472346d7bc00b3b9b",
+        "common/cti_memory.h": "f810ab85230181de40f016b2f1f875aae9aa9ae0",
+        "common/cti_privacy.cpp": "283207e0afd24258699122983ed3e1a1becd6daa",
+        "common/cti_privacy.h": "3ec5b5da2189b97d63f12893c1f6fcef44c45319",
+        "rmrCti/novoexport_chat_adapter_v2.py": "c70d7a396cc23b407234919b9e5b289d9f1b8929",
+        "vendor/nlohmann/json.hpp": "82d69f7c5d044c9887c96b90c97f5639083ecd14"
+      },
+      "repository": "rafaelmeloreisnovo/llamaRafaelia"
+    },
+    "schema": "rafaelia.atlas_cti_build.v1",
+    "source_hashes": {
+      "common/cti_layersbit.h": {
+        "git_blob": "dafa7c72263478a3662b43d21d8f48c0a6444d49",
+        "sha256": "148ed15ad07c43a8b73966c45ce7bc702397fed2f2f21f67b4c3c4f977317148"
+      },
+      "common/cti_lb_tables.h": {
+        "git_blob": "2f1daa06135b9d24999e8887c6a0d18d835e49ff",
+        "sha256": "dc056f3bd1d54c82d43a10b0eeae710487797629a3018d8f4c77fa7e69b4a815"
+      },
+      "common/cti_memory.cpp": {
+        "git_blob": "34380acf6c1451aeade27d7472346d7bc00b3b9b",
+        "sha256": "8c22088a3fdcc3ea68670bea9ab11b0e3d853d15866040b840c773f076785b9c"
+      },
+      "common/cti_memory.h": {
+        "git_blob": "f810ab85230181de40f016b2f1f875aae9aa9ae0",
+        "sha256": "c6c6ef038065241d15a474a66d46ba97b8e4e402ea90e35ad46394e0848ea964"
+      },
+      "common/cti_privacy.cpp": {
+        "git_blob": "283207e0afd24258699122983ed3e1a1becd6daa",
+        "sha256": "c5f96c69f543da606372031cbc8adeef104a46ad5b479eab5328d4574d5a34dc"
+      },
+      "common/cti_privacy.h": {
+        "git_blob": "3ec5b5da2189b97d63f12893c1f6fcef44c45319",
+        "sha256": "3e3eea05f46392f0be74c388c1f8dc8d0914e493efa0b13dfd3db79463fdd6db"
+      },
+      "rmrCti/novoexport_chat_adapter_v2.py": {
+        "git_blob": "c70d7a396cc23b407234919b9e5b289d9f1b8929",
+        "sha256": "17a56e8566b6e5f5b126b846448e816a11c28133e5b79a914f19a1d177744b75"
+      },
+      "vendor/nlohmann/json.hpp": {
+        "git_blob": "82d69f7c5d044c9887c96b90c97f5639083ecd14",
+        "sha256": "aaf127c04cb31c406e5b04a63f1ae89369fccde6d8fa7cdda1ed4f32dfc5de63"
+      }
+    },
+    "wrapper_sha256": "06ea8936dca86ed3de7e9625e3305555e81d8e182f088d4fe578fa594faeaa43",
+    "original_receipt_sha256": "3208deef800ec1dfb96a6e898968a64ae70adc353ad678a91df50e13cce27f0b",
+    "command_template": [
+      "/usr/bin/c++",
+      "-std=c++17",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-I${PRODUCER_ROOT}/common",
+      "-I${PRODUCER_ROOT}/vendor",
+      "${TERMUX_REPO}/tools/atlas_cti_bridge.cpp",
+      "${PRODUCER_ROOT}/common/cti_memory.cpp",
+      "${PRODUCER_ROOT}/common/cti_privacy.cpp",
+      "-o",
+      "${BUILD_DIR}/atlas-cti-bridge"
+    ]
+  },
+  "tests": {
+    "tests_run": 18,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "exit_code": 0,
+    "python": "3.12.13",
+    "machine": "x86_64",
+    "log_sha256": "f073f1b8723aa640af505b8bf4f75b948d4cd85e7ac744cfe165bb4d7105c63d",
+    "claim_allowed": false
+  },
+  "test_log": "docs/receipts/ATLAS_NOVO_CTI_LOCAL_20260906.tests.log",
+  "contract_validator": {
+    "command": "python3 tools/validate_atlas_llm_navigation_contract.py",
+    "exit_code": 0
+  },
+  "real_source_custody": {
+    "source_class": "USER_UPLOADED_EXPORT",
+    "archive_sha256": "53fbfbc52d110d5815024ca851868555d23c3180cd73bb5433dd5f5bade9d93f",
+    "member": "conversations.json",
+    "member_bytes": 792693581,
+    "member_sha256": "d2db8b130ed968b1b94768d98f6e1fcdba52233dc846b9b94a63749cee14b7cf",
+    "selection": {
+      "array_index": 0,
+      "byte_offset": 1,
+      "byte_length": 1707369,
+      "sha256": "88f7109075f16ad8293db210d36a82c3c82bd5463f73ad2ab9f86d830fa5a051"
+    },
+    "crc_read_completed": true,
+    "provider_binding": "TOKEN_VAZIO",
+    "claim_allowed": false
+  },
+  "real_controls": [
+    {
+      "adapter_sha256": "a452943f293189f5cf6656741e0454d32a5c7aacbe0f8dc31c93926144108e65",
+      "binary_sha256": "152da492a0e1c8649f09052ab301302c8956f28bf126ac7d3d7d84ea94e91929",
+      "bundle_emitted": true,
+      "claim_allowed": false,
+      "context_byte_limit": 2500,
+      "context_bytes": 451,
+      "cti_messages_sha256": "cb8b3fe465566c79e234e642fe4552a0ecad50bbc002de715dfc6c879b8fb65a",
+      "enabled": true,
+      "evidence_state": "MEASURED_LOCAL",
+      "execution_plan": "PINNED_CTI_SCAN_FALLBACK_NO_CURATION",
+      "exit_code": 0,
+      "hit_count": 1,
+      "input_class": "REAL_SOURCE_SNAPSHOT",
+      "inputs_unchanged": true,
+      "lineage_sha256": "6d6385df054bcbf3c15b46d84ad4967666c758a8837d977344ad564c6d107459",
+      "manifest_sha256": "d48a2e701188d19724693dc3e276cdfcdc758439026ced004e8e58197cb8d22b",
+      "message_count": 312,
+      "model_executed": false,
+      "observed_at": "2026-09-06T17:43:29.482422Z",
+      "output_hashes": {
+        "chunks.json": "41c7e38b06681f4c6815b9d460dcfbc45ddeb45de8a369e4468c24eb4e535e73",
+        "context_bundle.json": "f1a5fbcbeabac0e20d7c9d717b7c8c60b1fb83c1d116f7b7df3cd567abffbe26",
+        "envelope.json": "6441f6772ff25f12d8b27528d412098ca7bec9af3f8bb4d2bb854671ab255950",
+        "learn.json": "af5986160ea598c2ac30b3a9a62fb4b18e64bdf95e9ac9f8daa152cf04c2ebfb"
+      },
+      "privacy_blocked_hits": 0,
+      "privacy_gate_applied": true,
+      "privacy_redacted_hits": 1,
+      "producer_commit": "3dac5fd2c23a9c55361672d5d593d3e875146da3",
+      "query_sha256": "f800ebfd14afa4f857b7cb24469e7b9e482c6e4383bc6c483d75571b593980c8",
+      "rollback": "Discard this new derived run directory; source bytes were not changed.",
+      "route_commit": "9535ca98c8d87a35ac97f87283014b1ea5179078",
+      "route_id": "ATLAS:X-NOVO-RMRCTI-LLM-NAV-20260906",
+      "route_sha256": "4b888c44af8705744a7b464158b76706ac571ec418e9d21f6291724b3ff7d210",
+      "run_id": "78ed8a9e4230a28a3f38dfb2e25a170b2cb2330b4a63c0283511a189de451911",
+      "schema": "rafaelia.atlas_novo_adapter_receipt.v1",
+      "selection_id": "6fc64c31708143401ef435644dbacb901407b58c220215efa672a45d9a0f6616",
+      "snippet_byte_limit": 400,
+      "source_authority": "UserProvided/Export",
+      "source_sha256": "88f7109075f16ad8293db210d36a82c3c82bd5463f73ad2ab9f86d830fa5a051",
+      "stages": [
+        "ATLAS",
+        "NOVO_SNAPSHOT",
+        "LONGITUDINAL",
+        "RMRCTI",
+        "CONTEXT_BUNDLE",
+        "LEARN"
+      ],
+      "status": "ok",
+      "token_vazio": [
+        "TV-LLAMA-GENERATION-CAUSAL-USE",
+        "TV-NOVO-CURRENT-MANIFEST-EXACT-SCOPE",
+        "TV-PHYSICAL-TERMUX-RUNTIME",
+        "TV-NOVO-PROVIDER-BINDING"
+      ],
+      "top_k": 5,
+      "weights_modified": false,
+      "control": "cti_on"
+    },
+    {
+      "adapter_sha256": "a452943f293189f5cf6656741e0454d32a5c7aacbe0f8dc31c93926144108e65",
+      "binary_sha256": "152da492a0e1c8649f09052ab301302c8956f28bf126ac7d3d7d84ea94e91929",
+      "bundle_emitted": false,
+      "claim_allowed": false,
+      "context_byte_limit": 2500,
+      "context_bytes": 0,
+      "cti_messages_sha256": "cb8b3fe465566c79e234e642fe4552a0ecad50bbc002de715dfc6c879b8fb65a",
+      "enabled": false,
+      "evidence_state": "MEASURED_LOCAL",
+      "execution_plan": "PINNED_CTI_SCAN_FALLBACK_NO_CURATION",
+      "exit_code": 0,
+      "hit_count": 0,
+      "input_class": "REAL_SOURCE_SNAPSHOT",
+      "inputs_unchanged": true,
+      "lineage_sha256": "6d6385df054bcbf3c15b46d84ad4967666c758a8837d977344ad564c6d107459",
+      "manifest_sha256": "d48a2e701188d19724693dc3e276cdfcdc758439026ced004e8e58197cb8d22b",
+      "message_count": 312,
+      "model_executed": false,
+      "observed_at": "2026-09-06T17:43:29.719721Z",
+      "output_hashes": {
+        "chunks.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "envelope.json": "cc678f5be234205921552847c40fddae7a1508bf800f1324e483c94e698ec602",
+        "learn.json": "5afca18d7528c4d434bff66deddfd9f6d078876b8969c99722e73c15858b0e22"
+      },
+      "privacy_blocked_hits": 0,
+      "privacy_gate_applied": false,
+      "privacy_redacted_hits": 0,
+      "producer_commit": "3dac5fd2c23a9c55361672d5d593d3e875146da3",
+      "query_sha256": "f800ebfd14afa4f857b7cb24469e7b9e482c6e4383bc6c483d75571b593980c8",
+      "rollback": "Discard this new derived run directory; source bytes were not changed.",
+      "route_commit": "9535ca98c8d87a35ac97f87283014b1ea5179078",
+      "route_id": "ATLAS:X-NOVO-RMRCTI-LLM-NAV-20260906",
+      "route_sha256": "4b888c44af8705744a7b464158b76706ac571ec418e9d21f6291724b3ff7d210",
+      "run_id": "b1282f58c037a912e63f4e5af521d65fab5e1fbb8dcd3a5c7cfdcad090f40493",
+      "schema": "rafaelia.atlas_novo_adapter_receipt.v1",
+      "selection_id": "e67d1fdc629937c25fc28db6a7e91ab2c713ec9d7503c11b4959f5db469c12af",
+      "snippet_byte_limit": 400,
+      "source_authority": "UserProvided/Export",
+      "source_sha256": "88f7109075f16ad8293db210d36a82c3c82bd5463f73ad2ab9f86d830fa5a051",
+      "stages": [
+        "ATLAS",
+        "NOVO_SNAPSHOT",
+        "LONGITUDINAL",
+        "RMRCTI",
+        "CONTEXT_BUNDLE",
+        "LEARN"
+      ],
+      "status": "disabled",
+      "token_vazio": [
+        "TV-LLAMA-GENERATION-CAUSAL-USE",
+        "TV-NOVO-CURRENT-MANIFEST-EXACT-SCOPE",
+        "TV-PHYSICAL-TERMUX-RUNTIME",
+        "TV-NOVO-PROVIDER-BINDING",
+        "TV-CONTEXT-DISABLED"
+      ],
+      "top_k": 5,
+      "weights_modified": false,
+      "control": "cti_off"
+    },
+    {
+      "adapter_sha256": "a452943f293189f5cf6656741e0454d32a5c7aacbe0f8dc31c93926144108e65",
+      "binary_sha256": "152da492a0e1c8649f09052ab301302c8956f28bf126ac7d3d7d84ea94e91929",
+      "bundle_emitted": false,
+      "claim_allowed": false,
+      "context_byte_limit": 2500,
+      "context_bytes": 0,
+      "cti_messages_sha256": "cb8b3fe465566c79e234e642fe4552a0ecad50bbc002de715dfc6c879b8fb65a",
+      "enabled": true,
+      "evidence_state": "MEASURED_LOCAL",
+      "execution_plan": "PINNED_CTI_SCAN_FALLBACK_NO_CURATION",
+      "exit_code": 0,
+      "hit_count": 0,
+      "input_class": "REAL_SOURCE_SNAPSHOT",
+      "inputs_unchanged": true,
+      "lineage_sha256": "6d6385df054bcbf3c15b46d84ad4967666c758a8837d977344ad564c6d107459",
+      "manifest_sha256": "d48a2e701188d19724693dc3e276cdfcdc758439026ced004e8e58197cb8d22b",
+      "message_count": 312,
+      "model_executed": false,
+      "observed_at": "2026-09-06T17:43:29.934983Z",
+      "output_hashes": {
+        "chunks.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "envelope.json": "3c910c619f14bd2dbdf4884e2f18fc1b41c2e1599ac30d59eb03a89d145dea59",
+        "learn.json": "a52c29d7ec2fdd5303fbd92a8d30f78688d662184fb551e3b1c66662a8d0e6bc"
+      },
+      "privacy_blocked_hits": 0,
+      "privacy_gate_applied": true,
+      "privacy_redacted_hits": 0,
+      "producer_commit": "3dac5fd2c23a9c55361672d5d593d3e875146da3",
+      "query_sha256": "78621ad40a43e01d40e0b88f7c40ef5a696afdd2218ed5209ab42419538471f0",
+      "rollback": "Discard this new derived run directory; source bytes were not changed.",
+      "route_commit": "9535ca98c8d87a35ac97f87283014b1ea5179078",
+      "route_id": "ATLAS:X-NOVO-RMRCTI-LLM-NAV-20260906",
+      "route_sha256": "4b888c44af8705744a7b464158b76706ac571ec418e9d21f6291724b3ff7d210",
+      "run_id": "9a0765e6753aaf72b5be33cc722593dc581881e352e58d2dc6c3f11070b3b303",
+      "schema": "rafaelia.atlas_novo_adapter_receipt.v1",
+      "selection_id": "eb2496d10f450a649f35349def1e401cd3ceb042e75235ac404bf2c8d0af743e",
+      "snippet_byte_limit": 400,
+      "source_authority": "UserProvided/Export",
+      "source_sha256": "88f7109075f16ad8293db210d36a82c3c82bd5463f73ad2ab9f86d830fa5a051",
+      "stages": [
+        "ATLAS",
+        "NOVO_SNAPSHOT",
+        "LONGITUDINAL",
+        "RMRCTI",
+        "CONTEXT_BUNDLE",
+        "LEARN"
+      ],
+      "status": "no_hits",
+      "token_vazio": [
+        "TV-LLAMA-GENERATION-CAUSAL-USE",
+        "TV-NOVO-CURRENT-MANIFEST-EXACT-SCOPE",
+        "TV-PHYSICAL-TERMUX-RUNTIME",
+        "TV-NOVO-PROVIDER-BINDING",
+        "TV-CONTEXT-NO_HITS"
+      ],
+      "top_k": 5,
+      "weights_modified": false,
+      "control": "negative_no_hit"
+    }
+  ],
+  "control_interpretation": {
+    "rare_fact_fixture": "Synthetic unique marker and accompanying fact enter context only with CTI enabled.",
+    "real_probe": "Source-backed keyword appears in the retrieved snippet together with source text; marker and body are withheld from public artifacts.",
+    "positive_present": true,
+    "disabled_absent": true,
+    "negative_no_hit": true,
+    "input_bytes_unchanged": true,
+    "causal_model_use": "TOKEN_VAZIO"
+  },
+  "regressions_and_repairs": [
+    {
+      "id": "FIX-ENVELOPE-REQUIRED",
+      "before": "Missing envelope_id/query/source_refs/token_vazio accepted by old validator.",
+      "after": "Schema assertions and reference integrity enforced; 8 adversarial envelope tests pass."
+    },
+    {
+      "id": "FIX-CTI-BRIDGE-UTF8",
+      "before": "One multibyte integration test failed when unused native render_context_block output cut a UTF-8 sequence.",
+      "after": "Bridge no longer serializes unused rendered block; adapter constructs bounded UTF-8-safe chunks. Final 18/18 tests pass.",
+      "producer_renderer_changed": false,
+      "remaining_gap": "TV-CTI-UPSTREAM-RENDER-UTF8"
+    },
+    {
+      "id": "FIX-GPU-UNUSED-HANDLE",
+      "before": "Original ARM64 CI failed on unused g_opencl_handle with -Werror; reproduced in host translation-unit build.",
+      "after": "Removed unused declaration. Strict host compilation passes and .text is identical.",
+      "measurement": {
+        "baseline_strict_exit": 1,
+        "patched_strict_exit": 0,
+        "text_identical": true,
+        "text_sha256": "e7ba24eacd1e259b6fce363474c9ea8a219dcddf7e4ce30c653148e6e2bb1a0f",
+        "scope": "GCC x86_64 translation-unit compile; ARM64 APK not rebuilt locally",
+        "claim_allowed": false
+      }
+    }
+  ],
+  "remote_ci": {
+    "baseline_failed_run": 34046411844,
+    "baseline_failed_job": 101522340336,
+    "current_commit": "NOT_YET_PUBLISHED_AT_RECEIPT_CREATION",
+    "local_tests_replace_remote_ci": false,
+    "new_envelope_workflow_scope": "8 public envelope tests only; 10 native tests need authorized private producer sources."
+  },
+  "token_vazio": [
+    "TV-NOVO-PROVIDER-BINDING",
+    "TV-NOVO-CURRENT-MANIFEST-EXACT-SCOPE",
+    "TV-LLAMA-GENERATION-CAUSAL-USE",
+    "TV-CTI-UPSTREAM-RENDER-UTF8",
+    "TV-PHYSICAL-TERMUX-RUNTIME",
+    "TV-GAIA-RMRCTI-ADAPTER-RUNTIME",
+    "TV-PRIVATE-BOUNDED-ADAPTER-RUNTIME",
+    "TV-RLL-IMAGE-ADAPTER-REPLAY",
+    "TV-VECTRAS-OPTIONAL-BACKEND-DEVICE-PROOF",
+    "TV-REMOTE-CI-CURRENT-RECEIPT"
+  ],
+  "rollback": {
+    "code": "Revert implementation commit on the draft branch; baseline retained. No merge or force push.",
+    "data": "Discard only a newly derived run directory. Source, prior receipts and NOVOexport remain unchanged."
+  },
+  "disclosure": "Metadata/hashes only; no raw corpus, private producer source, query literal or retrieved body is published.",
+  "invariants": [
+    "retrieval != training",
+    "model_output != evidence",
+    "measured_delta_p != attractor",
+    "visual_similarity != physical_equivalence",
+    "TOKEN_VAZIO != 0"
+  ],
+  "self_hash_rule": "This receipt does not hash itself or its successor commit. Git commit identity and the Mapa successor receipt seal publication."
+}

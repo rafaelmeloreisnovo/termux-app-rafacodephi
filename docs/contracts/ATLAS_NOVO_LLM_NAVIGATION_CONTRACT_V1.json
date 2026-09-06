@@ -147,5 +147,17 @@
     "PRIVATE_POINTER != PUBLIC_DISCLOSURE",
     "SOURCE_PRESENT != BUILD_PROVEN != RUNTIME_PROVEN != DEVICE_PROVEN",
     "TOKEN_VAZIO != 0"
-  ]
+  ],
+  "implementation_successor": {
+    "id": "ATLAS-NOVO-CTI-LOCAL-20260906",
+    "state": "IMPLEMENTED_MEASURED_LOCAL",
+    "documentation": "docs/contracts/ATLAS_NOVO_CONTEXT_ADAPTER_V1.md",
+    "entrypoint": "tools/atlas_novo_context_adapter.py",
+    "producer_pin": "tools/atlas_cti_producer_pin.json",
+    "receipt": "docs/receipts/ATLAS_NOVO_CTI_LOCAL_20260906.v1.json",
+    "executed_route": ["ATLAS", "NOVO_SNAPSHOT", "LONGITUDINAL", "RMRCTI", "CONTEXT_BUNDLE", "LEARN"],
+    "model_executed": false,
+    "weights_modified": false,
+    "claim_allowed": false
+  }
 }

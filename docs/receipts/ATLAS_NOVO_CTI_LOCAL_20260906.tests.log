@@ -1,0 +1,23 @@
+test_baseline_remains_valid (test_atlas_novo_context_adapter.EnvelopeGate.test_baseline_remains_valid) ... ok
+test_dangling_hit_and_duplicate_identity_rejected (test_atlas_novo_context_adapter.EnvelopeGate.test_dangling_hit_and_duplicate_identity_rejected) ... ok
+test_duplicate_keys_and_nonfinite_json_rejected (test_atlas_novo_context_adapter.EnvelopeGate.test_duplicate_keys_and_nonfinite_json_rejected) ... ok
+test_false_not_zero_and_invalid_digest_rejected (test_atlas_novo_context_adapter.EnvelopeGate.test_false_not_zero_and_invalid_digest_rejected) ... ok
+test_missing_required_fields_rejected (test_atlas_novo_context_adapter.EnvelopeGate.test_missing_required_fields_rejected) ... ok
+test_non_object_and_bad_nested_type_rejected (test_atlas_novo_context_adapter.EnvelopeGate.test_non_object_and_bad_nested_type_rejected) ... ok
+test_public_raw_body_is_not_an_envelope_field (test_atlas_novo_context_adapter.EnvelopeGate.test_public_raw_body_is_not_an_envelope_field) ... ok
+test_unknown_assertion_fails_closed (test_atlas_novo_context_adapter.EnvelopeGate.test_unknown_assertion_fails_closed) ... ok
+test_ambiguous_redacted_source_rejected (test_atlas_novo_context_adapter.NativeCTIAdapter.test_ambiguous_redacted_source_rejected) ... ok
+test_append_only_and_deterministic_selection (test_atlas_novo_context_adapter.NativeCTIAdapter.test_append_only_and_deterministic_selection) ... ok
+test_multibyte_context_respects_total_budget (test_atlas_novo_context_adapter.NativeCTIAdapter.test_multibyte_context_respects_total_budget) ... ok
+test_no_hit_does_not_fabricate_bundle (test_atlas_novo_context_adapter.NativeCTIAdapter.test_no_hit_does_not_fabricate_bundle) ... ok
+test_pii_redacted_before_context (test_atlas_novo_context_adapter.NativeCTIAdapter.test_pii_redacted_before_context) ... ok
+test_query_limit_before_native_execution (test_atlas_novo_context_adapter.NativeCTIAdapter.test_query_limit_before_native_execution) ... ok
+test_rare_fact_requires_enabled_retrieval (test_atlas_novo_context_adapter.NativeCTIAdapter.test_rare_fact_requires_enabled_retrieval) ... ok
+test_restricted_query_is_blocked (test_atlas_novo_context_adapter.NativeCTIAdapter.test_restricted_query_is_blocked) ... ok
+test_route_and_disclosure_fail_closed (test_atlas_novo_context_adapter.NativeCTIAdapter.test_route_and_disclosure_fail_closed) ... ok
+test_source_hash_tamper_rejected (test_atlas_novo_context_adapter.NativeCTIAdapter.test_source_hash_tamper_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 0.600s
+
+OK
