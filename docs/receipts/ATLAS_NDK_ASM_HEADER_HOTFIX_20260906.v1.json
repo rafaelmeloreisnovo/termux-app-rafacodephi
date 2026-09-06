@@ -1,0 +1,128 @@
+{
+  "schema": "rafaelia.ndk_asm_flag_hotfix.v1",
+  "predecessor_commit": "1161f49de0ab0635420bab82144b7303c1e1a487",
+  "evidence_state": "MAKE_EVALUATED_NOT_NDK_COMPILE",
+  "baseline_ci_run": 34050254497,
+  "baseline_job": 101532645311,
+  "failure": "arm_neon.h C declarations injected into assembler via LOCAL_CFLAGS",
+  "fix": "Move only -include arm_neon.h into LOCAL_CONLYFLAGS; preserve shared HAS_BM_NEON_ASM and effective C flags.",
+  "source_documentation": "https://developer.android.com/ndk/guides/android_mk#local_conlyflags",
+  "checks": [
+    {
+      "abi": "arm64-v8a",
+      "mode": [
+        "default"
+      ],
+      "sources_unchanged": true,
+      "effective_c_flags_preserved": true,
+      "intrinsics_header_absent_from_shared_c_asm_flags": true
+    },
+    {
+      "abi": "arm64-v8a",
+      "mode": [
+        "RAFAELIA_NO_MALLOC=0"
+      ],
+      "sources_unchanged": true,
+      "effective_c_flags_preserved": true,
+      "intrinsics_header_absent_from_shared_c_asm_flags": true
+    },
+    {
+      "abi": "arm64-v8a",
+      "mode": [
+        "RMR_PURE_CORE=1"
+      ],
+      "sources_unchanged": true,
+      "effective_c_flags_preserved": true,
+      "intrinsics_header_absent_from_shared_c_asm_flags": true
+    },
+    {
+      "abi": "armeabi-v7a",
+      "mode": [
+        "default"
+      ],
+      "sources_unchanged": true,
+      "effective_c_flags_preserved": true,
+      "intrinsics_header_absent_from_shared_c_asm_flags": true
+    },
+    {
+      "abi": "armeabi-v7a",
+      "mode": [
+        "RAFAELIA_NO_MALLOC=0"
+      ],
+      "sources_unchanged": true,
+      "effective_c_flags_preserved": true,
+      "intrinsics_header_absent_from_shared_c_asm_flags": true
+    },
+    {
+      "abi": "armeabi-v7a",
+      "mode": [
+        "RMR_PURE_CORE=1"
+      ],
+      "sources_unchanged": true,
+      "effective_c_flags_preserved": true,
+      "intrinsics_header_absent_from_shared_c_asm_flags": true
+    },
+    {
+      "abi": "x86",
+      "mode": [
+        "default"
+      ],
+      "sources_unchanged": true,
+      "effective_c_flags_preserved": true,
+      "intrinsics_header_absent_from_shared_c_asm_flags": true
+    },
+    {
+      "abi": "x86",
+      "mode": [
+        "RAFAELIA_NO_MALLOC=0"
+      ],
+      "sources_unchanged": true,
+      "effective_c_flags_preserved": true,
+      "intrinsics_header_absent_from_shared_c_asm_flags": true
+    },
+    {
+      "abi": "x86",
+      "mode": [
+        "RMR_PURE_CORE=1"
+      ],
+      "sources_unchanged": true,
+      "effective_c_flags_preserved": true,
+      "intrinsics_header_absent_from_shared_c_asm_flags": true
+    },
+    {
+      "abi": "x86_64",
+      "mode": [
+        "default"
+      ],
+      "sources_unchanged": true,
+      "effective_c_flags_preserved": true,
+      "intrinsics_header_absent_from_shared_c_asm_flags": true
+    },
+    {
+      "abi": "x86_64",
+      "mode": [
+        "RAFAELIA_NO_MALLOC=0"
+      ],
+      "sources_unchanged": true,
+      "effective_c_flags_preserved": true,
+      "intrinsics_header_absent_from_shared_c_asm_flags": true
+    },
+    {
+      "abi": "x86_64",
+      "mode": [
+        "RMR_PURE_CORE=1"
+      ],
+      "sources_unchanged": true,
+      "effective_c_flags_preserved": true,
+      "intrinsics_header_absent_from_shared_c_asm_flags": true
+    }
+  ],
+  "exit_code": 0,
+  "old_sha256": "1b96b2b04a9248ea4248aaf5d8fbc75be966e6f7b2ac784cf69bbc789328ed9e",
+  "new_sha256": "6c5cce13bd54f78c96698c57a2a22e10f56146df328397d801e94adcf1b189fe",
+  "ndk_locally_available": false,
+  "android_build_proven": false,
+  "device_proven": false,
+  "claim_allowed": false,
+  "rollback": "Revert this isolated Android.mk commit; no source algorithm or ABI changed."
+}
