@@ -1,322 +1,222 @@
-# BUG-04..08 — Bootstrap Hardcode e Bugs Sistêmicos
-> Repositório: `exacordex-crypto/termux-app-rafacodephi`
-> Documento cobre: BUG-04 (bootstrap), BUG-05 (ZrManifest), 
->                  BUG-06 (CTI race), BUG-07 (BLAKE3), BUG-08 (Lyapunov)
+# BUG-04..08 — Registro auditado de Bootstrap e Bugs Sistêmicos
+
+> Repository atual: `rafaelmeloreisnovo/termux-app-rafacodephi`
+> Baseline auditado: `b207970fc7a8630a534956cb544350cfd61ba33a`
+> Histórico anterior permanece recuperável no Git. Este documento substitui trechos inferidos por apontamentos verificáveis do source atual.
+
+## Regra de evidência
+
+```text
+source/test/workflow > contract > receipt > documentation > historical hypothesis
+```
+
+Exemplos antigos marcados como `inferido`, `provável` ou `presumido` não são tratados como código real.
 
 ---
 
-## BUG-04 — Bootstrap paths hardcoded para `com.termux`
+## BUG-04 — Bootstrap package/prefix/sharedUserId
 
-### Severidade: 🟡 MÉDIO — Funcional mas bloqueia release oficial
+### Estado documental atual
 
-### Descrição
-
-O fork `termux-app-rafacodephi` usa o package name `com.termux.rafacodephi`
-(ou similar), mas os paths de bootstrap estão codificados para o package
-name do Termux original:
-
-```java
-// Localizações prováveis (inferidas):
-// termux-shared/src/main/java/.../TermuxConstants.java
-public static final String TERMUX_PACKAGE_NAME = "com.termux";
-public static final String TERMUX_FILES_DIR_PATH =
-    "/data/data/com.termux/files";   // ← HARDCODED
-public static final String TERMUX_PREFIX_DIR_PATH =
-    "/data/data/com.termux/files/usr"; // ← HARDCODED
+```text
+SOURCE_OBSERVED + TEST_ENFORCED + WORKFLOW_WIRED
+DEVICE_PROVEN = TOKEN_VAZIO
+claim_allowed = false
 ```
 
-### Impacto
+### O que o source atual sustenta
 
-1. **Side-by-side install impossível:** instalar `com.termux.rafacodephi`
-   ao lado do `com.termux` original causa conflito de paths — ambos
-   tentam usar `/data/data/com.termux/files/`.
+Identidade/prefixo normativos:
 
-2. **SharedUserId conflict:** Ambos usam `android:sharedUserId="com.termux"`,
-   mas APKs assinados com chaves diferentes não podem compartilhar o mesmo
-   `sharedUserId`. Resultado: crash no install.
-
-3. **Bootstrap não extrai para path correto:** O bootstrap zip é extraído
-   para `/data/data/com.termux/files/` independente do package instalado.
-
-### Fix
-
-```java
-// TermuxConstants.java — patch mínimo
-public static final String TERMUX_PACKAGE_NAME = BuildConfig.APPLICATION_ID;
-
-// No Gradle (app/build.gradle):
-android {
-    defaultConfig {
-        applicationId "com.termux.rafacodephi"
-    }
-}
-
-// Nos paths: usar BuildConfig ao invés de hardcode
-public static final String TERMUX_FILES_DIR_PATH =
-    "/data/data/" + BuildConfig.APPLICATION_ID + "/files";
+```text
+package = com.termux.rafacodephi
+prefix  = /data/data/com.termux.rafacodephi/files/usr
 ```
 
-### Scripts de bootstrap afetados
+O teste `tests/test_termux_api_access_contract.py` exige:
 
-```bash
-# prepare_bootstrap_env.sh — linha problemática (inferida)
-TERMUX_PREFIX=/data/data/com.termux/files/usr  # ← mudar para variável
+- permissão `${TERMUX_PACKAGE_NAME}.permission.TERMUX_API`;
+- `android:protectionLevel="signature"`;
+- ausência de `android:sharedUserId` no manifest principal.
 
-# Fix:
-TERMUX_PKG="${TERMUX_PACKAGE_NAME:-com.termux.rafacodephi}"
-TERMUX_PREFIX="/data/data/${TERMUX_PKG}/files/usr"
+Portanto, a narrativa antiga de que o app atual ainda usa `android:sharedUserId="com.termux"` é `STALE` para este baseline.
+
+A fonte real ARM/ARM64 e a cadeia de bootstrap estão descritas em:
+
+- `docs/BOOTSTRAP_SOURCE_CONTRACT.md`
+- `.github/workflows/beta-build.yml`
+- `.github/workflows/beta-build-libllvm18-unblock.yml`
+- `scripts/prepare_bootstrap_env.sh`
+- `scripts/generate_usable_beta_receipt.py`
+
+### Falha tardia do manifest
+
+O manifest:
+
+```text
+RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
 ```
 
-### Critério de fechamento
+é produto do source-build de `termux-packages`; não é arquivo para ser fabricado manualmente quando um consumidor downstream reclama da ausência.
 
-- [ ] `TermuxConstants.java` usa `BuildConfig.APPLICATION_ID`
-- [ ] `prepare_bootstrap_env.sh` usa variável configurável
-- [ ] Build matrix (`build_apk_matrix.sh`) gera APKs com package name correto
-- [ ] Install testado side-by-side com Termux original no mesmo dispositivo
-- [ ] `android:sharedUserId` removido ou atualizado (Android 11+: deprecated)
+O workflow `beta-build-libllvm18-unblock.yml` agora faz preflight da capacidade da fonte antes do build caro e só executa o receipt estrito em `success()`.
+
+Em falha upstream, registra:
+
+```text
+state=UPSTREAM_FAILURE_EVIDENCE_INCOMPLETE
+physical_android=TOKEN_VAZIO
+claim_allowed=false
+release_allowed=false
+```
+
+Regra causal:
+
+```text
+producer failed before artifact creation
+→ artifact missing is consequence
+→ do not replace the primary failure with "missing artifact"
+```
+
+### Gate restante
+
+A correção estrutural/documental não prova instalação física, shell físico, `pkg update` ou `pkg install`.
 
 ---
 
-## BUG-05 — `ZrManifest` em stack de thread (Stack Overflow)
+## BUG-05 — `ZrManifest` / prevenção de stack overflow
 
-### Severidade: 🔴 CRÍTICO (silencioso)
+### Estado observado
 
-### Descrição
-
-O `ZrManifest` da ZIPRAF tem ~59KB de tamanho. Se instanciado como
-variável local em qualquer função/thread, causa stack overflow silencioso.
-
-```c
-// BUGGY — comum em código não revisado:
-void some_zipraf_operation(void) {
-    ZrManifest manifest;  // 59KB na stack!!! OVERFLOW
-    zr_manifest_init(&manifest, ...);
-}
+```text
+SOURCE_OBSERVED
 ```
 
-Stack default em threads Android NDK = 1MB.
-Thread principal do app = 8MB (mas Termux pode ter menos).
-59KB de stack frame único não parece muito, mas combinado com
-frames de outras funções na call stack pode causar overflow.
+O baseline contém:
 
-### Fix
-
-```c
-// CORRETO 1: static (mais simples)
-static ZrManifest g_manifest;  // BSS/data segment, não stack
-void some_zipraf_operation(void) {
-    zr_manifest_init(&g_manifest, ...);
-}
-
-// CORRETO 2: Se múltiplas instâncias forem necessárias:
-// Alocar em heap via sistema de pool pré-alocado (sem malloc direto)
-// O VECTRA_OS tem um pool system baseado em arena estática
-
-// CORRETO 3: __attribute__((aligned(16384))) para 16KB page alignment
-static ZrManifest __attribute__((aligned(16384))) g_manifest_aligned;
+```text
+rmr/Rrr/zipraf_index.h
+rmr/Rrr/zipraf_index.c
+rmr/Rrr/zipraf_manifest_pool.h
+rmr/Rrr/zipraf_manifest_pool.c
 ```
 
-### Detecção
+`zipraf_index.h` contém guarda explícita referente a alocação acidental em stack, e existe pool estático dedicado a `ZrManifest`.
 
-```bash
-# Verificar no código se há ZrManifest como variável local:
-grep -rn "ZrManifest " . | grep -v "static\|extern\|*\|&"
-# Qualquer linha sem static/extern/pointer é um stack allocation
-```
+Documentos específicos de implementação/resolução também existem, incluindo:
 
-### Critério de fechamento
+- `docs/BUG05_ZRMANIFEST_RESOLUTION.md`
+- `docs/BUG_05_ZRMANIFEST_STACK_OVERFLOW_FIX.md`
 
-- [ ] `grep` acima retorna zero linhas
-- [ ] Todas as instâncias de `ZrManifest` são `static` ou via arena
-- [ ] `__attribute__((aligned(16384)))` aplicado para Android 15/16
+### Limite do claim
+
+A presença do pool/guard prova implementação estrutural, não ausência universal de qualquer uso incorreto em todo runtime/device. Para claim mais amplo, usar gate/teste/receipt correspondente.
 
 ---
 
-## BUG-06 — `CtiScanner` modo TOROID: Race condition sem barrier
+## BUG-06 — CTI / TOROID / concorrência
 
-### Severidade: 🟠 ALTO
+### Correção do documento antigo
 
-### Descrição
+O trecho antigo que inventava:
 
-O modo de varredura `CTI_SCAN_TOROID` do `CtiScanner` usa uma
-variável de índice compartilhada sem proteção de concorrência.
-Em uso multi-thread (comum em Android via ART), dois threads
-podem iniciar varreduras TOROID simultâneas e corromper o índice.
-
-```c
-// cti_raw_reader.c — trecho problemático (inferido)
-typedef struct {
-    CtiEntry entries[CTI_MAX_ENTRIES];  // 1024 entradas
-    int      scan_idx;                  // ← SEM ATOMIC
-    ScanMode mode;
-    // ...
-} CtiScanner;
-
-// Thread A e Thread B chamam simultaneamente:
-int cti_scan_next(CtiScanner *s) {
-    // RACE: dois threads lêem s->scan_idx = 512,
-    // ambos incrementam para 513, mas só um processa 512
-    int idx = s->scan_idx++;  // ← não atômico
-    return process_entry(&s->entries[idx % CTI_MAX_ENTRIES]);
-}
+```text
+int scan_idx;
+s->scan_idx++;
 ```
 
-### Fix
+foi explicitamente marcado como inferido e NÃO aparece como descrição do `rmr/Rrr/cti_raw_reader.c` atual. O scanner atual usa índices locais de iteração na rotina de scan.
 
-```c
-// cti_raw_reader.h — fix com _Atomic (C11)
-#include <stdatomic.h>
+O baseline também contém uma implementação/gate específico de barreira:
 
-typedef struct {
-    CtiEntry       entries[CTI_MAX_ENTRIES];
-    _Atomic int    scan_idx;      // ← atômico
-    ScanMode       mode;
-    // ...
-} CtiScanner;
-
-// cti_raw_reader.c — uso correto
-int cti_scan_next(CtiScanner *s) {
-    // fetch_add atômico — thread-safe
-    int idx = atomic_fetch_add_explicit(
-        &s->scan_idx, 1, memory_order_acq_rel);
-    return process_entry(&s->entries[idx % CTI_MAX_ENTRIES]);
-}
+```text
+rmr/Rrr/cti_scanner_barrier.h
+rmr/Rrr/cti_race_condition_validator.c
+Makefile target: cti-race-condition-gate
 ```
 
-**Alternativa para zero-overhead single-thread:** marcar explicitamente
-que `CtiScanner` é single-threaded e adicionar `assert` no header:
+### Estado documental
 
-```c
-#define CTI_ASSERT_SINGLE_THREAD  // se definido, desabilita _Atomic
+```text
+SOURCE_OBSERVED + GATE_WIRED
+DEVICE_PROVEN = TOKEN_VAZIO unless a physical receipt is attached
 ```
 
-### Critério de fechamento
-
-- [ ] `scan_idx` declarado `_Atomic int` ou proteção explícita documentada
-- [ ] Modo TOROID testado com 2+ threads simultâneos sem race
-- [ ] ASan + TSan habilitados em build de debug para confirmar
+Não usar o snippet antigo de `_Atomic scan_idx` como se fosse a implementação corrente.
 
 ---
 
-## BUG-07 — BLAKE3 hash skip silencioso no build pipeline
+## BUG-07 — integridade/BLAKE3 no pipeline
 
-### Severidade: 🟡 MÉDIO
+### Correção do documento antigo
 
-### Descrição
+O exemplo antigo afirmava que `hotfix_ate_compilar.sh` continha um mismatch BLAKE3 silencioso, mas o exemplo era explicitamente `inferido`.
 
-O script `hotfix_ate_compilar.sh` verifica hash BLAKE3 dos artefatos
-mas em caso de falha faz **log silencioso sem abort**:
+O arquivo real atual está em:
 
-```bash
-# hotfix_ate_compilar.sh — trecho problemático (inferido)
-EXPECTED_HASH="abc123..."
-ACTUAL_HASH=$(b3sum output.apk | cut -d' ' -f1)
-if [ "$EXPECTED_HASH" != "$ACTUAL_HASH" ]; then
-    echo "WARN: hash mismatch"  # ← deveria ser FATAL
-    # continua sem abort!!!
-fi
+```text
+scripts/hotfix_ate_compilar.sh
 ```
 
-Resultado: APKs com hash incorreto são distribuídos silenciosamente.
-Em um sistema com BLAKE3 como verificação de integridade, isso é
-uma violação do contrato de segurança.
+Ele usa `set -euo pipefail` e delega preflight/hashes para `prepare_bootstrap_env.sh` e/ou o pipeline de matriz. Logo, o snippet histórico com `EXPECTED_HASH="abc123..."` não pode ser citado como código atual.
 
-### Fix
+### Estado documental
 
-```bash
-# hotfix_ate_compilar.sh — versão corrigida
-verify_blake3() {
-    local file="$1"
-    local expected="$2"
-    local actual
-
-    actual=$(b3sum "$file" 2>/dev/null | cut -d' ' -f1)
-    if [ $? -ne 0 ]; then
-        echo "FATAL: b3sum falhou para $file" >&2
-        exit 1
-    fi
-
-    if [ "$actual" != "$expected" ]; then
-        echo "FATAL: BLAKE3 mismatch em $file" >&2
-        echo "  Esperado: $expected" >&2
-        echo "  Obtido:   $actual" >&2
-        exit 1  # ← ABORT, não warn
-    fi
-    echo "OK: $file hash verificado"
-}
+```text
+OLD_SNIPPET = STALE/HYPOTHESIS
+CURRENT_SCRIPT = SOURCE_OBSERVED
 ```
 
-### Critério de fechamento
-
-- [ ] Todo hash mismatch causa `exit 1` (não warn)
-- [ ] `build_apk_matrix.sh` verifica hashes de todos os artefatos
-- [ ] CI/CD bloqueia release se verificação BLAKE3 falhar
+Qualquer claim de integridade deve apontar ao verificador/receipt atual que materializou os hashes, não ao exemplo histórico.
 
 ---
 
-## BUG-08 — Invariante φ=(1-H)·C não verificado em runtime
+## BUG-08 — Lyapunov `φ=(1-H)·C`
 
-### Severidade: 🟠 ALTO
+### Correção do documento antigo
 
-### Descrição
+A macro hipotética `VECTRA_ASSERT_LYAPUNOV(...)` mostrada na versão anterior deste documento não aparece como autoridade atual do source pesquisado.
 
-O Lyapunov `φ = (1-H)·C` é um invariante fundamental do VECTRA_OS.
-Ele garante convergência do sistema. Porém, em nenhum ponto do código
-há verificação de runtime que φ permanece positivo e consistente com
-C e H após cada transição de estado.
+O baseline possui implementação/gate dedicado:
 
-Se φ → 0 (H → 1 com C baixo), o sistema está no limite de convergência.
-Se φ < 0 (matematicamente impossível em Q16.16 sem overflow), há
-corrupção de estado.
-
-```c
-// Falta em toda a codebase (inferido):
-// Nenhuma chamada para verificação pós-transição
+```text
+rmr/Rrr/lyapunov_convergence.c
+rmr/Rrr/lyapunov_convergence_validator.c
+Makefile target: lyapunov-convergence-gate
 ```
 
-### Fix
+O Makefile compila e executa o `lyapunov_validator` no gate correspondente.
 
-```c
-// vectra_invariant.h — macro de verificação
-#define VECTRA_ASSERT_LYAPUNOV(C, H, phi) do {                    \
-    uint32_t _one_minus_H = (1u << 16) - (H);                    \
-    uint32_t _expected_phi = (uint32_t)(                          \
-        ((uint64_t)_one_minus_H * (C)) >> 16);                   \
-    /* tolerância: ±1 ULP em Q16.16 */                            \
-    uint32_t _diff = (_expected_phi > (phi)) ?                    \
-        (_expected_phi - (phi)) : ((phi) - _expected_phi);       \
-    if (_diff > 1u) {                                             \
-        vectra_panic("LYAPUNOV VIOLATION: phi=%u expected=%u",    \
-            (phi), _expected_phi);                                \
-    }                                                             \
-} while(0)
+### Estado documental
 
-// Uso após cada transição:
-vectra_pulse_step(...);
-VECTRA_ASSERT_LYAPUNOV(x1_C, x2_H, x5_phi);
+```text
+SOURCE_OBSERVED + GATE_WIRED
+DEVICE/RUNTIME GENERALIZATION = TOKEN_VAZIO unless independently observed
 ```
 
-### Critério de fechamento
-
-- [ ] `VECTRA_ASSERT_LYAPUNOV` definido em `vectra_invariant.h`
-- [ ] Chamado após cada `vectra_pulse_step` em debug build
-- [ ] Logs de violação incluem state id e phase para rastreamento
-- [ ] Build de release usa versão no-op da macro (zero overhead)
+Não substituir a implementação atual pela macro hipotética antiga.
 
 ---
 
-## Resumo de priorização
+## Matriz auditada BUG-04..08
 
+| ID | Claim antigo problemático | Estado após auditoria | Autoridade atual |
+|---|---|---|---|
+| BUG-04 | hardcode/sharedUserId atual | parcialmente STALE | source contract + API access test + beta workflows |
+| BUG-05 | risco descrito apenas por exemplo | implementação estrutural observada | ZIPRAF headers/pool + records específicos |
+| BUG-06 | `scan_idx++` inferido | snippet STALE; gate real observado | `cti_raw_reader.c`, barrier header, race validator |
+| BUG-07 | mismatch silencioso inferido | snippet STALE | `scripts/hotfix_ate_compilar.sh` + pipeline atual |
+| BUG-08 | macro hipotética como fix | snippet HYPOTHESIS/STALE | Lyapunov source + validator + Makefile gate |
+
+## Fronteira final
+
+Nada neste documento converte estrutura em prova física:
+
+```text
+physical_android=TOKEN_VAZIO
+claim_allowed=false
 ```
-IMEDIATO (bloqueia tudo):
-    BUG-02 → BUG-01 → BUG-03
 
-PARALELO (não bloqueante entre si):
-    BUG-05 (Stack ZrManifest)    — fix em 1 hora
-    BUG-07 (BLAKE3 exit 1)       — fix em 30 min
-    BUG-04 (Bootstrap package)   — fix em 2-4 horas
+Auditoria completa de alinhamento documental:
 
-APÓS BUG-03 ESTÁVEL:
-    BUG-06 (CTI race condition)  — requer vectra_pulse.S estável
-    BUG-08 (Lyapunov assert)     — requer tabela completa para testar
-```
+- `docs/audits/DOCUMENTATION_CODE_ALIGNMENT_AUDIT_20260906.md`
