@@ -1,13 +1,10 @@
 #!/system/bin/sh
 # Compatibility shim only. Never report a successful PRoot execution unless a
-# real executable exists. The freestanding gate is preferred when packaged.
+# real payload exists outside this shim path. Do not delegate back through
+# $PREFIX/bin/proot: that would recurse while the compatibility shim is active.
 PREFIX="${PREFIX:-/data/data/com.termux.rafacodephi/files/usr}"
-REAL_FS="$PREFIX/libexec/rafproot-fs"
-REAL_PROOT="$PREFIX/bin/proot.real"
+REAL_PROOT="$PREFIX/libexec/proot-real"
 
-if [ -x "$REAL_FS" ]; then
-    exec "$REAL_FS" --run proot "$@"
-fi
 if [ -x "$REAL_PROOT" ]; then
     exec "$REAL_PROOT" "$@"
 fi
