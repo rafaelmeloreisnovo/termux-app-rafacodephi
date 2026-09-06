@@ -18,47 +18,50 @@
  * - Syscall number: x8
  * - Return value: x0 (may be int, may be pointer, on error: -errno)
  * - Clobber: x16, x17, x30 (lr)
+ *
+ * `__asm__` is used instead of the GNU spelling `asm` so this header remains
+ * accepted when Android ndk-build supplies -std=c11 rather than -std=gnu11.
  */
 
 /* Macro for inline ARM64 syscall (1 arg) */
 #define SYSCALL_1(num, a) \
     ({ \
-        register int64_t x0 asm("x0") = (int64_t)(a); \
-        register int64_t x8 asm("x8") = (num); \
-        asm volatile("svc #0" : "+r"(x0) : "r"(x8) : "cc", "memory"); \
+        register int64_t x0 __asm__("x0") = (int64_t)(a); \
+        register int64_t x8 __asm__("x8") = (num); \
+        __asm__ volatile("svc #0" : "+r"(x0) : "r"(x8) : "cc", "memory"); \
         x0; \
     })
 
 /* Macro for inline ARM64 syscall (2 args) */
 #define SYSCALL_2(num, a, b) \
     ({ \
-        register int64_t x0 asm("x0") = (int64_t)(a); \
-        register int64_t x1 asm("x1") = (int64_t)(b); \
-        register int64_t x8 asm("x8") = (num); \
-        asm volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x8) : "cc", "memory"); \
+        register int64_t x0 __asm__("x0") = (int64_t)(a); \
+        register int64_t x1 __asm__("x1") = (int64_t)(b); \
+        register int64_t x8 __asm__("x8") = (num); \
+        __asm__ volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x8) : "cc", "memory"); \
         x0; \
     })
 
 /* Macro for inline ARM64 syscall (3 args) */
 #define SYSCALL_3(num, a, b, c) \
     ({ \
-        register int64_t x0 asm("x0") = (int64_t)(a); \
-        register int64_t x1 asm("x1") = (int64_t)(b); \
-        register int64_t x2 asm("x2") = (int64_t)(c); \
-        register int64_t x8 asm("x8") = (num); \
-        asm volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x8) : "cc", "memory"); \
+        register int64_t x0 __asm__("x0") = (int64_t)(a); \
+        register int64_t x1 __asm__("x1") = (int64_t)(b); \
+        register int64_t x2 __asm__("x2") = (int64_t)(c); \
+        register int64_t x8 __asm__("x8") = (num); \
+        __asm__ volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x8) : "cc", "memory"); \
         x0; \
     })
 
 /* Macro for inline ARM64 syscall (4 args) */
 #define SYSCALL_4(num, a, b, c, d) \
     ({ \
-        register int64_t x0 asm("x0") = (int64_t)(a); \
-        register int64_t x1 asm("x1") = (int64_t)(b); \
-        register int64_t x2 asm("x2") = (int64_t)(c); \
-        register int64_t x3 asm("x3") = (int64_t)(d); \
-        register int64_t x8 asm("x8") = (num); \
-        asm volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x3), "r"(x8) : "cc", "memory"); \
+        register int64_t x0 __asm__("x0") = (int64_t)(a); \
+        register int64_t x1 __asm__("x1") = (int64_t)(b); \
+        register int64_t x2 __asm__("x2") = (int64_t)(c); \
+        register int64_t x3 __asm__("x3") = (int64_t)(d); \
+        register int64_t x8 __asm__("x8") = (num); \
+        __asm__ volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x3), "r"(x8) : "cc", "memory"); \
         x0; \
     })
 
@@ -143,7 +146,7 @@ struct freestanding_stat {
     uint64_t st_mtime_nsec;
     int64_t  st_ctime;
     uint64_t st_ctime_nsec;
-    int32_t  __unused[2];
+    int32_t  reserved_tail[2];
 };
 
 /* read(fd, buf, count) → bytes read */
@@ -189,6 +192,8 @@ static inline int64_t freestanding_brk(void *addr) {
 /* mmap(addr, length, prot, flags, fd, offset) → mapped address */
 static inline void *freestanding_mmap(void *addr, uint32_t length, int prot,
                                      int flags, int fd, uint32_t offset) {
+    (void)fd;
+    (void)offset;
     int64_t result = SYSCALL_4(SYS_mmap, addr, length, prot, flags);
     return (void *)result;
 }
@@ -206,18 +211,16 @@ static inline int64_t freestanding_mprotect(void *addr, uint32_t length, int pro
 /* exit(status) → never returns */
 static inline void freestanding_exit(int status) {
     SYSCALL_1(SYS_exit, status);
-    /* Unreachable */
     while (1) {
-        asm("svc #0");
+        __asm__ volatile("svc #0" ::: "cc", "memory");
     }
 }
 
 /* exit_group(status) → never returns */
 static inline void freestanding_exit_group(int status) {
     SYSCALL_1(SYS_exit_group, status);
-    /* Unreachable */
     while (1) {
-        asm("svc #0");
+        __asm__ volatile("svc #0" ::: "cc", "memory");
     }
 }
 
@@ -250,5 +253,3 @@ static inline int64_t freestanding_fsync(int fd) {
 static inline int64_t freestanding_fdatasync(int fd) {
     return SYSCALL_1(SYS_fdatasync, fd);
 }
-
-#endif /* FREESTANDING_SYSCALLS_H */
