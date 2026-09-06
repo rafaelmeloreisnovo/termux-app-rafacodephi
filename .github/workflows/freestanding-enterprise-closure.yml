@@ -1,0 +1,392 @@
+name: Freestanding Enterprise Closure
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - 'rafaelia/freestanding-enterprise-*'
+    paths:
+      - 'src/bootstrap/freestanding_string.h'
+      - 'bootstrap/proot_freestanding.c'
+      - 'bootstrap/proot_syscall_bridge.h'
+      - 'data/contracts/termux-packages-rafcodephi-pin.v1.json'
+      - 'scripts/resolve_termux_packages_pin.py'
+      - 'scripts/validate_rafcodephi_packages_source.sh'
+      - 'scripts/prepare_bootstrap_env.sh'
+      - 'scripts/import_rafcodephi_real_bootstrap.py'
+      - 'scripts/build_apk_matrix.sh'
+      - 'scripts/generate_usable_beta_receipt.py'
+      - 'scripts/inject_freestanding_gate_into_bootstrap.py'
+      - 'scripts/device_promote_freestanding_runtime.sh'
+      - 'scripts/validate_freestanding_device_receipt.py'
+      - 'tests/test_freestanding_device_receipt.py'
+      - 'tests/test_inject_freestanding_gate_manifest.py'
+      - 'docs/contracts/raf.freestanding-runtime-evidence.v1.schema.json'
+      - '.github/workflows/freestanding-enterprise-closure.yml'
+  pull_request:
+    paths:
+      - 'src/bootstrap/freestanding_string.h'
+      - 'bootstrap/proot_freestanding.c'
+      - 'bootstrap/proot_syscall_bridge.h'
+      - 'data/contracts/termux-packages-rafcodephi-pin.v1.json'
+      - 'scripts/resolve_termux_packages_pin.py'
+      - 'scripts/validate_rafcodephi_packages_source.sh'
+      - 'scripts/prepare_bootstrap_env.sh'
+      - 'scripts/import_rafcodephi_real_bootstrap.py'
+      - 'scripts/build_apk_matrix.sh'
+      - 'scripts/generate_usable_beta_receipt.py'
+      - 'scripts/inject_freestanding_gate_into_bootstrap.py'
+      - 'scripts/device_promote_freestanding_runtime.sh'
+      - 'scripts/validate_freestanding_device_receipt.py'
+      - 'tests/test_freestanding_device_receipt.py'
+      - 'tests/test_inject_freestanding_gate_manifest.py'
+      - 'docs/contracts/raf.freestanding-runtime-evidence.v1.schema.json'
+      - '.github/workflows/freestanding-enterprise-closure.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: freestanding-enterprise-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TERMUX_PACKAGES_RAF_CHANNEL: candidate
+  TERMUX_PACKAGES_RAF_REQUIRE_PINNED: 'true'
+  CLAIM_ALLOWED: 'false'
+  PHYSICAL_ANDROID: 'TOKEN_VAZIO'
+
+jobs:
+  contract-fast:
+    name: Evidence and custody contracts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate source, schema, shell and unit contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/inject_freestanding_gate_into_bootstrap.py \
+            scripts/validate_freestanding_device_receipt.py
+          python3 -m unittest \
+            tests.test_freestanding_device_receipt \
+            tests.test_inject_freestanding_gate_manifest -v
+          /bin/sh -n scripts/device_promote_freestanding_runtime.sh
+          python3 -m json.tool \
+            docs/contracts/raf.freestanding-runtime-evidence.v1.schema.json >/dev/null
+          grep -Fxq '#ifndef FREESTANDING_STRING_H' src/bootstrap/freestanding_string.h
+          grep -Fxq '#define FREESTANDING_STRING_H' src/bootstrap/freestanding_string.h
+          grep -Fxq '#endif /* FREESTANDING_STRING_H */' src/bootstrap/freestanding_string.h
+
+      - name: Assert claim boundary is fail closed in source
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'reproduced_state": "TOKEN_VAZIO"' scripts/device_promote_freestanding_runtime.sh
+          grep -Fq 'single physical receipt cannot self-promote REPRODUCED' scripts/validate_freestanding_device_receipt.py
+          grep -Fq 'candidate_apk_sha256 required for REPRODUCED promotion' scripts/validate_freestanding_device_receipt.py
+          grep -Fq 'freestanding_device_state=TOKEN_VAZIO' scripts/inject_freestanding_gate_into_bootstrap.py
+          grep -Fq 'freestanding_claim_allowed=false' scripts/inject_freestanding_gate_into_bootstrap.py
+
+  source-built-candidate:
+    name: Source-built gate-bearing APK candidate
+    needs: contract-fast
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - name: Checkout RAFCODEPHI app
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Resolve exact pinned termux-packages candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          python3 scripts/resolve_termux_packages_pin.py \
+            "$TERMUX_PACKAGES_RAF_CHANNEL" \
+            --github-env --json \
+            | tee build/reports/freestanding-packages-pin.json
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Checkout exact patched termux-packages source
+        uses: actions/checkout@v4
+        with:
+          repository: rafaelmeloreisnovo/termux-packages
+          ref: ${{ env.TERMUX_PACKAGES_SHA }}
+          path: termux-packages
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Gate source capabilities and bind RAFCODEPHI identity
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TERMUX_PACKAGES_SHA"
+          required=(
+            scripts/properties.sh
+            scripts/apply-rafcodephi-build-properties.py
+            scripts/validate-rafcodephi-build-properties.sh
+            scripts/run-docker.sh
+            scripts/build-rafcodephi-real-bootstrap.sh
+            scripts/generate-bootstraps.sh
+            packages/libxml2/build.sh
+          )
+          for path in "${required[@]}"; do
+            test -f "$path" || { echo "missing source capability: $path" >&2; exit 1; }
+          done
+          grep -Fq 'libllvm18' packages/libxml2/build.sh
+          mkdir -p build/reports
+          python3 scripts/apply-rafcodephi-build-properties.py \
+            --properties scripts/properties.sh \
+            --receipt build/reports/rafcodephi-freestanding-properties.json
+          bash scripts/validate-rafcodephi-build-properties.sh
+
+      - name: Source-build real ARM32 and ARM64 bootstrap pair
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-real-bootstrap.sh
+          ./scripts/run-docker.sh \
+            ./scripts/build-rafcodephi-real-bootstrap.sh \
+            --architectures arm,aarch64 \
+            2>&1 | tee build/reports/rafcodephi-freestanding-real-bootstrap.log
+
+      - name: Gate immutable parent source-build manifest
+        working-directory: termux-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=artifacts/rafcodephi-bootstrap
+          manifest="$root/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt"
+          arm="$root/rafcodephi-bootstrap-arm.zip"
+          arm64="$root/rafcodephi-bootstrap-aarch64.zip"
+          test -s "$manifest"
+          test -s "$arm"
+          test -s "$arm64"
+          grep -Fx 'schema=rafcodephi.real-bootstrap-sourcebuild/v1' "$manifest"
+          grep -Fx 'package_name=com.termux.rafacodephi' "$manifest"
+          grep -Fx 'prefix=/data/data/com.termux.rafacodephi/files/usr' "$manifest"
+          grep -Fx 'bridge_allowed=false' "$manifest"
+          grep -Fx 'legacy_prefix_allowed=false' "$manifest"
+          grep -Fx 'claim_allowed_device_runtime=false' "$manifest"
+          grep -Fx 'device_runtime_proof=TOKEN_VAZIO' "$manifest"
+          sha256sum "$manifest" "$arm" "$arm64" \
+            | tee build/reports/rafcodephi-freestanding-parent.sha256
+
+      - name: Build static gate and create hash-bound child bootstrap pair
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y clang lld binutils file
+          parent=termux-packages/artifacts/rafcodephi-bootstrap
+          child=build/freestanding-source
+          mkdir -p "$child" build/reports/freestanding-bootstrap
+          cp "$parent/rafcodephi-bootstrap-arm.zip" "$child/rafcodephi-bootstrap-arm.zip"
+          cp "$parent/rafcodephi-bootstrap-aarch64.zip" "$child/rafcodephi-bootstrap-aarch64.zip"
+          python3 scripts/inject_freestanding_gate_into_bootstrap.py \
+            --arm-zip "$child/rafcodephi-bootstrap-arm.zip" \
+            --aarch64-zip "$child/rafcodephi-bootstrap-aarch64.zip" \
+            --source-manifest "$parent/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt" \
+            --child-manifest "$child/RAFCODEPHI_FREESTANDING_BOOTSTRAP_MANIFEST.txt" \
+            --output-dir build/reports/freestanding-bootstrap
+          sha256sum "$child"/* | tee build/reports/freestanding-child.sha256
+
+      - name: Validate child pair with canonical strict importer
+        shell: bash
+        run: |
+          set -euo pipefail
+          child=build/freestanding-source
+          manifest="$child/RAFCODEPHI_FREESTANDING_BOOTSTRAP_MANIFEST.txt"
+          python3 scripts/import_rafcodephi_real_bootstrap.py \
+            --arch arm \
+            --zip "$child/rafcodephi-bootstrap-arm.zip" \
+            --manifest "$manifest" \
+            --validate-only
+          python3 scripts/import_rafcodephi_real_bootstrap.py \
+            --arch aarch64 \
+            --zip "$child/rafcodephi-bootstrap-aarch64.zip" \
+            --manifest "$manifest" \
+            --validate-only
+
+      - name: Build APK matrix from exact gate-bearing child pair
+        env:
+          RAF_BOOTSTRAP_SOURCE: source-built-real
+          RAF_REAL_BOOTSTRAP_ZIP_ARM: ${{ github.workspace }}/build/freestanding-source/rafcodephi-bootstrap-arm.zip
+          RAF_REAL_BOOTSTRAP_ZIP_AARCH64: ${{ github.workspace }}/build/freestanding-source/rafcodephi-bootstrap-aarch64.zip
+          RAF_REAL_BOOTSTRAP_MANIFEST: ${{ github.workspace }}/build/freestanding-source/RAFCODEPHI_FREESTANDING_BOOTSTRAP_MANIFEST.txt
+          RELEASE_TRACK: internal
+          APK_MATRIX_UNIT_TESTS_REQUIRED: 'true'
+        run: ./scripts/build_apk_matrix.sh
+
+      - name: Prove exact embedded real-pkg pair still contains gate hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          python3 tools/raf_bootstrap_profile.py validate \
+            --zip app/src/main/cpp/rewritten-bootstrap-arm.zip \
+            --expected-profile real-pkg \
+            --expected-arch arm \
+            --package-name com.termux.rafacodephi \
+            > build/reports/freestanding-embedded-arm.json
+          python3 tools/raf_bootstrap_profile.py validate \
+            --zip app/src/main/cpp/rewritten-bootstrap-aarch64.zip \
+            --expected-profile real-pkg \
+            --expected-arch aarch64 \
+            --package-name com.termux.rafacodephi \
+            > build/reports/freestanding-embedded-aarch64.json
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import zipfile
+          from pathlib import Path
+
+          matrix = json.loads(Path(
+              'build/reports/freestanding-bootstrap/freestanding-embedded-matrix.json'
+          ).read_text(encoding='utf-8'))
+          expected = {item['architecture']: item['gate_sha256'] for item in matrix['reports']}
+          for arch in ('arm', 'aarch64'):
+              profile = json.loads(Path(
+                  f'build/reports/freestanding-embedded-{arch}.json'
+              ).read_text(encoding='utf-8'))
+              assert profile['structural_state'] == 'PASS', profile
+              assert profile['profile'] == 'real-pkg', profile
+              assert profile['device_validation'] == 'TOKEN_VAZIO', profile
+              assert profile['claim_allowed'] is False, profile
+              assert profile['classifications']['bin/apt'] == 'ELF', profile
+              assert profile['classifications']['bin/apt-get'] == 'ELF', profile
+              archive = Path(f'app/src/main/cpp/rewritten-bootstrap-{arch}.zip')
+              with zipfile.ZipFile(archive) as zf:
+                  gate = zf.read('libexec/rafproot-fs')
+                  info = zf.read('BOOTSTRAP_INFO').decode('utf-8')
+              actual = hashlib.sha256(gate).hexdigest()
+              assert actual == expected[arch], (arch, actual, expected[arch])
+              assert f'BOOTSTRAP_FREESTANDING_GATE_SHA256={actual}' in info
+              assert 'BOOTSTRAP_FREESTANDING_DEVICE_STATE=TOKEN_VAZIO' in info
+              assert 'BOOTSTRAP_FREESTANDING_CLAIM_ALLOWED=false' in info
+          print('FREESTANDING_EXACT_EMBEDDED_PAIR=PASS')
+          PY
+
+      - name: Generate hash-bound usable-beta and enterprise receipts
+        shell: bash
+        run: |
+          set -euo pipefail
+          child=build/freestanding-source/RAFCODEPHI_FREESTANDING_BOOTSTRAP_MANIFEST.txt
+          python3 scripts/generate_usable_beta_receipt.py \
+            --apk-root dist/apk-matrix \
+            --bootstrap-manifest "$child" \
+            --arm-report build/reports/freestanding-embedded-arm.json \
+            --arm64-report build/reports/freestanding-embedded-aarch64.json \
+            --source-contract dist/source-contract/TERMUX_PACKAGES_RAFCODEPHI_SOURCE.env \
+            --packages-sha "$TERMUX_PACKAGES_SHA" \
+            --output build/reports/freestanding-usable-beta-receipt.json
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          beta = Path('build/reports/freestanding-usable-beta-receipt.json')
+          matrix_path = Path('build/reports/freestanding-bootstrap/freestanding-embedded-matrix.json')
+          child = Path('build/freestanding-source/RAFCODEPHI_FREESTANDING_BOOTSTRAP_MANIFEST.txt')
+          matrix = json.loads(matrix_path.read_text(encoding='utf-8'))
+          usable = json.loads(beta.read_text(encoding='utf-8'))
+          candidates = usable.get('physical_install_candidates', {})
+          candidate_hashes = {
+              abi: [item['sha256'] for item in items]
+              for abi, items in candidates.items()
+          }
+          doc = {
+              'schema': 'raf.freestanding-enterprise-candidate.v2',
+              'app_commit_sha': '${{ github.sha }}',
+              'termux_packages_sha': '${{ env.TERMUX_PACKAGES_SHA }}',
+              'usable_beta_receipt_sha256': hashlib.sha256(beta.read_bytes()).hexdigest(),
+              'freestanding_bootstrap_matrix_sha256': hashlib.sha256(matrix_path.read_bytes()).hexdigest(),
+              'parent_manifest_sha256': matrix['parent_manifest_sha256'],
+              'child_manifest_sha256': hashlib.sha256(child.read_bytes()).hexdigest(),
+              'physical_install_candidate_sha256': candidate_hashes,
+              'build_state': 'BUILD_PROVEN',
+              'physical_android': 'TOKEN_VAZIO',
+              'runtime_state': 'TOKEN_VAZIO',
+              'device_state': 'TOKEN_VAZIO',
+              'reproduced_state': 'TOKEN_VAZIO',
+              'claim_allowed': False,
+              'physical_evidence_command': 'scripts/device_promote_freestanding_runtime.sh full',
+          }
+          out = Path('build/reports/freestanding-enterprise-candidate.json')
+          out.write_text(json.dumps(doc, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          print(json.dumps(doc, indent=2, sort_keys=True))
+          PY
+
+      - name: Capture fail-closed partial evidence on upstream failure
+        if: failure()
+        shell: bash
+        run: |
+          set -u
+          mkdir -p build/reports
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          expected = [
+              'termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt',
+              'termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip',
+              'termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip',
+              'build/freestanding-source/RAFCODEPHI_FREESTANDING_BOOTSTRAP_MANIFEST.txt',
+              'build/reports/freestanding-bootstrap/freestanding-embedded-matrix.json',
+              'dist/source-contract/TERMUX_PACKAGES_RAFCODEPHI_SOURCE.env',
+              'dist/apk-matrix',
+          ]
+          present = [p for p in expected if Path(p).exists()]
+          missing = [p for p in expected if not Path(p).exists()]
+          doc = {
+              'schema': 'raf.freestanding-enterprise-failure.v1',
+              'state': 'TOKEN_VAZIO',
+              'app_commit_sha': os.environ.get('GITHUB_SHA', 'TOKEN_VAZIO'),
+              'termux_packages_sha': os.environ.get('TERMUX_PACKAGES_SHA', 'TOKEN_VAZIO'),
+              'present_evidence': present,
+              'missing_evidence': missing,
+              'physical_android': 'TOKEN_VAZIO',
+              'claim_allowed': False,
+              'release_allowed': False,
+              'diagnostic': 'An upstream step failed. Missing downstream evidence is a consequence, not promoted proof.',
+          }
+          Path('build/reports/freestanding-enterprise-failure.json').write_text(
+              json.dumps(doc, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(doc, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload enterprise candidate and custody evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: freestanding-enterprise-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            dist/apk-matrix/
+            dist/source-contract/
+            build/freestanding-source/
+            build/reports/
+            termux-packages/build/reports/
+            termux-packages/artifacts/rafcodephi-bootstrap/
