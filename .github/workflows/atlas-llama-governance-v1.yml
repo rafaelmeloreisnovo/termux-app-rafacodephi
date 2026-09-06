@@ -1,0 +1,36 @@
+name: atlas-llama-governance-v1
+
+on:
+  push:
+    paths:
+      - 'internal/governance/strict_readonly_gate_v1.py'
+      - 'tools/atlas_llama_governance_bridge.py'
+      - 'tools/validate_atlas_llama_provider_pin_v1.py'
+      - 'tests/vertical_slice/test_atlas_llama_governance_bridge.py'
+      - 'docs/contracts/ATLAS_LLAMA_PROVIDER_PIN_V1.json'
+      - '.github/workflows/atlas-llama-governance-v1.yml'
+  pull_request:
+    paths:
+      - 'internal/governance/strict_readonly_gate_v1.py'
+      - 'tools/atlas_llama_governance_bridge.py'
+      - 'tools/validate_atlas_llama_provider_pin_v1.py'
+      - 'tests/vertical_slice/test_atlas_llama_governance_bridge.py'
+      - 'docs/contracts/ATLAS_LLAMA_PROVIDER_PIN_V1.json'
+      - '.github/workflows/atlas-llama-governance-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax
+        run: python3 -m py_compile internal/governance/strict_readonly_gate_v1.py tools/atlas_llama_governance_bridge.py tools/validate_atlas_llama_provider_pin_v1.py tests/vertical_slice/test_atlas_llama_governance_bridge.py
+      - name: Provider pin
+        run: python3 tools/validate_atlas_llama_provider_pin_v1.py
+      - name: Governance falsifiers
+        run: python3 tests/vertical_slice/test_atlas_llama_governance_bridge.py
