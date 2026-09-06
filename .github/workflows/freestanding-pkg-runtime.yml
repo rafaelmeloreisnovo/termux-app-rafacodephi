@@ -1,0 +1,92 @@
+name: Freestanding Pkg Runtime
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'Makefile.freestanding'
+      - 'src/bootstrap/freestanding.h'
+      - 'src/bootstrap/syscall_arm.h'
+      - 'src/bootstrap/syscall_arm64.h'
+      - 'src/bootstrap/start_arm.S'
+      - 'src/bootstrap/bootstrap_orchestrator.c'
+      - 'src/bootstrap/extract_payload_real.c'
+      - 'src/bootstrap/dpkg_install_real.c'
+      - 'src/bootstrap/proot_freestanding_real.c'
+      - 'src/bootstrap/package_stack_real.c'
+      - 'scripts/import_rafcodephi_local_pkg_pair.py'
+      - 'scripts/device_pkg_smoke.sh'
+      - '.github/workflows/freestanding-pkg-runtime.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  freestanding-controller:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install LLVM tooling
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y clang lld llvm make
+
+      - name: Build and prove ARM32 ARM64 controller
+        run: |
+          set -euo pipefail
+          make -f Makefile.freestanding clean
+          make -f Makefile.freestanding all
+          make -f Makefile.freestanding size-report
+
+      - name: Importer and smoke syntax
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/import_rafcodephi_local_pkg_pair.py
+          bash -n scripts/device_pkg_smoke.sh
+
+      - name: Causal and epistemic invariants
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          orchestrator = Path('src/bootstrap/bootstrap_orchestrator.c').read_text()
+          order = [
+              'extract_bootstrap_payload()',
+              'dpkg_install_real()',
+              'package_stack_probe_real()',
+              'bootstrap_main()',
+          ]
+          positions = [orchestrator.index(x) for x in order]
+          if positions != sorted(positions):
+              raise SystemExit(f'bootstrap order regression: {list(zip(order, positions))}')
+          if 'claim_allowed_pkg_runtime = 0' not in orchestrator:
+              raise SystemExit('pkg runtime claim boundary missing')
+
+          proot = Path('src/bootstrap/proot_freestanding_real.c').read_text()
+          if '/system/bin/proot' in proot:
+              raise SystemExit('system proot regression')
+          if '/bin/proot.real' not in proot:
+              raise SystemExit('proot.real payload probe missing')
+
+          extract = Path('src/bootstrap/extract_payload_real.c').read_text()
+          forbidden = ('gunzip_freestanding', 'COMPRESSED_MAX', 'UNCOMPRESSED_MAX')
+          if any(x in extract for x in forbidden):
+              raise SystemExit('stub/bounded gzip extractor regression')
+          if 'tar_checksum_ok' not in extract or 'UNSAFE' in '':
+              raise SystemExit('tar integrity gate missing')
+
+          dpkg = Path('src/bootstrap/dpkg_install_real.c').read_text()
+          if 'Version: 1.22.6' in dpkg or 'Package: dpkg' in dpkg:
+              raise SystemExit('fabricated dpkg state regression')
+
+          smoke = Path('scripts/device_pkg_smoke.sh').read_text()
+          for marker in ('proot.real --version', 'pkg update -y', 'pkg install -y nano', 'pkg install -y python', 'pkg install -y git'):
+              if marker not in smoke:
+                  raise SystemExit(f'device smoke marker missing: {marker}')
+          print('RAFCODEPHI_FREESTANDING_CAUSAL_CONTRACT=PASS')
+          PY
