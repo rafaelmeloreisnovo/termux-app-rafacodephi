@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SCHEMA = "rafcodephi-bootstrap-promotion-gate-receipt/v1"
+REBUILD_SCOPE_SCHEMA = "rafcodephi-real-pkg-rebuild-scope/v1"
 
 
 def sha256(path: Path) -> str:
@@ -28,6 +29,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--audit", type=Path, required=True)
     parser.add_argument("--bootstrap", type=Path, required=True)
+    parser.add_argument("--rebuild-scope", type=Path)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
 
@@ -39,6 +41,14 @@ def main() -> int:
     state = audit.get("state")
     if state not in {"PASS", "BLOCKED", "FAIL"}:
         raise SystemExit(f"unexpected audit state: {state}")
+
+    rebuild_scope = None
+    if args.rebuild_scope is not None:
+        if not args.rebuild_scope.is_file():
+            raise SystemExit("rebuild scope input missing")
+        rebuild_scope = json.loads(args.rebuild_scope.read_text(encoding="utf-8"))
+        if rebuild_scope.get("schema") != REBUILD_SCOPE_SCHEMA:
+            raise SystemExit(f"unexpected rebuild scope schema: {rebuild_scope.get('schema')}")
 
     receipt = {
         "schema": SCHEMA,
@@ -67,6 +77,24 @@ def main() -> int:
             "It is not evidence that real pkg is usable in the RAFCODEPhi runtime."
         ),
     }
+
+    if rebuild_scope is not None:
+        receipt.update({
+            "rebuild_scope_path": str(args.rebuild_scope),
+            "rebuild_scope_sha256": sha256(args.rebuild_scope),
+            "rebuild_scope_state": rebuild_scope.get("state", "UNAVAILABLE"),
+            "rebuild_scope_complete": bool(rebuild_scope.get("scope_complete", False)),
+            "package_rebuild_count": rebuild_scope.get("package_rebuild_count", 0),
+            "attributed_binary_risk_entry_count": rebuild_scope.get("attributed_binary_risk_entry_count", 0),
+            "unattributed_binary_risk_entry_count": rebuild_scope.get("unattributed_binary_risk_entry_count", 0),
+            "rebuild_packages": [item.get("package") for item in rebuild_scope.get("packages", [])],
+        })
+        if state == "BLOCKED" and rebuild_scope.get("scope_complete"):
+            receipt["next_required_action"] = rebuild_scope.get(
+                "next_required_action",
+                "REBUILD_PACKAGE_SET_FROM_SOURCE_FOR_RAFCODEPHI_PREFIX",
+            )
+
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(receipt, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(receipt, ensure_ascii=False, sort_keys=True, indent=2))
