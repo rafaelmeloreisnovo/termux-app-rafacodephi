@@ -112,8 +112,8 @@ jobs:
           required_tokens = (
               'RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt',
               'rafcodephi.real-bootstrap-sourcebuild/v1',
-              'rafcodephi-bootstrap-arm.zip',
-              'rafcodephi-bootstrap-aarch64.zip',
+              'rafcodephi-bootstrap-${arch}.zip',
+              '--architectures',
           )
           missing = [token for token in required_tokens if token not in builder]
           if missing:
