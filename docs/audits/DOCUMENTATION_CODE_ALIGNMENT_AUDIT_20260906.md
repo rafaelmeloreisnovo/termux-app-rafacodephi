@@ -1,7 +1,8 @@
 # Documentation ↔ Code Alignment Audit — 2026-09-06
 
 > Repository: `rafaelmeloreisnovo/termux-app-rafacodephi`
-> Audited baseline: `b207970fc7a8630a534956cb544350cfd61ba33a`
+> Initial audited baseline: `b207970fc7a8630a534956cb544350cfd61ba33a`
+> Reconciliation baseline: `3f97ef42ae9756b9f7fb4965b941b5b3048fc8d1` (PR #415 merged while this audit was in progress).
 > Scope: documentation only. No executable source, workflow, build script, test or runtime behavior is modified by this audit branch.
 > Audit posture: source-first, fail-closed, append-only reasoning. `TOKEN_VAZIO` means evidence not yet observed; it is never promoted to PASS.
 
@@ -26,7 +27,7 @@ CURRENT SOURCE / TEST / WORKFLOW
 
 An inferred snippet is not evidence that the snippet exists in the repository. A historical bug report is not evidence that the bug remains open. A CI structural PASS is not physical-device proof.
 
-## 3. Source observations from baseline
+## 3. Source observations
 
 ### 3.1 Termux-packages source contract
 
@@ -41,7 +42,7 @@ The candidate supersedes stale commit `1fc540b0c296581c5793c109e3834589f85a0114`
 
 `scripts/resolve_termux_packages_pin.py` validates repository identity, package name, prefix, ABI set and claim/device boundaries before resolving `canonical`, `candidate` or an exact SHA.
 
-Documentation must therefore name workflow + selector/ref + resolved commit. "Current pin" by itself is ambiguous.
+Documentation must name workflow + selector/ref + resolved commit. "Current pin" by itself is ambiguous.
 
 ### 3.3 libLLVM18 beta workflow
 
@@ -76,53 +77,82 @@ Legacy `/data/data/com.termux/files/usr` references must be qualified as upstrea
 
 ### 3.7 Module-scoped attractor cardinality — critical finding
 
-The repository contains **different current cardinalities in different modules**.
+The repository contains different current cardinalities in different modules.
 
-RMR/VECTRA pulse surface:
+RMR/VECTRA pulse:
 
 ```text
 rmr/Rrr/attractor_table.h → count=41, period=41, indices 0..40
 rmr/Rrr/vectra_pulse.S    → period 41 / indices 0..40
 ```
 
-RAFAELIA Verbovivo graph surface:
+RAFAELIA Verbovivo graph:
 
 ```text
 rafaelia/verbovivo_graph.h → ATTRACTOR_COUNT 42u
 rafaelia/t7_toroid_builder.c → consumes ATTRACTOR_COUNT
 ```
 
-Therefore the correct documentation invariant is:
+Therefore:
 
 ```text
 RMR_ATTRACTOR_COUNT(41) != VERBOVIVO_ATTRACTOR_COUNT(42)
 ```
 
-unless an explicit bridge/decision proves equivalence. A global search-and-replace from 42→41 would be a regression.
+unless an explicit bridge/decision proves equivalence. A global 42→41 rewrite would be a regression.
 
 ### 3.8 CTI, ZrManifest, Lyapunov and hotfix source contradict old inferred snippets
 
 Observed current source:
 
-- CTI scanner uses its actual local traversal/index logic; the old `scan_idx++` example was inferred, not source authority.
+- CTI scanner uses its actual traversal/index logic; the old `scan_idx++` example was inferred.
 - `cti_scanner_barrier.h` and `cti_race_condition_validator.c` exist with a Makefile gate.
 - `zipraf_manifest_pool.*` and `zipraf_index.h` provide current ZrManifest mitigation structure.
-- `scripts/hotfix_ate_compilar.sh` uses `set -euo pipefail` and current pipeline helpers; the old fake `EXPECTED_HASH="abc123..."` snippet was not current source.
+- `scripts/hotfix_ate_compilar.sh` uses `set -euo pipefail`; the old fake hash snippet was not current source.
 - Lyapunov has `lyapunov_convergence.c`, validator and Makefile gate; the old hypothetical macro is not source authority.
+
+### 3.9 Reconciliation with PR #415 — freestanding ARM gate
+
+While the audit branch was open, PR #415 advanced `master` from `b207970...` to `3f97ef42...`.
+
+The changed files of #415 did not overlap the 12 documentation files already modified by this audit. The audit branch was then merged with the new master ancestry without force-push.
+
+New observed surfaces:
+
+```text
+bootstrap/proot_freestanding.c
+bootstrap/proot_syscall_bridge.h
+scripts/build_freestanding_real_arm_bootstrap.py
+.github/workflows/freestanding-runtime-gate.yml
+docs/FREESTANDING_PROOT_PKG_GATE_V1.md
+```
+
+The gate itself is freestanding; `pkg`, apt/dpkg, PRoot, Ninja, Clang, CMake and QEMU remain package payloads and are not reclassified as freestanding binaries.
+
+The workflow statically builds ARMv7 and AArch64 gate ELFs and rejects `PT_INTERP`, `DT_NEEDED` and undefined external symbols. Its receipt deliberately preserves:
+
+```text
+build_state=BUILD_PROVEN
+device_runtime_state=TOKEN_VAZIO
+claim_allowed=false
+```
+
+This delta was integrated into `ENGINEERING_RUNBOOK_RAFCODEPHI.md` and `RUNTIME_TRUTH_TABLE.md`.
 
 ## 4. Documentation drift found and disposition
 
 | Finding | Severity | Disposition |
 |---|---:|---|
-| old owner `exacordex-crypto/...` presented as current | HIGH | corrected in normative/indexed docs; historical reports remain chain-of-custody |
-| inferred code snippets treated as implementation | HIGH | removed/reclassified in BUG-01/03/04/05/06 surfaces |
+| old owner presented as current | HIGH | corrected in normative/indexed docs; historical reports remain custody |
+| inferred snippets treated as implementation | HIGH | removed/reclassified in active bug docs |
 | current `sharedUserId` conflict claim | HIGH | superseded by executable test contract |
 | bootstrap failure causality undocumented | HIGH | runbook/source-contract/truth-table updated |
-| multiple pin authorities collapsed conceptually | HIGH | routes explicitly separated |
-| RMR 41 vs Verbovivo 42 conflated | CRITICAL DOCUMENTATION RISK | module-scope invariant added; `CLAUDE.md` corrected |
-| old BUG master index mixed historical/current status | HIGH | converted to evidence-class navigation ledger |
-| old action plan told maintainers to reapply already-superseded fixes | HIGH | replaced with evidence-driven documentation/closure plan |
-| old structural-risk doc asserted hypotheses as source facts | HIGH | rewritten with `SOURCE_OBSERVED` vs `HYPOTHESIS/TOKEN_VAZIO` separation |
+| multiple pin authorities collapsed | HIGH | routes explicitly separated |
+| RMR 41 vs Verbovivo 42 conflated | CRITICAL DOC RISK | module-scope invariant added |
+| old BUG index mixed historical/current | HIGH | converted to evidence ledger |
+| old action plan prescribed already-superceded fixes | HIGH | replaced with evidence-driven plan |
+| structural-risk doc asserted hypotheses as source facts | HIGH | rewritten with evidence classes |
+| freestanding gate could be misread as making PRoot/pkg/Ninja freestanding | HIGH | explicit control-core vs payload boundary documented |
 
 ## 5. Required documentation states
 
@@ -140,9 +170,9 @@ Every active technical assertion should be expressible as one of:
 - `STALE`
 - `TOKEN_VAZIO`
 
-`RESOLVED` alone is insufficient for a current technical claim unless a source/test/receipt pointer accompanies it.
+`RESOLVED` alone is insufficient without a source/test/receipt pointer.
 
-## 6. Documentation-only change set completed in this branch
+## 6. Documentation-only change set
 
 Updated/created:
 
@@ -159,19 +189,11 @@ Updated/created:
 - `docs/06_PLANO_ACAO_EXECUCAO.md`
 - `docs/audits/DOCUMENTATION_CODE_ALIGNMENT_AUDIT_20260906.md`
 
-No executable file is modified by this branch.
+No executable file is modified by this audit PR.
 
 ## 7. Historical archive policy
 
-Historical audit/report files may still contain:
-
-- previous repository owner names;
-- previous 42-state RMR design;
-- already-executed action plans;
-- old CI state;
-- inferred snippets.
-
-They are retained for custody rather than silently rewritten. They must not outrank the current authority map above. When referenced from an active document, their historical nature must be explicit.
+Historical audit/report files may still contain previous owner names, previous RMR designs, already-executed action plans, old CI state or inferred snippets. They are retained for custody rather than silently rewritten. They must not outrank current source.
 
 ## 8. Current claim boundary
 
@@ -188,5 +210,6 @@ Documentation may describe structural implementation and CI wiring but cannot co
 ```text
 DOCUMENTATION_TRUTH(t) = CURRENT_SOURCE(t) + CURRENT_EVIDENCE(t) - STALE_INFERENCE(t)
 MODULE_SCOPE precedes NUMERIC_UNIFICATION
+freestanding_control_gate != freestanding_package_payload
 TOKEN_VAZIO remains valid until evidence exists
 ```
