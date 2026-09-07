@@ -1,0 +1,71 @@
+{
+  "schema": "rafaelia.tri_repo_mission_cohesion/v1",
+  "contract_id": "RAFAELIA-TRI-REPO-MISSION-COHESION-V1",
+  "status": "SOURCE_COHESION_DEFINED_EXTERNAL_GATES_OPEN",
+  "claim_allowed": false,
+  "scientific_claim_promotion": false,
+  "weight_training_authorized": false,
+  "baselines": {
+    "termux_app_rafacodephi": "db95f0a64b1d28d1d50b70ab44bc2571fabef29d",
+    "vectras_vm_android": "89e47837e551a565ceb7158cba1ced6954e72d93",
+    "rafpolimata": "3956bc6a7d7527ce3535661d170507c761b27fcb"
+  },
+  "roles": {
+    "termux_app_rafacodephi": {
+      "role": "ORCHESTRATION_AND_BOUNDED_GOVERNANCE",
+      "can_execute_only_authorized_scope": true,
+      "can_invent_goals": false,
+      "can_grant_external_authority": false
+    },
+    "vectras_vm_android": {
+      "role": "OPTIONAL_GOVERNED_RUNTIME_BACKEND",
+      "owns_mission_semantics": false,
+      "owns_training_authority": false,
+      "owns_scientific_promotion": false
+    },
+    "rafpolimata": {
+      "role": "ANALYSIS_COMPILER_FREESTANDING_RESEARCH_VALIDATION",
+      "source_build_test_evidence_only_within_scoped_gates": true,
+      "can_grant_execution_authority": false,
+      "can_grant_external_authority": false,
+      "can_update_model_weights": false,
+      "can_promote_scientific_claims": false
+    }
+  },
+  "invariants": [
+    "RETRIEVAL_CONTEXT!=WEIGHT_UPDATE",
+    "LEARN_APPEND_ONLY!=ONLINE_SELF_TRAINING",
+    "CONTINUE_APPROVED_SCOPE!=AUTONOMOUS_GOAL_CREATION",
+    "TOKEN_VAZIO!=0",
+    "SOURCE!=EXECUTION",
+    "EXECUTION!=EVIDENCE",
+    "EVIDENCE!=CLAIM",
+    "DATASET_INFORMS!=MISSION_AUTHORITY",
+    "IMPLEMENTED!=AUTHORIZED",
+    "REMOTE_IDENTITY!=RUNTIME_PROOF"
+  ],
+  "open_gates": {
+    "android_termux_physical": "TOKEN_VAZIO_DEVICE",
+    "multi_repo_real_runtime": "TOKEN_VAZIO_EXECUTION",
+    "remote_identity": "TOKEN_VAZIO_RUNTIME",
+    "provider_legal_authorization": "TOKEN_VAZIO_EXTERNAL_AUTHORITY",
+    "live_ruleset": "TOKEN_VAZIO_EXTERNAL_AUTHORITY",
+    "server_side_enforcement": "TOKEN_VAZIO_EXTERNAL_AUTHORITY",
+    "manual_promotion": "TOKEN_VAZIO_MANUAL_AUTHORITY",
+    "codescan_credential_analysis": "TOKEN_VAZIO_SECRET",
+    "weight_training_finetuning": "NOT_AUTHORIZED"
+  },
+  "learn_semantics": {
+    "append_only": true,
+    "sequence": [
+      "observation",
+      "authorized_action",
+      "result_evidence",
+      "F_ok",
+      "F_gap",
+      "F_next",
+      "successor_receipt"
+    ],
+    "updates_model_weights": false
+  }
+}
