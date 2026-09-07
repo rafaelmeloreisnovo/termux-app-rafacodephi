@@ -68,13 +68,15 @@
     },
     "evidence_refs": {
       "type": "array",
-      "description": "References to ConversationChunks that justify this intent",
+      "description": "References to ConversationChunks that justify this intent. MESSAGE_ROLE_BOUND_V1 evidence may carry source_role and provenance_class; these are message-level provenance only.",
       "items": {
         "type": "object",
         "required": ["chunk_id"],
         "properties": {
           "chunk_id": { "type": "string" },
-          "relevance": { "type": "string" }
+          "relevance": { "type": "string" },
+          "source_role": { "type": "string", "enum": ["user", "assistant", "system", "tool"] },
+          "provenance_class": { "type": "string", "enum": ["USER_SOURCE", "MODEL_OUTPUT", "SYSTEM_SOURCE", "TOOL_SOURCE"] }
         }
       }
     },
