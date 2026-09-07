@@ -21,11 +21,23 @@ ROOT = HERE.parent
 ROUTE_ID = "ATLAS:X-NOVO-RMRCTI-LLM-NAV-20260906"
 MAX_SOURCE_BYTES = 8 << 20
 MAX_MESSAGES = 10000
+PROVENANCE_CONTRACT = "MESSAGE_ROLE_BOUND_V1"
+PROVENANCE_BY_ROLE = {
+    "user": "USER_SOURCE",
+    "assistant": "MODEL_OUTPUT",
+    "system": "SYSTEM_SOURCE",
+    "tool": "TOOL_SOURCE",
+}
 
 
 def insist(condition, reason):
     if not condition:
         raise ValueError(reason)
+
+
+def provenance_for_role(role):
+    insist(role in PROVENANCE_BY_ROLE, "unknown_source_role")
+    return PROVENANCE_BY_ROLE[role]
 
 
 def bound_file(ref, base, limit):
@@ -86,7 +98,6 @@ def run_adapter(manifest_path: Path, query: str, producer_root: Path, native: Pa
     insist(build["wrapper_sha256"] == sha256((HERE / "atlas_cti_bridge.cpp").read_bytes()),
            "native_wrapper_binding")
     insist(build["binary_sha256"] == sha256(read_bytes(native, 32 << 20)), "native_hash_mismatch")
-    # Do not allow derived output inside raw sources, producer code, or the acted-on repo.
     output = output.resolve()
     for protected in (source_path.parent, route_path.parent, lineage_path.parent,
                       producer_root, working_directory):
@@ -113,7 +124,7 @@ def run_adapter(manifest_path: Path, query: str, producer_root: Path, native: Pa
             insist(type(row["conv_i"]) is int and row["conv_i"] == 0 and
                    isinstance(row["msg_id"], str) and row["msg_id"] and
                    row["canonical_record_id"] == raw_record_id and
-                   row["role"] in {"user", "assistant", "system", "tool"}, "invalid_cti_row")
+                   row["role"] in PROVENANCE_BY_ROLE, "invalid_cti_row")
             ids.append(row["msg_id"])
         insist(len(ids) == len(set(ids)), "duplicate_message_identity")
         messages.rename(cti_dir / "omega_msgs.jsonl")
@@ -130,8 +141,8 @@ def run_adapter(manifest_path: Path, query: str, producer_root: Path, native: Pa
                "privacy_gate_required")
     for hit in hits:
         insist(hit["privacy_gate_applied"] is True and len(hit["message_ids"]) == 1 and
-               hit["message_ids"][0] in ids, "hit_source_ambiguous")
-    # Detect concurrent source changes before any durable context is written.
+               hit["message_ids"][0] in ids and hit.get("role") in PROVENANCE_BY_ROLE,
+               "hit_source_ambiguous")
     for ref in (route, source, manifest["longitudinal"]):
         bound_file(ref, manifest_path.parent, MAX_SOURCE_BYTES)
     insist(read_bytes(manifest_path, 1 << 20) == manifest_bytes, "manifest_changed")
@@ -143,7 +154,6 @@ def run_adapter(manifest_path: Path, query: str, producer_root: Path, native: Pa
                               "native_sha256": build["binary_sha256"]}))
     gaps = ["TV-LLAMA-GENERATION-CAUSAL-USE", "TV-NOVO-CURRENT-MANIFEST-EXACT-SCOPE",
             "TV-PHYSICAL-TERMUX-RUNTIME"]
-    # Local bytes and a provider pointer cannot prove current Drive identity.
     gaps.append("TV-NOVO-PROVIDER-BINDING")
     if result["status"] != "ok":
         gaps.append("TV-CONTEXT-" + result["status"].upper())
@@ -178,19 +188,25 @@ def run_adapter(manifest_path: Path, query: str, producer_root: Path, native: Pa
             continue
         content = header + snippet
         remaining_context_bytes -= len(content.encode("utf-8"))
+        source_role = hit["role"]
+        provenance_class = provenance_for_role(source_role)
         chunks.append({"chunk_id": "cti-" + sha256(canonical([source["content_sha256"], hit["message_ids"][0]]))[:32],
                        "source_repo": PIN["repository"], "sequence_index": i, "content": content,
                        "content_sha256": sha256(content.encode()), "created_at": when,
-                       "role": "tool", "tags": ["RETRIEVED_DATA", "NO_WEIGHT_UPDATE"]})
+                       "role": "tool", "source_role": source_role, "provenance_class": provenance_class,
+                       "tags": ["RETRIEVED_DATA", "NO_WEIGHT_UPDATE", PROVENANCE_CONTRACT,
+                                "LEXICAL_ORIGIN_TOKEN_VAZIO"]})
         validate_shape(chunks[-1], load_json(ROOT / "docs/contracts/conversation_chunk.schema.json"), errors)
     insist(not hits or bool(chunks), "no_renderable_context")
     bundle = None
     if chunks:
         bundle = {"bundle_id": "atlas-" + identity[:32],
-                  "chunk_refs": [{key: c[key] for key in ("chunk_id", "source_repo", "content_sha256")} for c in chunks],
+                  "chunk_refs": [{key: c[key] for key in ("chunk_id", "source_repo", "content_sha256",
+                                                            "source_role", "provenance_class")} for c in chunks],
+                  "provenance_contract": PROVENANCE_CONTRACT,
                   "assembled_at": when, "working_directory": str(working_directory),
                   "active_repos": [PIN["repository"], "rafaelmeloreisnovo/termux-app-rafacodephi"],
-                  "summary_hint": "Untrusted retrieval; execution still requires the Governance Gate."}
+                  "summary_hint": "Untrusted retrieval; message-role provenance is bound; lexical authorship remains TOKEN_VAZIO; execution still requires the Governance Gate."}
         validate_shape(bundle, load_json(ROOT / "docs/contracts/context_bundle.schema.json"), errors)
     insist(not errors, "output_schema_failed:" + ";".join(errors))
     learn = {"learning_id": "LEARN-" + run_id[:32], "predecessor_ids": predecessors,
@@ -216,6 +232,9 @@ def run_adapter(manifest_path: Path, query: str, producer_root: Path, native: Pa
                "privacy_gate_applied": result["privacy_gate_applied"],
                "privacy_blocked_hits": result["privacy_blocked_hits"],
                "privacy_redacted_hits": result["privacy_redacted_hits"],
+               "provenance_contract": PROVENANCE_CONTRACT,
+               "message_provenance_bound": True,
+               "lexical_origin_inferred": False,
                "execution_plan": "PINNED_CTI_SCAN_FALLBACK_NO_CURATION",
                "stages": ["ATLAS", "NOVO_SNAPSHOT", "LONGITUDINAL", "RMRCTI", "CONTEXT_BUNDLE", "LEARN"],
                "model_executed": False, "weights_modified": False, "inputs_unchanged": True,

@@ -20,9 +20,16 @@
         "properties": {
           "chunk_id": { "type": "string" },
           "source_repo": { "type": "string" },
-          "content_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          "content_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "source_role": { "type": "string", "enum": ["user", "assistant", "system", "tool"] },
+          "provenance_class": { "type": "string", "enum": ["USER_SOURCE", "MODEL_OUTPUT", "SYSTEM_SOURCE", "TOOL_SOURCE"] }
         }
       }
+    },
+    "provenance_contract": {
+      "type": "string",
+      "const": "MESSAGE_ROLE_BOUND_V1",
+      "description": "When present, every chunk_ref must preserve source_role and provenance_class exactly from its referenced ConversationChunk."
     },
     "assembled_at": {
       "type": "string",
