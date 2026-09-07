@@ -19,6 +19,13 @@ ROOT = Path(__file__).resolve().parents[1]
 CAPS_PATH = ROOT / "internal/governance/capabilities.json"
 GATE_PATH = ROOT / "internal/governance/strict_readonly_gate_v1.py"
 MAX_JSON = 1 << 20
+PROVENANCE_CONTRACT = "MESSAGE_ROLE_BOUND_V1"
+PROVENANCE_BY_ROLE = {
+    "user": "USER_SOURCE",
+    "assistant": "MODEL_OUTPUT",
+    "system": "SYSTEM_SOURCE",
+    "tool": "TOOL_SOURCE",
+}
 
 
 def now():
@@ -72,14 +79,29 @@ def validate_upstream(run_dir: Path):
     require(envelope.get("model_backend", {}).get("backend_id") == "LLAMA_LOCAL_RMRCTI", "upstream_backend_mismatch")
     refs = bundle.get("chunk_refs")
     require(isinstance(refs, list) and refs, "upstream_chunk_refs")
-    chunk_ids = {item.get("chunk_id") for item in chunks if isinstance(item, dict)}
+    chunk_by_id = {item.get("chunk_id"): item for item in chunks if isinstance(item, dict)}
     expected_ids = {item.get("chunk_id") for item in refs if isinstance(item, dict)}
-    require(None not in expected_ids and expected_ids and expected_ids <= chunk_ids, "upstream_chunk_identity")
+    require(None not in expected_ids and expected_ids and expected_ids <= set(chunk_by_id), "upstream_chunk_identity")
+    provenance_contract = bundle.get("provenance_contract")
+    require(provenance_contract in {None, PROVENANCE_CONTRACT}, "upstream_provenance_contract")
+    provenance_by_id = {}
+    if provenance_contract == PROVENANCE_CONTRACT:
+        for ref in refs:
+            cid = ref.get("chunk_id")
+            source_role = ref.get("source_role")
+            provenance_class = ref.get("provenance_class")
+            require(source_role in PROVENANCE_BY_ROLE, "upstream_source_role")
+            require(provenance_class == PROVENANCE_BY_ROLE[source_role], "upstream_provenance_role_mismatch")
+            chunk = chunk_by_id[cid]
+            require(chunk.get("source_role") == source_role, "upstream_chunk_source_role_mismatch")
+            require(chunk.get("provenance_class") == provenance_class, "upstream_chunk_provenance_mismatch")
+            provenance_by_id[cid] = {"source_role": source_role, "provenance_class": provenance_class}
     require(isinstance(bundle.get("working_directory"), str) and bundle["working_directory"], "upstream_working_directory")
-    return bundle, expected_ids
+    return bundle, expected_ids, provenance_contract, provenance_by_id
 
 
-def validate_provider(intent: dict, receipt: dict, bundle: dict, expected_ids: set[str]):
+def validate_provider(intent: dict, receipt: dict, bundle: dict, expected_ids: set[str],
+                      provenance_contract, provenance_by_id: dict):
     require(receipt.get("schema") == "rafaelia.llama_intent_provider_receipt.v1", "provider_receipt_schema")
     require(receipt.get("claim_allowed") is False, "provider_claim_not_blocked")
     require(receipt.get("execution_granted") is False, "provider_execution_must_be_false")
@@ -88,8 +110,18 @@ def validate_provider(intent: dict, receipt: dict, bundle: dict, expected_ids: s
     require(intent.get("schema") == "rafaelia.intent.v1", "intent_schema")
     require(intent.get("source_bundle_id") == bundle.get("bundle_id"), "intent_bundle_mismatch")
     require(intent.get("target", {}).get("repo_path") == bundle.get("working_directory"), "intent_target_not_upstream")
-    observed_ids = {item.get("chunk_id") for item in intent.get("evidence_refs", []) if isinstance(item, dict)}
+    evidence_refs = [item for item in intent.get("evidence_refs", []) if isinstance(item, dict)]
+    observed_ids = {item.get("chunk_id") for item in evidence_refs}
     require(observed_ids == expected_ids, "intent_evidence_set_mismatch")
+    if provenance_contract == PROVENANCE_CONTRACT:
+        require(receipt.get("provenance_contract") == PROVENANCE_CONTRACT, "provider_provenance_contract_missing")
+        require(receipt.get("message_provenance_preserved") is True, "provider_provenance_not_preserved")
+        require(receipt.get("lexical_origin_inferred") is False, "provider_lexical_origin_overclaim")
+        require(len(evidence_refs) == len(expected_ids), "intent_evidence_duplicate_or_missing")
+        for item in evidence_refs:
+            expected = provenance_by_id[item["chunk_id"]]
+            require(item.get("source_role") == expected["source_role"], "intent_source_role_downgrade")
+            require(item.get("provenance_class") == expected["provenance_class"], "intent_provenance_downgrade")
     require(receipt.get("intent_sha256") == sha256_bytes(canonical(intent)), "provider_intent_hash_mismatch")
 
 
@@ -113,7 +145,7 @@ def main() -> int:
     require(sha256_path(provider) == args.provider_sha256, "provider_sha256_mismatch")
     require(not output.is_relative_to(run_dir), "output_inside_upstream_run")
 
-    bundle, expected_ids = validate_upstream(run_dir)
+    bundle, expected_ids, provenance_contract, provenance_by_id = validate_upstream(run_dir)
     work = Path(bundle["working_directory"]).resolve()
     require(not output.is_relative_to(work), "output_inside_target_workdir")
 
@@ -142,6 +174,9 @@ def main() -> int:
         "model_executed": bool(receipt.get("model_executed", False)),
         "execution_performed": False,
         "claim_allowed": False,
+        "provenance_contract": provenance_contract,
+        "message_provenance_bound": provenance_contract == PROVENANCE_CONTRACT,
+        "lexical_origin_inferred": False,
     }
 
     if proc.returncode == 2 and receipt.get("status") == "TOKEN_VAZIO":
@@ -154,7 +189,7 @@ def main() -> int:
         return 3
 
     intent = read_json(provider_out / "intent.json")
-    validate_provider(intent, receipt, bundle, expected_ids)
+    validate_provider(intent, receipt, bundle, expected_ids, provenance_contract, provenance_by_id)
     gate = load_gate_module()
     decision = gate.decide(intent, read_json(CAPS_PATH), operator_approved=args.operator_approved)
 
