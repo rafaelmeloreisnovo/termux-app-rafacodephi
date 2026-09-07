@@ -11,7 +11,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 from atlas_contract_io import canonical, decode_json, load_json, sha256, validate_shape
-from atlas_novo_context_adapter import ROUTE_ID, run_adapter
+from atlas_novo_context_adapter import PROVENANCE_CONTRACT, ROUTE_ID, run_adapter
 from validate_atlas_llm_navigation_contract import DEFAULT_FIXTURE, validate_fixture
 
 
@@ -110,6 +110,14 @@ class NativeCTIAdapter(unittest.TestCase):
         result = self.run_control()
         self.assertEqual(result["hit_count"], 1)
         self.assertIn("AZURE-STONE-731", (self.out / "chunks.json").read_text())
+        chunks = load_json(self.out / "chunks.json")
+        bundle = load_json(self.out / "context_bundle.json")
+        self.assertEqual(bundle["provenance_contract"], PROVENANCE_CONTRACT)
+        self.assertEqual(chunks[0]["source_role"], "user")
+        self.assertEqual(chunks[0]["provenance_class"], "USER_SOURCE")
+        self.assertIn("LEXICAL_ORIGIN_TOKEN_VAZIO", chunks[0]["tags"])
+        self.assertEqual(bundle["chunk_refs"][0]["source_role"], "user")
+        self.assertEqual(bundle["chunk_refs"][0]["provenance_class"], "USER_SOURCE")
         off = self.run_control(enabled=False, name="off")
         self.assertEqual(off["status"], "disabled")
         self.assertFalse((self.out / "context_bundle.json").exists())
@@ -117,6 +125,16 @@ class NativeCTIAdapter(unittest.TestCase):
         self.assertEqual(self.source.read_bytes(), before)
         self.assertFalse(result["model_executed"])
         self.assertFalse(result["weights_modified"])
+        self.assertTrue(result["message_provenance_bound"])
+        self.assertFalse(result["lexical_origin_inferred"])
+
+    def test_assistant_message_is_model_output_not_user_source(self):
+        result = self.run_control(query="Public control", name="assistant")
+        self.assertEqual(result["hit_count"], 1)
+        chunks = load_json(self.out / "chunks.json")
+        self.assertEqual(chunks[0]["source_role"], "assistant")
+        self.assertEqual(chunks[0]["provenance_class"], "MODEL_OUTPUT")
+        self.assertIn("LEXICAL_ORIGIN_TOKEN_VAZIO", chunks[0]["tags"])
 
     def test_no_hit_does_not_fabricate_bundle(self):
         result = self.run_control(query="unfindablezzqxmarker")
@@ -161,6 +179,7 @@ class NativeCTIAdapter(unittest.TestCase):
         chunks = load_json(self.out / "chunks.json")
         self.assertLessEqual(sum(len(c["content"].encode("utf-8")) for c in chunks), 2500)
         self.assertEqual(result["context_bytes"], sum(len(c["content"].encode("utf-8")) for c in chunks))
+        self.assertTrue(all(c["source_role"] == "user" and c["provenance_class"] == "USER_SOURCE" for c in chunks))
 
     def test_restricted_query_is_blocked(self):
         result = self.run_control(query="-----BEGIN PRIVATE KEY----- synthetic-test-only")
