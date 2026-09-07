@@ -39,6 +39,16 @@
       "type": "string",
       "enum": ["user", "assistant", "system", "tool"]
     },
+    "source_role": {
+      "type": "string",
+      "enum": ["user", "assistant", "system", "tool"],
+      "description": "Original message role before retrieval is wrapped as untrusted tool context. This is message-level provenance, not proof of lexical authorship."
+    },
+    "provenance_class": {
+      "type": "string",
+      "enum": ["USER_SOURCE", "MODEL_OUTPUT", "SYSTEM_SOURCE", "TOOL_SOURCE"],
+      "description": "Deterministic message-level provenance derived only from source_role. USER_RETRANSMISSION, THIRD_PARTY_CODE and MODEL_LABEL require separate content evidence and are not inferred here."
+    },
     "created_at": {
       "type": "string",
       "format": "date-time"
