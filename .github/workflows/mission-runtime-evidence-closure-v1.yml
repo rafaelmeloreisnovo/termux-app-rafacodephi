@@ -1,0 +1,19 @@
+name: Mission Runtime Evidence Closure V1
+on:
+  pull_request:
+    paths:
+      - 'docs/contracts/mission_runtime_evidence_closure.v1.json'
+      - 'scripts/validate_mission_runtime_evidence_closure.py'
+      - '.github/workflows/mission-runtime-evidence-closure-v1.yml'
+permissions:
+  contents: read
+jobs:
+  fail-closed-runtime-closure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate source closure contract
+        run: python3 scripts/validate_mission_runtime_evidence_closure.py
+      - name: Run positive and negative self-tests
+        run: python3 scripts/validate_mission_runtime_evidence_closure.py --self-test

@@ -1,0 +1,253 @@
+{
+  "schema": "rafaelia.mission_runtime_evidence_closure/v1",
+  "contract_id": "RAFAELIA-MISSION-RUNTIME-EVIDENCE-CLOSURE-V1",
+  "date": "2026-09-07",
+  "predecessor": {
+    "path": "docs/contracts/mission_execution_boundary.v1.json",
+    "contract_id": "RAFAELIA-MISSION-EXECUTION-BOUNDARY-V1"
+  },
+  "mode": "APPEND_ONLY_SOURCE_FIRST_FAIL_CLOSED",
+  "claim_allowed": false,
+  "scientific_claim_promotion": false,
+  "weight_training_authorized": false,
+  "source_completion_state": "SOURCE_READY_EXTERNAL_GATES_ONLY",
+  "terminal_program_state_when_required_evidence_is_valid": "FINISHED_WITH_EXTERNAL_GATES",
+  "invariants": [
+    "DATASET_INFORMS!=MISSION_AUTHORITY",
+    "MODEL_PROPOSAL!=EXECUTION_PERMISSION",
+    "RETRIEVAL_CONTEXT!=WEIGHT_UPDATE",
+    "LEARN_APPEND_ONLY!=ONLINE_SELF_TRAINING",
+    "CONTINUE_APPROVED_SCOPE!=AUTONOMOUS_GOAL_CREATION",
+    "SOURCE!=EXECUTION!=EVIDENCE!=CLAIM",
+    "TOKEN_VAZIO!=0",
+    "STATIC_OR_CI_PASS!=PHYSICAL_DEVICE_PROOF",
+    "SIMULATION!=EXTERNAL_AUTHORITY",
+    "NETWORK_REACHABILITY!=REMOTE_IDENTITY",
+    "SECRET_PRESENCE!=ANALYSIS_RESULT",
+    "GREEN_GATE_PROMOTES_ONLY_MEASURED_SCOPE"
+  ],
+  "evidence_gates": [
+    {
+      "gate_id": "physical_android_termux_execution",
+      "current_state": "TOKEN_VAZIO_DEVICE",
+      "owner": "physical Android/Termux target environment",
+      "producer_binding": {
+        "runner": "scripts/run_rafaelia_zero_device_probe.sh",
+        "contract_doc": "docs/RAFAELIA_ZERO_DEVICE_PROBE.md",
+        "receipt_schema": "rafaelia.zero.device.probe.v1"
+      },
+      "required_fields": [
+        "device_receipt_json",
+        "device_receipt_sha256",
+        "apk_sha256",
+        "device_fingerprint_or_privacy_preserving_id",
+        "capture_time_utc",
+        "result"
+      ],
+      "required_values": {
+        "result": "PASS"
+      },
+      "invalid_substitutes": [
+        "host_ci",
+        "emulator_only",
+        "static_contract_validation",
+        "source_presence"
+      ],
+      "promotion_scope": "one exact APK + one exact physical target receipt"
+    },
+    {
+      "gate_id": "exact_multi_repository_runtime_execution",
+      "current_state": "TOKEN_VAZIO_EXECUTION",
+      "owner": "MissionExecution runtime",
+      "required_fields": [
+        "repository_heads",
+        "execution_plan_id",
+        "authorized_action_ids",
+        "execution_result_ids",
+        "provenance_receipt_sha256",
+        "runtime_start_utc",
+        "runtime_end_utc",
+        "result"
+      ],
+      "required_values": {
+        "result": "PASS"
+      },
+      "required_repository_keys": [
+        "Mapa",
+        "termux-app-rafacodephi",
+        "llamaRafaelia",
+        "GAIA_phi",
+        "Rafaelia_Private",
+        "RafNet-Core",
+        "Cosmos",
+        "Rafaelia_Core"
+      ],
+      "invalid_substitutes": [
+        "source_merge_only",
+        "single_repository_ci",
+        "unbound_local_mock",
+        "model_output"
+      ],
+      "promotion_scope": "only the exact recorded checkout topology and executed plan"
+    },
+    {
+      "gate_id": "remote_network_identity",
+      "current_state": "TOKEN_VAZIO_RUNTIME",
+      "owner": "remote identity authority/runtime",
+      "required_fields": [
+        "identity_mechanism",
+        "peer_identifier",
+        "challenge_or_session_id",
+        "verification_result",
+        "evidence_digest",
+        "observed_at_utc"
+      ],
+      "required_values": {
+        "verification_result": "PASS"
+      },
+      "invalid_substitutes": [
+        "dns_resolution",
+        "tcp_connect_only",
+        "repository_name",
+        "self_declared_identity"
+      ],
+      "promotion_scope": "one verified peer identity under the declared mechanism"
+    },
+    {
+      "gate_id": "provider_or_legal_authorization",
+      "current_state": "TOKEN_VAZIO_EXTERNAL_AUTHORITY",
+      "owner": "provider/admin/legal authority",
+      "required_fields": [
+        "authority_name",
+        "decision_reference",
+        "scope",
+        "decision",
+        "effective_at_utc",
+        "evidence_digest_or_provider_reference"
+      ],
+      "required_values": {
+        "decision": "AUTHORIZED"
+      },
+      "invalid_substitutes": [
+        "orchestrator_request",
+        "repository_admin_permission",
+        "model_proposal",
+        "assumed_consent"
+      ],
+      "promotion_scope": "only the authority and scope named by the external decision"
+    },
+    {
+      "gate_id": "live_default_branch_ruleset",
+      "current_state": "TOKEN_VAZIO_EXTERNAL_AUTHORITY",
+      "owner": "repository provider/admin authority",
+      "required_fields": [
+        "repository",
+        "default_branch",
+        "provider_observation_id",
+        "ruleset_or_protection_snapshot_digest",
+        "observed_at_utc",
+        "result"
+      ],
+      "required_values": {
+        "result": "PASS"
+      },
+      "invalid_substitutes": [
+        "workflow_fixture",
+        "local_yaml",
+        "desired_policy_document"
+      ],
+      "promotion_scope": "live provider state at observation time"
+    },
+    {
+      "gate_id": "server_merge_enforcement",
+      "current_state": "TOKEN_VAZIO_EXTERNAL_AUTHORITY",
+      "owner": "repository provider/server",
+      "required_fields": [
+        "repository",
+        "branch",
+        "enforcement_observation_id",
+        "server_result",
+        "observed_at_utc",
+        "evidence_digest"
+      ],
+      "required_values": {
+        "server_result": "PASS"
+      },
+      "invalid_substitutes": [
+        "client_side_validator",
+        "fixture_only",
+        "policy_text"
+      ],
+      "promotion_scope": "observed server-side enforcement only"
+    },
+    {
+      "gate_id": "manual_promotion_decision",
+      "current_state": "TOKEN_VAZIO_MANUAL_AUTHORITY",
+      "owner": "explicit promotion authority",
+      "required_fields": [
+        "decision_id",
+        "authority",
+        "scope",
+        "decision",
+        "decided_at_utc",
+        "evidence_digest_or_provider_reference"
+      ],
+      "required_values": {
+        "decision": "APPROVED"
+      },
+      "invalid_substitutes": [
+        "negative_test_pass",
+        "ci_pass",
+        "absence_of_rejection",
+        "model_inference"
+      ],
+      "promotion_scope": "only the explicitly approved scope"
+    },
+    {
+      "gate_id": "codescan_credentialed_analysis",
+      "current_state": "TOKEN_VAZIO_SECRET",
+      "owner": "credentialed CodeScan/provider execution",
+      "required_fields": [
+        "analysis_run_id",
+        "analysis_result",
+        "report_digest",
+        "analyzed_ref",
+        "observed_at_utc"
+      ],
+      "required_values": {
+        "analysis_result": "PASS"
+      },
+      "forbidden_fields": [
+        "credential",
+        "token",
+        "secret",
+        "password"
+      ],
+      "invalid_substitutes": [
+        "credential_presence_only",
+        "uncredentialed_mock",
+        "local_static_analysis_named_codescan"
+      ],
+      "promotion_scope": "the exact analyzed ref/report; secrets are never persisted"
+    }
+  ],
+  "non_gates": {
+    "model_weight_training": {
+      "state": "NOT_AUTHORIZED",
+      "reason": "outside the current program mission; requires a separate explicit contract and authority"
+    },
+    "scientific_claim_promotion": {
+      "state": "BLOCKED",
+      "reason": "runtime closure does not create scientific evidence or claim authority"
+    }
+  },
+  "completion_rule": {
+    "required_gate_count": 8,
+    "all_required_gates_must_pass": true,
+    "partial_pass_promotes_global_completion": false,
+    "missing_gate_state": "TOKEN_VAZIO",
+    "invalid_gate_state": "FAIL_CLOSED",
+    "terminal_state": "FINISHED_WITH_EXTERNAL_GATES",
+    "claim_allowed_after_terminal_state": false
+  }
+}
