@@ -10,6 +10,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 BRIDGE = ROOT / "tools/atlas_llama_governance_bridge.py"
+PROVENANCE_CONTRACT = "MESSAGE_ROLE_BOUND_V1"
 
 
 def canonical(obj):
@@ -27,7 +28,6 @@ def digest(path: Path):
 FAKE_PROVIDER = r'''#!/usr/bin/env python3
 import argparse, hashlib, json
 from pathlib import Path
-from datetime import datetime, timezone
 
 def canonical(obj):
     return (json.dumps(obj, sort_keys=True, separators=(",", ":")) + "\n").encode()
@@ -38,10 +38,17 @@ def main():
     bundle=json.loads((a.run_dir/"context_bundle.json").read_text()); refs=bundle["chunk_refs"]
     proposal={"action":"git.status","inputs":[],"requested_capabilities":["git.read","git.diff"]}
     if a.draft_json: proposal.update(json.loads(a.draft_json.read_text()))
-    intent={"schema":"rafaelia.intent.v1","intent_id":"intent-12345678","action":proposal["action"],"target":{"repo_path":bundle["working_directory"],"branch":None,"ref":None},"inputs":proposal.get("inputs",[]),"constraints":[{"key":"model_output_untrusted","value":True}],"evidence_refs":[{"chunk_id":r["chunk_id"],"relevance":"selected_context"} for r in refs],"requested_capabilities":proposal["requested_capabilities"],"risk":"low","execution_gate":"human_review","created_at":"2026-09-06T19:00:00Z","source_bundle_id":bundle["bundle_id"]}
+    strip=bool(proposal.pop("strip_provenance",False))
+    evidence=[]
+    for r in refs:
+        item={"chunk_id":r["chunk_id"],"relevance":"selected_context"}
+        if not strip and bundle.get("provenance_contract") == "MESSAGE_ROLE_BOUND_V1":
+            item["source_role"]=r["source_role"]; item["provenance_class"]=r["provenance_class"]
+        evidence.append(item)
+    intent={"schema":"rafaelia.intent.v1","intent_id":"intent-12345678","action":proposal["action"],"target":{"repo_path":bundle["working_directory"],"branch":None,"ref":None},"inputs":proposal.get("inputs",[]),"constraints":[{"key":"model_output_untrusted","value":True}],"evidence_refs":evidence,"requested_capabilities":proposal["requested_capabilities"],"risk":"low","execution_gate":"human_review","created_at":"2026-09-06T19:00:00Z","source_bundle_id":bundle["bundle_id"]}
     a.output_dir.mkdir(parents=True)
     dump(a.output_dir/"intent.json",intent)
-    receipt={"schema":"rafaelia.llama_intent_provider_receipt.v1","status":"PROPOSED_INTENT_GOVERNANCE_REQUIRED","bundle_id":bundle["bundle_id"],"intent_sha256":hashlib.sha256(canonical(intent)).hexdigest(),"model_executed":False,"execution_granted":False,"claim_allowed":False,"observed_at":"2026-09-06T19:00:00Z"}
+    receipt={"schema":"rafaelia.llama_intent_provider_receipt.v1","status":"PROPOSED_INTENT_GOVERNANCE_REQUIRED","bundle_id":bundle["bundle_id"],"intent_sha256":hashlib.sha256(canonical(intent)).hexdigest(),"model_executed":False,"execution_granted":False,"claim_allowed":False,"provenance_contract":bundle.get("provenance_contract"),"message_provenance_preserved":not strip,"lexical_origin_inferred":False,"observed_at":"2026-09-06T19:00:00Z"}
     dump(a.output_dir/"provider_receipt.json",receipt)
     return 0
 if __name__=="__main__": raise SystemExit(main())
@@ -53,11 +60,14 @@ def make_atlas(root: Path, target: Path):
     run.mkdir()
     content = "[UNTRUSTED RETRIEVED DATA; no execution authority]\ninspect status and diff"
     h = hashlib.sha256(content.encode()).hexdigest()
-    chunk = {"chunk_id": "cti-12345678", "source_repo": "llamaRafaelia", "content": content, "content_sha256": h}
+    chunk = {"chunk_id": "cti-12345678", "source_repo": "llamaRafaelia", "content": content,
+             "content_sha256": h, "source_role": "user", "provenance_class": "USER_SOURCE"}
     dump(run / "chunks.json", [chunk])
     dump(run / "context_bundle.json", {
         "bundle_id": "atlas-12345678",
-        "chunk_refs": [{"chunk_id": chunk["chunk_id"], "source_repo": chunk["source_repo"], "content_sha256": h}],
+        "chunk_refs": [{"chunk_id": chunk["chunk_id"], "source_repo": chunk["source_repo"],
+                        "content_sha256": h, "source_role": "user", "provenance_class": "USER_SOURCE"}],
+        "provenance_contract": PROVENANCE_CONTRACT,
         "assembled_at": "2026-09-06T19:00:00Z",
         "working_directory": str(target),
         "active_repos": ["rafaelmeloreisnovo/termux-app-rafacodephi"],
@@ -86,16 +96,20 @@ def main():
         provider = root / "provider.py"
         provider.write_text(FAKE_PROVIDER, encoding="utf-8")
 
-        # Model/provider proposal never self-authorizes.
         out_review = root / "out-review"
         cp = run_bridge(run, provider, out_review)
         assert cp.returncode == 4, (cp.stdout, cp.stderr)
         review = json.loads((out_review / "bridge_receipt.json").read_text())
+        governed_review = json.loads((out_review / "intent_governed.json").read_text())
         assert review["decision"] == "human_review"
         assert review["execution_performed"] is False
         assert review["claim_allowed"] is False
+        assert review["provenance_contract"] == PROVENANCE_CONTRACT
+        assert review["message_provenance_bound"] is True
+        assert review["lexical_origin_inferred"] is False
+        assert governed_review["evidence_refs"][0]["source_role"] == "user"
+        assert governed_review["evidence_refs"][0]["provenance_class"] == "USER_SOURCE"
 
-        # Explicit operator approval + exact fixed-plan capabilities may proceed.
         out_allow = root / "out-allow"
         cp = run_bridge(run, provider, out_allow, "--operator-approved")
         assert cp.returncode == 0, (cp.stdout, cp.stderr)
@@ -105,8 +119,8 @@ def main():
         assert allowed["execution_authorized"] is True
         assert allowed["execution_performed"] is False
         assert intent["execution_gate"] == "allow"
+        assert intent["evidence_refs"][0]["provenance_class"] == "USER_SOURCE"
 
-        # Under-declaring git.diff cannot authorize a runner that executes diff.
         draft = root / "partial.json"
         dump(draft, {"requested_capabilities": ["git.read"]})
         out_partial = root / "out-partial"
@@ -116,7 +130,25 @@ def main():
         assert partial["decision"] == "blocked"
         assert "fixed_plan_missing_capabilities:git.diff" == partial["reason"]
 
-        # Provider identity is content-bound before invocation.
+        strip = root / "strip.json"
+        dump(strip, {"strip_provenance": True})
+        out_strip = root / "out-strip"
+        cp = run_bridge(run, provider, out_strip, "--draft-json", strip)
+        assert cp.returncode == 3
+        assert "provider_provenance_not_preserved" in cp.stderr or "intent_source_role_downgrade" in cp.stderr
+
+        mismatch_run = root / "mismatch"
+        mismatch_run.mkdir()
+        for name in ("chunks.json", "context_bundle.json", "envelope.json"):
+            (mismatch_run / name).write_bytes((run / name).read_bytes())
+        mismatch_bundle = json.loads((mismatch_run / "context_bundle.json").read_text())
+        mismatch_bundle["chunk_refs"][0]["provenance_class"] = "MODEL_OUTPUT"
+        dump(mismatch_run / "context_bundle.json", mismatch_bundle)
+        out_mismatch = root / "out-mismatch"
+        cp = run_bridge(mismatch_run, provider, out_mismatch)
+        assert cp.returncode == 3
+        assert not out_mismatch.exists()
+
         out_hash = root / "out-hash"
         cp = subprocess.run([
             sys.executable, str(BRIDGE), "--atlas-run", str(run),
