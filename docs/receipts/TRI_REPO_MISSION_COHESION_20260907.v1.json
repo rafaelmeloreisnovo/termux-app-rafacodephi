@@ -1,0 +1,52 @@
+{
+  "schema": "rafaelia.tri_repo_mission_cohesion_receipt/v1",
+  "receipt_id": "TRI-REPO-MISSION-COHESION-20260907-V1",
+  "recorded_at": "2026-09-07T05:21:00-03:00",
+  "mode": "APPEND_ONLY_SOURCE_COHESION",
+  "claim_allowed": false,
+  "scientific_claim_promotion": false,
+  "weight_training_authorized": false,
+  "contract_commit": "f83921f6a04e99199bdbef6a9d56607c150f4f2c",
+  "inspected_baselines": {
+    "termux_app_rafacodephi": "db95f0a64b1d28d1d50b70ab44bc2571fabef29d",
+    "vectras_vm_android": "89e47837e551a565ceb7158cba1ced6954e72d93",
+    "rafpolimata": "3956bc6a7d7527ce3535661d170507c761b27fcb"
+  },
+  "role_binding": {
+    "termux_app_rafacodephi": "ORCHESTRATION_AND_BOUNDED_GOVERNANCE",
+    "vectras_vm_android": "OPTIONAL_GOVERNED_RUNTIME_BACKEND",
+    "rafpolimata": "ANALYSIS_COMPILER_FREESTANDING_RESEARCH_VALIDATION"
+  },
+  "F_ok": [
+    "mission/source authority split is explicit",
+    "Vectras runtime role is bounded and non-promotional",
+    "RafPolimata analysis/compiler/freestanding/research-validation role is bounded",
+    "retrieval and LEARN semantics are separated from weight updates",
+    "append-only succession is explicit"
+  ],
+  "F_gap": [
+    "TOKEN_VAZIO_DEVICE",
+    "TOKEN_VAZIO_EXECUTION",
+    "TOKEN_VAZIO_RUNTIME",
+    "TOKEN_VAZIO_EXTERNAL_AUTHORITY",
+    "TOKEN_VAZIO_MANUAL_AUTHORITY",
+    "TOKEN_VAZIO_SECRET"
+  ],
+  "F_next": [
+    "execute physical Android/Termux gate only on a real target device",
+    "execute real multi-repo runtime gate only with bound runtime identity",
+    "observe provider/ruleset/server enforcement from the external authority surface",
+    "perform manual promotion only with explicit human authority",
+    "run secret-backed CodeScan only when the required credential is actually available",
+    "keep weight training disabled unless a separate explicit training contract is authorized"
+  ],
+  "invariants": [
+    "TOKEN_VAZIO!=0",
+    "SOURCE!=EXECUTION",
+    "EXECUTION!=EVIDENCE",
+    "EVIDENCE!=CLAIM",
+    "RETRIEVAL_CONTEXT!=WEIGHT_UPDATE",
+    "LEARN_APPEND_ONLY!=ONLINE_SELF_TRAINING",
+    "CONTINUE_APPROVED_SCOPE!=AUTONOMOUS_GOAL_CREATION"
+  ]
+}
