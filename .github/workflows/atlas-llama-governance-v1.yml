@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Syntax
         run: python3 -m py_compile internal/governance/strict_readonly_gate_v1.py tools/atlas_llama_governance_bridge.py tools/validate_atlas_llama_provider_pin_v1.py tests/vertical_slice/test_atlas_llama_governance_bridge.py
       - name: Provider pin
