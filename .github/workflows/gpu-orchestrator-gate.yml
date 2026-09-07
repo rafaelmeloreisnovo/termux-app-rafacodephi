@@ -1,0 +1,46 @@
+name: GPU Orchestrator Gate
+
+on:
+  pull_request:
+    paths:
+      - 'app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c'
+      - 'app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.h'
+      - 'app/src/main/cpp/lowlevel/gpu_orchestrator_jni.c'
+      - 'app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator_test.c'
+      - 'app/src/main/java/com/termux/lowlevel/GpuOrchestrator.java'
+      - '.github/workflows/gpu-orchestrator-gate.yml'
+  push:
+    branches:
+      - master
+    paths:
+      - 'app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c'
+      - 'app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.h'
+      - 'app/src/main/cpp/lowlevel/gpu_orchestrator_jni.c'
+      - 'app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator_test.c'
+      - 'app/src/main/java/com/termux/lowlevel/GpuOrchestrator.java'
+      - '.github/workflows/gpu-orchestrator-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  host-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile fail-closed orchestrator contract
+        run: |
+          set -euo pipefail
+          cc -std=c11 -O2 -Wall -Wextra -Werror \
+            app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c \
+            app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator_test.c \
+            -ldl -o /tmp/rafaelia_gpu_orchestrator_test
+      - name: Run qualification semantics
+        run: /tmp/rafaelia_gpu_orchestrator_test
+      - name: Assert no automatic GPU promotion shortcut
+        run: |
+          set -euo pipefail
+          grep -q 'rgpu_measurement_qualifies' app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c
+          grep -q 'RGO_ROUTE_GPU_NOT_QUALIFIED' app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c
+          grep -q 'RGO_ROUTE_THERMAL_GUARD' app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c
+          ! grep -q 'pthread_' app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c
