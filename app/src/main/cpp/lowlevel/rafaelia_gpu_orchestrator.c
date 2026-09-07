@@ -607,3 +607,8 @@ int remk_run_once(uint32_t* selected_core, uint32_t* used_gpu) {
     if (used_gpu) *used_gpu = (backend == RGO_GPU_BACKEND_NONE) ? 0u : 1u;
     return rc;
 }
+
+#ifdef __ANDROID__
+/* JNI is an entry-only facade. The routing policy remains in this core. */
+#include "gpu_orchestrator_jni.c"
+#endif
