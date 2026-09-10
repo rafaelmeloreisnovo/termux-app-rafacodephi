@@ -24,7 +24,7 @@ jobs:
   cold-start-builder-contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Validate cold-start and runtime-validator syntax
         run: |
           set -euo pipefail
@@ -54,7 +54,7 @@ jobs:
             extra: '-marm'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install LLVM and QEMU user-mode tools
         run: |

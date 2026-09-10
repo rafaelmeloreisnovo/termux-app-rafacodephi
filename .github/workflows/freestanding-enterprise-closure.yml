@@ -62,7 +62,7 @@ jobs:
     name: Evidence and custody contracts
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 1
@@ -101,7 +101,7 @@ jobs:
     timeout-minutes: 240
     steps:
       - name: Checkout RAFCODEPHI app
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 1
@@ -124,7 +124,7 @@ jobs:
           cache: gradle
 
       - name: Checkout exact patched termux-packages source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: rafaelmeloreisnovo/termux-packages
           ref: ${{ env.TERMUX_PACKAGES_SHA }}
