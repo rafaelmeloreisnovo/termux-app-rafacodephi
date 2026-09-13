@@ -1,0 +1,105 @@
+{
+  "id": "TERMUX-HANDOFF-KW7-APP-20260913-001",
+  "handoff_id": "TERMUX-PACKAGES-TO-APP-20260913-001",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "intent": "Bind the merged seven-guard adapter to the consumer side of one package-to-app handoff without promoting build or physical runtime claims.",
+  "provenance": {
+    "source_provider": "GitHub",
+    "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "ref": "14c1d4b4af2f3f31e675d8a57506812e8547f4ed",
+    "path": "configs/knowledge-work-seven-guards.v1.json",
+    "object_hash": "git-blob-sha1:a15f33f683c89b3db8ec0d41c382a39b3e3291f9",
+    "observed_at": "2026-09-13T04:03:39Z",
+    "authority": "ANDROID_RUNTIME_PROVIDER"
+  },
+  "context": {
+    "intent": "Record the current consumer-side assurance state for the package-to-app boundary.",
+    "scope": "Seven-guard structure and its exact remote CI observations at Termux app PR 439.",
+    "boundary": "Package/build CI does not prove APK installation, launch, pkg execution, QEMU guest execution, or physical Android behavior.",
+    "observed_at": "2026-09-13T04:03:39Z",
+    "dependencies": [
+      "github:rafaelmeloreisnovo/Mapa#619@3a2821d44d555c28cd041ba029cfa940fe3d4c0a",
+      "github:rafaelmeloreisnovo/RafGitTools#452@da8c129329c5106686dff3897f662c9701af6f9a",
+      "github:rafaelmeloreisnovo/termux-packages#112@f577b591e561b74cc7d6c62cb05ceb97e71969d1"
+    ]
+  },
+  "evidence": [
+    {
+      "ref": "github:rafaelmeloreisnovo/termux-app-rafacodephi#439@14c1d4b4af2f3f31e675d8a57506812e8547f4ed",
+      "type": "SOURCE_CHANGE",
+      "scope": "Repository-local contract, validator, adversarial tests, fixture, documentation, and existing-workflow integration."
+    },
+    {
+      "ref": "github-actions:rafaelmeloreisnovo/termux-app-rafacodephi/runs/34736941290#job-103669937826:steps-4-5",
+      "type": "REMOTE_CI",
+      "scope": "Seven-guard adversarial tests and structural fixture both passed on PR head bd6c26423454eac0ddf396421b80eed2b0d71277."
+    },
+    {
+      "ref": "github-actions:rafaelmeloreisnovo/termux-app-rafacodephi/runs/34736941290#job-103669937826:step-7",
+      "type": "NEGATIVE_RESULT",
+      "scope": "Aggregate Safety Gates failed later because two lowlevel files violated the existing include-policy gate."
+    },
+    {
+      "ref": "github-actions:rafaelmeloreisnovo/termux-app-rafacodephi/runs/34736941322#job-103669937679",
+      "type": "NEGATIVE_RESULT",
+      "scope": "Live provider-protection gate found no required-status-check rule, no provider-protection context, and no solo-safe review-thread rule."
+    }
+  ],
+  "contradictions": [
+    {
+      "id": "C-APP-CI-SCOPE-001",
+      "state": "RESOLVED",
+      "comparison_scope": "Seven-guard steps PASS versus aggregate Safety Gates workflow FAIL at the same PR head.",
+      "ref": "github-actions:rafaelmeloreisnovo/termux-app-rafacodephi/runs/34736941290",
+      "resolution": "The observations have different scopes: the adapter gates passed, while a later pre-existing include-policy gate failed; repository-wide CI therefore remains non-green."
+    },
+    {
+      "id": "C-APP-PROVIDER-RULESET-001",
+      "state": "OPEN",
+      "comparison_scope": "Required provider-protection policy versus the live default-branch ruleset.",
+      "ref": "github-actions:rafaelmeloreisnovo/termux-app-rafacodephi/runs/34736941322#job-103669937679"
+    }
+  ],
+  "uncertainty": [
+    {
+      "id": "U-APP-PACKAGE-CONSUMPTION-001",
+      "state": "TOKEN_VAZIO",
+      "evidence_needed": "A consumer receipt binding one package name/version/ABI/artifact digest/schema to bytes actually consumed by the app.",
+      "falsifier": "The app rejects the digest-pinned package or the observed consumed bytes differ from the producer receipt.",
+      "next_probe": "Consume one producer-issued, digest-pinned package handoff in a bounded app fixture and preserve the consumer verification receipt."
+    },
+    {
+      "id": "U-APP-PHYSICAL-RUNTIME-001",
+      "state": "TOKEN_VAZIO",
+      "evidence_needed": "Exact APK, package handoff, device identity, install, launch, command exit code, logs, and receipt hashes.",
+      "falsifier": "Installation, launch, package execution, ABI verification, or receipt binding fails on the identified Android device.",
+      "next_probe": "After consumer handoff verification, run one commit-bound read-only package probe on the authorized Termux device."
+    },
+    {
+      "id": "U-APP-INCLUDE-POLICY-001",
+      "state": "PARTIAL",
+      "evidence_needed": "Current-head classification or repair for rafaelia_gpu_orchestrator.c and rafaelia_gpu_orchestrator_test.c under the lowlevel include policy.",
+      "falsifier": "The same exact-head include-policy gate still reports either file after the bounded repair or reclassification.",
+      "next_probe": "Audit only the two reported files and the policy boundary; do not weaken the gate."
+    }
+  ],
+  "reproduction": {
+    "status": "PASS",
+    "procedure": "GitHub Actions Safety Gates CI run 34736941290, job 103669937826, steps 4 and 5.",
+    "environment_ref": "github-actions:ubuntu-latest:run-34736941290",
+    "input_ref": "git:rafaelmeloreisnovo/termux-app-rafacodephi@bd6c26423454eac0ddf396421b80eed2b0d71277",
+    "output_ref": "github-actions:run-34736941290:steps-4-5:PASS"
+  },
+  "rollback": {
+    "state": "READY",
+    "predecessor": "e40a1e2f537ad296755fd89dc84ec4a2cfa68da8",
+    "procedure": "On a dedicated rollback branch, revert commit 14c1d4b4af2f3f31e675d8a57506812e8547f4ed; never rewrite master history.",
+    "verification": "Not executed: require the focused seven-guard tests, workflow syntax, and a diff proving only the adapter delta is removed."
+  },
+  "reconstruction_pointer": "Mapa#619 -> RafGitTools#452 -> termux-packages#112 -> termux-app#439 -> Actions runs 34736941290 and 34736941322",
+  "mutation_performed": true,
+  "expected_decision": "BLOCKED",
+  "state": "VERIFIED_LIMITED_REMOTE_CI_WITH_OPEN_GAPS",
+  "claim_allowed": false,
+  "next": "Close the exact package-consumption receipt first; physical runtime remains a separate successor gate."
+}
