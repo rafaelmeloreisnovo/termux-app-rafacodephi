@@ -19,6 +19,12 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y build-essential clang gcc-multilib
 
+      - name: Seven knowledge/work guards — adversarial tests
+        run: python3 tests/test_knowledge_work_seven_guards.py
+
+      - name: Seven knowledge/work guards — structural fixture
+        run: python3 scripts/validate_knowledge_work_seven_guards.py examples/knowledge-work-seven-guards.example.json
+
       - name: Syntax check (freestanding ARM64 — core modules)
         run: |
           echo "Checking freestanding C syntax (ARM64 target)..."
@@ -106,6 +112,7 @@ jobs:
           echo "║   • attempted gate != resolved bug                        ║"
           echo "║   • CI observation != physical Android runtime           ║"
           echo "║   • swallowed/env-dependent failure = TOKEN_VAZIO        ║"
+          echo "║   • seven-guard READY != domain/runtime claim             ║"
           echo "║                                                           ║"
           echo "║ Device validation remains a separate evidence gate.      ║"
           echo "╚═══════════════════════════════════════════════════════════╝"
