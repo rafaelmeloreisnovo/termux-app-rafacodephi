@@ -39,6 +39,7 @@ jobs:
           echo "=== Phase 2D: Validating lowlevel include policy ==="
           echo "Checking for non-freestanding includes in app/src/main/cpp/lowlevel/*.c..."
 
+          # Check for stdlib.h, stdio.h, string.h, time.h, unistd.h, sys/*, pthread.h, math.h, assert.h
           NON_FREE=$(grep -l "^#include <stdlib.h>\|^#include <stdio.h>\|^#include <string.h>\|^#include <time.h>\|^#include <unistd.h>\|^#include <sys/\|^#include <pthread.h>\|^#include <math.h>\|^#include <assert.h>" app/src/main/cpp/lowlevel/*.c 2>/dev/null | wc -l)
 
           if [ "$NON_FREE" -eq 0 ]; then
