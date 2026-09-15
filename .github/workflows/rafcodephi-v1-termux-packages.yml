@@ -73,7 +73,7 @@ jobs:
         if: github.event_name == 'repository_dispatch'
         shell: bash
         env:
-          CROSS_REPO_TOKEN: ${{ secrets.PATGITHUB }}
+          CROSS_REPO_TOKEN: ${{ secrets.GITPAT || secrets.PATGITHUB || secrets.GIT }}
         run: |
           set -euo pipefail
           SHA="${{ github.event.client_payload.termux_packages_sha }}"
@@ -169,7 +169,7 @@ jobs:
           path: termux-packages
           repository: rafaelmeloreisnovo/termux-packages
           run-id: ${{ github.event.client_payload.producer_run_id }}
-          github-token: ${{ secrets.PATGITHUB }}
+          github-token: ${{ secrets.GITPAT || secrets.PATGITHUB || secrets.GIT }}
 
       - name: Verify producer receipt binding
         if: github.event_name == 'repository_dispatch'
