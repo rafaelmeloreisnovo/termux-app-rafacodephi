@@ -14,13 +14,31 @@
 #ifndef VERBOVIVO_GRAPH_H
 #define VERBOVIVO_GRAPH_H
 
-/* Freestanding: define integer types manually */
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-typedef unsigned long uint64_t;
-typedef unsigned long size_t;
-typedef signed long int64_t;
+/*
+ * Type contract:
+ * - Hosted Android/JNI builds use the platform headers.
+ * - Pure freestanding builds may use -nostdinc, so rely on compiler-provided
+ *   intrinsic type macros instead of guessing LP32/LP64 widths.
+ *
+ * This keeps uint64_t/int64_t truly 64-bit on armeabi-v7a and avoids
+ * redefining standard typedefs when <stdint.h>/<stddef.h> are already active.
+ */
+#if defined(__STDC_HOSTED__) && __STDC_HOSTED__
+#include <stddef.h>
+#include <stdint.h>
+#else
+#if !defined(__UINT8_TYPE__) || !defined(__UINT16_TYPE__) || \
+    !defined(__UINT32_TYPE__) || !defined(__UINT64_TYPE__) || \
+    !defined(__INT64_TYPE__) || !defined(__SIZE_TYPE__)
+#error "Verbovivo freestanding build requires compiler intrinsic integer/size types"
+#endif
+typedef __UINT8_TYPE__ uint8_t;
+typedef __UINT16_TYPE__ uint16_t;
+typedef __UINT32_TYPE__ uint32_t;
+typedef __UINT64_TYPE__ uint64_t;
+typedef __SIZE_TYPE__ size_t;
+typedef __INT64_TYPE__ int64_t;
+#endif
 
 /* ── Hypervector: 1024-bit node in the graph (128 × 8-byte lanes) ──────── */
 #define HV_LANES      128u   /* 128 × 8 bytes = 1024 bits */
