@@ -110,6 +110,7 @@ jobs:
             gradlew
             scripts/prepare_bootstrap_env.sh
             scripts/validate_side_by_side_contract.py
+            scripts/validate_verbovivo_type_contract.sh
             .github/actions/rafaelia-android-setup/action.yml
           )
           for file in "${critical_files[@]}"; do
@@ -119,6 +120,9 @@ jobs:
 
       - name: "🧩 Validate Native Module Structure"
         run: python3 scripts/validate_native_structure.py
+
+      - name: "🧬 Validate Verbovivo ABI Type Contract"
+        run: bash scripts/validate_verbovivo_type_contract.sh
 
       - name: "✅ Validate Gradle Wrapper"
         uses: gradle/actions/wrapper-validation@v6
