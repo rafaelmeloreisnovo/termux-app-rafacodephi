@@ -343,6 +343,9 @@ jobs:
       - name: "🔐 Configure Optional Release Signing"
         env:
           INPUT_BUILD_TYPE: release
+          # Push is an internal compile-validation lane: exercise assembleRelease
+          # without weakening manual/published release signing requirements.
+          TERMUX_ALLOW_UNSIGNED_RELEASE: ${{ github.event_name == 'push' && 'true' || 'false' }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
