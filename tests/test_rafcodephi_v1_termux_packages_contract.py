@@ -28,6 +28,16 @@ def main() -> int:
     assert RESOLVER.is_file()
 
     for token in (
+        'repository_dispatch:',
+        'types: [rafcodephi_packages_ready]',
+        'actions/download-artifact@v8',
+        'github-token: ${{ secrets.GITPAT || secrets.PATGITHUB || secrets.GIT }}',
+        'run-id: ${{ github.event.client_payload.producer_run_id }}',
+        'rafcodephi.termux-packages-producer-handoff/v1',
+        'BUILD_EVIDENCE_PASS',
+        'producer_commit',
+        'producer_run_id',
+        'PRODUCER_RECEIPT_SHA256',
         'repository: rafaelmeloreisnovo/termux-packages',
         'default: canonical',
         "|| 'canonical'",
@@ -67,7 +77,7 @@ def main() -> int:
         if token in text:
             raise AssertionError(f'forbidden premature/stale V1 route: {token}')
 
-    print('PASS: V1 resolves semantic pin -> exact termux-packages -> source-built ARM/ARM64 bootstrap -> APK; device remains TOKEN_VAZIO')
+    print('PASS: V1 accepts manual semantic pin or automatic producer receipt -> exact ARM/ARM64 bootstrap -> APK; device remains TOKEN_VAZIO')
     return 0
 
 
