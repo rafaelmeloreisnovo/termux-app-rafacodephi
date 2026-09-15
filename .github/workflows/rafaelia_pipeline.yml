@@ -111,6 +111,7 @@ jobs:
             scripts/prepare_bootstrap_env.sh
             scripts/validate_side_by_side_contract.py
             scripts/validate_verbovivo_type_contract.sh
+            scripts/validate_rafaelia_build_surface_contract.py
             .github/actions/rafaelia-android-setup/action.yml
           )
           for file in "${critical_files[@]}"; do
@@ -123,6 +124,9 @@ jobs:
 
       - name: "🧬 Validate Verbovivo ABI Type Contract"
         run: bash scripts/validate_verbovivo_type_contract.sh
+
+      - name: "🧭 Validate RAFAELIA Build Surface Contract"
+        run: python3 scripts/validate_rafaelia_build_surface_contract.py
 
       - name: "✅ Validate Gradle Wrapper"
         uses: gradle/actions/wrapper-validation@v6
@@ -165,9 +169,13 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
             BUILD_INPUT=debug
             BUILD_FULL_DEBUG=false
-          else
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             BUILD_INPUT="${{ inputs.build_type }}"
-            [[ -n "$BUILD_INPUT" ]] || BUILD_INPUT=both
+            [[ -n "$BUILD_INPUT" ]] || { echo "❌ workflow_dispatch requires build_type"; exit 2; }
+            BUILD_FULL_DEBUG=true
+          else
+            # Routine push is a validation/build event, not a signed release request.
+            BUILD_INPUT=debug
             BUILD_FULL_DEBUG=true
           fi
 
