@@ -1,6 +1,8 @@
 name: RAFCODEPHI V1 — termux-packages to APK
 
 on:
+  repository_dispatch:
+    types: [rafcodephi_packages_ready]
   workflow_dispatch:
     inputs:
       termux_packages_ref:
@@ -56,7 +58,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 210
     env:
-      SELECTED_TERMUX_PACKAGES_SELECTOR: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || 'canonical' }}
+      SELECTED_TERMUX_PACKAGES_SELECTOR: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.termux_packages_sha || (github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || 'canonical') }}
+      PRODUCER_RUN_ID: ${{ github.event.client_payload.producer_run_id || '' }}
+      PRODUCER_ARTIFACT_NAME: ${{ github.event.client_payload.artifact_name || '' }}
+      PRODUCER_RECEIPT_SHA256: ${{ github.event.client_payload.receipt_sha256 || '' }}
     steps:
       - name: Checkout exact app revision
         uses: actions/checkout@v7
@@ -64,7 +69,29 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
+      - name: Validate automatic producer handoff
+        if: github.event_name == 'repository_dispatch'
+        shell: bash
+        env:
+          CROSS_REPO_TOKEN: ${{ secrets.PATGITHUB }}
+        run: |
+          set -euo pipefail
+          SHA="${{ github.event.client_payload.termux_packages_sha }}"
+          RUN_ID="${{ github.event.client_payload.producer_run_id }}"
+          ARTIFACT="${{ github.event.client_payload.artifact_name }}"
+          RECEIPT_SHA="${{ github.event.client_payload.receipt_sha256 }}"
+
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "BLOCKED invalid producer SHA: $SHA" >&2; exit 2; }
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "BLOCKED invalid producer run id: $RUN_ID" >&2; exit 2; }
+          [[ "$ARTIFACT" == "rafcodephi-termux-packages-$SHA" ]] || { echo "BLOCKED artifact identity mismatch: $ARTIFACT" >&2; exit 2; }
+          [[ "$RECEIPT_SHA" =~ ^[0-9a-f]{64}$ ]] || { echo "BLOCKED invalid receipt sha256" >&2; exit 2; }
+          [[ -n "${CROSS_REPO_TOKEN:-}" ]] || { echo "TOKEN_VAZIO: PATGITHUB required for cross-repo artifact read" >&2; exit 2; }
+
+          echo "TERMUX_PACKAGES_SHA=$SHA" >> "$GITHUB_ENV"
+          echo "SELECTED_TERMUX_PACKAGES_SELECTOR=producer:$SHA" >> "$GITHUB_ENV"
+
       - name: Resolve semantic termux-packages pin
+        if: github.event_name != 'repository_dispatch'
         shell: bash
         run: |
           set -euo pipefail
@@ -75,6 +102,7 @@ jobs:
             | tee build/reports/rafcodephi-v1-packages-pin-resolution.json
 
       - name: Checkout pinned termux-packages source
+        if: github.event_name != 'repository_dispatch'
         uses: actions/checkout@v7
         with:
           repository: rafaelmeloreisnovo/termux-packages
@@ -84,6 +112,7 @@ jobs:
           fetch-depth: 1
 
       - name: Bind termux-packages identity and provenance
+        if: github.event_name != 'repository_dispatch'
         working-directory: termux-packages
         shell: bash
         run: |
@@ -100,6 +129,7 @@ jobs:
           sha256sum scripts/properties.sh > build/reports/rafcodephi-v1-properties.sha256
 
       - name: Build real ARM and ARM64 bootstrap from termux-packages
+        if: github.event_name != 'repository_dispatch'
         working-directory: termux-packages
         shell: bash
         run: |
@@ -130,6 +160,43 @@ jobs:
             echo "RAFCODEPHI_V1_REAL_BOOTSTRAP=BLOCKED exit_code=$build_status" >&2
             exit "$build_status"
           fi
+
+      - name: Download exact producer artifact
+        if: github.event_name == 'repository_dispatch'
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ github.event.client_payload.artifact_name }}
+          path: termux-packages
+          repository: rafaelmeloreisnovo/termux-packages
+          run-id: ${{ github.event.client_payload.producer_run_id }}
+          github-token: ${{ secrets.PATGITHUB }}
+
+      - name: Verify producer receipt binding
+        if: github.event_name == 'repository_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          RECEIPT=termux-packages/build/reports/rafcodephi-auto-handoff.json
+          test -s "$RECEIPT"
+          ACTUAL_RECEIPT_SHA="$(sha256sum "$RECEIPT" | awk '{print $1}')"
+          test "$ACTUAL_RECEIPT_SHA" = "$PRODUCER_RECEIPT_SHA256"
+
+          python3 - "$RECEIPT" "$TERMUX_PACKAGES_SHA" "$PRODUCER_RUN_ID" "$PRODUCER_ARTIFACT_NAME" <<'PY'
+          import json, sys
+          from pathlib import Path
+          receipt = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          expected_sha, expected_run, expected_artifact = sys.argv[2:5]
+          assert receipt["schema"] == "rafcodephi.termux-packages-producer-handoff/v1"
+          assert receipt["state"] == "BUILD_EVIDENCE_PASS"
+          assert receipt["producer_repository"] == "rafaelmeloreisnovo/termux-packages"
+          assert receipt["producer_commit"] == expected_sha
+          assert str(receipt["producer_run_id"]) == expected_run
+          assert receipt["artifact_name"] == expected_artifact
+          assert receipt["package_name"] == "com.termux.rafacodephi"
+          assert receipt["prefix"] == "/data/data/com.termux.rafacodephi/files/usr"
+          assert receipt["claim_allowed"] is False
+          assert receipt["physical_android"] == "TOKEN_VAZIO"
+          PY
 
       - name: Gate package/bootstrap output
         working-directory: termux-packages
@@ -192,7 +259,11 @@ jobs:
         run: |
           set -euo pipefail
           APP_SHA="$(git rev-parse HEAD)"
-          PKG_SHA="$(git -C termux-packages rev-parse HEAD)"
+          if [[ "$GITHUB_EVENT_NAME" == "repository_dispatch" ]]; then
+            PKG_SHA="$TERMUX_PACKAGES_SHA"
+          else
+            PKG_SHA="$(git -C termux-packages rev-parse HEAD)"
+          fi
           MANIFEST=termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
           ARM=termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
           ARM64=termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
