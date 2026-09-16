@@ -31,6 +31,7 @@ def main() -> int:
         'repository_dispatch:',
         'types: [rafcodephi_packages_ready]',
         'actions/download-artifact@v8',
+        'artifact-ids: ${{ github.event.client_payload.artifact_id }}',
         'github-token: ${{ secrets.GITPAT || secrets.PATGITHUB || secrets.GIT }}',
         'run-id: ${{ github.event.client_payload.producer_run_id }}',
         'rafcodephi.termux-packages-producer-handoff/v1',
