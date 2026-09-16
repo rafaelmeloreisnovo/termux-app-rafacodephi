@@ -309,6 +309,20 @@ jobs:
                   for block in iter(lambda: f.read(1 << 20), b''):
                       h.update(block)
               return h.hexdigest()
+          apk_manifest = Path(sys.argv[-1])
+          apk_sha256 = {}
+          for raw in apk_manifest.read_text(encoding='utf-8').splitlines():
+              if not raw.strip():
+                  continue
+              digest, filename = raw.split(None, 1)
+              apk_path = Path(filename.strip())
+              actual = sha256(apk_path)
+              if actual != digest:
+                  raise SystemExit(f'APK checksum manifest mismatch for {apk_path}')
+              apk_sha256[str(apk_path)] = actual
+          if not apk_sha256:
+              raise SystemExit('no APK digests recorded')
+
           receipt = {
               'schema': 'rafcodephi.v1-termux-packages-to-apk/v1',
               'state': 'BUILD_EVIDENCE_PASS',
@@ -317,6 +331,7 @@ jobs:
               'termux_packages_selector': __import__('os').environ.get('SELECTED_TERMUX_PACKAGES_SELECTOR', 'canonical'),
               'producer_artifact_id': __import__('os').environ.get('PRODUCER_ARTIFACT_ID', 'TOKEN_VAZIO'),
               'producer_artifact_digest': __import__('os').environ.get('PRODUCER_ARTIFACT_DIGEST', 'TOKEN_VAZIO'),
+              'apk_sha256': apk_sha256,
               'package_name': 'com.termux.rafacodephi',
               'prefix': '/data/data/com.termux.rafacodephi/files/usr',
               'source_built_arm_arm64': True,
