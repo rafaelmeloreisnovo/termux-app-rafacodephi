@@ -38,6 +38,11 @@ def main() -> int:
         'producer_commit',
         'producer_run_id',
         'PRODUCER_RECEIPT_SHA256',
+        'PRODUCER_ARTIFACT_ID',
+        'PRODUCER_ARTIFACT_DIGEST',
+        'producer byte digest mismatch',
+        'artifact_id',
+        'artifact_digest',
         'repository: rafaelmeloreisnovo/termux-packages',
         'default: canonical',
         "|| 'canonical'",
@@ -77,7 +82,7 @@ def main() -> int:
         if token in text:
             raise AssertionError(f'forbidden premature/stale V1 route: {token}')
 
-    print('PASS: V1 accepts manual semantic pin or automatic producer receipt -> exact ARM/ARM64 bootstrap -> APK; device remains TOKEN_VAZIO')
+    print('PASS: V1 verifies producer receipt hash + exact manifest/ARM/ARM64 byte digests + artifact identity -> APK; device remains TOKEN_VAZIO')
     return 0
 
 
