@@ -39,27 +39,42 @@ jobs:
 
       - name: Freestanding include-policy gate (lowlevel modules)
         run: |
+          set -euo pipefail
           echo "=== Phase 2D: Validating lowlevel include policy ==="
-          echo "Checking for non-freestanding includes in app/src/main/cpp/lowlevel/*.c..."
 
-          # Check for stdlib.h, stdio.h, string.h, time.h, unistd.h, sys/*, pthread.h, math.h, assert.h
-          NON_FREE=$(grep -l "^#include <stdlib.h>\|^#include <stdio.h>\|^#include <string.h>\|^#include <time.h>\|^#include <unistd.h>\|^#include <sys/\|^#include <pthread.h>\|^#include <math.h>\|^#include <assert.h>" app/src/main/cpp/lowlevel/*.c 2>/dev/null | wc -l)
+          LOWLEVEL_DIR=app/src/main/cpp/lowlevel
+          POSIX_RUNTIME="$LOWLEVEL_DIR/rafaelia_gpu_orchestrator.c"
 
-          if [ "$NON_FREE" -eq 0 ]; then
-            echo "PASS: zero forbidden lowlevel includes detected"
-          else
-            echo "FAIL: found $NON_FREE lowlevel files with forbidden includes"
-            grep -l "^#include <stdlib.h>\|^#include <stdio.h>\|^#include <string.h>\|^#include <time.h>\|^#include <unistd.h>\|^#include <sys/\|^#include <pthread.h>\|^#include <math.h>\|^#include <assert.h>" app/src/main/cpp/lowlevel/*.c
+          # Tests are host-side harnesses, not production freestanding units.
+          # rafaelia_gpu_orchestrator.c is an explicit Android/POSIX runtime adapter:
+          # it probes OpenCL/Vulkan through dlopen(3) and CPU count through sysconf(3).
+          test -f "$POSIX_RUNTIME"
+          grep -Fq '#include <dlfcn.h>' "$POSIX_RUNTIME"
+          grep -Fq '#include <unistd.h>' "$POSIX_RUNTIME"
+          grep -Fq 'dlopen(' "$POSIX_RUNTIME"
+          grep -Fq 'sysconf(' "$POSIX_RUNTIME"
+
+          mapfile -t FREESTANDING_SCOPE < <(
+            find "$LOWLEVEL_DIR" -maxdepth 1 -type f -name '*.c' \
+              ! -name '*_test.c' \
+              ! -name 'rafaelia_gpu_orchestrator.c' \
+              -print | LC_ALL=C sort
+          )
+          ((${#FREESTANDING_SCOPE[@]} > 0))
+
+          FORBIDDEN='^#include <(stdlib\.h|stdio\.h|string\.h|time\.h|unistd\.h|sys/[^>]+|pthread\.h|math\.h|assert\.h)>'
+          mapfile -t NON_FREE < <(grep -El "$FORBIDDEN" "${FREESTANDING_SCOPE[@]}" || true)
+
+          if ((${#NON_FREE[@]} != 0)); then
+            echo "FAIL: production lowlevel files crossed the freestanding include boundary"
+            printf '  %s\n' "${NON_FREE[@]}"
             exit 1
           fi
 
-          echo ""
-          echo "Verifying freestanding wrapper header includes..."
-          FS_USED=$(grep -l "freestanding_" app/src/main/cpp/lowlevel/*.c 2>/dev/null | wc -l)
-          echo "  • Freestanding headers used in: $FS_USED files"
-
-          echo ""
-          echo "PASS: include policy only. This does not prove compilation, ABI correctness, runtime behavior, or physical-device execution."
+          echo "PASS: freestanding production scope=${#FREESTANDING_SCOPE[@]} forbidden=0"
+          echo "PASS: explicit POSIX runtime exception=$POSIX_RUNTIME"
+          echo "PASS: *_test.c is classified as host-test scope, not production freestanding scope"
+          echo "Truth boundary: include-policy PASS != compile/ABI/runtime/device PASS."
 
       - name: Freestanding syscall header guard gate
         run: |
