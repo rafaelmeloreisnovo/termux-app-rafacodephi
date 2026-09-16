@@ -90,7 +90,7 @@ jobs:
           [[ "$ARTIFACT" == "rafcodephi-termux-packages-$SHA" ]] || { echo "BLOCKED artifact identity mismatch: $ARTIFACT" >&2; exit 2; }
           [[ "$RECEIPT_SHA" =~ ^[0-9a-f]{64}$ ]] || { echo "BLOCKED invalid receipt sha256" >&2; exit 2; }
           [[ "$ARTIFACT_ID" =~ ^[0-9]+$ ]] || { echo "BLOCKED invalid artifact id" >&2; exit 2; }
-          [[ "$ARTIFACT_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "BLOCKED invalid artifact digest" >&2; exit 2; }
+          [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]] || { echo "BLOCKED invalid artifact digest" >&2; exit 2; }
           [[ -n "${CROSS_REPO_TOKEN:-}" ]] || { echo "TOKEN_VAZIO: PATGITHUB required for cross-repo artifact read" >&2; exit 2; }
 
           echo "TERMUX_PACKAGES_SHA=$SHA" >> "$GITHUB_ENV"
