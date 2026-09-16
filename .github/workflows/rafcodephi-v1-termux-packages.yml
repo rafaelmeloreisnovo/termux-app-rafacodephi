@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 210
     env:
-      SELECTED_TERMUX_PACKAGES_SELECTOR: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.termux_packages_sha || (github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || 'canonical') }}
+      SELECTED_TERMUX_PACKAGES_SELECTOR: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.termux_packages_sha || (github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || (github.event_name == 'pull_request' && 'candidate' || 'canonical')) }}
       PRODUCER_RUN_ID: ${{ github.event.client_payload.producer_run_id || '' }}
       PRODUCER_ARTIFACT_NAME: ${{ github.event.client_payload.artifact_name || '' }}
       PRODUCER_RECEIPT_SHA256: ${{ github.event.client_payload.receipt_sha256 || '' }}
