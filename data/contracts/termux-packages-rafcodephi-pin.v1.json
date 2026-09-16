@@ -17,9 +17,9 @@
       "physical_android": "TOKEN_VAZIO"
     },
     "candidate": {
-      "commit": "0ffb24a5a6be58316236383a6d249544c39eb3e3",
-      "branch": "main",
-      "state": "CURRENT_MAIN_PIN_VALIDATION",
+      "commit": "19a598d4cc1f88ff14d5f309cabdcd626e41c9d5",
+      "branch": "hardening/rafcodephi-custody-signed-apt-v1-20260915",
+      "state": "PR_118_EXACT_HEAD_VALIDATION",
       "promotion_target": "canonical",
       "supersedes_commit": "1fc540b0c296581c5793c109e3834589f85a0114",
       "historical_pull_request": 89,
@@ -27,7 +27,9 @@
       "historical_merge_commit": "8a3587789c415912c04b83fc4bb82fe69c55d595",
       "equivalent_duplicate_closed": 90,
       "claim_allowed": false,
-      "physical_android": "TOKEN_VAZIO"
+      "physical_android": "TOKEN_VAZIO",
+      "pull_request": 118,
+      "previous_candidate_commit": "0ffb24a5a6be58316236383a6d249544c39eb3e3"
     }
   },
   "invariants": {
