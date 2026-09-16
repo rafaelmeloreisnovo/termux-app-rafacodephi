@@ -31,6 +31,7 @@ def main() -> int:
         'repository_dispatch:',
         'types: [rafcodephi_packages_ready]',
         'actions/download-artifact@v8',
+        'artifact-ids: ${{ github.event.client_payload.artifact_id }}',
         'github-token: ${{ secrets.GITPAT || secrets.PATGITHUB || secrets.GIT }}',
         'run-id: ${{ github.event.client_payload.producer_run_id }}',
         'rafcodephi.termux-packages-producer-handoff/v1',
@@ -38,6 +39,14 @@ def main() -> int:
         'producer_commit',
         'producer_run_id',
         'PRODUCER_RECEIPT_SHA256',
+        'PRODUCER_ARTIFACT_ID',
+        'PRODUCER_ARTIFACT_DIGEST',
+        'producer byte digest mismatch',
+        'artifact_id',
+        'artifact_digest',
+        "'apk_sha256': apk_sha256",
+        'APK checksum manifest mismatch',
+        'no APK digests recorded',
         'repository: rafaelmeloreisnovo/termux-packages',
         'default: canonical',
         "|| 'canonical'",
@@ -77,7 +86,7 @@ def main() -> int:
         if token in text:
             raise AssertionError(f'forbidden premature/stale V1 route: {token}')
 
-    print('PASS: V1 accepts manual semantic pin or automatic producer receipt -> exact ARM/ARM64 bootstrap -> APK; device remains TOKEN_VAZIO')
+    print('PASS: V1 verifies producer receipt hash + exact manifest/ARM/ARM64 byte digests + artifact identity -> APK; device remains TOKEN_VAZIO')
     return 0
 
 

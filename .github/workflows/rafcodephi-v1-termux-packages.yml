@@ -62,6 +62,8 @@ jobs:
       PRODUCER_RUN_ID: ${{ github.event.client_payload.producer_run_id || '' }}
       PRODUCER_ARTIFACT_NAME: ${{ github.event.client_payload.artifact_name || '' }}
       PRODUCER_RECEIPT_SHA256: ${{ github.event.client_payload.receipt_sha256 || '' }}
+      PRODUCER_ARTIFACT_ID: ${{ github.event.client_payload.artifact_id || '' }}
+      PRODUCER_ARTIFACT_DIGEST: ${{ github.event.client_payload.artifact_digest || '' }}
     steps:
       - name: Checkout exact app revision
         uses: actions/checkout@v7
@@ -80,11 +82,15 @@ jobs:
           RUN_ID="${{ github.event.client_payload.producer_run_id }}"
           ARTIFACT="${{ github.event.client_payload.artifact_name }}"
           RECEIPT_SHA="${{ github.event.client_payload.receipt_sha256 }}"
+          ARTIFACT_ID="${{ github.event.client_payload.artifact_id }}"
+          ARTIFACT_DIGEST="${{ github.event.client_payload.artifact_digest }}"
 
           [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "BLOCKED invalid producer SHA: $SHA" >&2; exit 2; }
           [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "BLOCKED invalid producer run id: $RUN_ID" >&2; exit 2; }
           [[ "$ARTIFACT" == "rafcodephi-termux-packages-$SHA" ]] || { echo "BLOCKED artifact identity mismatch: $ARTIFACT" >&2; exit 2; }
           [[ "$RECEIPT_SHA" =~ ^[0-9a-f]{64}$ ]] || { echo "BLOCKED invalid receipt sha256" >&2; exit 2; }
+          [[ "$ARTIFACT_ID" =~ ^[0-9]+$ ]] || { echo "BLOCKED invalid artifact id" >&2; exit 2; }
+          [[ "$ARTIFACT_DIGEST" =~ ^[0-9a-f]{64}$ ]] || { echo "BLOCKED invalid artifact digest" >&2; exit 2; }
           [[ -n "${CROSS_REPO_TOKEN:-}" ]] || { echo "TOKEN_VAZIO: PATGITHUB required for cross-repo artifact read" >&2; exit 2; }
 
           echo "TERMUX_PACKAGES_SHA=$SHA" >> "$GITHUB_ENV"
@@ -137,11 +143,16 @@ jobs:
           mkdir -p build/reports
           chmod +x scripts/run-docker.sh scripts/build-rafcodephi-real-bootstrap.sh
           set +e
-          ./scripts/run-docker.sh \
+          BOOTSTRAP_OUT=/tmp/rafcodephi-bootstrap-out
+          rm -rf artifacts/rafcodephi-bootstrap
+          mkdir -p artifacts/rafcodephi-bootstrap
+          ./scripts/run-docker.sh env \
+            RAFCODEPHI_BOOTSTRAP_OUT_DIR="$BOOTSTRAP_OUT" \
             ./scripts/build-rafcodephi-real-bootstrap.sh \
             --architectures arm,aarch64 \
             2>&1 | tee build/reports/rafcodephi-v1-real-bootstrap.log
           build_status="${PIPESTATUS[0]}"
+          sudo docker cp "termux-package-builder:$BOOTSTRAP_OUT/." artifacts/rafcodephi-bootstrap/ 2>/dev/null || true
           set -e
           python3 - "$build_status" > build/reports/rafcodephi-v1-real-bootstrap-status.json <<'PY'
           import json
@@ -165,7 +176,7 @@ jobs:
         if: github.event_name == 'repository_dispatch'
         uses: actions/download-artifact@v8
         with:
-          name: ${{ github.event.client_payload.artifact_name }}
+          artifact-ids: ${{ github.event.client_payload.artifact_id }}
           path: termux-packages
           repository: rafaelmeloreisnovo/termux-packages
           run-id: ${{ github.event.client_payload.producer_run_id }}
@@ -182,9 +193,10 @@ jobs:
           test "$ACTUAL_RECEIPT_SHA" = "$PRODUCER_RECEIPT_SHA256"
 
           python3 - "$RECEIPT" "$TERMUX_PACKAGES_SHA" "$PRODUCER_RUN_ID" "$PRODUCER_ARTIFACT_NAME" <<'PY'
-          import json, sys
+          import hashlib, json, sys
           from pathlib import Path
-          receipt = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          receipt_path = Path(sys.argv[1])
+          receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
           expected_sha, expected_run, expected_artifact = sys.argv[2:5]
           assert receipt["schema"] == "rafcodephi.termux-packages-producer-handoff/v1"
           assert receipt["state"] == "BUILD_EVIDENCE_PASS"
@@ -196,6 +208,25 @@ jobs:
           assert receipt["prefix"] == "/data/data/com.termux.rafacodephi/files/usr"
           assert receipt["claim_allowed"] is False
           assert receipt["physical_android"] == "TOKEN_VAZIO"
+
+          expected_paths = {
+              "artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt":
+                  Path("termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt"),
+              "artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip":
+                  Path("termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip"),
+              "artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip":
+                  Path("termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip"),
+          }
+          recorded = receipt.get("sha256")
+          assert isinstance(recorded, dict)
+          assert set(recorded) == set(expected_paths)
+          for key, path in expected_paths.items():
+              h = hashlib.sha256()
+              with path.open("rb") as fh:
+                  for block in iter(lambda: fh.read(1 << 20), b""):
+                      h.update(block)
+              actual = h.hexdigest()
+              assert actual == recorded[key], f"producer byte digest mismatch for {key}"
           PY
 
       - name: Gate package/bootstrap output
@@ -283,12 +314,29 @@ jobs:
                   for block in iter(lambda: f.read(1 << 20), b''):
                       h.update(block)
               return h.hexdigest()
+          apk_manifest = Path(sys.argv[-1])
+          apk_sha256 = {}
+          for raw in apk_manifest.read_text(encoding='utf-8').splitlines():
+              if not raw.strip():
+                  continue
+              digest, filename = raw.split(None, 1)
+              apk_path = Path(filename.strip())
+              actual = sha256(apk_path)
+              if actual != digest:
+                  raise SystemExit(f'APK checksum manifest mismatch for {apk_path}')
+              apk_sha256[str(apk_path)] = actual
+          if not apk_sha256:
+              raise SystemExit('no APK digests recorded')
+
           receipt = {
               'schema': 'rafcodephi.v1-termux-packages-to-apk/v1',
               'state': 'BUILD_EVIDENCE_PASS',
               'app_commit': app_sha,
               'termux_packages_commit': pkg_sha,
               'termux_packages_selector': __import__('os').environ.get('SELECTED_TERMUX_PACKAGES_SELECTOR', 'canonical'),
+              'producer_artifact_id': __import__('os').environ.get('PRODUCER_ARTIFACT_ID', 'TOKEN_VAZIO'),
+              'producer_artifact_digest': __import__('os').environ.get('PRODUCER_ARTIFACT_DIGEST', 'TOKEN_VAZIO'),
+              'apk_sha256': apk_sha256,
               'package_name': 'com.termux.rafacodephi',
               'prefix': '/data/data/com.termux.rafacodephi/files/usr',
               'source_built_arm_arm64': True,
