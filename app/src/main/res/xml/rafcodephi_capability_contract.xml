@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rafcodephiContract
+    version="1.0"
+    generated="2026-09-17"
+    policy="SOURCE_NE_ARTIFACT_NE_EXECUTION_NE_EVIDENCE_NE_CLAIM">
+
+    <capability
+        id="installed_identity"
+        title="Identidade desta instalação"
+        status="RUNTIME_CHECK"
+        claimPolicy="evidence_required">
+        <leigo>Mostra qual aplicativo está realmente instalado, sua versão e uma impressão digital para conferir se estamos falando do mesmo arquivo.</leigo>
+        <basico>Consulta pacote, versão e o APK atualmente carregado pelo Android.</basico>
+        <medio>Acrescenta tamanho do APK, quantidade de arquivos DEX e arquiteturas nativas encontradas dentro do pacote.</medio>
+        <avancado>Expõe package/version, source APK, SHA-256, DEX count, native ABI set e native library count.</avancado>
+        <expert>Use esta camada para comparar a instalação material com artefatos de build e receipts. Igualdade de nome não prova igualdade de bytes.</expert>
+        <nerd>Fingerprint = SHA-256 do sourceDir carregado; DEX e lib/*/*.so são enumerados diretamente do ZIP APK em runtime.</nerd>
+        <source>Android PackageManager + ApplicationInfo.sourceDir + java.util.zip.ZipFile</source>
+        <executor>CapabilityContractActivity.runtimeSnapshot</executor>
+        <evidence>Dados extraídos do APK que está executando esta própria tela.</evidence>
+        <gap>Não atribui automaticamente o APK a um commit Git sem receipt/hash correspondente.</gap>
+    </capability>
+
+    <capability
+        id="dex_structure"
+        title="Estrutura DEX"
+        status="RUNTIME_CHECK"
+        claimPolicy="evidence_required">
+        <leigo>Mostra quantos blocos de código Android existem dentro deste aplicativo.</leigo>
+        <basico>Conta classes.dex, classes2.dex e demais arquivos DEX presentes no APK.</basico>
+        <medio>Distingue presença física de DEX de qualquer afirmação sobre quais métodos foram executados.</medio>
+        <avancado>O APK é aberto como ZIP e todos os entries compatíveis com classes*.dex são enumerados.</avancado>
+        <expert>DEX presente = artefato. DEX carregado/executado exige outra evidência. Não promover presença a execução.</expert>
+        <nerd>Matcher: classes.dex ou classesN.dex na raiz do APK. Resultado é estrutura empacotada, não cobertura de execução.</nerd>
+        <source>APK instalado</source>
+        <executor>CapabilityContractActivity.inspectApk</executor>
+        <evidence>Contagem física de DEX dentro do pacote instalado.</evidence>
+        <gap>Sem instrumentação adicional, não informa cobertura de classes/métodos em runtime.</gap>
+    </capability>
+
+    <capability
+        id="native_elf"
+        title="Código nativo / ELF"
+        status="RUNTIME_CHECK"
+        claimPolicy="evidence_required">
+        <leigo>Mostra se o aplicativo traz componentes nativos próprios para o processador do telefone.</leigo>
+        <basico>Lista as arquiteturas existentes em lib/&lt;abi&gt;/ e conta bibliotecas .so.</basico>
+        <medio>Relaciona bibliotecas nativas às ABIs empacotadas sem afirmar que todas foram carregadas.</medio>
+        <avancado>Inspeciona entradas lib/*/*.so do APK e reporta ABI e quantidade de objetos compartilhados.</avancado>
+        <expert>Presença de .so demonstra artefato ELF empacotado; carregamento e chamadas JNI exigem prova adicional.</expert>
+        <nerd>O contrato mantém ELF_ARTIFACT != ELF_LOADED != SYMBOL_CALLED. A tela só prova a primeira condição.</nerd>
+        <source>APK instalado: lib/*/*.so</source>
+        <executor>CapabilityContractActivity.inspectApk</executor>
+        <evidence>ABIs e número de bibliotecas nativas encontrados fisicamente no APK.</evidence>
+        <gap>Não faz tracing de dlopen/JNI nesta tela.</gap>
+    </capability>
+
+    <capability
+        id="control_center"
+        title="Control Center RAFCODEΦ"
+        status="SOURCE_IMPLEMENTED"
+        claimPolicy="evidence_required">
+        <leigo>Existe uma área separada para executar diagnósticos e reunir evidências sem transformar a tela de apresentação em um terminal completo.</leigo>
+        <basico>O menu de configurações encaminha para o Control Center já existente.</basico>
+        <medio>O Control Center permanece separado deste contrato: esta tela explica e comprova; o orquestrador executa operações específicas.</medio>
+        <avancado>Âncora de código: BetaOrchestratorActivity. O contrato não duplica seus executores.</avancado>
+        <expert>A apresentação referencia executores existentes e preserva separação entre catálogo, execução e receipt.</expert>
+        <nerd>UI catalog != runner. Nenhum estado PASS é produzido apenas por abrir esta tela.</nerd>
+        <source>com.termux.app.activities.BetaOrchestratorActivity</source>
+        <executor>BetaOrchestratorActivity</executor>
+        <evidence>Implementação-fonte registrada no app e acessível pelo Settings.</evidence>
+        <gap>Resultados de cada pipeline continuam dependentes de suas próprias execuções e receipts.</gap>
+    </capability>
+
+    <capability
+        id="benchmark_pipeline"
+        title="Benchmarks e observações"
+        status="SOURCE_IMPLEMENTED"
+        claimPolicy="evidence_required">
+        <leigo>Benchmarks são medições. Esta tela mostra o método; o resultado só vale quando uma medição realmente foi executada.</leigo>
+        <basico>Distingue teste disponível de teste já realizado.</basico>
+        <medio>Benchmarks existentes podem ser ligados ao catálogo por source/executor/evidence sem copiar o código de teste.</medio>
+        <avancado>Estados recomendados: DECLARED, IMPLEMENTED_UNTESTED, PASS, FAIL, BLOCKED, TOKEN_VAZIO.</avancado>
+        <expert>PASS requer executor + parâmetros + output + receipt. IMPLEMENTED_UNTESTED não é PASS.</expert>
+        <nerd>O contrato é claim-gated: ausência de gate suficiente mantém claimAllowed=false para resultados quantitativos.</nerd>
+        <source>BenchmarkMenuActivity / BetaOrchestratorActivity / runners existentes</source>
+        <executor>Executores específicos fora desta tela</executor>
+        <evidence>Receipt próprio de cada benchmark.</evidence>
+        <gap>Esta versão do contrato não dispara todos os benchmarks automaticamente.</gap>
+    </capability>
+
+    <capability
+        id="open_gap"
+        title="Lacunas marcadas"
+        status="TOKEN_VAZIO"
+        claimPolicy="no_claim">
+        <leigo>Quando ainda não existe prova suficiente, o aplicativo deve dizer isso claramente em vez de inventar uma resposta.</leigo>
+        <basico>Uma lacuna marcada é um item conhecido como ainda não comprovado.</basico>
+        <medio>O catálogo aceita TOKEN_VAZIO como estado válido e mantém o próximo passo necessário.</medio>
+        <avancado>Gap deve apontar fonte ausente, executor ausente, evidência ausente ou gate insuficiente.</avancado>
+        <expert>Correções devem criar novo receipt/supersession; histórico não deve ser reescrito para fabricar sucesso.</expert>
+        <nerd>TOKEN_VAZIO != 0 != false. É ausência tipada de evidência/valor e não um valor numérico implícito.</nerd>
+        <source>Contrato RAFCODEΦ</source>
+        <executor>nenhum</executor>
+        <evidence>Estado explícito da lacuna.</evidence>
+        <gap>Permanece aberto até uma execução produzir evidência suficiente.</gap>
+    </capability>
+
+</rafcodephiContract>
