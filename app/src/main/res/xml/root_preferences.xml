@@ -6,11 +6,8 @@
         app:key="rafcodephi_capability_contract"
         app:title="RAFCODEΦ · Conheça e Comprove"
         app:summary="A mesma evidência em níveis Leigo → Básico → Médio → Avançado → Expert → Só para Nerds"
-        app:persistent="false">
-        <intent
-            android:targetPackage="com.termux.rafacodephi"
-            android:targetClass="com.termux.app.activities.CapabilityContractActivity"/>
-    </Preference>
+        app:persistent="false"
+        app:fragment="com.termux.app.fragments.settings.CapabilityContractPreferencesFragment"/>
 
     <Preference
         app:key="termux"
