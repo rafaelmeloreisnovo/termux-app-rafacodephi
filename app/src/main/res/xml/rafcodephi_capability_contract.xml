@@ -16,7 +16,7 @@
         <expert>Use esta camada para comparar a instalação material com artefatos de build e receipts. Igualdade de nome não prova igualdade de bytes.</expert>
         <nerd>Fingerprint = SHA-256 do sourceDir carregado; DEX e lib/*/*.so são enumerados diretamente do ZIP APK em runtime.</nerd>
         <source>Android PackageManager + ApplicationInfo.sourceDir + java.util.zip.ZipFile</source>
-        <executor>CapabilityContractActivity.runtimeSnapshot</executor>
+        <executor>CapabilityContractPreferencesFragment.inspectInstalledApk</executor>
         <evidence>Dados extraídos do APK que está executando esta própria tela.</evidence>
         <gap>Não atribui automaticamente o APK a um commit Git sem receipt/hash correspondente.</gap>
     </capability>
@@ -33,7 +33,7 @@
         <expert>DEX presente = artefato. DEX carregado/executado exige outra evidência. Não promover presença a execução.</expert>
         <nerd>Matcher: classes.dex ou classesN.dex na raiz do APK. Resultado é estrutura empacotada, não cobertura de execução.</nerd>
         <source>APK instalado</source>
-        <executor>CapabilityContractActivity.inspectApk</executor>
+        <executor>CapabilityContractPreferencesFragment.inspectInstalledApk</executor>
         <evidence>Contagem física de DEX dentro do pacote instalado.</evidence>
         <gap>Sem instrumentação adicional, não informa cobertura de classes/métodos em runtime.</gap>
     </capability>
@@ -50,7 +50,7 @@
         <expert>Presença de .so demonstra artefato ELF empacotado; carregamento e chamadas JNI exigem prova adicional.</expert>
         <nerd>O contrato mantém ELF_ARTIFACT != ELF_LOADED != SYMBOL_CALLED. A tela só prova a primeira condição.</nerd>
         <source>APK instalado: lib/*/*.so</source>
-        <executor>CapabilityContractActivity.inspectApk</executor>
+        <executor>CapabilityContractPreferencesFragment.inspectInstalledApk</executor>
         <evidence>ABIs e número de bibliotecas nativas encontrados fisicamente no APK.</evidence>
         <gap>Não faz tracing de dlopen/JNI nesta tela.</gap>
     </capability>
