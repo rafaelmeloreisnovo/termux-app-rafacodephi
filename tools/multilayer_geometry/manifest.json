@@ -1,0 +1,12 @@
+{
+  "id": "TERMUX-MULTILAYER-GEOMETRY-C99-V1",
+  "date": "2026-09-22",
+  "source_parity": "RLL tools/multilayer_geometry/multilayer_geometry.c",
+  "local_equivalent_selftest": {
+    "passed": 35,
+    "failed": 0
+  },
+  "provider_ci": "NOT_RUN",
+  "runtime_target": "Termux clang + libm",
+  "physical_binding": "TOKEN_VAZIO_EVIDENCE"
+}
