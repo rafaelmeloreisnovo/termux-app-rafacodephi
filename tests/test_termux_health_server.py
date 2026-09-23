@@ -21,6 +21,9 @@ SPEC.loader.exec_module(HEALTH)
 
 
 class TermuxHealthServerTests(unittest.TestCase):
+    def test_default_port_is_reserved_for_termux_health(self) -> None:
+        self.assertEqual(HEALTH.DEFAULT_PORT, 8766)
+
     def test_snapshot_is_bounded_sanitized_and_deterministic(self) -> None:
         snapshot = HEALTH.build_snapshot(
             started_ns=1_000_000_000,
@@ -54,9 +57,9 @@ class TermuxHealthServerTests(unittest.TestCase):
 
     def test_server_rejects_non_loopback_and_privileged_port(self) -> None:
         with self.assertRaisesRegex(ValueError, "host_not_loopback"):
-            HEALTH.create_server("0.0.0.0", 8765)
+            HEALTH.create_server("0.0.0.0", 8766)
         with self.assertRaisesRegex(ValueError, "host_not_loopback"):
-            HEALTH.create_server("192.168.1.2", 8765)
+            HEALTH.create_server("192.168.1.2", 8766)
         with self.assertRaisesRegex(ValueError, "port_out_of_range"):
             HEALTH.create_server("127.0.0.1", 80)
 
