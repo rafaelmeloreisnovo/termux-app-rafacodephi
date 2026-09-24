@@ -60,7 +60,11 @@ jobs:
         run: |
           set -euo pipefail
           bash -n scripts/build-rafcodephi-local-pkg-candidate.sh
-          python3 -m py_compile scripts/promote-rafcodephi-local-pkg-candidate.py
+          python3 -m py_compile scripts/promote-rafcodephi-local-pkg-candidate.py scripts/apply-rafcodephi-build-properties.py
+          mkdir -p build/reports
+          python3 scripts/apply-rafcodephi-build-properties.py \
+            --properties scripts/properties.sh \
+            --receipt build/reports/rafcodephi-build-properties-overlay.json
           chmod +x scripts/run-docker.sh scripts/build-rafcodephi-local-pkg-candidate.sh scripts/build-rafcodephi-real-bootstrap.sh build-package-rafcodephi.sh
 
       - name: Build source-built ARM32 ARM64 local-pkg pair
