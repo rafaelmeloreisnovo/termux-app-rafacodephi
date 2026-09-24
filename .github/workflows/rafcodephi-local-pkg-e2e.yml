@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_REF: codex/rafcodephi-source-pkg-core-v1
+  TERMUX_PACKAGES_REF: ea2d000b072a49df56ff3b6b46a1a9cdfe622862
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
 
