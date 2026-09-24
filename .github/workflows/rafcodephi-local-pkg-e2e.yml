@@ -61,7 +61,7 @@ jobs:
           set -euo pipefail
           bash -n scripts/build-rafcodephi-local-pkg-candidate.sh
           python3 -m py_compile scripts/promote-rafcodephi-local-pkg-candidate.py
-          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-local-pkg-candidate.sh
+          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-local-pkg-candidate.sh scripts/build-rafcodephi-real-bootstrap.sh build-package-rafcodephi.sh
 
       - name: Build source-built ARM32 ARM64 local-pkg pair
         working-directory: termux-packages
