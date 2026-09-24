@@ -61,7 +61,7 @@ jobs:
           set -euo pipefail
           bash -n scripts/build-rafcodephi-local-pkg-candidate.sh
           python3 -m py_compile scripts/promote-rafcodephi-local-pkg-candidate.py
-          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-local-pkg-candidate.sh
+          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-local-pkg-candidate.sh scripts/build-rafcodephi-real-bootstrap.sh build-package-rafcodephi.sh
 
       - name: Build source-built ARM32 ARM64 local-pkg pair
         working-directory: termux-packages
@@ -73,7 +73,7 @@ jobs:
           ./scripts/run-docker.sh \
             ./scripts/build-rafcodephi-local-pkg-candidate.sh \
               --architectures arm,aarch64 \
-              --out artifacts/rafcodephi-local-pkg \
+              --out output/rafcodephi-local-pkg \
             2>&1 | tee build/reports/local-pkg-source-build.log
           rc="${PIPESTATUS[0]}"
           set -e
@@ -95,7 +95,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          BASE="$GITHUB_WORKSPACE/termux-packages/artifacts/rafcodephi-local-pkg"
+          BASE="$GITHUB_WORKSPACE/termux-packages/output/rafcodephi-local-pkg"
           python3 scripts/import_rafcodephi_local_pkg_pair.py \
             --arm-zip "$BASE/candidate/rafcodephi-bootstrap-arm.zip" \
             --arm-receipt "$BASE/receipts/local-pkg-arm.json" \
@@ -195,8 +195,8 @@ jobs:
             app/build/outputs/apk/**/*.apk
             app/build/outputs/apk/**/output-metadata.json
             termux-packages/build/reports/local-pkg-*
-            termux-packages/artifacts/rafcodephi-local-pkg/matrix.v1.json
-            termux-packages/artifacts/rafcodephi-local-pkg/receipts/*.json
-            termux-packages/artifacts/rafcodephi-local-pkg/candidate/*.zip
+            termux-packages/output/rafcodephi-local-pkg/matrix.v1.json
+            termux-packages/output/rafcodephi-local-pkg/receipts/*.json
+            termux-packages/output/rafcodephi-local-pkg/candidate/*.zip
           if-no-files-found: warn
           retention-days: 30
