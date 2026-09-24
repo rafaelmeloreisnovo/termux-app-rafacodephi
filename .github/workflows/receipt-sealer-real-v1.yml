@@ -1,0 +1,30 @@
+name: Receipt Sealer Real V1
+
+on:
+  pull_request:
+    paths:
+      - 'src/bootstrap/receipt_sealer_real.c'
+      - 'tests/receipt_sealer_real_selftest.c'
+      - '.github/workflows/receipt-sealer-real-v1.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'src/bootstrap/receipt_sealer_real.c'
+      - 'tests/receipt_sealer_real_selftest.c'
+
+permissions:
+  contents: read
+
+jobs:
+  vectors:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Compile and run receipt vectors
+        run: |
+          set -euo pipefail
+          cc -O2 -std=c11 -Wall -Wextra -Werror -Isrc/bootstrap             tests/receipt_sealer_real_selftest.c -o /tmp/receipt-sealer-selftest
+          /tmp/receipt-sealer-selftest
