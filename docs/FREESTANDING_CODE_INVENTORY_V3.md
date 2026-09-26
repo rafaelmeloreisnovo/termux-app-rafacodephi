@@ -175,3 +175,21 @@ ARM32/ARM64.
 **F_next**: validar o novo dicionário; então extrair Q16 fixed-size correto
 para o produtor `rafaelia/.../zero` com vetores + assembly probe, sem tocar
 a cópia staging como autoridade.
+
+## 9. Successor de implementação — Q16 pure leaf V1
+
+Implementado nesta branch, ainda sujeito ao gate exato do provider:
+
+- `rafaelia/src/main/cpp/zero/include/rafz_pure_q16.h`;
+- sem headers/libc/heap/syscall/JNI/I/O;
+- sem `if/for/while/switch/goto/?:` na folha;
+- sem divisão variável;
+- `dot8` explicitamente desenrolado;
+- vetor host independente em `tests/pure_q16_vectors.c`;
+- o mesmo probe ARMv7/AArch64 passa a compilar chamadas da nova folha.
+
+A convenção byte é explicitamente `b/256`, preservando a semântica observada
+na implementação staging antiga sem chamá-la de `b/255`.
+
+Estado antes de CI: `IMPLEMENTED_UNTESTED`.
+Nenhuma chamada de produção foi redirecionada para esta folha nesta etapa.

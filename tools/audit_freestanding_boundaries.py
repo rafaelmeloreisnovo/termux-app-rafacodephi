@@ -165,12 +165,52 @@ def parse_asm_branches(asm_text: str) -> list[str]:
 def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
     clang = shutil.which("clang")
     if not clang:
-        return [], ["clang not found: assembly probe NOT_RUN"]
+        return [], ["clang not found: assembly/vector probe NOT_RUN"]
     source = ROOT / cfg["assembly_probe"]["source"]
     results: list[dict] = []
     errors: list[str] = []
     with tempfile.TemporaryDirectory(prefix="raf-pure-core-") as td:
         outdir = Path(td)
+
+        vector_name = cfg["assembly_probe"].get("host_vector_source")
+        if vector_name:
+            vector_source = ROOT / vector_name
+            vector_bin = outdir / "pure-q16-vectors"
+            vector_compile = subprocess.run(
+                [clang, "-std=c11", "-O2", str(vector_source), "-o", str(vector_bin)],
+                cwd=ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=False,
+            )
+            vector_item = {
+                "target": "host-native-q16-vectors",
+                "compile_exit": vector_compile.returncode,
+                "run_exit": None,
+                "branches": [],
+            }
+            if vector_compile.returncode != 0:
+                errors.append(
+                    "host q16 vector compile failed: "
+                    + vector_compile.stdout.strip()[:1200]
+                )
+            else:
+                vector_run = subprocess.run(
+                    [str(vector_bin)],
+                    cwd=ROOT,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    check=False,
+                )
+                vector_item["run_exit"] = vector_run.returncode
+                if vector_run.returncode != 0:
+                    errors.append(
+                        f"host q16 vectors failed count={vector_run.returncode}"
+                    )
+            results.append(vector_item)
+
         for target in cfg["assembly_probe"]["targets"]:
             out = outdir / (target.replace("/", "_") + ".s")
             cmd = [

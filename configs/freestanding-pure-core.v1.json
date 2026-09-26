@@ -27,6 +27,7 @@
   ],
   "pure_core_files": [
     "rafaelia/src/main/cpp/zero/include/rafz_pure_primitives.h",
+    "rafaelia/src/main/cpp/zero/include/rafz_pure_q16.h",
     "tests/pure_core_probe.c"
   ],
   "pure_core_forbidden": {
@@ -45,7 +46,8 @@
     "allow_terminal_return": true,
     "forbid_calls": true,
     "forbid_conditional_branches": true,
-    "forbid_unconditional_branches": true
+    "forbid_unconditional_branches": true,
+    "host_vector_source": "tests/pure_q16_vectors.c"
   },
   "claim_boundary": {
     "source_policy_pass": "does not prove final ELF runtime properties",
