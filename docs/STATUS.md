@@ -17,7 +17,12 @@ claims de release, signing ou execução física descritos em outras seções.
 - syscall/ELF entry ficam em `PLATFORM_GATE`; Android/JNI/POSIX em `HOSTED_ADAPTER`;
 - primeira folha sem decisão/iteração de runtime: `zero/include/rafz_pure_primitives.h`;
 - gate: `tools/audit_freestanding_boundaries.py --strict --compile-probe --write-report`;
-- estado da mudança antes do CI do commit exato: `IMPLEMENTED_UNTESTED`;
+- receipt CI do delta: run `36245846563`, job `108414818810`, commit `38e02d288b24a48bbbc0fe0909af541442f05bd0`;
+- `pure_core_source_policy=PASS`;
+- ARMv7 `armv7a-none-eabi`: `compile_exit=0`, transferências não terminais detectadas = `0`;
+- AArch64 `aarch64-none-elf`: `compile_exit=0`, transferências não terminais detectadas = `0`;
+- `rafaelia.zero.android-runtime-validation.v3=status:PASS`, sem erros;
+- `runtime_receipt.v2=status:PASS`, `evidence_state=HOST_SIMULATION`;
 - `whole_binary_no_branch=TOKEN_VAZIO`;
 - `physical_android=TOKEN_VAZIO`;
 - `claim_allowed=false`.
