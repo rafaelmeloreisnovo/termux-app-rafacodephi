@@ -20,7 +20,8 @@ Rotas humanas:
 - `06_EVIDENCIAS`
 - `07_E2E`
 - `08_VECTRA_V3`
-- `09_ENTERPRISE`\n- `10_PROVIDER`
+- `09_ENTERPRISE`
+- `10_PROVIDER`
 
 ## Workflows canônicos por trilha
 
@@ -35,7 +36,16 @@ Rotas humanas:
 | `evidence` | `.github/workflows/apk-evidence-gate.yml` | parser/contrato de evidência APK | evidence contract != supplied physical evidence |
 | `integration` | `.github/workflows/rafaelia_e2e_product_proof.yml` | integração E2E | CI integration != device proof |
 | `metrology` | `.github/workflows/vectra-grade-benchmarks.yml` | contratos/artefatos Vectra em CI | PA physical execution permanece TOKEN_VAZIO |
-| `provider-security` | `.github/workflows/provider-protection-gate.yml` | ruleset live do `master` | configuração live pode bloquear o Enterprise preflight |\n| `governance` | `scripts/ci/workflow_control_plane.py` | inventário de todos os YML/YAML | discovery != execution |
+| `provider-security` | `.github/workflows/provider-protection-gate.yml` | ruleset live do `master` | configuração live pode bloquear o Enterprise preflight |
+| `governance` | `scripts/ci/workflow_control_plane.py` | inventário de todos os YML/YAML | discovery != execution |
+
+## Provider protection — autoridade
+
+A trilha `provider-security` usa a cadeia:
+
+`governance/provider/PROVIDER_RULESET_TARGET_20260831.v1.json` → `scripts/ci/provider_protection_contract.py` → `.github/workflows/provider-protection-gate.yml` → receipt publicado → `00_START_HERE` rota `10_PROVIDER`/`09_ENTERPRISE`.
+
+O JSON é a **fonte desejada**; o estado live do GitHub é uma observação separada. O evaluator não altera o ruleset administrativo e nunca converte ausência de permissão em PASS.
 
 ## Metadados obrigatórios
 
