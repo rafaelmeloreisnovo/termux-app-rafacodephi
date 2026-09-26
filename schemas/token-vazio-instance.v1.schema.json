@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rafaelia://schemas/token-vazio-instance.v1.schema.json",
+  "title": "RAFAELIA typed TOKEN_VAZIO instance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "token_id",
+    "token_type",
+    "state",
+    "source_ref",
+    "missing_field",
+    "why_empty",
+    "evidence_needed",
+    "next_probe",
+    "authority",
+    "urgency",
+    "closure_gate",
+    "claim_allowed",
+    "created_at"
+  ],
+  "properties": {
+    "token_id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9][A-Z0-9._:-]{2,127}$"
+    },
+    "token_type": {
+      "type": "string",
+      "pattern": "^TOKEN_VAZIO(?:_[A-Z0-9]+)+$"
+    },
+    "state": {
+      "enum": [
+        "OPEN",
+        "BLOCKED",
+        "SUPERSEDED",
+        "CLOSED"
+      ]
+    },
+    "source_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parent": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "missing_field": {
+      "type": "string",
+      "minLength": 1
+    },
+    "why_empty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "blocking_dependency": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "evidence_needed": {
+      "type": "string",
+      "minLength": 1
+    },
+    "falsifier": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "next_probe": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority": {
+      "type": "string",
+      "minLength": 1
+    },
+    "data_class": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "privacy_class": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "security_class": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "legal_class": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "urgency": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "closure_gate": {
+      "type": "string",
+      "minLength": 1
+    },
+    "routes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "L": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "O": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "T": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "P": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "C": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "R": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "I": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "E": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "A": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "supersedes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 10
+    },
+    "hash_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "claim_allowed": {
+      "const": false
+    }
+  }
+}
