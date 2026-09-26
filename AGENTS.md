@@ -123,3 +123,22 @@ claim_allowed
 - If a gate reveals a new gap, index it instead of weakening the gate.
 - Do not copy Vectra assembly/register/attractor rules into this root file as Termux authority; those belong to the Vectra/local module that owns them.
 - Do not copy private/sensitive payload into a public receipt when a hash/pseudonym/typed reference is sufficient.
+
+## Canonical TOKEN_VAZIO + freestanding atlas
+
+For low-level/freestanding work, load these local contracts before broad crawling:
+
+- `configs/token-vazio-dictionary.v1.json` — canonical typed empty-state vocabulary.
+- `schemas/token-vazio-instance.v1.schema.json` — gap/roadmap instance contract.
+- `docs/TOKEN_VAZIO_CANONICAL_DICTIONARY_V1.md` — lifecycle and routing semantics.
+- `docs/FREESTANDING_CODE_INVENTORY_V3.md` — current low-level authority/risk atlas.
+
+Rules:
+
+- Prefer the most specific defined `TOKEN_VAZIO_*`; raw `TOKEN_VAZIO` is legacy/unspecified and must never be interpreted as PASS/FAIL/zero.
+- Every material empty state names its missing field, evidence needed, closure gate and next observable probe.
+- `PURE_CORE` remains syscall-free. ELF entry/syscall/OS ABI belongs to `PLATFORM_GATE`; JNI/Android/POSIX belongs to `HOSTED_BOUNDARY`.
+- Never promote `rmr/Rrr/q16_fixed.h` branchless/no-loop declarations without new source/vector/assembly evidence.
+- Never treat `src/main/jni/blake3_wrapper.h` as BLAKE3 conformance or cryptographic integrity evidence while its placeholder compression remains.
+- Historical/staging duplicates are not deleted merely because their blob hashes match; bind canonical authority and consumers first.
+

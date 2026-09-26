@@ -165,12 +165,66 @@ def parse_asm_branches(asm_text: str) -> list[str]:
 def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
     clang = shutil.which("clang")
     if not clang:
-        return [], ["clang not found: assembly probe NOT_RUN"]
+        return [], ["clang not found: assembly/vector probe NOT_RUN"]
     source = ROOT / cfg["assembly_probe"]["source"]
     results: list[dict] = []
     errors: list[str] = []
     with tempfile.TemporaryDirectory(prefix="raf-pure-core-") as td:
         outdir = Path(td)
+
+        vector_names = cfg["assembly_probe"].get("host_vector_sources")
+        if vector_names is None:
+            legacy = cfg["assembly_probe"].get("host_vector_source")
+            vector_names = [legacy] if legacy else []
+        for vector_name in vector_names:
+            vector_source = ROOT / vector_name
+            vector_bin = outdir / (vector_source.stem + ".bin")
+            extra_sources = [
+                str(ROOT / name)
+                for name in cfg["assembly_probe"]
+                    .get("host_vector_extra_sources", {})
+                    .get(vector_name, [])
+            ]
+            include_args = [
+                arg
+                for name in cfg["assembly_probe"].get("host_vector_include_dirs", [])
+                for arg in ("-I", str(ROOT / name))
+            ]
+            vector_compile = subprocess.run(
+                [clang, "-std=c11", "-O2", *include_args, str(vector_source), *extra_sources, "-o", str(vector_bin)],
+                cwd=ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=False,
+            )
+            vector_item = {
+                "target": "host-native-" + vector_source.stem,
+                "compile_exit": vector_compile.returncode,
+                "run_exit": None,
+                "branches": [],
+            }
+            if vector_compile.returncode != 0:
+                errors.append(
+                    f"{vector_name}: host vector compile failed: "
+                    + vector_compile.stdout.strip()[:1200]
+                )
+            else:
+                vector_run = subprocess.run(
+                    [str(vector_bin)],
+                    cwd=ROOT,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    check=False,
+                )
+                vector_item["run_exit"] = vector_run.returncode
+                if vector_run.returncode != 0:
+                    errors.append(
+                        f"{vector_name}: host vectors failed count={vector_run.returncode}"
+                    )
+            results.append(vector_item)
+
         for target in cfg["assembly_probe"]["targets"]:
             out = outdir / (target.replace("/", "_") + ".s")
             cmd = [
@@ -218,6 +272,52 @@ def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
                     )
             results.append(item)
     return results, errors
+
+
+def validate_token_vazio_contract() -> tuple[dict, list[str]]:
+    validator = ROOT / "tools" / "validate_token_vazio_dictionary.py"
+    if not validator.is_file():
+        return {"state": "TOKEN_VAZIO_NOT_OBSERVED"}, ["TOKEN_VAZIO validator missing"]
+    cp = subprocess.run(
+        [sys.executable, str(validator)],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    errors: list[str] = []
+    try:
+        payload = json.loads(cp.stdout)
+    except json.JSONDecodeError:
+        payload = {"state": "FAIL", "claim_allowed": False}
+        errors.append("TOKEN_VAZIO validator emitted invalid JSON")
+    if cp.returncode != 0:
+        errors.append("TOKEN_VAZIO dictionary validation failed")
+    return payload, errors
+
+
+def validate_source_alias_graph() -> tuple[dict, list[str]]:
+    validator = ROOT / "tools" / "validate_source_alias_graph.py"
+    if not validator.is_file():
+        return {"state": "TOKEN_VAZIO_NOT_OBSERVED"}, ["source alias validator missing"]
+    cp = subprocess.run(
+        [sys.executable, str(validator)],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    errors: list[str] = []
+    try:
+        payload = json.loads(cp.stdout)
+    except json.JSONDecodeError:
+        payload = {"state":"FAIL","claim_allowed":False}
+        errors.append("source alias validator emitted invalid JSON")
+    if cp.returncode != 0:
+        errors.append("source alias graph validation failed")
+    return payload, errors
 
 
 def build_report(cfg: dict, assembly: list[dict], pure_errors: list[str]) -> dict:
@@ -319,7 +419,11 @@ def main() -> int:
     if args.compile_probe:
         assembly, assembly_errors = compile_probe(cfg)
 
+    token_vazio_contract, token_vazio_errors = validate_token_vazio_contract()
+    source_alias_graph, source_alias_errors = validate_source_alias_graph()
     report = build_report(cfg, assembly, pure_errors)
+    report["token_vazio_contract"] = token_vazio_contract
+    report["source_alias_graph"] = source_alias_graph
     if args.write_report:
         write_reports(report)
 
@@ -332,10 +436,12 @@ def main() -> int:
         "focus_heap_call_files": report["focus_heap_call_files"],
         "pure_core_source_policy": report["pure_core_source_policy"],
         "assembly_probe": assembly,
+        "token_vazio_contract": token_vazio_contract,
+        "source_alias_graph": source_alias_graph,
         "claim_allowed": False,
     }, indent=2, sort_keys=True))
 
-    errors = pure_errors + assembly_errors
+    errors = pure_errors + assembly_errors + token_vazio_errors + source_alias_errors
     for err in errors:
         print(f"ERROR: {err}", file=sys.stderr)
     if args.strict and errors:

@@ -1,0 +1,122 @@
+{
+  "schema": "rafaelia.freestanding-work-cursor/v1",
+  "state": "ACTIVE_REVIEW_BRANCH",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "base_commit": "8004dfd5c112061579d54c6bf5a5afdd514ddfdf",
+  "branch": "audit/freestanding-atlas-token-vazio-v3-20260926",
+  "pull_request": 465,
+  "predecessor_head": "c055c2841fac1d7a1c7b808c858d2a570b6d0695",
+  "authority": {
+    "pure_core": "rafaelia/src/main/cpp/zero",
+    "platform_gate": [
+      "src/bootstrap",
+      "bootstrap"
+    ],
+    "hosted_boundary": [
+      "app/src/main/cpp/lowlevel",
+      "rafaelia/src/main/cpp/zero/rafz_android_jni.c"
+    ],
+    "staging_history": [
+      "Arme/Add",
+      "BugOrAdd",
+      "rmr/Rrr"
+    ]
+  },
+  "resume_protocol": [
+    "read this cursor",
+    "verify PR 465 head",
+    "read last receipt",
+    "execute only active_node gate",
+    "append successor receipt",
+    "advance only from observed evidence"
+  ],
+  "history": [
+    {
+      "seq": 1,
+      "commit": "12b5b7abc5454cb3bf861e077e44e431a6421c67",
+      "receipt": "docs/receipts/FREESTANDING_ATLAS_TOKEN_VAZIO_V3_20260926.md",
+      "state": "SOURCE_OBSERVED"
+    },
+    {
+      "seq": 2,
+      "commit": "a0a76a2c7c1d2143090e448d6d8dd0c78d960035",
+      "receipt": "docs/receipts/FREESTANDING_PURE_Q16_V1_20260926.md",
+      "state": "CI_SCOPE_PASS",
+      "evidence": "run 36273254098 / job 108491098854: host vector run_exit=0; ARMv7/AArch64 compile_exit=0 branches=[]"
+    },
+    {
+      "seq": 3,
+      "commit": "2a015af1bff0950b58d5274c1096ffc67f6228ad",
+      "receipt": "docs/receipts/TOKEN_VAZIO_GATE_PASS_20260926.md",
+      "state": "CI_SCOPE_PASS",
+      "evidence": "run 36273429715 / job 108491587952: dictionary_types=27; dictionary_errors=[]; pure-core PASS"
+    },
+    {
+      "seq": 4,
+      "commit": "dab7c580d1bc21f8ca75b950d9b09a3ab6d04844",
+      "receipt": "docs/receipts/FREESTANDING_BLAKE3_SINGLE_KAT_PASS_20260926.md",
+      "state": "BOUNDED_CONFORMANCE_PASS",
+      "evidence": "run 36273719073 / job 108492364111: official BLAKE3 single-block KAT 0/1/63/64 run_exit=0; ARMv7/AArch64 branches=[]"
+    },
+    {
+      "seq": 5,
+      "commit": "c055c2841fac1d7a1c7b808c858d2a570b6d0695",
+      "receipt": "docs/receipts/SOURCE_ALIAS_GRAPH_GATE_PASS_20260926.md",
+      "state": "CI_SCOPE_PASS",
+      "evidence": "run 36273837084 / job 108492683126: 29 groups, 43 excess, 5 canonical, 24 authority-blocked, errors=[]"
+    }
+  ],
+  "active_node": {
+    "id": "N060_FIXED_BLOCK_CRC",
+    "action": "extract fixed-block CRC32C leaf from authoritative RAFAELIA ZERO semantics, using compile-time specialization/unrolling without changing public streaming semantics",
+    "success": "vectors match authoritative rafz_crc32c for bounded blocks and ARMv7/AArch64 probe has no prohibited nonterminal transfers",
+    "failure": "polynomial/init/final-xor mismatch, helper call/control transfer regression, or public semantics drift"
+  },
+  "queued_nodes": [
+    [
+      "N070_BITRAF_FIXED_WIDTH",
+      "TOKEN_VAZIO_NOT_RUN"
+    ],
+    [
+      "N080_ELF_EXACT",
+      "TOKEN_VAZIO_ARTIFACT_UNBOUND"
+    ],
+    [
+      "N090_PHYSICAL_ARM32_ARM64",
+      "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING"
+    ]
+  ],
+  "open_tokens": [
+    [
+      "G-FS-BLAKE3-001",
+      "TOKEN_VAZIO_CONFORMANCE_UNPROVEN",
+      "src/main/jni/blake3_wrapper.h"
+    ],
+    [
+      "G-FS-DUP-001",
+      "TOKEN_VAZIO_PROVENANCE_UNBOUND",
+      "43 duplicate excess source copies"
+    ],
+    [
+      "G-FS-WHOLE-ELF-001",
+      "TOKEN_VAZIO_ARTIFACT_UNBOUND",
+      "whole-binary control-free"
+    ],
+    [
+      "G-FS-PHYS-ARM32",
+      "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING",
+      "armeabi-v7a"
+    ],
+    [
+      "G-FS-PHYS-ARM64",
+      "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING",
+      "arm64-v8a"
+    ],
+    [
+      "G-GOV-PROVIDER-001",
+      "TOKEN_VAZIO_GOVERNANCE_BLOCKED",
+      "Provider Protection run 36273253772"
+    ]
+  ],
+  "claim_allowed": false
+}
