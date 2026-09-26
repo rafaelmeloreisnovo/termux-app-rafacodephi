@@ -1,8 +1,28 @@
 # STATUS — fonte de verdade de build, runtime e conclusão
 
-> Última revisão: 2026-07-20  
+> Última revisão: 2026-09-26  
 > Contrato de conclusão: `configs/system-finalization-contract.json`  
 > Validador: `tools/validate_system_finalization.py`
+
+## Sucessor C/ASM e freestanding — 2026-09-26
+
+Escopo desta atualização: fronteira low-level C/ASM. Ela não promove por associação
+claims de release, signing ou execução física descritos em outras seções.
+
+- `master` observado no início da auditoria: `988d3c24cf3a4a676ff0cab0512a2436a8d1c704` (PR #462);
+- baseline: 355 fontes C/C++/ASM, 312 conteúdos únicos e 43 cópias exatas excedentes;
+- 83 arquivos do caminho low-level foram aprofundados;
+- chamadas explícitas `malloc/calloc/realloc/free` no recorte: 0;
+- `RAFAELIA ZERO` é a autoridade escolhida para o `PURE_CORE`;
+- syscall/ELF entry ficam em `PLATFORM_GATE`; Android/JNI/POSIX em `HOSTED_ADAPTER`;
+- primeira folha sem decisão/iteração de runtime: `zero/include/rafz_pure_primitives.h`;
+- gate: `tools/audit_freestanding_boundaries.py --strict --compile-probe --write-report`;
+- estado da mudança antes do CI do commit exato: `IMPLEMENTED_UNTESTED`;
+- `whole_binary_no_branch=TOKEN_VAZIO`;
+- `physical_android=TOKEN_VAZIO`;
+- `claim_allowed=false`.
+
+Documento técnico: [`FREESTANDING_PURE_CORE_INVENTORY_V2.md`](./FREESTANDING_PURE_CORE_INVENTORY_V2.md).
 
 ## Regra principal
 
