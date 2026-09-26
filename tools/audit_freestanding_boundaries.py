@@ -119,8 +119,8 @@ def classify(record: dict) -> str:
 
 
 def strip_c_comments(text: str) -> str:
-    text = re.sub(r"/\\*.*?\\*/", "", text, flags=re.S)
-    text = re.sub(r"//[^\\n]*", "", text)
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    text = re.sub(r"//[^\n]*", "", text)
     return text
 
 
