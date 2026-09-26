@@ -148,6 +148,18 @@ def _check_pull_request(
     return False, expected_cmp, observations
 
 
+def _same_instant(left: Any, right: Any) -> bool:
+    if not isinstance(left, str) or not isinstance(right, str):
+        return left == right
+    try:
+        def parse(value: str) -> datetime:
+            normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+            return datetime.fromisoformat(normalized).astimezone(timezone.utc)
+        return parse(left) == parse(right)
+    except ValueError:
+        return left == right
+
+
 def _resolve_bypass_observation(
     rulesets: list[dict[str, Any]],
     witness: dict[str, Any] | None,
@@ -169,7 +181,8 @@ def _resolve_bypass_observation(
     witness_id = binding.get("ruleset_id")
     witness_updated_at = binding.get("ruleset_updated_at")
     matched = any(
-        rs.get("id") == witness_id and rs.get("updated_at") == witness_updated_at
+        rs.get("id") == witness_id
+        and _same_instant(rs.get("updated_at"), witness_updated_at)
         for rs in rulesets
     )
     if matched:
@@ -373,7 +386,14 @@ def evaluate(
                 "desired": pr_expected,
             }
         )
-    if not bypass_ok:
+    if bypass_check["visibility_unproven"]:
+        remediation["operations"].append(
+            {
+                "kind": "REFRESH_BYPASS_WITNESS_OR_PROVIDE_PRIVILEGED_OBSERVATION",
+                "witness_state": bypass_check["witness_state"],
+            }
+        )
+    elif not bypass_ok:
         remediation["operations"].append(
             {
                 "kind": "IDENTIFY_OR_REMOVE_ALWAYS_BYPASS_INTEGRATIONS",
