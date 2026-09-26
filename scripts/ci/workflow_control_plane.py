@@ -2,8 +2,8 @@
 """RAFAELIA GitHub Actions control-plane inventory.
 
 Stdlib-only scanner for every .github/workflows/*.yml|*.yaml file.
-It does not rewrite or execute workflows. It makes orchestration state explicit,
-keeps unknowns as TOKEN_VAZIO, and can be promoted to strict fail-closed mode.
+It does not rewrite or execute workflows. It keeps unknowns as TOKEN_VAZIO and
+recognizes both block and inline GitHub Actions trigger syntax.
 """
 from __future__ import annotations
 
@@ -16,8 +16,17 @@ from typing import Any
 
 ROOT = Path(".github/workflows")
 TOKEN_VAZIO = "TOKEN_VAZIO"
-ALLOWED_TRACKS = {"debug", "internal", "official", "ops", "deprecated"}
-TRIGGERS = ("workflow_dispatch", "workflow_call", "pull_request", "push", "schedule", "release", "repository_dispatch", "workflow_run")
+ALLOWED_TRACKS = {"debug", "internal", "official", "artifact", "ops", "deprecated"}
+TRIGGERS = (
+    "workflow_dispatch",
+    "workflow_call",
+    "pull_request",
+    "push",
+    "schedule",
+    "release",
+    "repository_dispatch",
+    "workflow_run",
+)
 
 
 def sha256(path: Path) -> str:
@@ -36,7 +45,7 @@ def header_value(text: str, key: str) -> str:
 def top_level_name(text: str) -> str:
     for line in text.splitlines():
         if line.startswith("name:"):
-            value = line.split(":", 1)[1].strip().strip('"\'')
+            value = line.split(":", 1)[1].strip().strip(""'")
             return value or TOKEN_VAZIO
     return TOKEN_VAZIO
 
@@ -45,12 +54,61 @@ def present_key(text: str, key: str) -> bool:
     return re.search(rf"(?m)^\s{{0,2}}{re.escape(key)}\s*:", text) is not None
 
 
+def _split_flow_sequence(value: str) -> set[str]:
+    value = value.strip()
+    if value.startswith("[") and value.endswith("]"):
+        body = value[1:-1]
+        return {part.strip().strip(""'") for part in body.split(",") if part.strip()}
+    return set()
+
+
 def detect_triggers(text: str) -> list[str]:
-    found: list[str] = []
-    for trigger in TRIGGERS:
-        if re.search(rf"(?m)^\s{{2,4}}{re.escape(trigger)}\s*:", text):
-            found.append(trigger)
-    return found
+    """Detect triggers without a YAML parser.
+
+    PyYAML/YAML-1.1 may coerce the key 'on' to boolean True, so this scanner
+    intentionally recognizes GitHub's common textual forms:
+      on:
+        push:
+        workflow_dispatch:
+      on: [push, pull_request, workflow_dispatch]
+      on: workflow_dispatch
+      on: {push: null, workflow_dispatch: null}
+    """
+    found: set[str] = set()
+    lines = text.splitlines()
+
+    for idx, line in enumerate(lines):
+        match = re.match(r"^(?:on|'on'|\"on\")\s*:\s*(.*?)\s*$", line)
+        if not match:
+            continue
+
+        inline_on = match.group(1).strip()
+        if inline_on:
+            if inline_on.startswith("["):
+                found.update(_split_flow_sequence(inline_on))
+            elif inline_on.startswith("{") and inline_on.endswith("}"):
+                body = inline_on[1:-1]
+                for item in body.split(","):
+                    key = item.split(":", 1)[0].strip().strip(""'")
+                    if key:
+                        found.add(key)
+            else:
+                found.add(inline_on.strip(""'"))
+            continue
+
+        # Block form: only immediate children of top-level on are accepted.
+        for child in lines[idx + 1 :]:
+            if not child.strip() or child.lstrip().startswith("#"):
+                continue
+            indent = len(child) - len(child.lstrip(" "))
+            if indent == 0:
+                break
+            if indent == 2:
+                child_match = re.match(r"^\s{2}([A-Za-z0-9_-]+)\s*:", child)
+                if child_match:
+                    found.add(child_match.group(1))
+
+    return [trigger for trigger in TRIGGERS if trigger in found]
 
 
 def classify(path: Path, text: str) -> dict[str, Any]:
@@ -171,7 +229,7 @@ def markdown(rows: list[dict[str, Any]], errors: list[str], warnings: list[str],
         "",
         "`workflow discovered → classified → orchestratable/specialist/deprecated → evidence → claim`",
         "",
-        "A workflow being discovered or callable is not execution evidence. Device validation remains a separate physical gate.",
+        "Discovery/callability is not execution evidence. Device validation remains a separate physical gate.",
     ])
     return "\n".join(lines) + "\n"
 
@@ -194,7 +252,7 @@ def main() -> int:
     errors, warnings = validate(rows, args.strict)
 
     payload = {
-        "schema": "rafaelia.workflow-control-plane/v1",
+        "schema": "rafaelia.workflow-control-plane/v2",
         "state": "BLOCKED" if errors else ("OBSERVED_WITH_WARNINGS" if warnings else "PASS"),
         "claim_allowed": False,
         "strict": args.strict,
