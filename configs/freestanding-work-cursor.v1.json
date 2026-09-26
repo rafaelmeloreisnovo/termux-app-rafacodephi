@@ -4,8 +4,8 @@
   "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
   "base_commit": "8004dfd5c112061579d54c6bf5a5afdd514ddfdf",
   "branch": "audit/freestanding-atlas-token-vazio-v3-20260926",
-  "pull_request": 465,
-  "predecessor_head": "c055c2841fac1d7a1c7b808c858d2a570b6d0695",
+  "pull_request": 466,
+  "predecessor_head": "225f9a1772c9fc83026545d5720d1b3bde37462c",
   "authority": {
     "pure_core": "rafaelia/src/main/cpp/zero",
     "platform_gate": [
@@ -64,19 +64,22 @@
       "receipt": "docs/receipts/SOURCE_ALIAS_GRAPH_GATE_PASS_20260926.md",
       "state": "CI_SCOPE_PASS",
       "evidence": "run 36273837084 / job 108492683126: 29 groups, 43 excess, 5 canonical, 24 authority-blocked, errors=[]"
+    },
+    {
+      "seq": 6,
+      "commit": "9023b9f1542e27ab63eabd9107c54995d54652e4",
+      "receipt": "docs/receipts/FREESTANDING_CRC32C_FIXED_PASS_20260926.md",
+      "state": "CI_SCOPE_PASS",
+      "evidence": "run 36274066348 / job 108494115794: CRC32C host vector compile/run=0; ARMv7/AArch64 branches=[]"
     }
   ],
   "active_node": {
-    "id": "N060_FIXED_BLOCK_CRC",
-    "action": "extract fixed-block CRC32C leaf from authoritative RAFAELIA ZERO semantics, using compile-time specialization/unrolling without changing public streaming semantics",
-    "success": "vectors match authoritative rafz_crc32c for bounded blocks and ARMv7/AArch64 probe has no prohibited nonterminal transfers",
-    "failure": "polynomial/init/final-xor mismatch, helper call/control transfer regression, or public semantics drift"
+    "id": "N070_BITRAF_FIXED_WIDTH",
+    "action": "extract authoritative lowlevel BitRAF-42 packing/field/validation semantics into RAFAELIA ZERO pure leaf and prove equivalence against app/src/main/cpp/lowlevel/raf_bitraf.c",
+    "success": "host roundtrip/equivalence PASS and ARMv7/AArch64 probe has no prohibited transfer; incompatible six-by-seven-bit generated spec is explicitly separated",
+    "failure": "field layout drift, 42-bit validation mismatch, helper/control transfer, or documentation conflates the two incompatible formats"
   },
   "queued_nodes": [
-    [
-      "N070_BITRAF_FIXED_WIDTH",
-      "TOKEN_VAZIO_NOT_RUN"
-    ],
     [
       "N080_ELF_EXACT",
       "TOKEN_VAZIO_ARTIFACT_UNBOUND"
@@ -118,5 +121,7 @@
       "Provider Protection run 36273253772"
     ]
   ],
-  "claim_allowed": false
+  "claim_allowed": false,
+  "merged_predecessor_pr": 465,
+  "merged_predecessor_commit": "5cca02e357d023be593c7a7b2369e39ded7d2eb9"
 }
