@@ -33,7 +33,7 @@ The chain deliberately preserves:
 | offline regression vectors | `tests/test_provider_protection_contract.py` |
 | live execution | `.github/workflows/provider-protection-gate.yml` |
 | human router | `.github/workflows/00_START_HERE.yml` |
-| evidence | `provider-protection-receipt-<run>-<attempt>` artifact |
+| bypass witness | `governance/provider/PROVIDER_RULESET_EXTERNAL_WITNESS_20260926.v1.json` |\n| evidence | `provider-protection-receipt-<run>-<attempt>` artifact |
 
 V1 is intentionally retained because it contains historical observation data.
 It is not the current desired-state source.
@@ -64,7 +64,7 @@ The V2 target requires:
 Therefore current provider state is expected to remain **FAIL** until the live
 ruleset is changed.
 
-## Why bypass is blocking
+## Witness bridge for bypass visibility\n\nThe default GitHub Actions token and an external provider read can expose different\nviews of bypass actors. V2 does not resolve that contradiction by preference.\n\nThe external witness records only the bypass scope and is bound to:\n\n- `ruleset_id=21908888`;\n- `ruleset_updated_at=2026-08-31T04:41:31.206-03:00`.\n\nIf the live ruleset has the same ID and `updated_at`, the witness may supplement\nthe runner observation. If either value changes, the witness is stale and the\ngate produces `BYPASS_VISIBILITY_UNPROVEN` / `TOKEN_VAZIO_STALE_OR_UNMATCHED_WITNESS`.\n\nThis prevents both false absence and permanent stale evidence.\n\n## Why bypass is blocking
 
 An always-bypass integration can cross a rule that is otherwise described as
 required. An unidentified bypass therefore cannot be represented as PASS.
