@@ -1,0 +1,32 @@
+{
+  "schema": "rafaelia.provider_ruleset_external_witness/v1",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "scope": "always_bypass_integrations",
+  "observation_source": "GitHub provider connector read",
+  "observed_date": "2026-09-26",
+  "observed_at_precision": "date",
+  "source_ref": "https://api.github.com/repos/rafaelmeloreisnovo/termux-app-rafacodephi/rulesets/21908888",
+  "binding": {
+    "ruleset_id": 21908888,
+    "ruleset_name": "1",
+    "ruleset_updated_at": "2026-08-31T04:41:31.206-03:00",
+    "enforcement": "active",
+    "ref_condition": "~DEFAULT_BRANCH"
+  },
+  "observed": {
+    "always_bypass_integrations": [
+      20150,
+      29110,
+      73253,
+      1144995
+    ],
+    "current_user_can_bypass": "never"
+  },
+  "claim_allowed": false,
+  "invariants": [
+    "WITNESS != LIVE_PROVIDER_STATE",
+    "WITNESS_VALID_ONLY_WHILE_RULESET_ID_AND_UPDATED_AT_MATCH",
+    "STALE_WITNESS = TOKEN_VAZIO",
+    "TOKEN_VAZIO != PASS"
+  ]
+}
