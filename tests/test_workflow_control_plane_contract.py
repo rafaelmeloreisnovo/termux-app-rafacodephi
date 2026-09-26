@@ -31,6 +31,7 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
             "07_E2E",
             "08_VECTRA_V3",
             "09_ENTERPRISE",
+            "10_PROVIDER",
         ):
             self.assertIn(token, self.control)
         self.assertIn("INVALID_ROUTE", self.control)
@@ -45,6 +46,8 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
             self.control,
         )
         self.assertIn("URGENCY_DOES_NOT_BYPASS_GATES", self.control)
+        self.assertIn("provider_protection", self.control)
+        self.assertIn("./.github/workflows/provider-protection-gate.yml", self.control)
         self.assertIn("Emitir receipt antes de decidir PASS/FAIL", self.control)
 
     def test_arm32_wrappers_delegate_to_one_reusable_pillar(self) -> None:
