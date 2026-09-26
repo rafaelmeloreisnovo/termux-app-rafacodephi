@@ -35,7 +35,8 @@
     "bypass_policy": {
       "always_bypass_integrations": "MUST_BE_IDENTIFIED_AND_JUSTIFIED_IF_PRESENT",
       "unknown_identity_state": "TOKEN_VAZIO_PENDING_IDENTITY_AND_JUSTIFICATION",
-      "do_not_expand_bypass": true
+      "do_not_expand_bypass": true,
+      "justified_integration_ids": []
     }
   },
   "claim_allowed": false,
