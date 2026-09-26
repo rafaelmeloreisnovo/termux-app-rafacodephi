@@ -43,7 +43,7 @@ Rotas humanas:
 
 A trilha `provider-security` usa a cadeia:
 
-`governance/provider/PROVIDER_RULESET_TARGET_20260831.v1.json` → `scripts/ci/provider_protection_contract.py` → `.github/workflows/provider-protection-gate.yml` → receipt publicado → `00_START_HERE` rota `10_PROVIDER`/`09_ENTERPRISE`.
+`governance/provider/PROVIDER_RULESET_TARGET.v2.json` → `scripts/ci/provider_protection_contract.py` → `.github/workflows/provider-protection-gate.yml` → receipt publicado → `00_START_HERE` rota `10_PROVIDER`/`09_ENTERPRISE`.
 
 O JSON é a **fonte desejada**; o estado live do GitHub é uma observação separada. O evaluator não altera o ruleset administrativo e nunca converte ausência de permissão em PASS.
 
