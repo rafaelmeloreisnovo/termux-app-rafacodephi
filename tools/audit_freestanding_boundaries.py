@@ -191,7 +191,7 @@ def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
                 for arg in ("-I", str(ROOT / name))
             ]
             vector_compile = subprocess.run(
-                [clang, "-std=c11", "-O2", *include_args, str(vector_source), *extra_sources, "-o", str(vector_bin)],
+                [clang, "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror", "-Wshadow", *include_args, str(vector_source), *extra_sources, "-o", str(vector_bin)],
                 cwd=ROOT,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -239,6 +239,11 @@ def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
                 "-fno-stack-protector",
                 "-fno-unwind-tables",
                 "-fno-asynchronous-unwind-tables",
+                "-fno-optimize-sibling-calls",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-Wshadow",
                 "-S",
                 str(source),
                 "-o",

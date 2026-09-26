@@ -3,6 +3,7 @@
 #include "../rafaelia/src/main/cpp/zero/include/rafz_pure_q16.h"
 #include "../rafaelia/src/main/cpp/zero/include/rafz_pure_blake3_single.h"
 #include "../rafaelia/src/main/cpp/zero/include/rafz_pure_crc32c_fixed.h"
+#include "../rafaelia/src/main/cpp/zero/include/rafz_pure_bitraf42.h"
 
 RAFZ_EXPORT rafz_u32 rafz_pure_core_probe(rafz_u32 x) {
     const rafz_u32 a = (rafz_u32)rafz_pure_bagua_rol3((rafz_u8)x);
@@ -27,4 +28,20 @@ RAFZ_EXPORT void rafz_pure_blake3_single_probe(
 
 RAFZ_EXPORT rafz_u32 rafz_pure_crc32c8_probe(const rafz_u8 block[8]) {
     return rafz_pure_crc32c_fixed8(block);
+}
+
+RAFZ_EXPORT rafz_u64 rafz_pure_bitraf42_probe(rafz_u32 x) {
+    const rafz_u64 word = rafz_pure_bitraf42_encode(
+        (rafz_u8)x,
+        (rafz_u8)(x >> 6u),
+        (rafz_u16)(x >> 9u),
+        (rafz_u16)(x >> 19u),
+        (rafz_u16)(x >> 21u));
+    const rafz_u64 fields =
+        ((rafz_u64)rafz_pure_bitraf42_opcode(word) << 36u) |
+        ((rafz_u64)rafz_pure_bitraf42_dir(word) << 33u) |
+        ((rafz_u64)rafz_pure_bitraf42_layer(word) << 23u) |
+        ((rafz_u64)rafz_pure_bitraf42_imm(word) << 11u) |
+        (rafz_u64)rafz_pure_bitraf42_flags(word);
+    return word ^ fields ^ (rafz_u64)rafz_pure_bitraf42_is_valid(word);
 }
