@@ -1,4 +1,7 @@
-/* SPDX-License-Identifier: GPL-3.0-only
+/*
+ * Layer: PLATFORM_GATE. This unit is libc-free but uses direct syscalls;
+ * it must not be used as evidence that the architecture-neutral core is syscall-free.
+ * SPDX-License-Identifier: GPL-3.0-only
  * RAFCODEPHI PA core: direct ELF entry payload.
  * No headers. No libc. No malloc. No JNI. No Java native methods.
  *
