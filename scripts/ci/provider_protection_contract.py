@@ -20,7 +20,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-DEFAULT_TARGET = Path("governance/provider/PROVIDER_RULESET_TARGET_20260831.v1.json")
+DEFAULT_TARGET = Path("governance/provider/PROVIDER_RULESET_TARGET.v2.json")
 DEFAULT_JSON = Path("reports/provider-protection-receipt.json")
 DEFAULT_MD = Path("reports/provider-protection-receipt.md")
 API_VERSION = "2022-11-28"
@@ -42,7 +42,7 @@ def file_sha256(path: Path) -> str:
 
 def load_target(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("schema") != "rafaelia.provider_ruleset_target/v1":
+    if data.get("schema") not in {"rafaelia.provider_ruleset_target/v1", "rafaelia.provider_ruleset_target/v2"}:
         raise ValueError(f"unsupported target schema: {data.get('schema')!r}")
     if not isinstance(data.get("target"), dict):
         raise ValueError("target contract missing object: target")
@@ -185,9 +185,12 @@ def evaluate(
     target = contract["target"]
     by_type = _rules_by_type(rulesets)
 
-    required_types = sorted(
-        set(target.get("preserve_rules") or []) | set(target.get("add_rules") or [])
-    )
+    if "required_rules" in target:
+        required_types = sorted(set(target.get("required_rules") or []))
+    else:
+        required_types = sorted(
+            set(target.get("preserve_rules") or []) | set(target.get("add_rules") or [])
+        )
     observed_types = sorted(by_type)
     missing_types = sorted(set(required_types) - set(observed_types))
 
@@ -295,7 +298,7 @@ def evaluate(
         "failures": failures,
         "remediation": remediation,
         "claim_allowed": False,
-        "provider_apply_state": contract.get("provider_apply_state", TOKEN_VAZIO),
+        "provider_apply_state": TOKEN_VAZIO,
         "invariants": [
             "TARGET_FILE != LIVE_PROVIDER_STATE",
             "WORKFLOW_PASS != PROVIDER_ENFORCEMENT",
