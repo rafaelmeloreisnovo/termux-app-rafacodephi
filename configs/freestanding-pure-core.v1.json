@@ -30,6 +30,7 @@
     "rafaelia/src/main/cpp/zero/include/rafz_pure_q16.h",
     "rafaelia/src/main/cpp/zero/include/rafz_pure_blake3_single.h",
     "rafaelia/src/main/cpp/zero/include/rafz_pure_crc32c_fixed.h",
+    "rafaelia/src/main/cpp/zero/include/rafz_pure_bitraf42.h",
     "tests/pure_core_probe.c"
   ],
   "pure_core_forbidden": {
@@ -53,11 +54,15 @@
     "host_vector_sources": [
       "tests/pure_q16_vectors.c",
       "tests/pure_blake3_single_block_vectors.c",
-      "tests/pure_crc32c_fixed_vectors.c"
+      "tests/pure_crc32c_fixed_vectors.c",
+      "tests/pure_bitraf42_vectors.c"
     ],
     "host_vector_extra_sources": {
       "tests/pure_crc32c_fixed_vectors.c": [
         "rafaelia/src/main/cpp/zero/rafz.c"
+      ],
+      "tests/pure_bitraf42_vectors.c": [
+        "app/src/main/cpp/lowlevel/raf_bitraf.c"
       ]
     },
     "host_vector_include_dirs": [
@@ -69,5 +74,17 @@
     "assembly_probe_pass": "does not prove physical device execution",
     "physical_android": "TOKEN_VAZIO until a device receipt exists",
     "claim_allowed": false
+  },
+  "compile_policy": {
+    "warnings": [
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Wshadow"
+    ],
+    "codegen": [
+      "-fno-optimize-sibling-calls"
+    ],
+    "note": "Warnings are execution gates; sibling/tail-call optimization is disabled for pure-core probes."
   }
 }

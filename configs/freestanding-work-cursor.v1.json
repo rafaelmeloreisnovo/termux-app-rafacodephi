@@ -2,10 +2,10 @@
   "schema": "rafaelia.freestanding-work-cursor/v1",
   "state": "ACTIVE_REVIEW_BRANCH",
   "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
-  "base_commit": "8004dfd5c112061579d54c6bf5a5afdd514ddfdf",
-  "branch": "audit/freestanding-atlas-token-vazio-v3-20260926",
-  "pull_request": 465,
-  "predecessor_head": "c055c2841fac1d7a1c7b808c858d2a570b6d0695",
+  "base_commit": "5cca02e357d023be593c7a7b2369e39ded7d2eb9",
+  "branch": "rafaelia/freestanding-bitraf42-v1-20260926",
+  "pull_request": 468,
+  "predecessor_head": "5cca02e357d023be593c7a7b2369e39ded7d2eb9",
   "authority": {
     "pure_core": "rafaelia/src/main/cpp/zero",
     "platform_gate": [
@@ -64,19 +64,24 @@
       "receipt": "docs/receipts/SOURCE_ALIAS_GRAPH_GATE_PASS_20260926.md",
       "state": "CI_SCOPE_PASS",
       "evidence": "run 36273837084 / job 108492683126: 29 groups, 43 excess, 5 canonical, 24 authority-blocked, errors=[]"
+    },
+    {
+      "seq": 6,
+      "commit": "9023b9f1542e27ab63eabd9107c54995d54652e4",
+      "receipt": "docs/receipts/FREESTANDING_CRC32C_GATE_PASS_20260926.md",
+      "state": "CI_SCOPE_PASS",
+      "evidence": "run 36274066348 / job 108494115794: CRC host vector compile_exit=0 run_exit=0; ARMv7/AArch64 compile_exit=0 branches=[]; pure-core source policy PASS"
     }
   ],
   "active_node": {
-    "id": "N060_FIXED_BLOCK_CRC",
-    "action": "extract fixed-block CRC32C leaf from authoritative RAFAELIA ZERO semantics, using compile-time specialization/unrolling without changing public streaming semantics",
-    "success": "vectors match authoritative rafz_crc32c for bounded blocks and ARMv7/AArch64 probe has no prohibited nonterminal transfers",
-    "failure": "polynomial/init/final-xor mismatch, helper call/control transfer regression, or public semantics drift"
+    "id": "N070_BITRAF_FIXED_WIDTH",
+    "state": "IMPLEMENTED_UNTESTED",
+    "action": "extract the documented 42-bit BITRAF instruction pack/extract semantics into RAFAELIA ZERO fixed-width leaves and compare against the current low-level codec",
+    "success": "host legacy-equivalence vectors run_exit=0 and ARMv7/AArch64 probe has no prohibited nonterminal transfers under warning-as-error policy",
+    "failure": "bit layout drift, width-mask mismatch, hidden helper/control transfer, warning regression, or legacy semantic mismatch",
+    "note": "policy false-positive review: rafz.h remains a base ABI header, while runtime-control lexical scanning stays scoped to executable pure leaves; compile flags are consumed from configs/freestanding-pure-core.v1.json"
   },
   "queued_nodes": [
-    [
-      "N070_BITRAF_FIXED_WIDTH",
-      "TOKEN_VAZIO_NOT_RUN"
-    ],
     [
       "N080_ELF_EXACT",
       "TOKEN_VAZIO_ARTIFACT_UNBOUND"
@@ -87,6 +92,11 @@
     ]
   ],
   "open_tokens": [
+    [
+      "G-FS-BITRAF42-001",
+      "TOKEN_VAZIO_NOT_RUN",
+      "exact-head host equivalence + ARMv7/AArch64 compile/assembly gate"
+    ],
     [
       "G-FS-BLAKE3-001",
       "TOKEN_VAZIO_CONFORMANCE_UNPROVEN",
