@@ -3,7 +3,7 @@
 
 SOURCE != PROVIDER_STATE != OBSERVATION != EVIDENCE != CLAIM.
 
-The desired state lives in governance/provider/PROVIDER_RULESET_TARGET_20260831.v1.json.
+The desired state lives in governance/provider/PROVIDER_RULESET_TARGET.v2.json.
 This module is stdlib-only so the same evaluator can run in GitHub Actions and in
 offline unit tests. A failing live configuration still emits a machine-readable
 receipt before returning a non-zero exit code.
@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_TARGET = Path("governance/provider/PROVIDER_RULESET_TARGET.v2.json")
+DEFAULT_WITNESS = Path("governance/provider/PROVIDER_RULESET_EXTERNAL_WITNESS_20260926.v1.json")
 DEFAULT_JSON = Path("reports/provider-protection-receipt.json")
 DEFAULT_MD = Path("reports/provider-protection-receipt.md")
 API_VERSION = "2022-11-28"
@@ -47,6 +48,17 @@ def load_target(path: Path) -> dict[str, Any]:
         raise ValueError(f"unsupported target schema: {data.get('schema')!r}")
     if not isinstance(data.get("target"), dict):
         raise ValueError("target contract missing object: target")
+    return data
+
+
+def load_witness(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if data.get("schema") != "rafaelia.provider_ruleset_external_witness/v1":
+        raise ValueError(f"unsupported witness schema: {data.get('schema')!r}")
+    if not isinstance(data.get("binding"), dict):
+        raise ValueError("witness missing binding object")
+    if not isinstance(data.get("observed"), dict):
+        raise ValueError("witness missing observed object")
     return data
 
 
@@ -136,22 +148,78 @@ def _check_pull_request(
     return False, expected_cmp, observations
 
 
+def _resolve_bypass_observation(
+    rulesets: list[dict[str, Any]],
+    witness: dict[str, Any] | None,
+) -> tuple[list[int], str, dict[str, Any]]:
+    direct_ids = _always_bypass_integrations(rulesets)
+    if direct_ids:
+        return direct_ids, "DIRECT_LIVE_OBSERVATION", {
+            "witness_used": False,
+            "witness_match": False,
+        }
+
+    if witness is None:
+        return [], "LIVE_EMPTY_NO_EXTERNAL_WITNESS", {
+            "witness_used": False,
+            "witness_match": False,
+        }
+
+    binding = witness.get("binding") or {}
+    witness_id = binding.get("ruleset_id")
+    witness_updated_at = binding.get("ruleset_updated_at")
+    matched = any(
+        rs.get("id") == witness_id and rs.get("updated_at") == witness_updated_at
+        for rs in rulesets
+    )
+    if matched:
+        ids = sorted(
+            item
+            for item in ((witness.get("observed") or {}).get("always_bypass_integrations") or [])
+            if isinstance(item, int)
+        )
+        return ids, "BOUND_EXTERNAL_WITNESS", {
+            "witness_used": True,
+            "witness_match": True,
+            "binding_ruleset_id": witness_id,
+            "binding_ruleset_updated_at": witness_updated_at,
+        }
+
+    return [], "TOKEN_VAZIO_STALE_OR_UNMATCHED_WITNESS", {
+        "witness_used": True,
+        "witness_match": False,
+        "binding_ruleset_id": witness_id,
+        "binding_ruleset_updated_at": witness_updated_at,
+        "observed_ruleset_versions": [
+            {"id": rs.get("id"), "updated_at": rs.get("updated_at")}
+            for rs in rulesets
+        ],
+    }
+
+
 def _check_bypass_policy(
     target: dict[str, Any],
     rulesets: list[dict[str, Any]],
+    witness: dict[str, Any] | None = None,
 ) -> tuple[bool, dict[str, Any]]:
     policy = target.get("bypass_policy") or {}
-    observed_ids = _always_bypass_integrations(rulesets)
+    observed_ids, assurance, witness_state = _resolve_bypass_observation(
+        rulesets, witness
+    )
     justified_ids = {
         item
         for item in (policy.get("justified_integration_ids") or [])
         if isinstance(item, int)
     }
     unresolved = sorted(set(observed_ids) - justified_ids)
-    return not unresolved, {
+    visibility_unproven = assurance == "TOKEN_VAZIO_STALE_OR_UNMATCHED_WITNESS"
+    return not unresolved and not visibility_unproven, {
         "observed_always_bypass_integration_ids": observed_ids,
         "justified_integration_ids": sorted(justified_ids),
         "unresolved_integration_ids": unresolved,
+        "observation_assurance": assurance,
+        "visibility_unproven": visibility_unproven,
+        "witness_state": witness_state,
         "policy": policy.get(
             "always_bypass_integrations",
             "TOKEN_VAZIO_NO_EXPLICIT_BYPASS_POLICY",
@@ -205,6 +273,7 @@ def evaluate(
     target_sha256: str,
     repository: str,
     default_branch: str,
+    witness: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     target = contract["target"]
     by_type = _rules_by_type(rulesets)
@@ -224,13 +293,17 @@ def evaluate(
     status_ok, status_expected, status_observed = _check_required_status(
         target, by_type.get("required_status_checks", [])
     )
-    bypass_ok, bypass_check = _check_bypass_policy(target, rulesets)
+    bypass_ok, bypass_check = _check_bypass_policy(target, rulesets, witness)
 
-    bypass_ids = _always_bypass_integrations(rulesets)
+    bypass_ids = bypass_check["observed_always_bypass_integration_ids"]
     bypass_state = (
-        "NONE_OBSERVED"
-        if not bypass_ids
-        else "TOKEN_VAZIO_PENDING_IDENTITY_AND_JUSTIFICATION"
+        "TOKEN_VAZIO_PENDING_IDENTITY_AND_JUSTIFICATION"
+        if bypass_check["unresolved_integration_ids"]
+        else (
+            "TOKEN_VAZIO_STALE_OR_UNMATCHED_WITNESS"
+            if bypass_check["visibility_unproven"]
+            else "NONE_UNRESOLVED"
+        )
     )
 
     failures: list[dict[str, Any]] = []
@@ -259,13 +332,22 @@ def evaluate(
                 "observed_candidates": status_observed,
             }
         )
-    if not bypass_ok:
+    if bypass_check["visibility_unproven"]:
+        failures.append(
+            {
+                "code": "BYPASS_VISIBILITY_UNPROVEN",
+                "observation_assurance": bypass_check["observation_assurance"],
+                "witness_state": bypass_check["witness_state"],
+            }
+        )
+    elif not bypass_ok:
         failures.append(
             {
                 "code": "UNJUSTIFIED_ALWAYS_BYPASS_INTEGRATIONS",
                 "observed": bypass_check["observed_always_bypass_integration_ids"],
                 "justified": bypass_check["justified_integration_ids"],
                 "unresolved": bypass_check["unresolved_integration_ids"],
+                "observation_assurance": bypass_check["observation_assurance"],
             }
         )
 
@@ -346,6 +428,8 @@ def evaluate(
         "provider_apply_state": TOKEN_VAZIO,
         "invariants": [
             "TARGET_FILE != LIVE_PROVIDER_STATE",
+            "WITNESS != LIVE_PROVIDER_STATE",
+            "WITNESS_VALID_ONLY_WHILE_RULESET_VERSION_MATCHES",
             "WORKFLOW_PASS != PROVIDER_ENFORCEMENT",
             "TOKEN_VAZIO != PASS",
         ],
@@ -409,6 +493,7 @@ def write_receipt(receipt: dict[str, Any], json_path: Path, md_path: Path) -> No
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--target", type=Path, default=DEFAULT_TARGET)
+    parser.add_argument("--witness", type=Path, default=DEFAULT_WITNESS)
     parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY", ""))
     parser.add_argument("--default-branch", default="master")
     parser.add_argument("--token", default=os.environ.get("GH_TOKEN", ""))
@@ -426,6 +511,11 @@ def main() -> int:
 
     try:
         contract = load_target(args.target)
+        witness = load_witness(args.witness)
+        if witness.get("repository") != args.repository:
+            raise ValueError(
+                f"witness repository mismatch: {witness.get('repository')} != {args.repository}"
+            )
         if contract.get("repository") != args.repository:
             raise ValueError(
                 f"target repository mismatch: {contract.get('repository')} != {args.repository}"
@@ -478,7 +568,14 @@ def main() -> int:
                 target_sha256=file_sha256(args.target),
                 repository=args.repository,
                 default_branch=args.default_branch,
+                witness=witness,
             )
+            receipt["witness"] = {
+                "path": str(args.witness),
+                "sha256": file_sha256(args.witness),
+                "schema": witness["schema"],
+                "binding": witness.get("binding"),
+            }
 
     except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError) as exc:
         receipt = {
