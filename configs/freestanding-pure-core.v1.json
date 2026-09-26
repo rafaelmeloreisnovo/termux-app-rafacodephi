@@ -1,0 +1,56 @@
+{
+  "schema": "rafaelia.freestanding-boundary/v1",
+  "baseline_commit": "988d3c24cf3a4a676ff0cab0512a2436a8d1c704",
+  "authority": {
+    "pure_core": "rafaelia/src/main/cpp/zero",
+    "platform_gate": [
+      "src/bootstrap",
+      "bootstrap"
+    ],
+    "hosted_adapter": [
+      "app/src/main/cpp/lowlevel",
+      "rafaelia/src/main/cpp/zero/rafz_android_jni.c"
+    ],
+    "historical_or_staging": [
+      "Arme/Add",
+      "BugOrAdd",
+      "rmr/Rrr"
+    ]
+  },
+  "inventory_roots": [
+    "app/src/main/cpp/lowlevel",
+    "app/src/main/cpp/freestanding",
+    "src/bootstrap",
+    "bootstrap",
+    "bootstrap_rafaelia",
+    "rafaelia/src/main/cpp/zero"
+  ],
+  "pure_core_files": [
+    "rafaelia/src/main/cpp/zero/include/rafz_pure_primitives.h",
+    "tests/pure_core_probe.c"
+  ],
+  "pure_core_forbidden": {
+    "external_include": "^\\s*#\\s*include\\s*<",
+    "heap": "\\b(?:malloc|calloc|realloc|free)\\s*\\(",
+    "syscall": "\\b(?:syscall|__NR_|SYS_|svc|int\\s+\\$0x80|proot_sys_|freestanding_(?:read|write|open|close|exit))",
+    "hosted": "\\b(?:JNIEnv|JNIEXPORT|Java_[A-Za-z0-9_]+|android_log|dlopen|dlsym|pthread_)",
+    "runtime_control": "\\b(?:if|for|while|switch)\\s*\\(|\\bgoto\\b|\\?"
+  },
+  "assembly_probe": {
+    "source": "tests/pure_core_probe.c",
+    "targets": [
+      "armv7a-none-eabi",
+      "aarch64-none-elf"
+    ],
+    "allow_terminal_return": true,
+    "forbid_calls": true,
+    "forbid_conditional_branches": true,
+    "forbid_unconditional_branches": true
+  },
+  "claim_boundary": {
+    "source_policy_pass": "does not prove final ELF runtime properties",
+    "assembly_probe_pass": "does not prove physical device execution",
+    "physical_android": "TOKEN_VAZIO until a device receipt exists",
+    "claim_allowed": false
+  }
+}
