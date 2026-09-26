@@ -12,7 +12,7 @@ on:
       - 'tests/test_verify_apk_evidence.py'
       - 'data/contracts/apk_*.json'
       - '.github/workflows/apk-evidence-gate.yml'
-      - '.github/workflows/00-rafaelia-control-plane.yml'
+      - '.github/workflows/00_START_HERE.yml'
 
 permissions:
   contents: read
