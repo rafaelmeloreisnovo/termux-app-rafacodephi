@@ -1,4 +1,5 @@
-/* RAFCODEPHI freestanding ELF entry — ARM32 / AArch64 */
+/* RAFCODEPHI PLATFORM_GATE ELF entry — ARM32 / AArch64.
+ * Direct exit_group syscall is intentional here; this is not PURE_CORE. */
 
 #if defined(__aarch64__)
     .text
