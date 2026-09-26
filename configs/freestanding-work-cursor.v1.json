@@ -5,7 +5,7 @@
   "base_commit": "5cca02e357d023be593c7a7b2369e39ded7d2eb9",
   "branch": "rafaelia/freestanding-bitraf42-v1-20260926",
   "pull_request": 468,
-  "predecessor_head": "5cca02e357d023be593c7a7b2369e39ded7d2eb9",
+  "predecessor_head": "cc3f310b25e40a9668b5627fe834bf0063c9ee31",
   "authority": {
     "pure_core": "rafaelia/src/main/cpp/zero",
     "platform_gate": [
@@ -78,21 +78,23 @@
       "receipt": "docs/receipts/FREESTANDING_BITRAF42_NATIVE_SAFETY_FAIL_01_20260926.md",
       "state": "FAIL_CLOSED",
       "evidence": "run 36277312669 / job 108502444769: exact protected rafz.h blob drift; BITRAF semantics not implicated"
+    },
+    {
+      "seq": 8,
+      "commit": "cc3f310b25e40a9668b5627fe834bf0063c9ee31",
+      "receipt": "docs/receipts/FREESTANDING_BITRAF42_GATE_PASS_20260926.md",
+      "state": "CI_SCOPE_PASS",
+      "evidence": "run 36277368782 / job 108502635508: host-native-pure_bitraf42_vectors compile_exit=0 run_exit=0; armv7a-none-eabi compile_exit=0 branches=[]; aarch64-none-elf compile_exit=0 branches=[]; pure_core_source_policy=PASS; RAFAELIA ZERO compatibility=PASS"
     }
   ],
   "active_node": {
-    "id": "N070_BITRAF_FIXED_WIDTH",
-    "state": "IMPLEMENTED_UNTESTED",
-    "action": "extract the documented 42-bit BITRAF instruction pack/extract semantics into RAFAELIA ZERO fixed-width leaves and compare against the current low-level codec",
-    "success": "host legacy-equivalence vectors run_exit=0 and ARMv7/AArch64 probe has no prohibited nonterminal transfers under warning-as-error policy",
-    "failure": "bit layout drift, width-mask mismatch, hidden helper/control transfer, warning regression, or legacy semantic mismatch",
-    "note": "Native Safety fail closed on protected rafz.h hash; base header restored exactly and u64 alias localized to the BITRAF42 leaf. Exact-head rerun pending."
+    "id": "N080_ELF_EXACT",
+    "state": "TOKEN_VAZIO_ARTIFACT_UNBOUND",
+    "action": "materialize exact pure-core ELF artifacts for ARMv7 and AArch64, then audit interpreter, dynamic dependencies, undefined symbols, relocations, exported symbols, sections and artifact hashes without claiming physical execution",
+    "success": "each target links without libc/CRT; PT_INTERP absent; DT_NEEDED absent; undefined external symbols absent; unexpected dynamic relocations absent; exported symbol surface bounded; receipt binds exact artifact hashes",
+    "failure": "linker helper/runtime dependency, dynamic interpreter/dependency, undefined external symbol, unexpected relocation/symbol/section drift, or artifact identity unbound"
   },
   "queued_nodes": [
-    [
-      "N080_ELF_EXACT",
-      "TOKEN_VAZIO_ARTIFACT_UNBOUND"
-    ],
     [
       "N090_PHYSICAL_ARM32_ARM64",
       "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING"
@@ -100,9 +102,9 @@
   ],
   "open_tokens": [
     [
-      "G-FS-BITRAF42-001",
-      "TOKEN_VAZIO_NOT_RUN",
-      "exact-head host equivalence + ARMv7/AArch64 compile/assembly gate"
+      "G-FS-ELF-EXACT-001",
+      "TOKEN_VAZIO_ARTIFACT_UNBOUND",
+      "exact ARMv7/AArch64 pure-core ELF identity and structural audit"
     ],
     [
       "G-FS-BLAKE3-001",
