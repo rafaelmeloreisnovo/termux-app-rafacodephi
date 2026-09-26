@@ -118,6 +118,12 @@ def classify(record: dict) -> str:
     return "FREESTANDING_CANDIDATE"
 
 
+def strip_c_comments(text: str) -> str:
+    text = re.sub(r"/\\*.*?\\*/", "", text, flags=re.S)
+    text = re.sub(r"//[^\\n]*", "", text)
+    return text
+
+
 def audit_pure_source(cfg: dict) -> list[str]:
     errors: list[str] = []
     patterns = {
@@ -129,7 +135,7 @@ def audit_pure_source(cfg: dict) -> list[str]:
         if not path.exists():
             errors.append(f"missing pure-core file: {name}")
             continue
-        text = path.read_text(encoding="utf-8")
+        text = strip_c_comments(path.read_text(encoding="utf-8"))
         for kind, rx in patterns.items():
             matches = list(rx.finditer(text))
             if matches:
