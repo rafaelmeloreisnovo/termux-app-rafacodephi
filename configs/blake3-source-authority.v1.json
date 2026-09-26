@@ -1,0 +1,48 @@
+{
+  "schema": "rafaelia.blake3-source-authority/v1",
+  "producer_repository": "rafaelmeloreisnovo/BLAKE3",
+  "producer_commit": "29e4525e5b1e6dfd79167586da8d19722c3cc65b",
+  "producer_version": "1.8.7",
+  "producer_runtime_source": "current_repository_checkout:c/",
+  "official_repository": "https://github.com/BLAKE3-team/BLAKE3.git",
+  "official_ref": "6aab490a26124663329dfd3961b8469f8fdb158b",
+  "source_blobs": {
+    "c/blake3.h": "f9656c21f459d227efb4e7b6acb139a3822fcb50",
+    "c/blake3.c": "00f91f444922df7c8e7b5ff69343852cbbf4c613",
+    "c/blake3_impl.h": "facd5997435736a9f15491f490805ceff6c0453f",
+    "c/blake3_portable.c": "062dd1b47fb6424f4d3db4c6edd2f90efcb92973",
+    "test_vectors/test_vectors.json": "f6da91792c6cdf5c6a0f6dad01803045bb204a68"
+  },
+  "local_leaf": {
+    "path": "rafaelia/src/main/cpp/zero/include/rafz_pure_blake3_single.h",
+    "scope": "unkeyed single root block, zero-padded 64-byte caller block, block_len 0..64, counter=0",
+    "flags": [
+      "CHUNK_START",
+      "CHUNK_END",
+      "ROOT"
+    ],
+    "rounds": 7,
+    "streaming": false,
+    "tree_hashing": false,
+    "keyed": false
+  },
+  "kat_cases": [
+    {
+      "input_len": 0,
+      "hash32": "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
+    },
+    {
+      "input_len": 1,
+      "hash32": "2d3adedff11b61f14c886e35afa036736dcd87a74d27b5c1510225d0f592e213"
+    },
+    {
+      "input_len": 63,
+      "hash32": "e9bc37a594daad83be9470df7f7b3798297c3d834ce80ba85d6e207627b7db7b"
+    },
+    {
+      "input_len": 64,
+      "hash32": "4eed7141ea4a5cd4b788606bd23f46e212af9cacebacdc7d1f4c6dc7f2511b98"
+    }
+  ],
+  "claim_allowed": false
+}

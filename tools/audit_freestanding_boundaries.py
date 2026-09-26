@@ -172,10 +172,13 @@ def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
     with tempfile.TemporaryDirectory(prefix="raf-pure-core-") as td:
         outdir = Path(td)
 
-        vector_name = cfg["assembly_probe"].get("host_vector_source")
-        if vector_name:
+        vector_names = cfg["assembly_probe"].get("host_vector_sources")
+        if vector_names is None:
+            legacy = cfg["assembly_probe"].get("host_vector_source")
+            vector_names = [legacy] if legacy else []
+        for vector_name in vector_names:
             vector_source = ROOT / vector_name
-            vector_bin = outdir / "pure-q16-vectors"
+            vector_bin = outdir / (vector_source.stem + ".bin")
             vector_compile = subprocess.run(
                 [clang, "-std=c11", "-O2", str(vector_source), "-o", str(vector_bin)],
                 cwd=ROOT,
@@ -185,14 +188,14 @@ def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
                 check=False,
             )
             vector_item = {
-                "target": "host-native-q16-vectors",
+                "target": "host-native-" + vector_source.stem,
                 "compile_exit": vector_compile.returncode,
                 "run_exit": None,
                 "branches": [],
             }
             if vector_compile.returncode != 0:
                 errors.append(
-                    "host q16 vector compile failed: "
+                    f"{vector_name}: host vector compile failed: "
                     + vector_compile.stdout.strip()[:1200]
                 )
             else:
@@ -207,7 +210,7 @@ def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
                 vector_item["run_exit"] = vector_run.returncode
                 if vector_run.returncode != 0:
                     errors.append(
-                        f"host q16 vectors failed count={vector_run.returncode}"
+                        f"{vector_name}: host vectors failed count={vector_run.returncode}"
                     )
             results.append(vector_item)
 
