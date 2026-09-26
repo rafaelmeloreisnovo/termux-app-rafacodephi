@@ -2,6 +2,7 @@
 #include "../rafaelia/src/main/cpp/zero/include/rafz_pure_primitives.h"
 #include "../rafaelia/src/main/cpp/zero/include/rafz_pure_q16.h"
 #include "../rafaelia/src/main/cpp/zero/include/rafz_pure_blake3_single.h"
+#include "../rafaelia/src/main/cpp/zero/include/rafz_pure_crc32c_fixed.h"
 
 RAFZ_EXPORT rafz_u32 rafz_pure_core_probe(rafz_u32 x) {
     const rafz_u32 a = (rafz_u32)rafz_pure_bagua_rol3((rafz_u8)x);
@@ -22,4 +23,8 @@ RAFZ_EXPORT void rafz_pure_blake3_single_probe(
     rafz_u32 block_len,
     rafz_u8 out[32]) {
     rafz_pure_blake3_single_block_root(block, block_len, out);
+}
+
+RAFZ_EXPORT rafz_u32 rafz_pure_crc32c8_probe(const rafz_u8 block[8]) {
+    return rafz_pure_crc32c_fixed8(block);
 }
