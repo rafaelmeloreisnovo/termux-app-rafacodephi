@@ -20,7 +20,7 @@ Rotas humanas:
 - `06_EVIDENCIAS`
 - `07_E2E`
 - `08_VECTRA_V3`
-- `09_ENTERPRISE`
+- `09_ENTERPRISE`\n- `10_PROVIDER`
 
 ## Workflows canônicos por trilha
 
@@ -35,7 +35,7 @@ Rotas humanas:
 | `evidence` | `.github/workflows/apk-evidence-gate.yml` | parser/contrato de evidência APK | evidence contract != supplied physical evidence |
 | `integration` | `.github/workflows/rafaelia_e2e_product_proof.yml` | integração E2E | CI integration != device proof |
 | `metrology` | `.github/workflows/vectra-grade-benchmarks.yml` | contratos/artefatos Vectra em CI | PA physical execution permanece TOKEN_VAZIO |
-| `governance` | `scripts/ci/workflow_control_plane.py` | inventário de todos os YML/YAML | discovery != execution |
+| `provider-security` | `.github/workflows/provider-protection-gate.yml` | ruleset live do `master` | configuração live pode bloquear o Enterprise preflight |\n| `governance` | `scripts/ci/workflow_control_plane.py` | inventário de todos os YML/YAML | discovery != execution |
 
 ## Metadados obrigatórios
 
