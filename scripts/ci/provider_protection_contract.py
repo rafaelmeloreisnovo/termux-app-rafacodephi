@@ -3,7 +3,7 @@
 
 SOURCE != PROVIDER_STATE != OBSERVATION != EVIDENCE != CLAIM.
 
-The desired state lives in governance/provider/PROVIDER_RULESET_TARGET.v2.json.
+The desired state lives in governance/provider/PROVIDER_RULESET_TARGET.v3.json.
 This module is stdlib-only so the same evaluator can run in GitHub Actions and in
 offline unit tests. A failing live configuration still emits a machine-readable
 receipt before returning a non-zero exit code.
@@ -21,8 +21,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-DEFAULT_TARGET = Path("governance/provider/PROVIDER_RULESET_TARGET.v2.json")
-DEFAULT_WITNESS = Path("governance/provider/PROVIDER_RULESET_EXTERNAL_WITNESS_20260926.v1.json")
+DEFAULT_TARGET = Path("governance/provider/PROVIDER_RULESET_TARGET.v3.json")
+DEFAULT_WITNESS = Path("governance/provider/PROVIDER_RULESET_EXTERNAL_WITNESS_20260926.v2.json")
 DEFAULT_JSON = Path("reports/provider-protection-receipt.json")
 DEFAULT_MD = Path("reports/provider-protection-receipt.md")
 API_VERSION = "2022-11-28"
@@ -44,7 +44,7 @@ def file_sha256(path: Path) -> str:
 
 def load_target(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("schema") not in {"rafaelia.provider_ruleset_target/v1", "rafaelia.provider_ruleset_target/v2"}:
+    if data.get("schema") not in {"rafaelia.provider_ruleset_target/v1", "rafaelia.provider_ruleset_target/v2", "rafaelia.provider_ruleset_target/v3"}:
         raise ValueError(f"unsupported target schema: {data.get('schema')!r}")
     if not isinstance(data.get("target"), dict):
         raise ValueError("target contract missing object: target")
@@ -53,7 +53,7 @@ def load_target(path: Path) -> dict[str, Any]:
 
 def load_witness(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("schema") != "rafaelia.provider_ruleset_external_witness/v1":
+    if data.get("schema") not in {"rafaelia.provider_ruleset_external_witness/v1", "rafaelia.provider_ruleset_external_witness/v2"}:
         raise ValueError(f"unsupported witness schema: {data.get('schema')!r}")
     if not isinstance(data.get("binding"), dict):
         raise ValueError("witness missing binding object")
@@ -65,7 +65,7 @@ def load_witness(path: Path) -> dict[str, Any]:
 def github_get(url: str, token: str) -> Any:
     headers = {
         "Accept": "application/vnd.github+json",
-        "User-Agent": "rafaelia-provider-protection-contract-v2",
+        "User-Agent": "rafaelia-provider-protection-contract-v3",
         "X-GitHub-Api-Version": API_VERSION,
     }
     if token:
@@ -102,15 +102,69 @@ def _rules_by_type(rulesets: list[dict[str, Any]]) -> dict[str, list[dict[str, A
     return by_type
 
 
-def _always_bypass_integrations(rulesets: list[dict[str, Any]]) -> list[int]:
-    ids: set[int] = set()
+def _normalize_bypass_actor(actor: Any) -> dict[str, Any] | None:
+    if not isinstance(actor, dict):
+        return None
+    actor_type = actor.get("actor_type")
+    actor_id = actor.get("actor_id")
+    bypass_mode = actor.get("bypass_mode")
+    if not isinstance(actor_type, str) or not isinstance(actor_id, int):
+        return None
+    if bypass_mode != "always":
+        return None
+    return {
+        "actor_type": actor_type,
+        "actor_id": actor_id,
+        "bypass_mode": "always",
+    }
+
+
+def _actor_key(actor: dict[str, Any]) -> tuple[str, int]:
+    return str(actor["actor_type"]), int(actor["actor_id"])
+
+
+def _always_bypass_actors(rulesets: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    actors: dict[tuple[str, int], dict[str, Any]] = {}
     for rs in rulesets:
-        for actor in rs.get("bypass_actors") or []:
-            if actor.get("actor_type") == "Integration" and actor.get("bypass_mode") == "always":
-                actor_id = actor.get("actor_id")
-                if isinstance(actor_id, int):
-                    ids.add(actor_id)
-    return sorted(ids)
+        for raw in rs.get("bypass_actors") or []:
+            actor = _normalize_bypass_actor(raw)
+            if actor is not None:
+                actors[_actor_key(actor)] = actor
+    return [actors[key] for key in sorted(actors)]
+
+
+def _integration_ids(actors: list[dict[str, Any]]) -> list[int]:
+    return sorted(
+        actor["actor_id"]
+        for actor in actors
+        if actor.get("actor_type") == "Integration"
+    )
+
+
+def _witness_bypass_actors(witness: dict[str, Any]) -> list[dict[str, Any]]:
+    observed = witness.get("observed") or {}
+    raw_actors = observed.get("always_bypass_actors")
+    if isinstance(raw_actors, list):
+        actors = [
+            actor
+            for raw in raw_actors
+            if (actor := _normalize_bypass_actor(raw)) is not None
+        ]
+        return sorted(actors, key=_actor_key)
+
+    # V1 compatibility: Integration IDs were the only modeled actor class.
+    return [
+        {
+            "actor_type": "Integration",
+            "actor_id": actor_id,
+            "bypass_mode": "always",
+        }
+        for actor_id in sorted(
+            item
+            for item in (observed.get("always_bypass_integrations") or [])
+            if isinstance(item, int)
+        )
+    ]
 
 
 def _check_pull_request(
@@ -163,19 +217,25 @@ def _same_instant(left: Any, right: Any) -> bool:
 def _resolve_bypass_observation(
     rulesets: list[dict[str, Any]],
     witness: dict[str, Any] | None,
-) -> tuple[list[int], str, dict[str, Any]]:
-    direct_ids = _always_bypass_integrations(rulesets)
-    if direct_ids:
-        return direct_ids, "DIRECT_LIVE_OBSERVATION", {
-            "witness_used": False,
-            "witness_match": False,
+) -> tuple[list[dict[str, Any]], str, dict[str, Any], Any]:
+    direct_actors = _always_bypass_actors(rulesets)
+    direct_user_bypass = sorted(
+        {
+            value
+            for rs in rulesets
+            if isinstance((value := rs.get("current_user_can_bypass")), str)
         }
+    )
 
     if witness is None:
-        return [], "LIVE_EMPTY_NO_EXTERNAL_WITNESS", {
+        return direct_actors, (
+            "DIRECT_LIVE_OBSERVATION"
+            if direct_actors
+            else "LIVE_EMPTY_NO_EXTERNAL_WITNESS"
+        ), {
             "witness_used": False,
             "witness_match": False,
-        }
+        }, direct_user_bypass or TOKEN_VAZIO
 
     binding = witness.get("binding") or {}
     witness_id = binding.get("ruleset_id")
@@ -185,29 +245,39 @@ def _resolve_bypass_observation(
         and _same_instant(rs.get("updated_at"), witness_updated_at)
         for rs in rulesets
     )
-    if matched:
-        ids = sorted(
-            item
-            for item in ((witness.get("observed") or {}).get("always_bypass_integrations") or [])
-            if isinstance(item, int)
-        )
-        return ids, "BOUND_EXTERNAL_WITNESS", {
+    if not matched:
+        return direct_actors, "TOKEN_VAZIO_STALE_OR_UNMATCHED_WITNESS", {
             "witness_used": True,
-            "witness_match": True,
+            "witness_match": False,
             "binding_ruleset_id": witness_id,
             "binding_ruleset_updated_at": witness_updated_at,
-        }
+            "observed_ruleset_versions": [
+                {"id": rs.get("id"), "updated_at": rs.get("updated_at")}
+                for rs in rulesets
+            ],
+        }, direct_user_bypass or TOKEN_VAZIO
 
-    return [], "TOKEN_VAZIO_STALE_OR_UNMATCHED_WITNESS", {
+    merged = {_actor_key(actor): actor for actor in direct_actors}
+    for actor in _witness_bypass_actors(witness):
+        merged[_actor_key(actor)] = actor
+
+    witness_user_bypass = (witness.get("observed") or {}).get(
+        "current_user_can_bypass",
+        TOKEN_VAZIO,
+    )
+    current_user = (
+        witness_user_bypass
+        if witness_user_bypass != TOKEN_VAZIO
+        else (direct_user_bypass or TOKEN_VAZIO)
+    )
+    return [merged[key] for key in sorted(merged)], "BOUND_EXTERNAL_WITNESS", {
         "witness_used": True,
-        "witness_match": False,
+        "witness_match": True,
         "binding_ruleset_id": witness_id,
         "binding_ruleset_updated_at": witness_updated_at,
-        "observed_ruleset_versions": [
-            {"id": rs.get("id"), "updated_at": rs.get("updated_at")}
-            for rs in rulesets
-        ],
-    }
+        "direct_actor_count": len(direct_actors),
+        "witness_actor_count": len(_witness_bypass_actors(witness)),
+    }, current_user
 
 
 def _check_bypass_policy(
@@ -216,26 +286,55 @@ def _check_bypass_policy(
     witness: dict[str, Any] | None = None,
 ) -> tuple[bool, dict[str, Any]]:
     policy = target.get("bypass_policy") or {}
-    observed_ids, assurance, witness_state = _resolve_bypass_observation(
-        rulesets, witness
+    observed_actors, assurance, witness_state, current_user_bypass = (
+        _resolve_bypass_observation(rulesets, witness)
     )
-    justified_ids = {
-        item
-        for item in (policy.get("justified_integration_ids") or [])
-        if isinstance(item, int)
-    }
-    unresolved = sorted(set(observed_ids) - justified_ids)
+
+    if "justified_actors" in policy:
+        justified_actors = [
+            actor
+            for raw in (policy.get("justified_actors") or [])
+            if (actor := _normalize_bypass_actor({
+                **raw,
+                "bypass_mode": raw.get("bypass_mode", "always"),
+            } if isinstance(raw, dict) else raw)) is not None
+        ]
+    else:
+        justified_actors = [
+            {
+                "actor_type": "Integration",
+                "actor_id": actor_id,
+                "bypass_mode": "always",
+            }
+            for actor_id in (policy.get("justified_integration_ids") or [])
+            if isinstance(actor_id, int)
+        ]
+
+    justified_keys = {_actor_key(actor) for actor in justified_actors}
+    unresolved_actors = [
+        actor
+        for actor in observed_actors
+        if _actor_key(actor) not in justified_keys
+    ]
     visibility_unproven = assurance == "TOKEN_VAZIO_STALE_OR_UNMATCHED_WITNESS"
-    return not unresolved and not visibility_unproven, {
-        "observed_always_bypass_integration_ids": observed_ids,
-        "justified_integration_ids": sorted(justified_ids),
-        "unresolved_integration_ids": unresolved,
+
+    return not unresolved_actors and not visibility_unproven, {
+        "observed_always_bypass_actors": observed_actors,
+        "observed_always_bypass_integration_ids": _integration_ids(observed_actors),
+        "justified_actors": sorted(justified_actors, key=_actor_key),
+        "justified_integration_ids": _integration_ids(justified_actors),
+        "unresolved_actors": unresolved_actors,
+        "unresolved_integration_ids": _integration_ids(unresolved_actors),
+        "current_user_can_bypass": current_user_bypass,
         "observation_assurance": assurance,
         "visibility_unproven": visibility_unproven,
         "witness_state": witness_state,
         "policy": policy.get(
-            "always_bypass_integrations",
-            "TOKEN_VAZIO_NO_EXPLICIT_BYPASS_POLICY",
+            "always_bypass_actors",
+            policy.get(
+                "always_bypass_integrations",
+                "TOKEN_VAZIO_NO_EXPLICIT_BYPASS_POLICY",
+            ),
         ),
     }
 
@@ -308,10 +407,11 @@ def evaluate(
     )
     bypass_ok, bypass_check = _check_bypass_policy(target, rulesets, witness)
 
+    bypass_actors = bypass_check["observed_always_bypass_actors"]
     bypass_ids = bypass_check["observed_always_bypass_integration_ids"]
     bypass_state = (
         "TOKEN_VAZIO_PENDING_IDENTITY_AND_JUSTIFICATION"
-        if bypass_check["unresolved_integration_ids"]
+        if bypass_check["unresolved_actors"]
         else (
             "TOKEN_VAZIO_STALE_OR_UNMATCHED_WITNESS"
             if bypass_check["visibility_unproven"]
@@ -356,10 +456,10 @@ def evaluate(
     elif not bypass_ok:
         failures.append(
             {
-                "code": "UNJUSTIFIED_ALWAYS_BYPASS_INTEGRATIONS",
-                "observed": bypass_check["observed_always_bypass_integration_ids"],
-                "justified": bypass_check["justified_integration_ids"],
-                "unresolved": bypass_check["unresolved_integration_ids"],
+                "code": "UNJUSTIFIED_ALWAYS_BYPASS_ACTORS",
+                "observed": bypass_check["observed_always_bypass_actors"],
+                "justified": bypass_check["justified_actors"],
+                "unresolved": bypass_check["unresolved_actors"],
                 "observation_assurance": bypass_check["observation_assurance"],
             }
         )
@@ -396,13 +496,13 @@ def evaluate(
     elif not bypass_ok:
         remediation["operations"].append(
             {
-                "kind": "IDENTIFY_OR_REMOVE_ALWAYS_BYPASS_INTEGRATIONS",
-                "integration_ids": bypass_check["unresolved_integration_ids"],
+                "kind": "IDENTIFY_JUSTIFY_OR_REMOVE_ALWAYS_BYPASS_ACTORS",
+                "actors": bypass_check["unresolved_actors"],
             }
         )
 
     return {
-        "schema": "rafaelia.provider_protection_receipt/v2",
+        "schema": "rafaelia.provider_protection_receipt/v3",
         "state": "OBSERVED",
         "gate": gate,
         "repository": repository,
@@ -417,7 +517,9 @@ def evaluate(
             "ruleset_names": [rs.get("name") for rs in rulesets],
             "digest_sha256": live_digest,
             "rule_types": observed_types,
+            "always_bypass_actors": bypass_actors,
             "always_bypass_integrations": bypass_ids,
+            "current_user_can_bypass": bypass_check["current_user_can_bypass"],
             "bypass_identity_state": bypass_state,
         },
         "checks": {
@@ -437,7 +539,7 @@ def evaluate(
                 "expected": status_expected,
                 "observed_candidates": status_observed,
             },
-            "always_bypass_integrations": {
+            "always_bypass_actors": {
                 "pass": bypass_ok,
                 **bypass_check,
             },
@@ -459,7 +561,7 @@ def evaluate(
 def render_markdown(receipt: dict[str, Any]) -> str:
     checks = receipt["checks"]
     lines = [
-        "# Provider Protection Receipt V2",
+        "# Provider Protection Receipt V3",
         "",
         f"- gate: **{receipt['gate']}**",
         f"- repository: `{receipt['repository']}`",
@@ -476,7 +578,7 @@ def render_markdown(receipt: dict[str, Any]) -> str:
         f"| required rule types | {'PASS' if checks['required_rule_types']['pass'] else 'FAIL'} |",
         f"| pull request policy | {'PASS' if checks['pull_request']['pass'] else 'FAIL'} |",
         f"| required status checks | {'PASS' if checks['required_status_checks']['pass'] else 'FAIL'} |",
-        f"| always-bypass integrations | {'PASS' if checks['always_bypass_integrations']['pass'] else 'FAIL'} |",
+        f"| always-bypass actors | {'PASS' if checks['always_bypass_actors']['pass'] else 'FAIL'} |",
         "",
     ]
 
@@ -548,7 +650,7 @@ def main() -> int:
         rulesets = fetch_live_rulesets(args.repository, args.default_branch, args.token)
         if not rulesets:
             receipt = {
-                "schema": "rafaelia.provider_protection_receipt/v2",
+                "schema": "rafaelia.provider_protection_receipt/v3",
                 "state": "BLOCKED",
                 "gate": "FAIL",
                 "repository": args.repository,
@@ -562,7 +664,9 @@ def main() -> int:
                     "ruleset_ids": [],
                     "digest_sha256": canonical_sha256([]),
                     "rule_types": [],
+                    "always_bypass_actors": [],
                     "always_bypass_integrations": [],
+                    "current_user_can_bypass": TOKEN_VAZIO,
                     "bypass_identity_state": TOKEN_VAZIO,
                 },
                 "checks": {},
@@ -599,7 +703,7 @@ def main() -> int:
 
     except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError) as exc:
         receipt = {
-            "schema": "rafaelia.provider_protection_receipt/v2",
+            "schema": "rafaelia.provider_protection_receipt/v3",
             "state": "ERROR",
             "gate": "FAIL",
             "repository": args.repository,
