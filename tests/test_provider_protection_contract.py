@@ -150,7 +150,7 @@ class ProviderProtectionContractTests(unittest.TestCase):
         )
         self.assertEqual(
             receipt["live_observation"]["current_user_can_bypass"],
-            ["always"],
+            "always",
         )
         codes = {item["code"] for item in receipt["failures"]}
         self.assertIn("UNJUSTIFIED_ALWAYS_BYPASS_ACTORS", codes)
@@ -334,6 +334,51 @@ class ProviderProtectionContractTests(unittest.TestCase):
         )
         codes = {item["code"] for item in receipt["failures"]}
         self.assertIn("BYPASS_VISIBILITY_UNPROVEN", codes)
+
+    def test_admin_plan_is_bound_to_current_witness_and_target(self) -> None:
+        import json
+
+        witness_path = (
+            self.root
+            / "governance/provider/PROVIDER_RULESET_EXTERNAL_WITNESS_20260926.v2.json"
+        )
+        plan_path = (
+            self.root
+            / "governance/provider/PROVIDER_RULESET_ADMIN_DELTA_20260926.v1.json"
+        )
+        witness = json.loads(witness_path.read_text(encoding="utf-8"))
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            plan["desired_policy_source"],
+            "governance/provider/PROVIDER_RULESET_TARGET.v3.json",
+        )
+        self.assertEqual(
+            plan["precondition"]["ruleset_id"],
+            witness["binding"]["ruleset_id"],
+        )
+        self.assertTrue(
+            self.mod._same_instant(
+                plan["precondition"]["ruleset_updated_at"],
+                witness["binding"]["ruleset_updated_at"],
+            )
+        )
+        self.assertEqual(plan["precondition"]["on_mismatch"], "ABORT_STALE_PLAN")
+        actors = {
+            (op.get("actor_type"), op.get("actor_id"))
+            for op in plan["operations"]
+            if op["kind"] == "REVIEW_ALWAYS_BYPASS_ACTOR"
+        }
+        self.assertEqual(
+            actors,
+            {
+                ("RepositoryRole", 5),
+                ("Integration", 20150),
+                ("Integration", 29110),
+                ("Integration", 73253),
+                ("Integration", 1144995),
+            },
+        )
 
     def test_target_and_live_are_hash_addressed_separately(self) -> None:
         receipt = self._evaluate(self._live_ruleset())
