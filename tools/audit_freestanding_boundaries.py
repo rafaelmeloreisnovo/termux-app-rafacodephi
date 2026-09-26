@@ -171,6 +171,9 @@ def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
     errors: list[str] = []
     with tempfile.TemporaryDirectory(prefix="raf-pure-core-") as td:
         outdir = Path(td)
+        policy = cfg.get("compile_policy", {})
+        warning_flags = policy.get("warnings", [])
+        codegen_flags = policy.get("codegen", [])
 
         vector_names = cfg["assembly_probe"].get("host_vector_sources")
         if vector_names is None:
@@ -191,7 +194,7 @@ def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
                 for arg in ("-I", str(ROOT / name))
             ]
             vector_compile = subprocess.run(
-                [clang, "-std=c11", "-O2", *include_args, str(vector_source), *extra_sources, "-o", str(vector_bin)],
+                [clang, "-std=c11", "-O2", *warning_flags, *include_args, str(vector_source), *extra_sources, "-o", str(vector_bin)],
                 cwd=ROOT,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -239,6 +242,8 @@ def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
                 "-fno-stack-protector",
                 "-fno-unwind-tables",
                 "-fno-asynchronous-unwind-tables",
+                *codegen_flags,
+                *warning_flags,
                 "-S",
                 str(source),
                 "-o",
@@ -271,6 +276,176 @@ def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
                         + " | ".join(branches[:12])
                     )
             results.append(item)
+    return results, errors
+
+
+def exact_elf_probe(cfg: dict, preserve: bool) -> tuple[list[dict], list[str]]:
+    probe = cfg.get("exact_elf_probe")
+    if not probe:
+        return [], ["exact ELF probe config missing"]
+    clang = shutil.which("clang")
+    readelf = shutil.which("readelf")
+    nm = shutil.which("nm")
+    missing = [name for name, tool in (("clang", clang), ("readelf", readelf), ("nm", nm)) if not tool]
+    if missing:
+        return [], ["exact ELF tools missing: " + ", ".join(missing)]
+
+    source = ROOT / probe["source"]
+    policy = cfg.get("compile_policy", {})
+    warning_flags = policy.get("warnings", [])
+    codegen_flags = policy.get("codegen", [])
+    roots = list(probe.get("roots", []))
+    entry = probe["entry"]
+    forbidden_sections = set(probe.get("forbidden_sections", []))
+    max_globals = int(probe.get("max_global_defined_symbols", len(roots)))
+
+    results: list[dict] = []
+    errors: list[str] = []
+    reports_dir = ROOT / "reports"
+    preserved_dir = reports_dir / "freestanding-elf"
+    if preserve:
+        preserved_dir.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory(prefix="raf-exact-elf-") as td:
+        outdir = Path(td)
+        for spec in probe["targets"]:
+            target = spec["target"]
+            name = spec["name"]
+            extra = list(spec.get("extra", []))
+            out = outdir / f"rafz-pure-{name}.elf"
+            retain = [f"-Wl,-u,{symbol}" for symbol in roots]
+            cmd = [
+                clang,
+                f"--target={target}",
+                *extra,
+                "-std=c11",
+                "-Oz",
+                "-ffreestanding",
+                "-nostdlib",
+                "-nostdinc",
+                "-fno-builtin",
+                "-fno-stack-protector",
+                "-fno-unwind-tables",
+                "-fno-asynchronous-unwind-tables",
+                "-fno-pic",
+                "-fno-pie",
+                "-fvisibility=hidden",
+                "-ffunction-sections",
+                "-fdata-sections",
+                *codegen_flags,
+                *warning_flags,
+                "-fuse-ld=lld",
+                "-static",
+                str(source),
+                *retain,
+                f"-Wl,-e,{entry},--gc-sections,--icf=all,--build-id=none,--no-undefined",
+                "-o",
+                str(out),
+            ]
+            cp = subprocess.run(
+                cmd,
+                cwd=ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=False,
+            )
+            item: dict = {
+                "target": target,
+                "name": name,
+                "link_exit": cp.returncode,
+                "sha256": None,
+                "bytes": None,
+                "interp": None,
+                "needed": [],
+                "undefined": [],
+                "relocations": [],
+                "global_defined_symbols": [],
+                "forbidden_sections_present": [],
+                "artifact_state": "TOKEN_VAZIO_ARTIFACT_UNBOUND",
+            }
+            if cp.returncode != 0:
+                errors.append(f"{target}: exact ELF link failed: {cp.stdout.strip()[:1600]}")
+                results.append(item)
+                continue
+
+            ph = subprocess.run([readelf, "-lW", str(out)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+            dyn = subprocess.run([readelf, "-dW", str(out)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+            syms = subprocess.run([nm, "-u", str(out)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+            defs = subprocess.run([nm, "-g", "--defined-only", str(out)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+            rels = subprocess.run([readelf, "-rW", str(out)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+            sect = subprocess.run([readelf, "-SW", str(out)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+
+            interp = " INTERP " in ph.stdout or "Requesting program interpreter" in ph.stdout
+            needed = [line.strip() for line in dyn.stdout.splitlines() if "(NEEDED)" in line]
+            undefined = [line.strip() for line in syms.stdout.splitlines() if line.strip()]
+            global_defined = []
+            for line in defs.stdout.splitlines():
+                parts = line.split()
+                if len(parts) >= 3:
+                    global_defined.append(parts[-1])
+            relocation_rows = []
+            for line in rels.stdout.splitlines():
+                stripped = line.strip()
+                if re.match(r"^[0-9a-fA-F]+\s+", stripped):
+                    relocation_rows.append(stripped)
+            forbidden_present = sorted(
+                section for section in forbidden_sections
+                if re.search(rf"\]\s+{re.escape(section)}(?:\s|$)", sect.stdout)
+            )
+
+            item.update({
+                "sha256": sha256(out),
+                "bytes": out.stat().st_size,
+                "interp": interp,
+                "needed": needed,
+                "undefined": undefined,
+                "relocations": relocation_rows,
+                "global_defined_symbols": sorted(global_defined),
+                "forbidden_sections_present": forbidden_present,
+            })
+
+            if interp:
+                errors.append(f"{target}: PT_INTERP detected")
+            if needed:
+                errors.append(f"{target}: DT_NEEDED detected")
+            if undefined:
+                errors.append(f"{target}: undefined external symbol(s): {' | '.join(undefined[:12])}")
+            if relocation_rows:
+                errors.append(f"{target}: final ELF relocation(s) remain: {' | '.join(relocation_rows[:12])}")
+            if forbidden_present:
+                errors.append(f"{target}: forbidden section(s): {', '.join(forbidden_present)}")
+            unexpected_globals = sorted(set(global_defined) - set(roots))
+            missing_roots = sorted(set(roots) - set(global_defined))
+            if unexpected_globals:
+                errors.append(f"{target}: unexpected global symbol(s): {', '.join(unexpected_globals)}")
+            if missing_roots:
+                errors.append(f"{target}: required retained symbol(s) missing: {', '.join(missing_roots)}")
+            if len(global_defined) > max_globals:
+                errors.append(f"{target}: global symbol surface {len(global_defined)} exceeds {max_globals}")
+
+            target_errors_before = len(errors)
+            # Re-evaluate only this item's structural predicates for a local state.
+            local_ok = (
+                not interp and not needed and not undefined and not relocation_rows
+                and not forbidden_present and not unexpected_globals and not missing_roots
+                and len(global_defined) <= max_globals
+            )
+            item["artifact_state"] = "STRUCTURAL_ELF_PASS" if local_ok else "FAIL"
+            if preserve:
+                shutil.copy2(out, preserved_dir / out.name)
+            results.append(item)
+
+    if preserve:
+        (reports_dir / "freestanding-exact-elf.json").write_text(
+            json.dumps({
+                "schema": "rafaelia.freestanding-exact-elf/v1",
+                "artifacts": results,
+                "claim_allowed": False,
+                "physical_android": "TOKEN_VAZIO",
+            }, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
     return results, errors
 
 
@@ -410,6 +585,7 @@ def main() -> int:
     parser.add_argument("--strict", action="store_true")
     parser.add_argument("--write-report", action="store_true")
     parser.add_argument("--compile-probe", action="store_true")
+    parser.add_argument("--exact-elf", action="store_true")
     args = parser.parse_args()
 
     cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
@@ -418,6 +594,11 @@ def main() -> int:
     assembly_errors: list[str] = []
     if args.compile_probe:
         assembly, assembly_errors = compile_probe(cfg)
+
+    exact_elf: list[dict] = []
+    exact_elf_errors: list[str] = []
+    if args.exact_elf:
+        exact_elf, exact_elf_errors = exact_elf_probe(cfg, args.write_report)
 
     token_vazio_contract, token_vazio_errors = validate_token_vazio_contract()
     source_alias_graph, source_alias_errors = validate_source_alias_graph()
@@ -436,12 +617,13 @@ def main() -> int:
         "focus_heap_call_files": report["focus_heap_call_files"],
         "pure_core_source_policy": report["pure_core_source_policy"],
         "assembly_probe": assembly,
+        "exact_elf_probe": exact_elf,
         "token_vazio_contract": token_vazio_contract,
         "source_alias_graph": source_alias_graph,
         "claim_allowed": False,
     }, indent=2, sort_keys=True))
 
-    errors = pure_errors + assembly_errors + token_vazio_errors + source_alias_errors
+    errors = pure_errors + assembly_errors + exact_elf_errors + token_vazio_errors + source_alias_errors
     for err in errors:
         print(f"ERROR: {err}", file=sys.stderr)
     if args.strict and errors:

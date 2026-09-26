@@ -2,10 +2,10 @@
   "schema": "rafaelia.freestanding-work-cursor/v1",
   "state": "ACTIVE_REVIEW_BRANCH",
   "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
-  "base_commit": "8004dfd5c112061579d54c6bf5a5afdd514ddfdf",
-  "branch": "audit/freestanding-atlas-token-vazio-v3-20260926",
-  "pull_request": 466,
-  "predecessor_head": "225f9a1772c9fc83026545d5720d1b3bde37462c",
+  "base_commit": "5cca02e357d023be593c7a7b2369e39ded7d2eb9",
+  "branch": "rafaelia/freestanding-bitraf42-v1-20260926",
+  "pull_request": 468,
+  "predecessor_head": "997af99a2be3c78d3ce5cbb3d4cbe6ffa3607e1e",
   "authority": {
     "pure_core": "rafaelia/src/main/cpp/zero",
     "platform_gate": [
@@ -68,28 +68,46 @@
     {
       "seq": 6,
       "commit": "9023b9f1542e27ab63eabd9107c54995d54652e4",
-      "receipt": "docs/receipts/FREESTANDING_CRC32C_FIXED_PASS_20260926.md",
+      "receipt": "docs/receipts/FREESTANDING_CRC32C_GATE_PASS_20260926.md",
       "state": "CI_SCOPE_PASS",
-      "evidence": "run 36274066348 / job 108494115794: CRC32C host vector compile/run=0; ARMv7/AArch64 branches=[]"
+      "evidence": "run 36274066348 / job 108494115794: CRC host vector compile_exit=0 run_exit=0; ARMv7/AArch64 compile_exit=0 branches=[]; pure-core source policy PASS"
+    },
+    {
+      "seq": 7,
+      "commit": "9d86c6d710a815982f1a81703659db00d79b8b40",
+      "receipt": "docs/receipts/FREESTANDING_BITRAF42_NATIVE_SAFETY_FAIL_01_20260926.md",
+      "state": "FAIL_CLOSED",
+      "evidence": "run 36277312669 / job 108502444769: exact protected rafz.h blob drift; BITRAF semantics not implicated"
+    },
+    {
+      "seq": 8,
+      "commit": "cc3f310b25e40a9668b5627fe834bf0063c9ee31",
+      "receipt": "docs/receipts/FREESTANDING_BITRAF42_GATE_PASS_20260926.md",
+      "state": "CI_SCOPE_PASS",
+      "evidence": "run 36277368782 / job 108502635508: host-native-pure_bitraf42_vectors compile_exit=0 run_exit=0; armv7a-none-eabi compile_exit=0 branches=[]; aarch64-none-elf compile_exit=0 branches=[]; pure_core_source_policy=PASS; RAFAELIA ZERO compatibility=PASS"
+    },
+    {
+      "seq": 9,
+      "commit": "997af99a2be3c78d3ce5cbb3d4cbe6ffa3607e1e",
+      "receipt": "docs/receipts/FREESTANDING_EXACT_ELF_GATE_PASS_20260926.md",
+      "state": "STRUCTURAL_ELF_PASS",
+      "evidence": "START HERE run 36277588450 / job 108503320657; artifact 10917464522; ARMv7 6532 bytes sha256 eb0040559275fadfba3f4117dbe7d0008f4d8fc555f31f26cf975af5507629d7; AArch64 5808 bytes sha256 4215646cbbcb54c7d6cc0808aa16cc7186b6aff0c34d0e6c8640ec0b58a86c26; no INTERP/NEEDED/UND/relocs/forbidden dynamic sections; 4 bounded globals"
     }
   ],
   "active_node": {
-    "id": "N070_BITRAF_FIXED_WIDTH",
-    "action": "extract authoritative lowlevel BitRAF-42 packing/field/validation semantics into RAFAELIA ZERO pure leaf and prove equivalence against app/src/main/cpp/lowlevel/raf_bitraf.c",
-    "success": "host roundtrip/equivalence PASS and ARMv7/AArch64 probe has no prohibited transfer; incompatible six-by-seven-bit generated spec is explicitly separated",
-    "failure": "field layout drift, 42-bit validation mismatch, helper/control transfer, or documentation conflates the two incompatible formats"
+    "id": "N090_PHYSICAL_ARM32_ARM64",
+    "state": "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING",
+    "action": "collect physical ARM32 and ARM64 device receipts against the same pure-core semantic vectors and bind device/toolchain/artifact/source identities without promoting host simulation",
+    "success": "both physical architectures execute the bounded pure-core vector suite with zero failures and receipts bind source commit, compiler identity, ABI/device identity and produced artifact hashes",
+    "failure": "missing architecture, vector mismatch, compiler/runtime drift, identity/hash gap, or hosted simulation presented as physical proof"
   },
-  "queued_nodes": [
-    [
-      "N080_ELF_EXACT",
-      "TOKEN_VAZIO_ARTIFACT_UNBOUND"
-    ],
-    [
-      "N090_PHYSICAL_ARM32_ARM64",
-      "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING"
-    ]
-  ],
+  "queued_nodes": [],
   "open_tokens": [
+    [
+      "G-FS-PHYSICAL-ARM-DUAL-001",
+      "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING",
+      "physical ARM32 + ARM64 pure-core vector receipts bound to exact source/toolchain/device identity"
+    ],
     [
       "G-FS-BLAKE3-001",
       "TOKEN_VAZIO_CONFORMANCE_UNPROVEN",

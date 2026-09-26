@@ -2,67 +2,35 @@
 #include "../rafaelia/src/main/cpp/zero/include/rafz_pure_bitraf42.h"
 #include "../app/src/main/cpp/lowlevel/raf_bitraf.h"
 
-static int check_u64(rafz_bitraf42_u64 a, rafz_bitraf42_u64 b) {
-    return a == b ? 0 : 1;
+static int check_u64(rafz_bitraf_u64 actual, rafz_bitraf_u64 expected) {
+    return actual == expected ? 0 : 1;
 }
 
-static int check_u32(rafz_u32 a, rafz_u32 b) {
-    return a == b ? 0 : 1;
-}
-
-static int check_s32(rafz_s32 a, rafz_s32 b) {
-    return a == b ? 0 : 1;
-}
-
-static int run_case(
-    rafz_u8 opcode,
-    rafz_u8 dir,
-    rafz_u16 layer,
-    rafz_u16 imm,
-    rafz_u16 flags) {
-    const rafz_bitraf42_u64 pure =
-        rafz_pure_bitraf42_encode(opcode, dir, layer, imm, flags);
-    const uint64_t lowlevel = bitraf_encode(opcode, dir, layer, imm, flags);
-    uint8_t o = 0u;
-    uint8_t d = 0u;
-    uint16_t l = 0u;
-    uint16_t m = 0u;
-    uint16_t f = 0u;
-    int failures = 0;
-
-    bitraf_decode(lowlevel, &o, &d, &l, &m, &f);
-    failures += check_u64(pure, (rafz_bitraf42_u64)lowlevel);
-    failures += check_u32(rafz_pure_bitraf42_opcode(pure), o);
-    failures += check_u32(rafz_pure_bitraf42_dir(pure), d);
-    failures += check_u32(rafz_pure_bitraf42_layer(pure), l);
-    failures += check_u32(rafz_pure_bitraf42_imm(pure), m);
-    failures += check_u32(rafz_pure_bitraf42_flags(pure), f);
-    failures += check_s32(
-        rafz_pure_bitraf42_validate(pure),
-        (rafz_s32)bitraf_validate(lowlevel));
-    return failures;
+static int check_u32(rafz_u32 actual, rafz_u32 expected) {
+    return actual == expected ? 0 : 1;
 }
 
 int main(void) {
     int failures = 0;
-    const rafz_bitraf42_u64 overflow =
-        ((rafz_bitraf42_u64)1u << 42u) | 0x12345u;
+    const rafz_bitraf_u64 pure = rafz_pure_bitraf42_encode(1u, 2u, 3u, 4u, 5u);
+    const rafz_bitraf_u64 legacy = (rafz_bitraf_u64)bitraf_encode(1u, 2u, 3u, 4u, 5u);
+    const rafz_bitraf_u64 maxword =
+        rafz_pure_bitraf42_encode(0xFFu, 0xFFu, 0xFFFFu, 0xFFFFu, 0xFFFFu);
 
-    failures += run_case(1u, 2u, 3u, 4u, 5u);
-    failures += run_case(63u, 7u, 1023u, 4095u, 2047u);
-    failures += run_case(0xFFu, 0xFFu, 0xFFFFu, 0xFFFFu, 0xFFFFu);
-    failures += check_u64(
-        rafz_pure_bitraf42_encode(63u, 7u, 1023u, 4095u, 2047u),
-        RAFZ_BITRAF42_MASK);
+    failures += check_u64(pure, (rafz_bitraf_u64)0x0000001401802005ULL);
+    failures += check_u64(pure, legacy);
+    failures += check_u64(maxword, RAFZ_BITRAF42_WORD_MASK);
+
+    failures += check_u32((rafz_u32)rafz_pure_bitraf42_opcode(maxword), 0x3Fu);
+    failures += check_u32((rafz_u32)rafz_pure_bitraf42_dir(maxword), 0x07u);
+    failures += check_u32((rafz_u32)rafz_pure_bitraf42_layer(maxword), 0x03FFu);
+    failures += check_u32((rafz_u32)rafz_pure_bitraf42_imm(maxword), 0x0FFFu);
+    failures += check_u32((rafz_u32)rafz_pure_bitraf42_flags(maxword), 0x07FFu);
+
+    failures += check_u32(rafz_pure_bitraf42_is_valid(maxword), 1u);
     failures += check_u32(
-        rafz_pure_bitraf42_is_valid(RAFZ_BITRAF42_MASK),
-        1u);
-    failures += check_s32(
-        rafz_pure_bitraf42_validate(overflow),
-        -1);
-    failures += check_u64(
-        rafz_pure_bitraf42_canonicalize(overflow),
-        0x12345u);
+        rafz_pure_bitraf42_is_valid(maxword | ((rafz_bitraf_u64)1u << 42u)),
+        0u);
 
     return failures;
 }

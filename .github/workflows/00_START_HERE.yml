@@ -275,7 +275,19 @@ jobs:
         run: ./scripts/validate_abi_policy_consistency.sh
 
       - name: Freestanding pure-core boundary
-        run: python3 tools/audit_freestanding_boundaries.py --strict --compile-probe --write-report
+        run: python3 tools/audit_freestanding_boundaries.py --strict --compile-probe --exact-elf --write-report
+
+      - name: Publicar evidência freestanding/ELF
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: freestanding-exact-elf-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            reports/freestanding-boundary-inventory.json
+            reports/freestanding-boundary-inventory.md
+            reports/freestanding-exact-elf.json
+            reports/freestanding-elf/
 
       - name: RAFAELIA ZERO compatibility
         run: python3 scripts/validate_rafaelia_zero_runtime.py
