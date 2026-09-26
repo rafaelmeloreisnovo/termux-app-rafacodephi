@@ -45,7 +45,7 @@ def header_value(text: str, key: str) -> str:
 def top_level_name(text: str) -> str:
     for line in text.splitlines():
         if line.startswith("name:"):
-            value = line.split(":", 1)[1].strip().strip(""'")
+            value = line.split(":", 1)[1].strip().strip(chr(34) + chr(39))
             return value or TOKEN_VAZIO
     return TOKEN_VAZIO
 
@@ -58,7 +58,7 @@ def _split_flow_sequence(value: str) -> set[str]:
     value = value.strip()
     if value.startswith("[") and value.endswith("]"):
         body = value[1:-1]
-        return {part.strip().strip(""'") for part in body.split(",") if part.strip()}
+        return {part.strip().strip(chr(34) + chr(39)) for part in body.split(",") if part.strip()}
     return set()
 
 
@@ -89,11 +89,11 @@ def detect_triggers(text: str) -> list[str]:
             elif inline_on.startswith("{") and inline_on.endswith("}"):
                 body = inline_on[1:-1]
                 for item in body.split(","):
-                    key = item.split(":", 1)[0].strip().strip(""'")
+                    key = item.split(":", 1)[0].strip().strip(chr(34) + chr(39))
                     if key:
                         found.add(key)
             else:
-                found.add(inline_on.strip(""'"))
+                found.add(inline_on.strip(chr(34) + chr(39)))
             continue
 
         # Block form: only immediate children of top-level on are accepted.
