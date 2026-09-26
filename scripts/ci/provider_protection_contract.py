@@ -219,12 +219,21 @@ def _resolve_bypass_observation(
     witness: dict[str, Any] | None,
 ) -> tuple[list[dict[str, Any]], str, dict[str, Any], Any]:
     direct_actors = _always_bypass_actors(rulesets)
-    direct_user_bypass = sorted(
+    direct_user_values = sorted(
         {
             value
             for rs in rulesets
             if isinstance((value := rs.get("current_user_can_bypass")), str)
         }
+    )
+    direct_user_bypass: Any = (
+        TOKEN_VAZIO
+        if not direct_user_values
+        else (
+            direct_user_values[0]
+            if len(direct_user_values) == 1
+            else direct_user_values
+        )
     )
 
     if witness is None:
@@ -235,7 +244,7 @@ def _resolve_bypass_observation(
         ), {
             "witness_used": False,
             "witness_match": False,
-        }, direct_user_bypass or TOKEN_VAZIO
+        }, direct_user_bypass
 
     binding = witness.get("binding") or {}
     witness_id = binding.get("ruleset_id")
@@ -255,7 +264,7 @@ def _resolve_bypass_observation(
                 {"id": rs.get("id"), "updated_at": rs.get("updated_at")}
                 for rs in rulesets
             ],
-        }, direct_user_bypass or TOKEN_VAZIO
+        }, direct_user_bypass
 
     merged = {_actor_key(actor): actor for actor in direct_actors}
     for actor in _witness_bypass_actors(witness):
@@ -268,7 +277,7 @@ def _resolve_bypass_observation(
     current_user = (
         witness_user_bypass
         if witness_user_bypass != TOKEN_VAZIO
-        else (direct_user_bypass or TOKEN_VAZIO)
+        else (direct_user_bypass)
     )
     return [merged[key] for key in sorted(merged)], "BOUND_EXTERNAL_WITNESS", {
         "witness_used": True,
@@ -410,11 +419,11 @@ def evaluate(
     bypass_actors = bypass_check["observed_always_bypass_actors"]
     bypass_ids = bypass_check["observed_always_bypass_integration_ids"]
     bypass_state = (
-        "TOKEN_VAZIO_PENDING_IDENTITY_AND_JUSTIFICATION"
-        if bypass_check["unresolved_actors"]
+        "TOKEN_VAZIO_STALE_OR_UNMATCHED_WITNESS"
+        if bypass_check["visibility_unproven"]
         else (
-            "TOKEN_VAZIO_STALE_OR_UNMATCHED_WITNESS"
-            if bypass_check["visibility_unproven"]
+            "TOKEN_VAZIO_PENDING_IDENTITY_AND_JUSTIFICATION"
+            if bypass_check["unresolved_actors"]
             else "NONE_UNRESOLVED"
         )
     )
@@ -559,43 +568,65 @@ def evaluate(
 
 
 def render_markdown(receipt: dict[str, Any]) -> str:
-    checks = receipt["checks"]
+    checks = receipt.get("checks") or {}
+
+    def check_state(key: str) -> str:
+        return "PASS" if (checks.get(key) or {}).get("pass") is True else "FAIL"
+
     lines = [
         "# Provider Protection Receipt V3",
         "",
-        f"- gate: **{receipt['gate']}**",
-        f"- repository: `{receipt['repository']}`",
-        f"- default branch: `{receipt['default_branch']}`",
-        f"- target SHA-256: `{receipt['target']['sha256']}`",
-        f"- live digest SHA-256: `{receipt['live_observation']['digest_sha256']}`",
-        f"- live ruleset IDs: `{receipt['live_observation']['ruleset_ids']}`",
-        f"- bypass identity state: **{receipt['live_observation']['bypass_identity_state']}**",
-        "",
-        "## Gates",
-        "",
-        "| Gate | State |",
-        "|---|---|",
-        f"| required rule types | {'PASS' if checks['required_rule_types']['pass'] else 'FAIL'} |",
-        f"| pull request policy | {'PASS' if checks['pull_request']['pass'] else 'FAIL'} |",
-        f"| required status checks | {'PASS' if checks['required_status_checks']['pass'] else 'FAIL'} |",
-        f"| always-bypass actors | {'PASS' if checks['always_bypass_actors']['pass'] else 'FAIL'} |",
-        "",
+        f"- state: **{receipt.get('state', TOKEN_VAZIO)}**",
+        f"- gate: **{receipt.get('gate', 'FAIL')}**",
+        f"- repository: `{receipt.get('repository', TOKEN_VAZIO)}`",
+        f"- default branch: `{receipt.get('default_branch', TOKEN_VAZIO)}`",
     ]
 
-    if receipt["failures"]:
-        lines.extend(["## Failures", ""])
-        for failure in receipt["failures"]:
-            lines.append(f"- **{failure['code']}**")
-        lines.append("")
+    target = receipt.get("target") or {}
+    live = receipt.get("live_observation") or {}
+    if target:
+        lines.append(f"- target SHA-256: `{target.get('sha256', TOKEN_VAZIO)}`")
+    if live:
+        lines.extend(
+            [
+                f"- live digest SHA-256: `{live.get('digest_sha256', TOKEN_VAZIO)}`",
+                f"- live ruleset IDs: `{live.get('ruleset_ids', [])}`",
+                f"- bypass identity state: **{live.get('bypass_identity_state', TOKEN_VAZIO)}**",
+            ]
+        )
 
+    if checks:
+        lines.extend(
+            [
+                "",
+                "## Gates",
+                "",
+                "| Gate | State |",
+                "|---|---|",
+                f"| required rule types | {check_state('required_rule_types')} |",
+                f"| pull request policy | {check_state('pull_request')} |",
+                f"| required status checks | {check_state('required_status_checks')} |",
+                f"| always-bypass actors | {check_state('always_bypass_actors')} |",
+            ]
+        )
+
+    failures = receipt.get("failures") or []
+    if failures:
+        lines.extend(["", "## Failures", ""])
+        for failure in failures:
+            lines.append(f"- **{failure.get('code', 'UNKNOWN_FAILURE')}**")
+
+    remediation = receipt.get("remediation") or {}
     lines.extend(
         [
+            "",
             "## Boundary",
             "",
             "- `TARGET_FILE != LIVE_PROVIDER_STATE`",
+            "- `WITNESS != LIVE_PROVIDER_STATE`",
             "- `WORKFLOW_PASS != PROVIDER_ENFORCEMENT`",
             "- `claim_allowed=false`",
-            f"- provider apply state: **{receipt['remediation']['apply_state']}**",
+            f"- provider apply state: **{remediation.get('apply_state', TOKEN_VAZIO)}**",
             "",
         ]
     )
