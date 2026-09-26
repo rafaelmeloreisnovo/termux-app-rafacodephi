@@ -139,5 +139,7 @@
       "Provider Protection run 36273253772"
     ]
   ],
-  "claim_allowed": false
+  "claim_allowed": false,
+  "merged_predecessor_pr": 465,
+  "merged_predecessor_commit": "5cca02e357d023be593c7a7b2369e39ded7d2eb9"
 }
