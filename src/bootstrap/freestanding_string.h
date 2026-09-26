@@ -2,7 +2,8 @@
  * freestanding_string.h — Freestanding string utilities
  *
  * Replaces string.h (memcpy, memset, strlen, etc.) without external dependencies.
- * Minimal, branchless implementations suitable for bootstrap context.
+ * Bootstrap support implementation. Variable-length helpers intentionally
+ * use control flow and are NOT classified as PURE_CORE.
  *
  * No external dependencies: pure freestanding C, no libc.
  */
