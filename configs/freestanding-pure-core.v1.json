@@ -86,5 +86,39 @@
       "-fno-optimize-sibling-calls"
     ],
     "note": "Warnings are execution gates; sibling/tail-call optimization is disabled for pure-core probes."
+  },
+  "exact_elf_probe": {
+    "source": "tests/pure_core_probe.c",
+    "targets": [
+      {
+        "target": "armv7a-none-eabi",
+        "name": "armv7",
+        "extra": [
+          "-marm"
+        ]
+      },
+      {
+        "target": "aarch64-none-elf",
+        "name": "aarch64",
+        "extra": []
+      }
+    ],
+    "roots": [
+      "rafz_pure_core_probe",
+      "rafz_pure_blake3_single_probe",
+      "rafz_pure_crc32c8_probe",
+      "rafz_pure_bitraf42_probe"
+    ],
+    "entry": "rafz_pure_core_probe",
+    "forbidden_sections": [
+      ".interp",
+      ".dynamic",
+      ".dynsym",
+      ".dynstr",
+      ".plt",
+      ".got.plt"
+    ],
+    "max_global_defined_symbols": 4,
+    "note": "Structural ELF proof only. Entry is a retained pure-core symbol, not a runtime boot contract."
   }
 }

@@ -5,7 +5,7 @@
   "base_commit": "5cca02e357d023be593c7a7b2369e39ded7d2eb9",
   "branch": "rafaelia/freestanding-bitraf42-v1-20260926",
   "pull_request": 468,
-  "predecessor_head": "cc3f310b25e40a9668b5627fe834bf0063c9ee31",
+  "predecessor_head": "1fb080f65c4066b88c677382853e8d7b2591962e",
   "authority": {
     "pure_core": "rafaelia/src/main/cpp/zero",
     "platform_gate": [
@@ -89,10 +89,11 @@
   ],
   "active_node": {
     "id": "N080_ELF_EXACT",
-    "state": "TOKEN_VAZIO_ARTIFACT_UNBOUND",
+    "state": "IMPLEMENTED_UNTESTED",
     "action": "materialize exact pure-core ELF artifacts for ARMv7 and AArch64, then audit interpreter, dynamic dependencies, undefined symbols, relocations, exported symbols, sections and artifact hashes without claiming physical execution",
     "success": "each target links without libc/CRT; PT_INTERP absent; DT_NEEDED absent; undefined external symbols absent; unexpected dynamic relocations absent; exported symbol surface bounded; receipt binds exact artifact hashes",
-    "failure": "linker helper/runtime dependency, dynamic interpreter/dependency, undefined external symbol, unexpected relocation/symbol/section drift, or artifact identity unbound"
+    "failure": "linker helper/runtime dependency, dynamic interpreter/dependency, undefined external symbol, unexpected relocation/symbol/section drift, or artifact identity unbound",
+    "note": "exact ELF structural builder/auditor wired into START HERE policy lane; artifacts retained as CI evidence bundle for 14 days; exact-head gate pending"
   },
   "queued_nodes": [
     [
