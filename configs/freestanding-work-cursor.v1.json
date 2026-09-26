@@ -5,7 +5,7 @@
   "base_commit": "8004dfd5c112061579d54c6bf5a5afdd514ddfdf",
   "branch": "audit/freestanding-atlas-token-vazio-v3-20260926",
   "pull_request": 465,
-  "predecessor_head": "dab7c580d1bc21f8ca75b950d9b09a3ab6d04844",
+  "predecessor_head": "c055c2841fac1d7a1c7b808c858d2a570b6d0695",
   "authority": {
     "pure_core": "rafaelia/src/main/cpp/zero",
     "platform_gate": [
@@ -57,19 +57,22 @@
       "receipt": "docs/receipts/FREESTANDING_BLAKE3_SINGLE_KAT_PASS_20260926.md",
       "state": "BOUNDED_CONFORMANCE_PASS",
       "evidence": "run 36273719073 / job 108492364111: official BLAKE3 single-block KAT 0/1/63/64 run_exit=0; ARMv7/AArch64 branches=[]"
+    },
+    {
+      "seq": 5,
+      "commit": "c055c2841fac1d7a1c7b808c858d2a570b6d0695",
+      "receipt": "docs/receipts/SOURCE_ALIAS_GRAPH_GATE_PASS_20260926.md",
+      "state": "CI_SCOPE_PASS",
+      "evidence": "run 36273837084 / job 108492683126: 29 groups, 43 excess, 5 canonical, 24 authority-blocked, errors=[]"
     }
   ],
   "active_node": {
-    "id": "N050_ALIAS_GRAPH",
-    "action": "bind all exact duplicate source blobs to canonical authority or an explicit typed authority gap without deleting history",
-    "success": "every duplicate group has exact blob identity and canonical/ambiguous/unbound state; validator proves all listed paths retain the recorded blob",
-    "failure": "a path/hash mismatch, staging path is silently promoted, or ambiguous authority is guessed"
+    "id": "N060_FIXED_BLOCK_CRC",
+    "action": "extract fixed-block CRC32C leaf from authoritative RAFAELIA ZERO semantics, using compile-time specialization/unrolling without changing public streaming semantics",
+    "success": "vectors match authoritative rafz_crc32c for bounded blocks and ARMv7/AArch64 probe has no prohibited nonterminal transfers",
+    "failure": "polynomial/init/final-xor mismatch, helper call/control transfer regression, or public semantics drift"
   },
   "queued_nodes": [
-    [
-      "N060_FIXED_BLOCK_CRC",
-      "TOKEN_VAZIO_NOT_RUN"
-    ],
     [
       "N070_BITRAF_FIXED_WIDTH",
       "TOKEN_VAZIO_NOT_RUN"
