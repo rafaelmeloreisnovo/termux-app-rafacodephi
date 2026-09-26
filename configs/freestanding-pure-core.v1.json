@@ -26,7 +26,6 @@
     "rafaelia/src/main/cpp/zero"
   ],
   "pure_core_files": [
-    "rafaelia/src/main/cpp/zero/include/rafz.h",
     "rafaelia/src/main/cpp/zero/include/rafz_pure_primitives.h",
     "rafaelia/src/main/cpp/zero/include/rafz_pure_q16.h",
     "rafaelia/src/main/cpp/zero/include/rafz_pure_blake3_single.h",

@@ -4,7 +4,7 @@
   "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
   "base_commit": "5cca02e357d023be593c7a7b2369e39ded7d2eb9",
   "branch": "rafaelia/freestanding-bitraf42-v1-20260926",
-  "pull_request": null,
+  "pull_request": 468,
   "predecessor_head": "5cca02e357d023be593c7a7b2369e39ded7d2eb9",
   "authority": {
     "pure_core": "rafaelia/src/main/cpp/zero",
@@ -78,7 +78,8 @@
     "state": "IMPLEMENTED_UNTESTED",
     "action": "extract the documented 42-bit BITRAF instruction pack/extract semantics into RAFAELIA ZERO fixed-width leaves and compare against the current low-level codec",
     "success": "host legacy-equivalence vectors run_exit=0 and ARMv7/AArch64 probe has no prohibited nonterminal transfers under warning-as-error policy",
-    "failure": "bit layout drift, width-mask mismatch, hidden helper/control transfer, warning regression, or legacy semantic mismatch"
+    "failure": "bit layout drift, width-mask mismatch, hidden helper/control transfer, warning regression, or legacy semantic mismatch",
+    "note": "policy false-positive review: rafz.h remains a base ABI header, while runtime-control lexical scanning stays scoped to executable pure leaves; compile flags are consumed from configs/freestanding-pure-core.v1.json"
   },
   "queued_nodes": [
     [
