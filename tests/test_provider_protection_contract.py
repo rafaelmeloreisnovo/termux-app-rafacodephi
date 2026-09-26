@@ -149,9 +149,17 @@ class ProviderProtectionContractTests(unittest.TestCase):
             [20150, 29110, 73253, 1144995],
         )
 
+    def test_iso8601_timezone_equivalence_is_same_instant(self) -> None:
+        self.assertTrue(
+            self.mod._same_instant(
+                "2026-08-31T04:41:31.206-03:00",
+                "2026-08-31T07:41:31.206Z",
+            )
+        )
+
     def test_version_bound_witness_recovers_filtered_bypass_observation(self) -> None:
         live = self._live_ruleset()
-        live[0]["updated_at"] = "2026-08-31T04:41:31.206-03:00"
+        live[0]["updated_at"] = "2026-08-31T07:41:31.206Z"
         witness = {
             "schema": "rafaelia.provider_ruleset_external_witness/v1",
             "binding": {
