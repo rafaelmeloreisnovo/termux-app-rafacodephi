@@ -1,8 +1,9 @@
 #include "proot_syscall_bridge.h"
 
 /*
- * RAFCODEPHI freestanding runtime gate.
+ * RAFCODEPHI PLATFORM_GATE runtime boundary.
  *
+ * It is libc-free but syscall/OS-ABI dependent, therefore not PURE_CORE.
  * This is deliberately smaller than PRoot/Ninja/pkg themselves. It is the
  * dependency-free control boundary that probes and execs those package
  * payloads without libc, malloc, fork, threads, stdio, JNI or shell-command

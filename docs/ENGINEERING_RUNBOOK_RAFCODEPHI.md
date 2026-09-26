@@ -1,5 +1,10 @@
 # ENGINEERING_RUNBOOK_RAFCODEPHI
 
+> **Estado documental:** complementar/histórico. O baseline `3f97ef42...`
+> registrado abaixo não representa o head atual. Para operação corrente, começar
+> em `docs/ENGINEERING_SYSTEM_RUNBOOK.md`, `docs/STATUS.md` e
+> `docs/FREESTANDING_PURE_CORE_INVENTORY_V2.md`.
+
 > Repository: `rafaelmeloreisnovo/termux-app-rafacodephi`
 > Initial documentation audit baseline: `b207970fc7a8630a534956cb544350cfd61ba33a`
 > Reconciled with current `master`: `3f97ef42ae9756b9f7fb4965b941b5b3048fc8d1` (PR #415 freestanding gate; no overlap with prior 12-file documentation patch).

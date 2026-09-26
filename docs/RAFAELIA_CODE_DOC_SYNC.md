@@ -11,6 +11,7 @@ Esta matriz deve começar pelos claims que orientam leitura, build, runtime e au
 | runbook operacional principal é `docs/ENGINEERING_SYSTEM_RUNBOOK.md` | `README.md`, `docs/README.md`, `INDICE_DOCUMENTACAO.md`, arquivo do runbook | navegação documental atualizada para o hub e runbook canônico | PROVADO ESTRUTURAL | remover rotas antigas como entrada principal |
 | bootstrap/pkg ainda não equivalem a backend apt real completo | `docs/STATUS.md`, `docs/RUNTIME_TRUTH_TABLE.md`, `scripts/build_rafaelia_bootstraps.sh`, logs de `:app:generateRafcodephiBootstraps` | `./run_tests.sh` falhou em `:app:generateRafcodephiBootstraps` com `LEGACY_PREFIX_BINARY_RISK` | PARCIAL | manter gap explícito; não promover para pronto sem artifact real |
 | camada de coerência documental deve fechar o ciclo hub → status → runbook → runtime truth → sync report | `docs/README.md`, `docs/STATUS.md`, `docs/RAFAELIA_CODE_DOC_SYNC_REPORT.md` | links e leitura por objetivo revisados nesta trilha documental | PROVADO ESTRUTURAL | atualizar a rota curta sempre que um documento canônico mudar |
+| `PURE_CORE` não contém syscall/JNI/heap/headers hosted nem controle de runtime na folha auditada | `rafaelia/src/main/cpp/zero/include/rafz_pure_primitives.h`, `tools/audit_freestanding_boundaries.py`, `tests/pure_core_probe.c` | run `36245846563`, job `108414818810`: source policy PASS; ARMv7/AArch64 compile_exit=0 e zero transferências não terminais detectadas | PROVADO NO ESCOPO DA SONDA | não estender para ELF inteiro ou aparelho; ambos permanecem TOKEN_VAZIO |
 
 ## Inventário ampliado
 
