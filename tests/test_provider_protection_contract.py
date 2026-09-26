@@ -15,7 +15,7 @@ class ProviderProtectionContractTests(unittest.TestCase):
         cls.mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.mod)
 
-        cls.target_path = cls.root / "governance/provider/PROVIDER_RULESET_TARGET_20260831.v1.json"
+        cls.target_path = cls.root / "governance/provider/PROVIDER_RULESET_TARGET.v2.json"
         cls.contract = cls.mod.load_target(cls.target_path)
 
     def _live_ruleset(self, *, include_status: bool = True, code_owner: bool = False):
@@ -73,7 +73,7 @@ class ProviderProtectionContractTests(unittest.TestCase):
     def test_target_schema_is_canonical(self) -> None:
         self.assertEqual(
             self.contract["schema"],
-            "rafaelia.provider_ruleset_target/v1",
+            "rafaelia.provider_ruleset_target/v2",
         )
         self.assertFalse(self.contract["claim_allowed"])
 
