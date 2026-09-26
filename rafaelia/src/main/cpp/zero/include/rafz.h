@@ -14,7 +14,6 @@
 typedef __UINT8_TYPE__  rafz_u8;
 typedef __UINT16_TYPE__ rafz_u16;
 typedef __UINT32_TYPE__ rafz_u32;
-typedef __UINT64_TYPE__ rafz_u64;
 typedef __INT32_TYPE__  rafz_s32;
 typedef __UINTPTR_TYPE__ rafz_uptr;
 
@@ -165,7 +164,6 @@ typedef struct RAFZ_ALIGN(RAFZ_CACHELINE) rafz_image {
 RAFZ_STATIC_ASSERT(u8_is_1, sizeof(rafz_u8) == 1u);
 RAFZ_STATIC_ASSERT(u16_is_2, sizeof(rafz_u16) == 2u);
 RAFZ_STATIC_ASSERT(u32_is_4, sizeof(rafz_u32) == 4u);
-RAFZ_STATIC_ASSERT(u64_is_8, sizeof(rafz_u64) == 8u);
 RAFZ_STATIC_ASSERT(frame_is_40, RAFZ_FRAME_HEADER_BYTES == 40u);
 
 #ifdef __cplusplus

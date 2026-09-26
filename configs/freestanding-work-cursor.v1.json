@@ -71,6 +71,13 @@
       "receipt": "docs/receipts/FREESTANDING_CRC32C_GATE_PASS_20260926.md",
       "state": "CI_SCOPE_PASS",
       "evidence": "run 36274066348 / job 108494115794: CRC host vector compile_exit=0 run_exit=0; ARMv7/AArch64 compile_exit=0 branches=[]; pure-core source policy PASS"
+    },
+    {
+      "seq": 7,
+      "commit": "9d86c6d710a815982f1a81703659db00d79b8b40",
+      "receipt": "docs/receipts/FREESTANDING_BITRAF42_NATIVE_SAFETY_FAIL_01_20260926.md",
+      "state": "FAIL_CLOSED",
+      "evidence": "run 36277312669 / job 108502444769: exact protected rafz.h blob drift; BITRAF semantics not implicated"
     }
   ],
   "active_node": {
@@ -79,7 +86,7 @@
     "action": "extract the documented 42-bit BITRAF instruction pack/extract semantics into RAFAELIA ZERO fixed-width leaves and compare against the current low-level codec",
     "success": "host legacy-equivalence vectors run_exit=0 and ARMv7/AArch64 probe has no prohibited nonterminal transfers under warning-as-error policy",
     "failure": "bit layout drift, width-mask mismatch, hidden helper/control transfer, warning regression, or legacy semantic mismatch",
-    "note": "policy false-positive review: rafz.h remains a base ABI header, while runtime-control lexical scanning stays scoped to executable pure leaves; compile flags are consumed from configs/freestanding-pure-core.v1.json"
+    "note": "Native Safety fail closed on protected rafz.h hash; base header restored exactly and u64 alias localized to the BITRAF42 leaf. Exact-head rerun pending."
   },
   "queued_nodes": [
     [
