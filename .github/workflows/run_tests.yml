@@ -2,7 +2,7 @@
 # ci_abis: n/a
 name: Unit tests
 
-# Canonical invocation: 00-rafaelia-control-plane.yml.
+# Canonical invocation: 00_START_HERE.yml.
 # Manual dispatch remains available for compatibility and focused debugging.
 on:
   workflow_call:
