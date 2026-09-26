@@ -1,114 +1,182 @@
-# RAFAELIA Workflow Control Plane V1
+# RAFCODEΦ Workflow Control Plane V3 — START HERE
 
 ## Objetivo
 
-Transformar a coleção de workflows em uma operação previsível para dois públicos ao mesmo tempo:
+Transformar a superfície de GitHub Actions em uma operação previsível para dois públicos simultaneamente:
 
-1. **usuário leigo:** escolhe uma intenção e acompanha uma sequência curta, numerada e legível;
-2. **mantenedor técnico:** continua tendo workflows especialistas, artefatos, gates, hashes, logs e fail-closed.
+1. **iniciante/operador:** escolhe uma rota humana pronta e recebe um resultado curto;
+2. **engenharia/auditoria:** mantém especialistas isolados, gates independentes, hashes, logs, receipts e fronteiras epistemológicas.
 
-O ponto de entrada humano é:
+Entrada humana canônica:
 
-`Actions → 🧭 RAFAELIA — Executar / Diagnosticar → Run workflow`
+`.github/workflows/00_START_HERE.yml`
 
-Não é necessário escolher entre dezenas de arquivos YAML para o fluxo principal.
+Nome visível: **00 START HERE — RAFCODEΦ Enterprise**.
 
-## Quatro opções humanas
+## UX: um combo, somente combinações válidas
 
-| Opção | Quando usar | O que executa |
+O GitHub Actions oferece inputs `choice`, mas não oferece dependência dinâmica entre dois dropdowns que desabilite valores incompatíveis. Por isso V3 evita a combinação livre `mission × ndk_lane`.
+
+O operador escolhe **uma rota pronta**:
+
+| Rota | Uso humano | Especialistas exigidos |
 |---|---|---|
-| `diagnostico` | “Quero saber se o software básico está saudável” | inventário dos workflows + testes/smoke |
-| `arm32-v7` | “Quero gerar/validar o APK do aparelho ARM32” | inventário + lane `armeabi-v7a` |
-| `bootstrap-arm32` | “Quero avançar o Bootstrap Wizard do ARM32” | inventário + ARM32 + contrato do bootstrap + gate de evidência APK |
-| `completo-seguro` | “Quero a cobertura principal antes de avançar” | inventário + testes + ARM32 + bootstrap + evidência |
+| `01_DIAGNOSTICO` | “O básico está saudável?” | inventário + política + testes |
+| `02_ARM32_CANONICO` | “Validar/build ARM32 normal” | ARM32 canonical |
+| `03_ARM32_NDK29` | “Validar/build ARM32 com NDK29” | ARM32 NDK29 |
+| `04_BOOTSTRAP_CANONICO` | “Avançar bootstrap ARM32 normal” | ARM32 + bootstrap + evidence |
+| `05_BOOTSTRAP_NDK29` | “Avançar bootstrap via NDK29” | ARM32 NDK29 + bootstrap + evidence |
+| `06_EVIDENCIAS` | “Auditar artefato/integração” | APK evidence + E2E |
+| `07_E2E` | “Executar apenas contrato E2E” | E2E |
+| `08_VECTRA_V3` | “Validar metrologia/benchmark em CI” | Vectra V3 |
+| `09_ENTERPRISE` | “Preflight principal amplo” | tests + ARM32 + bootstrap + evidence + E2E + Vectra |
 
-Para ARM32 existem duas lanes preservadas:
+`strict_governance` é ortogonal: quando ligado, metadados ausentes deixam de ser warning e passam a bloquear a rodada.
 
-- `canonical`: contrato atual do projeto;
-- `ndk29`: compatibilidade explícita com NDK 29.
+## Regra do gate final
 
-## Arquitetura
+O gate final não pergunta “todos os jobs ficaram verdes?”. Ele pergunta:
 
-```text
-                         usuário
-                            │
-                            ▼
-             00-rafaelia-control-plane.yml
-                            │
-             ┌──────────────┼──────────────┐
-             ▼              ▼              ▼
-       workflow map      software       ARM32 v7
-             │           tests              │
-             │                         reusable core
-             │                         /           \
-             │                canonical           NDK29
-             │
-             ├──────────── bootstrap contract
-             └──────────── APK evidence contract
-                            │
-                            ▼
-                       Ω summary
+`quais jobs esta rota declarou obrigatórios e qual foi o resultado observado de cada um?`
+
+Isso evita o bug clássico em que um job opcional legitimamente `skipped` é tratado como falha obrigatória.
+
+Semântica V3:
+
+- `success` = etapa solicitada executou e passou;
+- `failure` = etapa solicitada executou e falhou;
+- `skipped` = **NOT_REQUESTED**, salvo se a rota explicitamente exigir a etapa;
+- `TOKEN_VAZIO` = evidência ausente/desconhecida; nunca zero e nunca PASS.
+
+O receipt é escrito **antes** do passo que encerra o workflow com falha. Assim, uma rodada bloqueada continua auditável.
+
+## Responsabilidades
+
+| Papel | Pilar |
+|---|---|
+| Operador | resolve uma rota válida |
+| Auditor/CI | inventário de workflows, metadados e referências |
+| Segurança/Arquitetura | ABI, pure-core, runtime collector read-only |
+| QA | testes de software |
+| Build engineer | ARM32 canonical/NDK29 |
+| Bootstrap engineer | contrato de bootstrap |
+| Evidence/custody | APK evidence gate |
+| Integration engineer | E2E proof contract |
+| Metrologia | Vectra V3 CI |
+| Auditor final | receipt + fail-closed gate |
+
+Falha de um pilar requerido não é compensada por PASS de outro.
+
+## Correções estruturais desta versão
+
+### 1. Trigger inline
+
+O scanner anterior reconhecia majoritariamente:
+
+```yaml
+on:
+  workflow_dispatch:
 ```
 
-### Pilar ARM32 reutilizável
+mas podia perder:
 
-A duplicação histórica entre `compatibility-arm32.yml` e `compatibility-arm32-ndk29.yml` foi removida do caminho pesado. Ambos são wrappers compatíveis sobre:
+```yaml
+on: [push, pull_request, workflow_dispatch]
+```
 
-`_reusable-arm32-compat.yml`
+Isso fazia um workflow manual poder ser inventariado como autônomo. O scanner V2 reconhece formas block, scalar, sequence e flow-map sem depender de parser YAML 1.1, que pode interpretar `on` como boolean.
 
-Assim, build, inspeção ELF, verificação de assinatura, presença de `bootstrap-arm.zip`, checksums e receipt são mantidos em um único lugar.
+### 2. `ci_track=artifact`
 
-## Governança de todos os YML
+O validador shell já aceitava `artifact`, enquanto o scanner Python não aceitava. V3 alinha ambos para o mesmo contrato:
 
-`scripts/ci/workflow_control_plane.py` percorre **todo** `.github/workflows/*.yml` e `.yaml` e gera:
+`debug | internal | official | artifact | ops | deprecated`.
 
-- `reports/workflow-control-plane.json` — inventário auditável;
-- `reports/workflow-control-plane.md` — visão humana;
+### 3. strict consistente
+
+`strict_governance=true` é propagado para:
+
+- inventário Python;
+- auditoria de referências Actions;
+- validador de metadados shell.
+
+Não existe mais uma parte da rodada “strict” executando silenciosamente em compatibilidade.
+
+## Vectra V3
+
+`.github/workflows/vectra-grade-benchmarks.yml` agora é também `workflow_call`, permitindo orquestração tipada pelo START HERE.
+
+A geração/upload de artefatos continua `always()` para preservar diagnóstico após falha. Para evitar ambiguidade, o workflow emite:
+
+`dist/vectra-benchmarks/CI_EVIDENCE_ENVELOPE.json`
+
+com:
+
+- resultados observados de toolchain/contratos/build/geração;
+- gate `PASS|FAIL`;
+- `claim_allowed=false`;
+- `pa_physical_execution=TOKEN_VAZIO`;
+- `energy_validity=TOKEN_VAZIO`;
+- `cross_device_comparability=TOKEN_VAZIO`;
+- fronteira `CI artifacts != PA physical device measurement`.
+
+Portanto:
+
+`artifact diagnostic != PA receipt != governed n>=30 series != cross-device claim`.
+
+## Governança do conjunto inteiro
+
+`scripts/ci/workflow_control_plane.py` percorre todo `.github/workflows/*.yml|*.yaml` e gera:
+
+- `reports/workflow-control-plane.json`;
+- `reports/workflow-control-plane.md`;
 - SHA-256 por workflow;
-- `ci_track` e `ci_abis` ou `TOKEN_VAZIO` quando ausentes;
-- triggers observados;
-- capacidade `workflow_call`/`workflow_dispatch`;
-- presença de `permissions`, `concurrency` e `timeout-minutes`;
-- classificação operacional: `orchestratable`, `specialist-manual`, `autonomous-specialist`, `legacy-compatibility`.
+- `ci_track` e `ci_abis` ou `TOKEN_VAZIO`;
+- triggers;
+- `workflow_call` / `workflow_dispatch`;
+- presença de `permissions`, `concurrency`, `timeout-minutes`;
+- papel operacional.
 
-Nada ausente é convertido silenciosamente em PASS. Lacuna permanece `TOKEN_VAZIO`/warning até ser tratada.
+Descoberta ou callability não é execução.
 
-## Regra de não regressão
+## Fronteira de evidência
 
-A migração é **compatível e incremental**:
+`SOURCE != ARTIFACT != EXECUTION != EVIDENCE != CLAIM`
 
-- workflows antigos não são apagados em lote;
-- nomes de checks importantes são preservados por wrappers quando possível;
-- o control plane não transforma CI em prova física;
-- falha de especialista exigido faz o resumo Ω falhar;
-- `skipped` significa “não solicitado”, não PASS;
-- `device_runtime_proof` permanece `TOKEN_VAZIO` até existir receipt real do Android.
+Em particular:
 
-## UX do resultado
+- CI PASS não é receipt físico Android;
+- build ARM32 PASS não prova runtime no handset;
+- Vectra CI PASS não prova PA física;
+- `n>=30` não prova sozinho estabilidade ambiental ou comparabilidade;
+- urgência não autoriza bypass de gate;
+- `claim_allowed=false` permanece até o gate correspondente existir.
 
-O usuário não precisa ler logs inteiros primeiro. A última etapa `Ω Resultado simples` mostra:
+## Receipt START HERE
 
-- o que foi pedido;
-- o que executou;
-- `success`, `failure` ou `skipped` por pilar;
-- qual etapa vermelha deve ser aberta;
-- lembrete de que CI não substitui o aparelho físico.
+Toda rodada produz `rafcodephi-start-here-receipt.json` contendo:
 
-## Próxima fase de refatoração
+- repositório, SHA, run id e attempt;
+- route id / mission / lane;
+- jobs exigidos;
+- resultados observados;
+- jobs obrigatórios que falharam;
+- boundary flags;
+- estados físicos `TOKEN_VAZIO`;
+- gate final.
 
-Depois que V1 estiver verde, a migração dos especialistas restantes pode seguir por famílias, sem big-bang:
+## Migração
 
-1. build/release;
-2. bootstrap/package;
-3. benchmarks;
-4. Vectras/IPC/provider;
-5. auditoria/governança;
-6. legados/deprecated.
+A refatoração é incremental:
 
-Para cada família: `inventariar → extrair reusable → converter wrappers → provar equivalência → deprecar duplicata → remover somente após janela definida`.
+`inventariar → extrair reusable → orquestrar → provar equivalência → deprecar duplicata → remover somente com evidência`.
 
-## Claim boundary
+Workflows especialistas continuam úteis para diagnóstico focal. O START HERE é o **front door**, não um monólito que reimplementa especialistas.
 
-`workflow orchestration != build proof != APK proof != device proof != release certification`.
+## R3
 
-O control plane melhora operação e rastreabilidade; não altera essa fronteira.
+`F_ok`: rota única, combos inválidos removidos, gate route-aware, scanner corrigido, Vectra callable/evidence-envelope.
+
+`F_gap`: o CI desta mudança precisa executar; PA físico, série n>=30, energia calibrada e comparabilidade entre aparelhos continuam fora do alcance do runner hospedado.
+
+`F_next`: observar CI do PR; só depois considerar integração em `master`.
