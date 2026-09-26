@@ -43,7 +43,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/ci/provider_protection_contract.py \
-            --target governance/provider/PROVIDER_RULESET_TARGET_20260831.v1.json \
+            --target governance/provider/PROVIDER_RULESET_TARGET.v2.json \
             --default-branch master \
             --json reports/provider-protection-receipt.json \
             --markdown reports/provider-protection-receipt.md
