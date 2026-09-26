@@ -5,7 +5,7 @@
   "base_commit": "8004dfd5c112061579d54c6bf5a5afdd514ddfdf",
   "branch": "audit/freestanding-atlas-token-vazio-v3-20260926",
   "pull_request": 465,
-  "predecessor_head": "2a015af1bff0950b58d5274c1096ffc67f6228ad",
+  "predecessor_head": "dab7c580d1bc21f8ca75b950d9b09a3ab6d04844",
   "authority": {
     "pure_core": "rafaelia/src/main/cpp/zero",
     "platform_gate": [
@@ -50,19 +50,22 @@
       "receipt": "docs/receipts/TOKEN_VAZIO_GATE_PASS_20260926.md",
       "state": "CI_SCOPE_PASS",
       "evidence": "run 36273429715 / job 108491587952: dictionary_types=27; dictionary_errors=[]; pure-core PASS"
+    },
+    {
+      "seq": 4,
+      "commit": "dab7c580d1bc21f8ca75b950d9b09a3ab6d04844",
+      "receipt": "docs/receipts/FREESTANDING_BLAKE3_SINGLE_KAT_PASS_20260926.md",
+      "state": "BOUNDED_CONFORMANCE_PASS",
+      "evidence": "run 36273719073 / job 108492364111: official BLAKE3 single-block KAT 0/1/63/64 run_exit=0; ARMv7/AArch64 branches=[]"
     }
   ],
   "active_node": {
-    "id": "N040_BLAKE3_ROUTE",
-    "action": "bind Termux hashing path to authoritative BLAKE3 producer through exact source provenance and KAT before any consumer migration",
-    "success": "placeholder cannot be mistaken for conformant BLAKE3; authoritative source/ref/KAT route is explicit and reproducible",
-    "failure": "consumer still can reach placeholder as cryptographic integrity implementation or canonical source/KAT cannot be bound"
+    "id": "N050_ALIAS_GRAPH",
+    "action": "bind all exact duplicate source blobs to canonical authority or an explicit typed authority gap without deleting history",
+    "success": "every duplicate group has exact blob identity and canonical/ambiguous/unbound state; validator proves all listed paths retain the recorded blob",
+    "failure": "a path/hash mismatch, staging path is silently promoted, or ambiguous authority is guessed"
   },
   "queued_nodes": [
-    [
-      "N050_ALIAS_GRAPH",
-      "TOKEN_VAZIO_PROVENANCE_UNBOUND"
-    ],
     [
       "N060_FIXED_BLOCK_CRC",
       "TOKEN_VAZIO_NOT_RUN"
