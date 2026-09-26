@@ -149,6 +149,73 @@ class ProviderProtectionContractTests(unittest.TestCase):
             [20150, 29110, 73253, 1144995],
         )
 
+    def test_version_bound_witness_recovers_filtered_bypass_observation(self) -> None:
+        live = self._live_ruleset()
+        live[0]["updated_at"] = "2026-08-31T04:41:31.206-03:00"
+        witness = {
+            "schema": "rafaelia.provider_ruleset_external_witness/v1",
+            "binding": {
+                "ruleset_id": 21908888,
+                "ruleset_updated_at": "2026-08-31T04:41:31.206-03:00",
+            },
+            "observed": {
+                "always_bypass_integrations": [20150, 29110, 73253, 1144995]
+            },
+        }
+        receipt = self.mod.evaluate(
+            self.contract,
+            live,
+            target_path=str(self.target_path.relative_to(self.root)),
+            target_sha256=self.mod.file_sha256(self.target_path),
+            repository="rafaelmeloreisnovo/termux-app-rafacodephi",
+            default_branch="master",
+            witness=witness,
+        )
+        self.assertEqual(receipt["gate"], "FAIL")
+        self.assertEqual(
+            receipt["checks"]["always_bypass_integrations"]["observation_assurance"],
+            "BOUND_EXTERNAL_WITNESS",
+        )
+        self.assertEqual(
+            receipt["checks"]["always_bypass_integrations"]["unresolved_integration_ids"],
+            [20150, 29110, 73253, 1144995],
+        )
+        codes = {item["code"] for item in receipt["failures"]}
+        self.assertIn("UNJUSTIFIED_ALWAYS_BYPASS_INTEGRATIONS", codes)
+
+    def test_stale_witness_becomes_token_vazio_and_blocks(self) -> None:
+        live = self._live_ruleset()
+        live[0]["updated_at"] = "2026-09-27T00:00:00Z"
+        witness = {
+            "schema": "rafaelia.provider_ruleset_external_witness/v1",
+            "binding": {
+                "ruleset_id": 21908888,
+                "ruleset_updated_at": "2026-08-31T04:41:31.206-03:00",
+            },
+            "observed": {
+                "always_bypass_integrations": [20150, 29110, 73253, 1144995]
+            },
+        }
+        receipt = self.mod.evaluate(
+            self.contract,
+            live,
+            target_path=str(self.target_path.relative_to(self.root)),
+            target_sha256=self.mod.file_sha256(self.target_path),
+            repository="rafaelmeloreisnovo/termux-app-rafacodephi",
+            default_branch="master",
+            witness=witness,
+        )
+        self.assertEqual(receipt["gate"], "FAIL")
+        self.assertTrue(
+            receipt["checks"]["always_bypass_integrations"]["visibility_unproven"]
+        )
+        self.assertEqual(
+            receipt["checks"]["always_bypass_integrations"]["observation_assurance"],
+            "TOKEN_VAZIO_STALE_OR_UNMATCHED_WITNESS",
+        )
+        codes = {item["code"] for item in receipt["failures"]}
+        self.assertIn("BYPASS_VISIBILITY_UNPROVEN", codes)
+
     def test_target_and_live_are_hash_addressed_separately(self) -> None:
         receipt = self._evaluate(self._live_ruleset())
         self.assertRegex(receipt["target"]["sha256"], r"^[0-9a-f]{64}$")
