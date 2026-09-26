@@ -103,7 +103,37 @@ Saídas:
 - `reports/freestanding-boundary-inventory.json`
 - `reports/freestanding-boundary-inventory.md`
 
-## 7. Próximas extrações
+## 7. Evidência CI observada — PR #463
+
+Commit auditado pelo gate específico: `38e02d288b24a48bbbc0fe0909af541442f05bd0`.
+
+Control plane: run `36245846563`; job `108414818810` concluiu `success`.
+
+```text
+pure_core_source_policy=PASS
+source_files_total=357
+source_unique_blobs=314
+exact_duplicate_excess=43
+focus_files=84
+focus_heap_call_files=0
+armv7a-none-eabi: compile_exit=0, non_terminal_transfers=0
+aarch64-none-elf: compile_exit=0, non_terminal_transfers=0
+rafaelia.zero.android-runtime-validation.v3: PASS
+runtime_receipt.v2: PASS / HOST_SIMULATION
+claim_allowed=false
+physical_android=TOKEN_VAZIO
+whole_binary_no_branch=TOKEN_VAZIO
+```
+
+O incremento 355→357 e 312→314 em relação ao baseline é explicado pelos dois
+novos artefatos de fonte do próprio gate: a folha pure-core e a sonda de teste.
+
+O workflow `Provider Protection Gate` permanece FAIL por configuração do ruleset
+do `master` (ausência de `required_status_checks` e requisito de resolução de
+threads esperado pelo gate). Esse estado é governança externa ao delta C/ASM e
+não é usado para promover nem rebaixar a propriedade técnica da folha pure-core.
+
+## 8. Próximas extrações
 
 A ordem de menor risco é:
 
@@ -120,10 +150,11 @@ especializadas por tamanho fixo.
 ## R3
 
 `F_ok`: autoridade do core separada; inventário reproduzível; primeira folha
-pure-core definida; gate de fonte e assembly especificado.
+pure-core definida; source policy PASS; probes ARMv7/AArch64 compilados com
+zero transferências não terminais detectadas; compatibilidade RAFAELIA ZERO PASS.
 
-`F_gap`: whole-binary no-branch; ELF exato do PR; execução física Android;
-deduplicação semântica dos 43 excedentes.
+`F_gap`: whole-binary no-branch; auditoria do ELF final; execução física Android;
+deduplicação semântica dos 43 excedentes; ruleset provider-protection fora do delta.
 
-`F_next`: executar CI do commit exato, consumir a assembly ARMv7/AArch64,
-então promover somente propriedades observadas.
+`F_next`: extrair a próxima folha de tamanho/semântica fixa, adicionar gate ELF
+(PT_INTERP/DT_NEEDED/undefined/relocations) e gerar receipt físico quando houver aparelho.
