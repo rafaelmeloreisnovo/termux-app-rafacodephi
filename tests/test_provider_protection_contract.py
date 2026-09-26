@@ -15,7 +15,7 @@ class ProviderProtectionContractTests(unittest.TestCase):
         cls.mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.mod)
 
-        cls.target_path = cls.root / "governance/provider/PROVIDER_RULESET_TARGET.v2.json"
+        cls.target_path = cls.root / "governance/provider/PROVIDER_RULESET_TARGET.v3.json"
         cls.contract = cls.mod.load_target(cls.target_path)
 
     def _live_ruleset(self, *, include_status: bool = True, code_owner: bool = False):
@@ -73,7 +73,7 @@ class ProviderProtectionContractTests(unittest.TestCase):
     def test_target_schema_is_canonical(self) -> None:
         self.assertEqual(
             self.contract["schema"],
-            "rafaelia.provider_ruleset_target/v2",
+            "rafaelia.provider_ruleset_target/v3",
         )
         self.assertFalse(self.contract["claim_allowed"])
 
@@ -119,19 +119,62 @@ class ProviderProtectionContractTests(unittest.TestCase):
             "TOKEN_VAZIO_PENDING_IDENTITY_AND_JUSTIFICATION",
         )
         codes = {item["code"] for item in receipt["failures"]}
-        self.assertIn("UNJUSTIFIED_ALWAYS_BYPASS_INTEGRATIONS", codes)
+        self.assertIn("UNJUSTIFIED_ALWAYS_BYPASS_ACTORS", codes)
         operations = {item["kind"] for item in receipt["remediation"]["operations"]}
-        self.assertIn("IDENTIFY_OR_REMOVE_ALWAYS_BYPASS_INTEGRATIONS", operations)
+        self.assertIn("IDENTIFY_JUSTIFY_OR_REMOVE_ALWAYS_BYPASS_ACTORS", operations)
         self.assertFalse(receipt["claim_allowed"])
+
+    def test_repository_role_always_bypass_is_not_ignored(self) -> None:
+        live = self._live_ruleset()
+        live[0]["bypass_actors"] = [
+            {
+                "actor_type": "RepositoryRole",
+                "actor_id": 5,
+                "bypass_mode": "always",
+            }
+        ]
+        live[0]["current_user_can_bypass"] = "always"
+
+        receipt = self._evaluate(live)
+
+        self.assertEqual(receipt["gate"], "FAIL")
+        self.assertEqual(
+            receipt["checks"]["always_bypass_actors"]["unresolved_actors"],
+            [
+                {
+                    "actor_type": "RepositoryRole",
+                    "actor_id": 5,
+                    "bypass_mode": "always",
+                }
+            ],
+        )
+        self.assertEqual(
+            receipt["live_observation"]["current_user_can_bypass"],
+            "always",
+        )
+        codes = {item["code"] for item in receipt["failures"]}
+        self.assertIn("UNJUSTIFIED_ALWAYS_BYPASS_ACTORS", codes)
 
     def test_current_live_shape_exposes_all_provider_dimensions(self) -> None:
         live = self._live_ruleset(include_status=False, code_owner=True)
         pr = next(rule for rule in live[0]["rules"] if rule["type"] == "pull_request")
         pr["parameters"]["allowed_merge_methods"] = ["merge", "squash", "rebase"]
         live[0]["bypass_actors"] = [
-            {"actor_type": "Integration", "actor_id": actor_id, "bypass_mode": "always"}
-            for actor_id in (20150, 29110, 73253, 1144995)
+            {
+                "actor_type": "RepositoryRole",
+                "actor_id": 5,
+                "bypass_mode": "always",
+            },
+            *[
+                {
+                    "actor_type": "Integration",
+                    "actor_id": actor_id,
+                    "bypass_mode": "always",
+                }
+                for actor_id in (20150, 29110, 73253, 1144995)
+            ],
         ]
+        live[0]["current_user_can_bypass"] = "always"
         receipt = self._evaluate(live)
         self.assertEqual(receipt["gate"], "FAIL")
         codes = {item["code"] for item in receipt["failures"]}
@@ -141,12 +184,28 @@ class ProviderProtectionContractTests(unittest.TestCase):
                 "MISSING_RULE_TYPES",
                 "PULL_REQUEST_POLICY_MISMATCH",
                 "REQUIRED_STATUS_CHECKS_MISMATCH",
-                "UNJUSTIFIED_ALWAYS_BYPASS_INTEGRATIONS",
+                "UNJUSTIFIED_ALWAYS_BYPASS_ACTORS",
             },
         )
         self.assertEqual(
-            receipt["checks"]["always_bypass_integrations"]["unresolved_integration_ids"],
+            receipt["checks"]["always_bypass_actors"]["unresolved_integration_ids"],
             [20150, 29110, 73253, 1144995],
+        )
+        self.assertEqual(
+            receipt["checks"]["always_bypass_actors"]["unresolved_actors"][0],
+            {
+                "actor_type": "Integration",
+                "actor_id": 20150,
+                "bypass_mode": "always",
+            },
+        )
+        self.assertIn(
+            {
+                "actor_type": "RepositoryRole",
+                "actor_id": 5,
+                "bypass_mode": "always",
+            },
+            receipt["checks"]["always_bypass_actors"]["unresolved_actors"],
         )
 
     def test_iso8601_timezone_equivalence_is_same_instant(self) -> None:
@@ -181,15 +240,67 @@ class ProviderProtectionContractTests(unittest.TestCase):
         )
         self.assertEqual(receipt["gate"], "FAIL")
         self.assertEqual(
-            receipt["checks"]["always_bypass_integrations"]["observation_assurance"],
+            receipt["checks"]["always_bypass_actors"]["observation_assurance"],
             "BOUND_EXTERNAL_WITNESS",
         )
         self.assertEqual(
-            receipt["checks"]["always_bypass_integrations"]["unresolved_integration_ids"],
+            receipt["checks"]["always_bypass_actors"]["unresolved_integration_ids"],
             [20150, 29110, 73253, 1144995],
         )
         codes = {item["code"] for item in receipt["failures"]}
-        self.assertIn("UNJUSTIFIED_ALWAYS_BYPASS_INTEGRATIONS", codes)
+        self.assertIn("UNJUSTIFIED_ALWAYS_BYPASS_ACTORS", codes)
+
+    def test_v2_witness_preserves_repository_role_and_integrations(self) -> None:
+        live = self._live_ruleset()
+        live[0]["updated_at"] = "2026-09-26T23:05:43.907Z"
+        witness = {
+            "schema": "rafaelia.provider_ruleset_external_witness/v2",
+            "binding": {
+                "ruleset_id": 21908888,
+                "ruleset_updated_at": "2026-09-26T20:05:43.907-03:00",
+            },
+            "observed": {
+                "always_bypass_actors": [
+                    {
+                        "actor_type": "RepositoryRole",
+                        "actor_id": 5,
+                        "bypass_mode": "always",
+                    },
+                    {
+                        "actor_type": "Integration",
+                        "actor_id": 20150,
+                        "bypass_mode": "always",
+                    },
+                ],
+                "current_user_can_bypass": "always",
+            },
+        }
+        receipt = self.mod.evaluate(
+            self.contract,
+            live,
+            target_path=str(self.target_path.relative_to(self.root)),
+            target_sha256=self.mod.file_sha256(self.target_path),
+            repository="rafaelmeloreisnovo/termux-app-rafacodephi",
+            default_branch="master",
+            witness=witness,
+        )
+        self.assertEqual(receipt["gate"], "FAIL")
+        self.assertEqual(
+            receipt["checks"]["always_bypass_actors"]["observation_assurance"],
+            "BOUND_EXTERNAL_WITNESS",
+        )
+        self.assertIn(
+            {
+                "actor_type": "RepositoryRole",
+                "actor_id": 5,
+                "bypass_mode": "always",
+            },
+            receipt["checks"]["always_bypass_actors"]["unresolved_actors"],
+        )
+        self.assertEqual(
+            receipt["checks"]["always_bypass_actors"]["current_user_can_bypass"],
+            "always",
+        )
 
     def test_stale_witness_becomes_token_vazio_and_blocks(self) -> None:
         live = self._live_ruleset()
@@ -215,14 +326,59 @@ class ProviderProtectionContractTests(unittest.TestCase):
         )
         self.assertEqual(receipt["gate"], "FAIL")
         self.assertTrue(
-            receipt["checks"]["always_bypass_integrations"]["visibility_unproven"]
+            receipt["checks"]["always_bypass_actors"]["visibility_unproven"]
         )
         self.assertEqual(
-            receipt["checks"]["always_bypass_integrations"]["observation_assurance"],
+            receipt["checks"]["always_bypass_actors"]["observation_assurance"],
             "TOKEN_VAZIO_STALE_OR_UNMATCHED_WITNESS",
         )
         codes = {item["code"] for item in receipt["failures"]}
         self.assertIn("BYPASS_VISIBILITY_UNPROVEN", codes)
+
+    def test_admin_plan_is_bound_to_current_witness_and_target(self) -> None:
+        import json
+
+        witness_path = (
+            self.root
+            / "governance/provider/PROVIDER_RULESET_EXTERNAL_WITNESS_20260926.v2.json"
+        )
+        plan_path = (
+            self.root
+            / "governance/provider/PROVIDER_RULESET_ADMIN_DELTA_20260926.v1.json"
+        )
+        witness = json.loads(witness_path.read_text(encoding="utf-8"))
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            plan["desired_policy_source"],
+            "governance/provider/PROVIDER_RULESET_TARGET.v3.json",
+        )
+        self.assertEqual(
+            plan["precondition"]["ruleset_id"],
+            witness["binding"]["ruleset_id"],
+        )
+        self.assertTrue(
+            self.mod._same_instant(
+                plan["precondition"]["ruleset_updated_at"],
+                witness["binding"]["ruleset_updated_at"],
+            )
+        )
+        self.assertEqual(plan["precondition"]["on_mismatch"], "ABORT_STALE_PLAN")
+        actors = {
+            (op.get("actor_type"), op.get("actor_id"))
+            for op in plan["operations"]
+            if op["kind"] == "REVIEW_ALWAYS_BYPASS_ACTOR"
+        }
+        self.assertEqual(
+            actors,
+            {
+                ("RepositoryRole", 5),
+                ("Integration", 20150),
+                ("Integration", 29110),
+                ("Integration", 73253),
+                ("Integration", 1144995),
+            },
+        )
 
     def test_target_and_live_are_hash_addressed_separately(self) -> None:
         receipt = self._evaluate(self._live_ruleset())

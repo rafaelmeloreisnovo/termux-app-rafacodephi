@@ -1,149 +1,137 @@
-# Provider Protection — Enterprise Runbook V2
+# Provider Protection — Enterprise Runbook V3
 
 ## Purpose
 
-This runbook closes the boundary between repository policy-as-code and the live
-GitHub ruleset protecting `master`.
-
-The canonical chain is:
+Close the boundary between repository policy-as-code and the live GitHub ruleset
+protecting `master`.
 
 ```text
-PROVIDER_RULESET_TARGET.v2.json
+PROVIDER_RULESET_TARGET.v3.json
         ↓ desired policy
 provider_protection_contract.py
-        ↓ evaluate live provider state
+        ↓ live provider observation + version-bound witness
 provider-protection-gate.yml
-        ↓ publish receipt before fail-closed exit
+        ↓ receipt published before fail-closed exit
 00_START_HERE.yml
         ↓
 10_PROVIDER or 09_ENTERPRISE
 ```
 
-The chain deliberately preserves:
-
-`TARGET_FILE != LIVE_PROVIDER_STATE != OBSERVATION_RECEIPT != CLAIM`.
+`TARGET != LIVE_PROVIDER_STATE != WITNESS != RECEIPT != CLAIM`.
 
 ## Authority
 
 | Layer | Authority |
 |---|---|
-| desired provider policy | `governance/provider/PROVIDER_RULESET_TARGET.v2.json` |
-| historical 2026-08-31 observation | `governance/provider/PROVIDER_RULESET_TARGET_20260831.v1.json` |
+| desired provider policy | `governance/provider/PROVIDER_RULESET_TARGET.v3.json` |
+| V2 historical policy | `governance/provider/PROVIDER_RULESET_TARGET.v2.json` |
+| current external bypass witness | `governance/provider/PROVIDER_RULESET_EXTERNAL_WITNESS_20260926.v2.json` |
+| administrative mutation plan | `governance/provider/PROVIDER_RULESET_ADMIN_DELTA_20260926.v1.json` |
 | evaluator | `scripts/ci/provider_protection_contract.py` |
-| offline regression vectors | `tests/test_provider_protection_contract.py` |
-| live execution | `.github/workflows/provider-protection-gate.yml` |
+| regression vectors | `tests/test_provider_protection_contract.py` |
+| live workflow | `.github/workflows/provider-protection-gate.yml` |
 | human router | `.github/workflows/00_START_HERE.yml` |
-| bypass witness | `governance/provider/PROVIDER_RULESET_EXTERNAL_WITNESS_20260926.v1.json` |\n| evidence | `provider-protection-receipt-<run>-<attempt>` artifact |
 
-V1 is intentionally retained because it contains historical observation data.
-It is not the current desired-state source.
+Historical targets and witnesses remain append-only evidence and are not silently
+rewritten into the current policy.
 
-## Current live gap observed on 2026-09-26
+## V3 change: bypass identity is typed
 
-GitHub ruleset `21908888` is active on the default branch and currently exposes:
+V2 modeled only Integration IDs. The current provider read exposes an additional
+always-bypass actor:
 
-- rules: `deletion`, `non_fast_forward`, `required_signatures`,
-  `pull_request`, `code_quality`, `required_linear_history`;
+- `RepositoryRole:5`;
+- `Integration:20150`;
+- `Integration:29110`;
+- `Integration:73253`;
+- `Integration:1144995`.
+
+The live observation also reports `current_user_can_bypass=always`.
+
+V3 therefore defines bypass identity as `(actor_type, actor_id)`. An always-bypass
+actor of any type must be explicitly identified and justified or removed. Unknown
+or stale visibility is never promoted to PASS.
+
+## Version-bound witness
+
+The current witness is bound to:
+
+- ruleset ID `21908888`;
+- ruleset updated instant `2026-09-26T20:05:43.907-03:00`;
+- default branch condition `~DEFAULT_BRANCH`.
+
+The evaluator compares ISO-8601 instants rather than timestamp strings. If the
+ruleset ID or update instant changes, the witness becomes stale and the gate emits
+`BYPASS_VISIBILITY_UNPROVEN` / `TOKEN_VAZIO_STALE_OR_UNMATCHED_WITNESS`.
+
+This prevents both false absence and permanent stale evidence.
+
+## Current provider gaps
+
+At the bound provider version, ruleset `21908888` still has:
+
 - no `required_status_checks` rule;
 - pull-request policy with `require_code_owner_review=true`;
-- merge methods `merge,squash,rebase`;
-- four `always` integration bypass actors:
-  `20150`, `29110`, `73253`, `1144995`.
+- merge methods `merge,squash,rebase` rather than target `squash,rebase`;
+- five unreviewed always-bypass actors listed above.
 
-The V2 target requires:
+V3 requires:
 
-- `required_status_checks`;
-- `strict_required_status_checks_policy=true`;
+- strict required status checks;
 - required context `provider-protection`;
-- `require_code_owner_review=false` until an independently governed CODEOWNERS
-  path exists;
-- review-thread resolution enabled;
-- allowed merge methods `squash,rebase`;
-- every always-bypass integration explicitly identified and justified, or removed.
+- pull-request parameters aligned with the V3 target;
+- every always-bypass actor justified or removed.
 
-Therefore current provider state is expected to remain **FAIL** until the live
-ruleset is changed.
+Provider state therefore remains **FAIL** until administration is reconciled.
 
-## Witness bridge for bypass visibility\n\nThe default GitHub Actions token and an external provider read can expose different\nviews of bypass actors. V2 does not resolve that contradiction by preference.\n\nThe external witness records only the bypass scope and is bound to:\n\n- `ruleset_id=21908888`;\n- `ruleset_updated_at=2026-08-31T04:41:31.206-03:00`.\n\nIf the live ruleset has the same ID and the same `updated_at` instant (ISO-8601 normalized across timezone offsets), the witness may supplement\nthe runner observation. If either value changes, the witness is stale and the\ngate produces `BYPASS_VISIBILITY_UNPROVEN` / `TOKEN_VAZIO_STALE_OR_UNMATCHED_WITNESS`.\n\nThis prevents both false absence and permanent stale evidence.\n\n## Why bypass is blocking
+## Administrative delta
 
-An always-bypass integration can cross a rule that is otherwise described as
-required. An unidentified bypass therefore cannot be represented as PASS.
+The evaluator is intentionally read-only. The machine-readable administrative
+plan is fail-stale: it may be applied only if the provider still reports the exact
+ruleset ID and `updated_at` recorded in its precondition.
 
-V2 uses:
+Minimum plan:
 
-`TOKEN_VAZIO_PENDING_IDENTITY_AND_JUSTIFICATION`
+1. add strict `required_status_checks`;
+2. require `provider-protection`;
+3. align pull-request policy and merge methods;
+4. identify and justify or remove `RepositoryRole:5`;
+5. identify and justify or remove each Integration bypass actor;
+6. execute `00 START HERE → 10_PROVIDER`;
+7. accept closure only when the exact receipt has `gate=PASS`.
 
-for unresolved bypass identity and the provider gate fails closed when such an
-actor is observed.
+If the precondition no longer matches, abort and generate a successor observation
+and plan. Do not force an old plan onto a changed provider state.
 
-Adding an actor ID to `justified_integration_ids` is not a cosmetic fix. A
-future justification must include the integration identity, operational need,
-scope, owner, revocation path, and evidence that the bypass is necessary.
+## Receipt semantics
 
-## Administrative delta required
+A failed provider gate still publishes JSON and Markdown evidence before the final
+non-zero exit. V3 receipts include:
 
-The evaluator is read-only. It does **not** mutate GitHub administration state.
-
-The provider administrator must reconcile the live default-branch ruleset with
-the V2 target. The minimum current delta is:
-
-1. add `required_status_checks`;
-2. require context `provider-protection`;
-3. enable strict required-status-check policy;
-4. align the pull-request parameters with the V2 target;
-5. remove `merge` if the V2 merge-method policy remains authoritative;
-6. identify and justify or remove each always-bypass integration;
-7. rerun `Actions → 00 START HERE — RAFCODEΦ Enterprise → 10_PROVIDER`;
-8. only accept closure when the published V2 receipt has `gate=PASS`.
-
-If the live policy should intentionally differ, update the target through a
-reviewable repository delta **before** changing the provider. Do not change the
-evaluator merely to fit the live state.
-
-## Receipt contract
-
-The evaluator publishes JSON and Markdown receipts containing:
-
-- target path + SHA-256;
-- live ruleset IDs and rule types;
-- canonical live-state digest SHA-256;
-- pull-request-policy comparison;
-- status-check comparison;
-- always-bypass comparison;
-- structured remediation operations;
-- observation timestamp;
-- provider observation ID;
-- GitHub SHA/run/attempt/event;
+- target path/schema/SHA-256;
+- witness path/schema/SHA-256/binding;
+- live ruleset IDs and canonical digest;
+- observed rule types;
+- every typed always-bypass actor;
+- integration-ID compatibility projection;
+- `current_user_can_bypass`;
+- structured differences and remediation operations;
+- workflow SHA/run/attempt/event;
 - `claim_allowed=false`.
 
-A failed run must still publish its receipt.
+## Boundary
 
-## Failure semantics
-
-| State | Meaning |
-|---|---|
-| `PASS` | all provider structural gates in the current target matched |
-| `FAIL` | one or more required provider conditions mismatched |
-| `TOKEN_VAZIO` | evidence or identity is absent/unknown; never implicit PASS |
-| evaluator/network error | FAIL; observation failure is not provider proof |
-
-Even a V2 provider PASS does not prove Android runtime, APK behavior, physical
-benchmarking, or release quality. It proves only the provider-protection scope.
-
-## Rollback
-
-Repository-side evaluator changes are ordinary Git commits and can be reverted.
-
-Provider-side administrative rollback must preserve the previous ruleset
-snapshot/receipt and must not remove protection merely to make CI green.
+Provider protection PASS proves only the configured GitHub provider scope. It does
+not prove Android runtime, APK behavior, physical benchmarking, scientific claims,
+legal identity, or release fitness.
 
 ## R3
 
-`F_ok`: target desired state is separated from historical observation; evaluator
-is reusable/testable; failure produces evidence; bypass is explicit.
+`F_ok`: V3 closes the actor-class blind spot and keeps desired policy, observation,
+witness, mutation plan and receipt separate.
 
-`F_gap`: current GitHub ruleset still requires an administrative change outside
-the repository write surface.
+`F_gap`: live GitHub administration remains outside the current repository-write
+connector and the provider is still nonconformant.
 
-`F_next`: apply the provider-side ruleset delta under authorized administration,
-then execute route `10_PROVIDER` and retain the exact PASS receipt.
+`F_next`: authorized provider administration applies a non-stale delta, then route
+`10_PROVIDER` must produce an exact PASS receipt.

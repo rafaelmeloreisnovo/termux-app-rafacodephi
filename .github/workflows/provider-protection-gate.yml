@@ -43,8 +43,8 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/ci/provider_protection_contract.py \
-            --target governance/provider/PROVIDER_RULESET_TARGET.v2.json \
-            --witness governance/provider/PROVIDER_RULESET_EXTERNAL_WITNESS_20260926.v1.json \
+            --target governance/provider/PROVIDER_RULESET_TARGET.v3.json \
+            --witness governance/provider/PROVIDER_RULESET_EXTERNAL_WITNESS_20260926.v2.json \
             --default-branch master \
             --json reports/provider-protection-receipt.json \
             --markdown reports/provider-protection-receipt.md
@@ -57,7 +57,7 @@ jobs:
             cat reports/provider-protection-receipt.md >> "$GITHUB_STEP_SUMMARY"
           else
             {
-              echo '# Provider Protection Receipt V2'
+              echo '# Provider Protection Receipt V3'
               echo
               echo '- gate: **FAIL**'
               echo '- receipt: **TOKEN_VAZIO — evaluator did not materialize output**'
