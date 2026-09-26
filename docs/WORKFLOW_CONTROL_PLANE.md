@@ -29,7 +29,7 @@ O operador escolhe **uma rota pronta**:
 | `06_EVIDENCIAS` | “Auditar artefato/integração” | APK evidence + E2E |
 | `07_E2E` | “Executar apenas contrato E2E” | E2E |
 | `08_VECTRA_V3` | “Validar metrologia/benchmark em CI” | Vectra V3 |
-| `09_ENTERPRISE` | “Preflight principal amplo” | tests + ARM32 + bootstrap + evidence + E2E + Vectra |
+| `09_ENTERPRISE` | “Preflight principal amplo” | provider + tests + ARM32 + bootstrap + evidence + E2E + Vectra |\n| `10_PROVIDER` | “A proteção live do repositório está adequada?” | provider ruleset gate |
 
 `strict_governance` é ortogonal: quando ligado, metadados ausentes deixam de ser warning e passam a bloquear a rodada.
 
@@ -56,7 +56,7 @@ O receipt é escrito **antes** do passo que encerra o workflow com falha. Assim,
 |---|---|
 | Operador | resolve uma rota válida |
 | Auditor/CI | inventário de workflows, metadados e referências |
-| Segurança/Arquitetura | ABI, pure-core, runtime collector read-only |
+| Segurança/Arquitetura | ABI, pure-core, runtime collector read-only |\n| Provider security | ruleset live do `master`, status checks e política de PR |
 | QA | testes de software |
 | Build engineer | ARM32 canonical/NDK29 |
 | Bootstrap engineer | contrato de bootstrap |
@@ -175,7 +175,7 @@ Workflows especialistas continuam úteis para diagnóstico focal. O START HERE �
 
 ## R3
 
-`F_ok`: rota única, combos inválidos removidos, gate route-aware, scanner corrigido, Vectra callable/evidence-envelope.
+`F_ok`: rota única, combos inválidos removidos, gate route-aware, scanner corrigido, Vectra callable/evidence-envelope e provider protection tipado como especialista.
 
 `F_gap`: o CI desta mudança precisa executar; PA físico, série n>=30, energia calibrada e comparabilidade entre aparelhos continuam fora do alcance do runner hospedado.
 
