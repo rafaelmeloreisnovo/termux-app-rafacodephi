@@ -107,17 +107,47 @@ class ProviderProtectionContractTests(unittest.TestCase):
         operations = {item["kind"] for item in receipt["remediation"]["operations"]}
         self.assertIn("ALIGN_PULL_REQUEST_POLICY", operations)
 
-    def test_unknown_always_bypass_is_not_silently_promoted(self) -> None:
+    def test_unknown_always_bypass_is_fail_closed(self) -> None:
         live = self._live_ruleset()
         live[0]["bypass_actors"] = [
             {"actor_type": "Integration", "actor_id": 999999, "bypass_mode": "always"}
         ]
         receipt = self._evaluate(live)
+        self.assertEqual(receipt["gate"], "FAIL")
         self.assertEqual(
             receipt["live_observation"]["bypass_identity_state"],
             "TOKEN_VAZIO_PENDING_IDENTITY_AND_JUSTIFICATION",
         )
+        codes = {item["code"] for item in receipt["failures"]}
+        self.assertIn("UNJUSTIFIED_ALWAYS_BYPASS_INTEGRATIONS", codes)
+        operations = {item["kind"] for item in receipt["remediation"]["operations"]}
+        self.assertIn("IDENTIFY_OR_REMOVE_ALWAYS_BYPASS_INTEGRATIONS", operations)
         self.assertFalse(receipt["claim_allowed"])
+
+    def test_current_live_shape_exposes_all_provider_dimensions(self) -> None:
+        live = self._live_ruleset(include_status=False, code_owner=True)
+        pr = next(rule for rule in live[0]["rules"] if rule["type"] == "pull_request")
+        pr["parameters"]["allowed_merge_methods"] = ["merge", "squash", "rebase"]
+        live[0]["bypass_actors"] = [
+            {"actor_type": "Integration", "actor_id": actor_id, "bypass_mode": "always"}
+            for actor_id in (20150, 29110, 73253, 1144995)
+        ]
+        receipt = self._evaluate(live)
+        self.assertEqual(receipt["gate"], "FAIL")
+        codes = {item["code"] for item in receipt["failures"]}
+        self.assertEqual(
+            codes,
+            {
+                "MISSING_RULE_TYPES",
+                "PULL_REQUEST_POLICY_MISMATCH",
+                "REQUIRED_STATUS_CHECKS_MISMATCH",
+                "UNJUSTIFIED_ALWAYS_BYPASS_INTEGRATIONS",
+            },
+        )
+        self.assertEqual(
+            receipt["checks"]["always_bypass_integrations"]["unresolved_integration_ids"],
+            [20150, 29110, 73253, 1144995],
+        )
 
     def test_target_and_live_are_hash_addressed_separately(self) -> None:
         receipt = self._evaluate(self._live_ruleset())
