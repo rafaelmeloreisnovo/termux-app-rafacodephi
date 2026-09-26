@@ -3,6 +3,7 @@
 #include "../rafaelia/src/main/cpp/zero/include/rafz_pure_q16.h"
 #include "../rafaelia/src/main/cpp/zero/include/rafz_pure_blake3_single.h"
 #include "../rafaelia/src/main/cpp/zero/include/rafz_pure_crc32c_fixed.h"
+#include "../rafaelia/src/main/cpp/zero/include/rafz_pure_bitraf42.h"
 
 RAFZ_EXPORT rafz_u32 rafz_pure_core_probe(rafz_u32 x) {
     const rafz_u32 a = (rafz_u32)rafz_pure_bagua_rol3((rafz_u8)x);
@@ -27,4 +28,18 @@ RAFZ_EXPORT void rafz_pure_blake3_single_probe(
 
 RAFZ_EXPORT rafz_u32 rafz_pure_crc32c8_probe(const rafz_u8 block[8]) {
     return rafz_pure_crc32c_fixed8(block);
+}
+
+RAFZ_EXPORT rafz_bitraf42_u64 rafz_pure_bitraf42_probe(
+    rafz_u8 opcode,
+    rafz_u8 dir,
+    rafz_u16 layer,
+    rafz_u16 imm,
+    rafz_u16 flags) {
+    return rafz_pure_bitraf42_encode(opcode, dir, layer, imm, flags);
+}
+
+RAFZ_EXPORT rafz_s32 rafz_pure_bitraf42_validate_probe(
+    rafz_bitraf42_u64 word) {
+    return rafz_pure_bitraf42_validate(word);
 }

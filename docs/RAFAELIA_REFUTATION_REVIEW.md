@@ -8,7 +8,7 @@
 ## Matriz de claims
 | Claim | Onde aparece | Código relacionado | Implementação | Teste | Benchmark | Contradição | Refutável? | Prova faltante | Status |
 |---|---|---|---|---|---|---|---|---|---|
-| BitRAF 42 bits encode/decode | `RAFAELIA_SEED_ALIGNMENT`, `raf_bitraf.h` | `app/src/main/cpp/lowlevel/raf_bitraf.c` | Sim | Não localizado selftest dedicado neste repo | Não | Não | Parcial | suíte de roundtrip + corpus ASM | PROVADO_NO_CÓDIGO |
+| BitRAF 42 bits encode/decode | `RAFAELIA_SEED_ALIGNMENT`, `raf_bitraf.h` | `app/src/main/cpp/lowlevel/raf_bitraf.c` + `rafaelia/src/main/cpp/zero/include/rafz_pure_bitraf42.h` | Sim | Smoke roundtrip já existia em `tools/rmr_pure_core_selftest.c`; equivalência/ASM ZERO em gate deste PR | Não | Sim: `rmr/Rrr/generated/rafaelia_isa_spec.md` usa formato 6×7 incompatível; separado como `BITRAF42-6X7-EXPERIMENTAL` | Sim | CI exato do novo leaf + benchmark físico separado | IMPLEMENTED_UNTESTED |
 | Ciclo 42 e estado T^7 em núcleo low-level | `RAFAELIA_SEMENTES`, docs auditoria | `rmr/Rrr/rafaelia_core.c`, `rmr/Rrr/rafaelia_b1.S` | Sim | Parcial (integração local) | Não formal | Não | Parcial | teste automatizado de invariantes T^7/42 | PROVADO_NO_CÓDIGO |
 | ZipRAF completo em Termux | docs e seed narrativa | não encontrado módulo ZipRAF C/H em Termux | Não | Não | Não | Sim (doc menciona, código não) | Sim | portar código real (Vectras) + testes | DOCUMENTADO_NÃO_PROVADO |
 | BitOmega FSM em Termux | seed/docs narrativos | não encontrado módulo `bitomega.*` em Termux | Não | Não | Não | Sim | Sim | implementação + invariantes FSM | DOCUMENTADO_NÃO_PROVADO |
