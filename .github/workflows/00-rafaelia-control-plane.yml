@@ -42,6 +42,11 @@ on:
       - 'scripts/validate_abi_policy_consistency.sh'
       - 'scripts/federation/collect_runtime_evidence.sh'
       - 'tools/validate_runtime_evidence.py'
+      - 'tools/audit_freestanding_boundaries.py'
+      - 'configs/freestanding-pure-core.v1.json'
+      - 'rafaelia/src/main/cpp/zero/**'
+      - 'tests/pure_core_probe.c'
+      - 'docs/FREESTANDING_PURE_CORE_INVENTORY_V2.md'
       - 'tests/test_rafcodephi_startup_and_settings_contract.py'
       - 'tests/test_workflow_control_plane_contract.py'
       - 'docs/CI_WORKFLOW_OWNERSHIP.md'
@@ -57,6 +62,11 @@ on:
       - 'scripts/validate_abi_policy_consistency.sh'
       - 'scripts/federation/collect_runtime_evidence.sh'
       - 'tools/validate_runtime_evidence.py'
+      - 'tools/audit_freestanding_boundaries.py'
+      - 'configs/freestanding-pure-core.v1.json'
+      - 'rafaelia/src/main/cpp/zero/**'
+      - 'tests/pure_core_probe.c'
+      - 'docs/FREESTANDING_PURE_CORE_INVENTORY_V2.md'
       - 'tests/test_rafcodephi_startup_and_settings_contract.py'
       - 'tests/test_workflow_control_plane_contract.py'
       - 'docs/CI_WORKFLOW_OWNERSHIP.md'
@@ -163,6 +173,12 @@ jobs:
       - name: ABI policy consistency
         run: ./scripts/validate_abi_policy_consistency.sh
 
+      - name: Freestanding pure-core boundary
+        run: |
+          set -euo pipefail
+          python3 tools/audit_freestanding_boundaries.py \
+            --strict --compile-probe --write-report
+
       - name: Settings / capability / startup contract
         run: python3 tests/test_rafcodephi_startup_and_settings_contract.py
 
@@ -188,7 +204,10 @@ jobs:
           name: rafcodephi-runtime-contract-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: error
           retention-days: 30
-          path: artifacts/termux-runtime-evidence.json
+          path: |
+            artifacts/termux-runtime-evidence.json
+            reports/freestanding-boundary-inventory.json
+            reports/freestanding-boundary-inventory.md
 
   tests:
     name: "🧪 2/6 Testes de software"
