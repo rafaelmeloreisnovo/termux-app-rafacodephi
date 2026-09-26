@@ -135,6 +135,29 @@ def _check_pull_request(
     return False, expected_cmp, observations
 
 
+def _check_bypass_policy(
+    target: dict[str, Any],
+    rulesets: list[dict[str, Any]],
+) -> tuple[bool, dict[str, Any]]:
+    policy = target.get("bypass_policy") or {}
+    observed_ids = _always_bypass_integrations(rulesets)
+    justified_ids = {
+        item
+        for item in (policy.get("justified_integration_ids") or [])
+        if isinstance(item, int)
+    }
+    unresolved = sorted(set(observed_ids) - justified_ids)
+    return not unresolved, {
+        "observed_always_bypass_integration_ids": observed_ids,
+        "justified_integration_ids": sorted(justified_ids),
+        "unresolved_integration_ids": unresolved,
+        "policy": policy.get(
+            "always_bypass_integrations",
+            "TOKEN_VAZIO_NO_EXPLICIT_BYPASS_POLICY",
+        ),
+    }
+
+
 def _check_required_status(
     target: dict[str, Any],
     observed_rules: list[dict[str, Any]],
@@ -200,6 +223,7 @@ def evaluate(
     status_ok, status_expected, status_observed = _check_required_status(
         target, by_type.get("required_status_checks", [])
     )
+    bypass_ok, bypass_check = _check_bypass_policy(target, rulesets)
 
     bypass_ids = _always_bypass_integrations(rulesets)
     bypass_state = (
@@ -234,6 +258,15 @@ def evaluate(
                 "observed_candidates": status_observed,
             }
         )
+    if not bypass_ok:
+        failures.append(
+            {
+                "code": "UNJUSTIFIED_ALWAYS_BYPASS_INTEGRATIONS",
+                "observed": bypass_check["observed_always_bypass_integration_ids"],
+                "justified": bypass_check["justified_integration_ids"],
+                "unresolved": bypass_check["unresolved_integration_ids"],
+            }
+        )
 
     gate = "PASS" if not failures else "FAIL"
     live_digest = canonical_sha256(rulesets)
@@ -255,6 +288,13 @@ def evaluate(
             {
                 "kind": "ALIGN_PULL_REQUEST_POLICY",
                 "desired": pr_expected,
+            }
+        )
+    if not bypass_ok:
+        remediation["operations"].append(
+            {
+                "kind": "IDENTIFY_OR_REMOVE_ALWAYS_BYPASS_INTEGRATIONS",
+                "integration_ids": bypass_check["unresolved_integration_ids"],
             }
         )
 
@@ -294,6 +334,10 @@ def evaluate(
                 "expected": status_expected,
                 "observed_candidates": status_observed,
             },
+            "always_bypass_integrations": {
+                "pass": bypass_ok,
+                **bypass_check,
+            },
         },
         "failures": failures,
         "remediation": remediation,
@@ -327,6 +371,7 @@ def render_markdown(receipt: dict[str, Any]) -> str:
         f"| required rule types | {'PASS' if checks['required_rule_types']['pass'] else 'FAIL'} |",
         f"| pull request policy | {'PASS' if checks['pull_request']['pass'] else 'FAIL'} |",
         f"| required status checks | {'PASS' if checks['required_status_checks']['pass'] else 'FAIL'} |",
+        f"| always-bypass integrations | {'PASS' if checks['always_bypass_integrations']['pass'] else 'FAIL'} |",
         "",
     ]
 
