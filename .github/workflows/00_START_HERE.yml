@@ -1,0 +1,464 @@
+# ci_track: ops
+# ci_abis: armeabi-v7a,arm64-v8a
+name: "00 START HERE — RAFCODEΦ Enterprise"
+
+run-name: "START HERE / ${{ inputs.route || 'AUTO_GOVERNANCE' }} / ${{ github.ref_name }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      route:
+        description: "Escolha UMA rota pronta. As combinações inválidas não são oferecidas."
+        required: true
+        default: "01_DIAGNOSTICO — testes + contratos; sem build pesado"
+        type: choice
+        options:
+          - "01_DIAGNOSTICO — testes + contratos; sem build pesado"
+          - "02_ARM32_CANONICO — build/ABI armeabi-v7a canônico"
+          - "03_ARM32_NDK29 — build/ABI armeabi-v7a com NDK29"
+          - "04_BOOTSTRAP_CANONICO — ARM32 + bootstrap + evidência APK"
+          - "05_BOOTSTRAP_NDK29 — NDK29 + bootstrap + evidência APK"
+          - "06_EVIDENCIAS — gate APK + contrato E2E"
+          - "07_E2E — contrato E2E isolado"
+          - "08_VECTRA_V3 — metrologia/benchmark CI; PA físico continua separado"
+          - "09_ENTERPRISE — preflight principal completo; sem promover prova física"
+      strict_governance:
+        description: "Bloquear TOKEN_VAZIO de metadados de workflow durante esta rodada?"
+        required: true
+        default: false
+        type: boolean
+
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - ".github/actions/**"
+      - "scripts/ci/workflow_control_plane.py"
+      - "scripts/validate_ci_workflow_metadata.sh"
+      - "scripts/audit_github_actions_refs.py"
+      - "scripts/validate_abi_policy_consistency.sh"
+      - "scripts/federation/collect_runtime_evidence.sh"
+      - "tools/validate_runtime_evidence.py"
+      - "tools/audit_freestanding_boundaries.py"
+      - "configs/freestanding-pure-core.v1.json"
+      - "rafaelia/src/main/cpp/zero/**"
+      - "tests/pure_core_probe.c"
+      - "tests/test_workflow_control_plane_contract.py"
+      - "tests/test_industrial_benchmark_v3_contract.py"
+      - "tests/test_beta_orchestrator_contract.py"
+      - "docs/CI_WORKFLOW_OWNERSHIP.md"
+      - "docs/WORKFLOW_CONTROL_PLANE.md"
+      - "docs/benchmark/**"
+
+  push:
+    branches: [master]
+    paths:
+      - ".github/workflows/**"
+      - ".github/actions/**"
+      - "scripts/ci/workflow_control_plane.py"
+      - "scripts/validate_ci_workflow_metadata.sh"
+      - "scripts/audit_github_actions_refs.py"
+      - "scripts/validate_abi_policy_consistency.sh"
+      - "scripts/federation/collect_runtime_evidence.sh"
+      - "tools/validate_runtime_evidence.py"
+      - "tools/audit_freestanding_boundaries.py"
+      - "configs/freestanding-pure-core.v1.json"
+      - "rafaelia/src/main/cpp/zero/**"
+      - "tests/pure_core_probe.c"
+      - "tests/test_workflow_control_plane_contract.py"
+      - "tests/test_industrial_benchmark_v3_contract.py"
+      - "tests/test_beta_orchestrator_contract.py"
+      - "docs/CI_WORKFLOW_OWNERSHIP.md"
+      - "docs/WORKFLOW_CONTROL_PLANE.md"
+      - "docs/benchmark/**"
+
+permissions:
+  contents: read
+
+env:
+  ORCHESTRATOR_SCHEMA: "rafaelia.rafcodephi-start-here/v3"
+  CLAIM_ALLOWED: "false"
+  RELEASE_ALLOWED: "false"
+  PHYSICAL_ANDROID: "TOKEN_VAZIO"
+  PA_PHYSICAL_EXECUTION: "TOKEN_VAZIO"
+
+concurrency:
+  group: rafaelia-start-here-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  route:
+    name: "🧭 0/9 Operador — resolver rota válida"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      route_id: ${{ steps.plan.outputs.route_id }}
+      mission: ${{ steps.plan.outputs.mission }}
+      ndk_lane: ${{ steps.plan.outputs.ndk_lane }}
+      strict_governance: ${{ steps.plan.outputs.strict_governance }}
+      run_tests: ${{ steps.plan.outputs.run_tests }}
+      run_arm32: ${{ steps.plan.outputs.run_arm32 }}
+      run_bootstrap: ${{ steps.plan.outputs.run_bootstrap }}
+      run_evidence: ${{ steps.plan.outputs.run_evidence }}
+      run_e2e: ${{ steps.plan.outputs.run_e2e }}
+      run_vectra: ${{ steps.plan.outputs.run_vectra }}
+    steps:
+      - name: Resolver sem combinações implícitas
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_ROUTE: ${{ inputs.route }}
+          REQUESTED_STRICT: ${{ inputs.strict_governance }}
+        run: |
+          set -euo pipefail
+
+          route="${REQUESTED_ROUTE:-AUTO_GOVERNANCE}"
+          strict="${REQUESTED_STRICT:-false}"
+          route_id="AUTO"
+          mission="automatic-governance"
+          ndk_lane="n/a"
+          run_tests=false
+          run_arm32=false
+          run_bootstrap=false
+          run_evidence=false
+          run_e2e=false
+          run_vectra=false
+          explanation="PR/push: governança estática, sem build pesado implícito."
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            case "$route" in
+              "01_DIAGNOSTICO — testes + contratos; sem build pesado")
+                route_id="01"; mission="diagnostico"; run_tests=true
+                explanation="Saúde básica: inventário + políticas + testes."
+                ;;
+              "02_ARM32_CANONICO — build/ABI armeabi-v7a canônico")
+                route_id="02"; mission="arm32-v7"; ndk_lane="canonical"; run_arm32=true
+                explanation="Build/ABI ARM32 na toolchain canônica."
+                ;;
+              "03_ARM32_NDK29 — build/ABI armeabi-v7a com NDK29")
+                route_id="03"; mission="arm32-v7"; ndk_lane="ndk29"; run_arm32=true
+                explanation="Build/ABI ARM32 na lane NDK29."
+                ;;
+              "04_BOOTSTRAP_CANONICO — ARM32 + bootstrap + evidência APK")
+                route_id="04"; mission="bootstrap-arm32"; ndk_lane="canonical"
+                run_arm32=true; run_bootstrap=true; run_evidence=true
+                explanation="ARM32 canônico + bootstrap + gate de evidência APK."
+                ;;
+              "05_BOOTSTRAP_NDK29 — NDK29 + bootstrap + evidência APK")
+                route_id="05"; mission="bootstrap-arm32"; ndk_lane="ndk29"
+                run_arm32=true; run_bootstrap=true; run_evidence=true
+                explanation="ARM32 NDK29 + bootstrap + gate de evidência APK."
+                ;;
+              "06_EVIDENCIAS — gate APK + contrato E2E")
+                route_id="06"; mission="evidencias"; run_evidence=true; run_e2e=true
+                explanation="Proveniência/evidência APK + contrato E2E."
+                ;;
+              "07_E2E — contrato E2E isolado")
+                route_id="07"; mission="e2e-proof"; run_e2e=true
+                explanation="Integração E2E isolada; sem inferir prova física."
+                ;;
+              "08_VECTRA_V3 — metrologia/benchmark CI; PA físico continua separado")
+                route_id="08"; mission="vectra-v3"; run_vectra=true
+                explanation="Contratos/metrologia V3 em CI; PA físico continua TOKEN_VAZIO."
+                ;;
+              "09_ENTERPRISE — preflight principal completo; sem promover prova física")
+                route_id="09"; mission="enterprise-preflight"; ndk_lane="canonical"
+                run_tests=true; run_arm32=true; run_bootstrap=true
+                run_evidence=true; run_e2e=true; run_vectra=true
+                explanation="Preflight amplo com gates independentes e receipt final."
+                ;;
+              *)
+                echo "INVALID_ROUTE=$route" >&2
+                exit 64
+                ;;
+            esac
+          fi
+
+          case "$strict" in true|false) ;; *) echo "INVALID_STRICT=$strict" >&2; exit 64 ;; esac
+
+          for pair in             "route_id=$route_id" "mission=$mission" "ndk_lane=$ndk_lane"             "strict_governance=$strict" "run_tests=$run_tests" "run_arm32=$run_arm32"             "run_bootstrap=$run_bootstrap" "run_evidence=$run_evidence"             "run_e2e=$run_e2e" "run_vectra=$run_vectra"; do
+            echo "$pair" >> "$GITHUB_OUTPUT"
+          done
+
+          {
+            echo "## 🧭 START HERE — rota resolvida"
+            echo
+            echo "- rota: **$route_id / $mission**"
+            echo "- ARM32 lane: **$ndk_lane**"
+            echo "- governança estrita: **$strict**"
+            echo "- contexto: $explanation"
+            echo
+            echo "> Apenas opções válidas chegam aos especialistas. Urgência nunca reduz gate."
+            echo "> Etapa não solicitada = NOT_REQUESTED/skipped, nunca PASS."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  inventory:
+    name: "🧾 1/9 Auditor — inventário, proveniência e governança"
+    needs: route
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout imutável
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Inventariar todos os YML
+        env:
+          STRICT: ${{ needs.route.outputs.strict_governance }}
+        run: |
+          set -euo pipefail
+          args=()
+          [[ "$STRICT" == "true" ]] && args+=(--strict)
+          python3 scripts/ci/workflow_control_plane.py "${args[@]}"
+          cat reports/workflow-control-plane.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Auditar referências de Actions
+        env:
+          STRICT: ${{ needs.route.outputs.strict_governance }}
+        run: |
+          set -euo pipefail
+          args=(--json reports/action-reference-audit.json)
+          [[ "$STRICT" == "true" ]] && args+=(--strict)
+          python3 scripts/audit_github_actions_refs.py "${args[@]}"
+
+      - name: Validar contrato do START HERE
+        run: python3 tests/test_workflow_control_plane_contract.py
+
+      - name: Validar metadados com a mesma política strict
+        env:
+          CI_METADATA_STRICT: ${{ needs.route.outputs.strict_governance == 'true' && '1' || '0' }}
+        run: ./scripts/validate_ci_workflow_metadata.sh
+
+      - name: Publicar inventário
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: workflow-control-plane-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            reports/workflow-control-plane.json
+            reports/workflow-control-plane.md
+            reports/action-reference-audit.json
+
+  policy-contracts:
+    name: "🛡️ 2/9 Segurança/arquitetura — ABI + pure-core + runtime read-only"
+    needs: [route, inventory]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout imutável
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: ABI policy consistency
+        run: ./scripts/validate_abi_policy_consistency.sh
+
+      - name: Freestanding pure-core boundary
+        run: python3 tools/audit_freestanding_boundaries.py --strict --compile-probe --write-report
+
+      - name: RAFAELIA ZERO compatibility
+        run: python3 scripts/validate_rafaelia_zero_runtime.py
+
+      - name: Settings / capability / startup
+        run: python3 tests/test_rafcodephi_startup_and_settings_contract.py
+
+      - name: Runtime evidence collector — somente leitura
+        run: |
+          set -euo pipefail
+          sh -n scripts/federation/collect_runtime_evidence.sh
+          mkdir -p artifacts
+          sh scripts/federation/collect_runtime_evidence.sh artifacts/termux-runtime-evidence.json
+          python3 tools/validate_runtime_evidence.py artifacts/termux-runtime-evidence.json
+
+  tests:
+    name: "🧪 3/9 QA — testes de software"
+    if: needs.route.outputs.run_tests == 'true'
+    needs: [route, inventory, policy-contracts]
+    uses: ./.github/workflows/run_tests.yml
+    secrets: inherit
+
+  arm32-canonical:
+    name: "📱 4/9 Build — ARM32 canônico"
+    if: needs.route.outputs.run_arm32 == 'true' && needs.route.outputs.ndk_lane == 'canonical'
+    needs: [route, inventory, policy-contracts]
+    uses: ./.github/workflows/compatibility-arm32.yml
+    secrets: inherit
+
+  arm32-ndk29:
+    name: "📱 4/9 Build — ARM32 NDK29"
+    if: needs.route.outputs.run_arm32 == 'true' && needs.route.outputs.ndk_lane == 'ndk29'
+    needs: [route, inventory, policy-contracts]
+    uses: ./.github/workflows/compatibility-arm32-ndk29.yml
+    secrets: inherit
+
+  bootstrap-contract:
+    name: "🧱 5/9 Bootstrap — contrato"
+    if: needs.route.outputs.run_bootstrap == 'true'
+    needs: [route, inventory, policy-contracts]
+    uses: ./.github/workflows/beta-real-bootstrap-contract.yml
+    secrets: inherit
+
+  evidence-contract:
+    name: "🔎 6/9 Evidence — APK gate"
+    if: needs.route.outputs.run_evidence == 'true'
+    needs: [route, inventory, policy-contracts]
+    uses: ./.github/workflows/apk-evidence-gate.yml
+    secrets: inherit
+
+  e2e-proof-contract:
+    name: "🔗 7/9 Integração — E2E contract"
+    if: needs.route.outputs.run_e2e == 'true'
+    needs: [route, inventory, policy-contracts]
+    uses: ./.github/workflows/rafaelia_e2e_product_proof.yml
+    with:
+      torre_correlation_id: ${{ format('start-here-{0}-{1}', github.run_id, github.run_attempt) }}
+    secrets: inherit
+
+  vectra-v3:
+    name: "📐 8/9 Metrologia — Vectra V3 CI"
+    if: needs.route.outputs.run_vectra == 'true'
+    needs: [route, inventory, policy-contracts]
+    uses: ./.github/workflows/vectra-grade-benchmarks.yml
+    secrets: inherit
+
+  omega-summary:
+    name: "Ω 9/9 Auditor final — receipt + gate"
+    if: always()
+    needs:
+      - route
+      - inventory
+      - policy-contracts
+      - tests
+      - arm32-canonical
+      - arm32-ndk29
+      - bootstrap-contract
+      - evidence-contract
+      - e2e-proof-contract
+      - vectra-v3
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Emitir receipt antes de decidir PASS/FAIL
+        env:
+          ROUTE_RESULT: ${{ needs.route.result }}
+          ROUTE_ID: ${{ needs.route.outputs.route_id }}
+          MISSION: ${{ needs.route.outputs.mission }}
+          NDK_LANE: ${{ needs.route.outputs.ndk_lane }}
+          INVENTORY: ${{ needs.inventory.result }}
+          POLICY: ${{ needs.policy-contracts.result }}
+          TESTS: ${{ needs.tests.result }}
+          ARM32_CANONICAL: ${{ needs.arm32-canonical.result }}
+          ARM32_NDK29: ${{ needs.arm32-ndk29.result }}
+          BOOTSTRAP: ${{ needs.bootstrap-contract.result }}
+          EVIDENCE: ${{ needs.evidence-contract.result }}
+          E2E: ${{ needs.e2e-proof-contract.result }}
+          VECTRA: ${{ needs.vectra-v3.result }}
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          route_id = os.environ.get("ROUTE_ID") or "AUTO"
+          results = {
+              "route": os.environ["ROUTE_RESULT"],
+              "inventory": os.environ["INVENTORY"],
+              "policy_contracts": os.environ["POLICY"],
+              "tests": os.environ["TESTS"],
+              "arm32_canonical": os.environ["ARM32_CANONICAL"],
+              "arm32_ndk29": os.environ["ARM32_NDK29"],
+              "bootstrap_contract": os.environ["BOOTSTRAP"],
+              "apk_evidence_contract": os.environ["EVIDENCE"],
+              "e2e_proof_contract": os.environ["E2E"],
+              "vectra_v3": os.environ["VECTRA"],
+          }
+          required_by_route = {
+              "AUTO": ["route", "inventory", "policy_contracts"],
+              "01": ["route", "inventory", "policy_contracts", "tests"],
+              "02": ["route", "inventory", "policy_contracts", "arm32_canonical"],
+              "03": ["route", "inventory", "policy_contracts", "arm32_ndk29"],
+              "04": ["route", "inventory", "policy_contracts", "arm32_canonical", "bootstrap_contract", "apk_evidence_contract"],
+              "05": ["route", "inventory", "policy_contracts", "arm32_ndk29", "bootstrap_contract", "apk_evidence_contract"],
+              "06": ["route", "inventory", "policy_contracts", "apk_evidence_contract", "e2e_proof_contract"],
+              "07": ["route", "inventory", "policy_contracts", "e2e_proof_contract"],
+              "08": ["route", "inventory", "policy_contracts", "vectra_v3"],
+              "09": ["route", "inventory", "policy_contracts", "tests", "arm32_canonical", "bootstrap_contract", "apk_evidence_contract", "e2e_proof_contract", "vectra_v3"],
+          }
+          required = required_by_route.get(route_id)
+          if required is None:
+              required = ["route"]
+              results["route"] = "failure"
+
+          failed = [name for name in required if results.get(name) != "success"]
+          gate = "PASS" if not failed else "FAIL"
+
+          payload = {
+              "schema": os.environ["ORCHESTRATOR_SCHEMA"],
+              "state": "OBSERVED",
+              "gate": gate,
+              "repository": os.environ["GITHUB_REPOSITORY"],
+              "sha": os.environ["GITHUB_SHA"],
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "route_id": route_id,
+              "mission": os.environ.get("MISSION") or "automatic-governance",
+              "ndk_lane": os.environ.get("NDK_LANE") or "n/a",
+              "required_jobs": required,
+              "failed_required_jobs": failed,
+              "results": results,
+              "skipped_semantics": "NOT_REQUESTED unless the route lists it as required",
+              "claim_allowed": False,
+              "release_allowed": False,
+              "physical_android": "TOKEN_VAZIO",
+              "pa_physical_execution": "TOKEN_VAZIO",
+              "boundaries": [
+                  "CI_PASS_DOES_NOT_EQUAL_PHYSICAL_ANDROID_PROOF",
+                  "VECTRA_CI_ARTIFACT_DOES_NOT_EQUAL_PA_DEVICE_MEASUREMENT",
+                  "URGENCY_DOES_NOT_BYPASS_GATES",
+              ],
+          }
+          out = Path("reports/rafcodephi-start-here-receipt.json")
+          out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+          print(f"START_HERE_GATE={gate}")
+          print(f"REQUIRED={','.join(required)}")
+          print(f"FAILED_REQUIRED={','.join(failed) if failed else 'none'}")
+
+          summary = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          with summary.open("a", encoding="utf-8") as fh:
+              fh.write("# Ω START HERE — resultado\n\n")
+              fh.write(f"- rota: **{route_id} / {payload['mission']}**\n")
+              fh.write(f"- gate: **{gate}**\n")
+              fh.write(f"- obrigatórios: {', '.join(required)}\n")
+              fh.write(f"- falhas obrigatórias: {', '.join(failed) if failed else 'nenhuma'}\n")
+              fh.write("- physical Android: **TOKEN_VAZIO**\n")
+              fh.write("- PA physical execution: **TOKEN_VAZIO**\n\n")
+              fh.write("> skipped = não solicitado; não é PASS.\n")
+          PY
+
+      - name: Publicar receipt final
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: rafcodephi-start-here-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 30
+          path: reports/rafcodephi-start-here-receipt.json
+
+      - name: Gate final fail-closed
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path("reports/rafcodephi-start-here-receipt.json").read_text())
+          if p["gate"] != "PASS":
+              raise SystemExit("START HERE blocked: " + ",".join(p["failed_required_jobs"]))
+          print("START_HERE=PASS")
+          PY
