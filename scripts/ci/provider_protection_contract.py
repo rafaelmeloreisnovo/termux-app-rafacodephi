@@ -17,6 +17,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -493,6 +494,26 @@ def main() -> int:
                 "TOKEN_VAZIO != PASS",
             ],
         }
+
+    observed_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    run_id = os.environ.get("GITHUB_RUN_ID")
+    run_attempt = os.environ.get("GITHUB_RUN_ATTEMPT")
+    observation_id = (
+        f"github-actions:{args.repository}:{run_id}:{run_attempt or '1'}"
+        if run_id
+        else f"local:{args.repository}:{observed_at}"
+    )
+    receipt.setdefault("observed_at_utc", observed_at)
+    receipt.setdefault("provider_observation_id", observation_id)
+    receipt.setdefault(
+        "execution",
+        {
+            "github_sha": os.environ.get("GITHUB_SHA", TOKEN_VAZIO),
+            "github_run_id": run_id or TOKEN_VAZIO,
+            "github_run_attempt": run_attempt or TOKEN_VAZIO,
+            "github_event_name": os.environ.get("GITHUB_EVENT_NAME", TOKEN_VAZIO),
+        },
+    )
 
     write_receipt(receipt, args.json, args.markdown)
     print(render_markdown(receipt), end="")
