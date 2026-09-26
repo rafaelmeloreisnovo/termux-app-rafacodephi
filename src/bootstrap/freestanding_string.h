@@ -5,7 +5,8 @@
  * Bootstrap support implementation. Variable-length helpers intentionally
  * use control flow and are NOT classified as PURE_CORE.
  *
- * No external dependencies: pure freestanding C, no libc.
+ * No external runtime dependency: no libc calls. This support header still
+ * uses compiler/toolchain stdint.h and stddef.h and is not a PURE_CORE leaf.
  */
 
 #ifndef FREESTANDING_STRING_H
