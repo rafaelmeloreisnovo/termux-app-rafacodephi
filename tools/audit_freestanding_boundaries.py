@@ -260,6 +260,29 @@ def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
     return results, errors
 
 
+def validate_token_vazio_contract() -> tuple[dict, list[str]]:
+    validator = ROOT / "tools" / "validate_token_vazio_dictionary.py"
+    if not validator.is_file():
+        return {"state": "TOKEN_VAZIO_NOT_OBSERVED"}, ["TOKEN_VAZIO validator missing"]
+    cp = subprocess.run(
+        [sys.executable, str(validator)],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    errors: list[str] = []
+    try:
+        payload = json.loads(cp.stdout)
+    except json.JSONDecodeError:
+        payload = {"state": "FAIL", "claim_allowed": False}
+        errors.append("TOKEN_VAZIO validator emitted invalid JSON")
+    if cp.returncode != 0:
+        errors.append("TOKEN_VAZIO dictionary validation failed")
+    return payload, errors
+
+
 def build_report(cfg: dict, assembly: list[dict], pure_errors: list[str]) -> dict:
     all_sources = source_files()
     focus = focus_files(cfg)
@@ -359,7 +382,9 @@ def main() -> int:
     if args.compile_probe:
         assembly, assembly_errors = compile_probe(cfg)
 
+    token_vazio_contract, token_vazio_errors = validate_token_vazio_contract()
     report = build_report(cfg, assembly, pure_errors)
+    report["token_vazio_contract"] = token_vazio_contract
     if args.write_report:
         write_reports(report)
 
@@ -372,10 +397,11 @@ def main() -> int:
         "focus_heap_call_files": report["focus_heap_call_files"],
         "pure_core_source_policy": report["pure_core_source_policy"],
         "assembly_probe": assembly,
+        "token_vazio_contract": token_vazio_contract,
         "claim_allowed": False,
     }, indent=2, sort_keys=True))
 
-    errors = pure_errors + assembly_errors
+    errors = pure_errors + assembly_errors + token_vazio_errors
     for err in errors:
         print(f"ERROR: {err}", file=sys.stderr)
     if args.strict and errors:
