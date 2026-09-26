@@ -179,6 +179,9 @@ jobs:
           python3 tools/audit_freestanding_boundaries.py \
             --strict --compile-probe --write-report
 
+      - name: RAFAELIA ZERO compatibility contract
+        run: python3 scripts/validate_rafaelia_zero_runtime.py
+
       - name: Settings / capability / startup contract
         run: python3 tests/test_rafcodephi_startup_and_settings_contract.py
 
