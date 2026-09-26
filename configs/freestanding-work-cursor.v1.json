@@ -4,8 +4,8 @@
   "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
   "base_commit": "8004dfd5c112061579d54c6bf5a5afdd514ddfdf",
   "branch": "audit/freestanding-atlas-token-vazio-v3-20260926",
-  "pull_request": 465,
-  "predecessor_head": "9023b9f1542e27ab63eabd9107c54995d54652e4",
+  "pull_request": 466,
+  "predecessor_head": "225f9a1772c9fc83026545d5720d1b3bde37462c",
   "authority": {
     "pure_core": "rafaelia/src/main/cpp/zero",
     "platform_gate": [
@@ -121,5 +121,7 @@
       "Provider Protection run 36273253772"
     ]
   ],
-  "claim_allowed": false
+  "claim_allowed": false,
+  "merged_predecessor_pr": 465,
+  "merged_predecessor_commit": "5cca02e357d023be593c7a7b2369e39ded7d2eb9"
 }
