@@ -185,8 +185,13 @@ def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
                     .get("host_vector_extra_sources", {})
                     .get(vector_name, [])
             ]
+            include_args = [
+                arg
+                for name in cfg["assembly_probe"].get("host_vector_include_dirs", [])
+                for arg in ("-I", str(ROOT / name))
+            ]
             vector_compile = subprocess.run(
-                [clang, "-std=c11", "-O2", str(vector_source), *extra_sources, "-o", str(vector_bin)],
+                [clang, "-std=c11", "-O2", *include_args, str(vector_source), *extra_sources, "-o", str(vector_bin)],
                 cwd=ROOT,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
