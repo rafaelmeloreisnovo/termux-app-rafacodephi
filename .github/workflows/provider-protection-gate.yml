@@ -44,6 +44,7 @@ jobs:
           set -euo pipefail
           python3 scripts/ci/provider_protection_contract.py \
             --target governance/provider/PROVIDER_RULESET_TARGET.v2.json \
+            --witness governance/provider/PROVIDER_RULESET_EXTERNAL_WITNESS_20260926.v1.json \
             --default-branch master \
             --json reports/provider-protection-receipt.json \
             --markdown reports/provider-protection-receipt.md
