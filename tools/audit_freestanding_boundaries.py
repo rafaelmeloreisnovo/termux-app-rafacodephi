@@ -286,6 +286,29 @@ def validate_token_vazio_contract() -> tuple[dict, list[str]]:
     return payload, errors
 
 
+def validate_source_alias_graph() -> tuple[dict, list[str]]:
+    validator = ROOT / "tools" / "validate_source_alias_graph.py"
+    if not validator.is_file():
+        return {"state": "TOKEN_VAZIO_NOT_OBSERVED"}, ["source alias validator missing"]
+    cp = subprocess.run(
+        [sys.executable, str(validator)],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    errors: list[str] = []
+    try:
+        payload = json.loads(cp.stdout)
+    except json.JSONDecodeError:
+        payload = {"state":"FAIL","claim_allowed":False}
+        errors.append("source alias validator emitted invalid JSON")
+    if cp.returncode != 0:
+        errors.append("source alias graph validation failed")
+    return payload, errors
+
+
 def build_report(cfg: dict, assembly: list[dict], pure_errors: list[str]) -> dict:
     all_sources = source_files()
     focus = focus_files(cfg)
@@ -386,8 +409,10 @@ def main() -> int:
         assembly, assembly_errors = compile_probe(cfg)
 
     token_vazio_contract, token_vazio_errors = validate_token_vazio_contract()
+    source_alias_graph, source_alias_errors = validate_source_alias_graph()
     report = build_report(cfg, assembly, pure_errors)
     report["token_vazio_contract"] = token_vazio_contract
+    report["source_alias_graph"] = source_alias_graph
     if args.write_report:
         write_reports(report)
 
@@ -401,10 +426,11 @@ def main() -> int:
         "pure_core_source_policy": report["pure_core_source_policy"],
         "assembly_probe": assembly,
         "token_vazio_contract": token_vazio_contract,
+        "source_alias_graph": source_alias_graph,
         "claim_allowed": False,
     }, indent=2, sort_keys=True))
 
-    errors = pure_errors + assembly_errors + token_vazio_errors
+    errors = pure_errors + assembly_errors + token_vazio_errors + source_alias_errors
     for err in errors:
         print(f"ERROR: {err}", file=sys.stderr)
     if args.strict and errors:
