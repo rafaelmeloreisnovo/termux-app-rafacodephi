@@ -1,0 +1,49 @@
+{
+  "schema": "rafaelia.ecosystem-federation-hotfix-receipt/v2",
+  "date": "2026-09-30",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "branch": "hotfix/ecosystem-federation-v2-20260930",
+  "supersedes": "federation/receipts/2026-09-30-ecosystem-federation.v1.json",
+  "state": "BLOCKED_EXTERNAL_ADMIN_AUTHORITY",
+  "errors": [
+    "live ruleset lacks required_status_checks",
+    "pull-request policy differs from target v3",
+    "five always-bypass actors unresolved"
+  ],
+  "urgencies": [
+    "apply version-bound provider admin delta before treating provider protection as PASS"
+  ],
+  "gates": {
+    "rafaelia_pipeline": "PASS_PREDECESSOR",
+    "native_safety": "PASS_PREDECESSOR",
+    "provider_protection": "FAIL"
+  },
+  "token_vazio": [
+    "bypass actor justification",
+    "provider apply state",
+    "D6-D8 physical runtime evidence"
+  ],
+  "provisions": [
+    "ruleset 21908888 re-read; updated_at still matches administrative delta precondition",
+    "do not weaken provider evaluator"
+  ],
+  "needs": [
+    "GitHub ruleset administrative authority",
+    "post-change 10_PROVIDER PASS receipt"
+  ],
+  "rollback": "No provider mutation was applied. If later applied, preserve pre-change snapshot and revert only through provider administration with successor receipt.",
+  "hotfix_commits": [],
+  "claim_allowed": false,
+  "R3": {
+    "F_ok": "BLOCKED_EXTERNAL_ADMIN_AUTHORITY",
+    "F_gap": [
+      "live ruleset lacks required_status_checks",
+      "pull-request policy differs from target v3",
+      "five always-bypass actors unresolved",
+      "bypass actor justification",
+      "provider apply state",
+      "D6-D8 physical runtime evidence"
+    ],
+    "F_next": "apply version-bound provider admin delta before treating provider protection as PASS"
+  }
+}
