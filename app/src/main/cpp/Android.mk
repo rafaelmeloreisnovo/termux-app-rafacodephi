@@ -38,7 +38,7 @@ else
 LOCAL_SRC_FILES := lowlevel/baremetal.c
 endif
 endif
-LOCAL_SRC_FILES += lowlevel/baremetal_jni.c lowlevel/rafaelia_gpu_orchestrator.c lowlevel/rafaelia_commit_gate_ll.c lowlevel/bootstrap_baremetal_guard.c lowlevel/bootstrap_baremetal_jni.c lowlevel/hw_profile_pagesize_wrap.c
+LOCAL_SRC_FILES += lowlevel/baremetal_jni.c lowlevel/rafaelia_gpu_orchestrator.c lowlevel/gpu_compute_evidence_gate.c lowlevel/rafaelia_commit_gate_ll.c lowlevel/bootstrap_baremetal_guard.c lowlevel/bootstrap_baremetal_jni.c lowlevel/hw_profile_pagesize_wrap.c
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
     LOCAL_SRC_FILES += lowlevel/baremetal_asm.S
     LOCAL_CFLAGS += -DHAS_BM_NEON_ASM=1
