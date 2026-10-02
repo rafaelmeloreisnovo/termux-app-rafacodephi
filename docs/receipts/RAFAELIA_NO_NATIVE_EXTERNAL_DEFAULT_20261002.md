@@ -1,7 +1,8 @@
 # RAFAELIA No-Native/No-External Default Receipt — 2026-10-02
 
 event: `RAFAELIA-NO-NATIVE-EXTERNAL-DEFAULT-20261002`
-parent_ref: `rafaelmeloreisnovo/termux-app-rafacodephi@70ef505aa7d31193ab80ee9d6bfb3205b45ece42`
+parent_ref: `rafaelmeloreisnovo/termux-app-rafacodephi@c30ef43c8126bc85b72e75e7d6ca330ddb00b7ae`
+local_read_ref: `70ef505aa7d31193ab80ee9d6bfb3205b45ece42`
 branch_scope: `master` local patch, not yet Android-build promoted
 authority: Termux RAFCODEPHI local Android/provider implementation
 write_scope: `gradle.properties`, `rafaelia/build.gradle`, `RafaeliaUtils.java`, tests, this receipt
