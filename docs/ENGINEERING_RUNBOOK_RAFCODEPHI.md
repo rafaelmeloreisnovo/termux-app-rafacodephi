@@ -200,9 +200,12 @@ O modo obrigatório falha quando `final_status != DEVICE_VALIDATED`.
 
 ```bash
 ./scripts/device_pkg_smoke.sh
+REQUIRE_REAL_PKG=true ./scripts/device_pkg_smoke.sh
 ```
 
 Um PASS estrutural/bridge/freestanding-host não prova `pkg update` nem `pkg install` físicos.
+
+Só promover `pkg` real quando o smoke obrigatório emitir `DEVICE_REAL_PKG_VALIDATED`.
 
 ## 11. Payload source-built RAFCODEPHI ARM/ARM64
 
@@ -222,11 +225,14 @@ A promoção física mínima continua device-bound:
 
 ```bash
 DEVICE_SMOKE_REQUIRED=true ./scripts/device_runtime_smoke.sh path/to/app.apk
+REQUIRE_REAL_PKG=true ./scripts/device_pkg_smoke.sh
 pkg update -y
 pkg install -y nano
 pkg install -y python
 pkg install -y git
 ```
+
+O estado esperado de promoção é `DEVICE_REAL_PKG_VALIDATED`; qualquer outro final_status preserva `TOKEN_VAZIO`/BLOCKED para `pkg update` e `pkg install`.
 
 ## 12. Repositório binário custom
 
