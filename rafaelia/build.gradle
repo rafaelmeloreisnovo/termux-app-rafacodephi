@@ -2,28 +2,54 @@ plugins {
   id 'com.android.library'
 }
 
+def rafaeliaNativeBridgeEnabled = providers.gradleProperty("rafaelia.nativeBridge.enabled")
+    .map { it.toBoolean() }
+    .orElse(false)
+    .get()
+def rafaeliaWorkRuntimeEnabled = providers.gradleProperty("rafaelia.workRuntime.enabled")
+    .map { it.toBoolean() }
+    .orElse(false)
+    .get()
+
 android {
   namespace = "com.termux.rafaelia"
   
   compileSdk = project.properties.compileSdkVersion.toInteger()
-  ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
+  if (rafaeliaNativeBridgeEnabled) {
+    ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
+  }
 
   defaultConfig {
     minSdk = project.properties.minSdkVersion.toInteger()
     targetSdk = project.properties.targetSdkVersion.toInteger()
     
-    externalNativeBuild {
-      ndkBuild {
-        cFlags "-std=c11", "-Wall", "-Wextra", "-Werror", "-Os", "-fno-stack-protector"
+    if (rafaeliaNativeBridgeEnabled) {
+      externalNativeBuild {
+        ndkBuild {
+          cFlags "-std=c11", "-Wall", "-Wextra", "-Werror", "-Os", "-fno-stack-protector"
+        }
       }
     }
 
     testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
   }
 
-  externalNativeBuild {
-    ndkBuild {
-      path "src/main/cpp/Android.mk"
+  if (rafaeliaNativeBridgeEnabled) {
+    externalNativeBuild {
+      ndkBuild {
+        path "src/main/cpp/Android.mk"
+      }
+    }
+  }
+
+  sourceSets {
+    main {
+      if (!rafaeliaWorkRuntimeEnabled) {
+        java {
+          exclude "**/RafaeliaBatchScheduler.java"
+          exclude "**/RafaeliaBatchWorker.java"
+        }
+      }
     }
   }
 
@@ -51,8 +77,10 @@ android {
 }
 
 dependencies {
-  implementation 'androidx.annotation:annotation:1.8.2'
-  implementation 'androidx.work:work-runtime:2.9.1'
+  if (rafaeliaWorkRuntimeEnabled) {
+    implementation 'androidx.annotation:annotation:1.8.2'
+    implementation 'androidx.work:work-runtime:2.9.1'
+  }
   testImplementation 'junit:junit:4.13.2'
   // Local JVM tests exercise the same org.json contract used on Android.
   // The Android mockable jar returns default/null values for framework APIs,
