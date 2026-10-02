@@ -26,6 +26,7 @@ Make the RAFAELIA module default to a low-friction package profile:
 - Replaced public `native` utility methods in `RafaeliaUtils` with Java fallbacks for memory, vector, ANOVA, sequence, radix, and zero-curve helpers.
 - Added `tests/test_rafaelia_dependency_profile_contract.py`.
 - Updated `docs/ENGINEERING_RUNBOOK_RAFCODEPHI.md` with the real ARM validator gate, the `LEGACY_PREFIX_BINARY_RISK` promotion stop, and the device-bound `pkg install` promotion sequence.
+- Declared the bridge's canonical real-pkg promotion package set with `termux-api`, while preserving cheaper profile resolution for structural lanes.
 
 ## Evidence
 
