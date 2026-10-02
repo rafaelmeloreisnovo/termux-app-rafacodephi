@@ -19,6 +19,9 @@ API_PACKAGES=(termux-api)
 # Canonical real-pkg promotion payload. Profile resolution below may narrow this
 # for cheaper structural lanes, but real promotion keeps proot and termux-api in scope.
 REQUIRED_PACKAGES=(apt bash busybox proot dpkg ca-certificates coreutils termux-tools termux-api)
+# Canonical promotion ABI pair. The default development lane still uses
+# RAFCODEPHI_PACKAGE_ARCHES:-arm and overwrites REQUIRED_ARCHES below.
+REQUIRED_ARCHES=(aarch64 arm)
 read -r -a REQUIRED_ARCHES <<< "$ARCHES_SELECTOR"
 
 info() { printf '[rafcodephi-packages-bridge] %s\n' "$*"; }
