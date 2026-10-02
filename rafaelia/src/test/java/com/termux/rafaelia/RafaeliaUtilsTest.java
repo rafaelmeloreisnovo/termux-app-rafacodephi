@@ -9,7 +9,8 @@ import static org.junit.Assert.*;
  * Unit tests for Rafaelia utility functions.
  * Tests memory operations, mathematical functions, and vector operations.
  * 
- * Tests that require native library are skipped when the library is not available.
+ * Public utility fallbacks run without a native library. JNI-only paths are
+ * skipped when the library is not available.
  */
 public class RafaeliaUtilsTest {
     
@@ -28,11 +29,10 @@ public class RafaeliaUtilsTest {
         // Native library availability is checked in individual tests that need it
     }
     
-    // ==================== Memory Operations Tests (require native) ====================
+    // ==================== Memory Operations Tests (pure Java fallback available) ====================
     
     @Test
     public void testMemcpy() {
-        requireNativeLibrary();
         byte[] src = {1, 2, 3, 4, 5, 6, 7, 8};
         byte[] dest = new byte[8];
         
@@ -43,7 +43,6 @@ public class RafaeliaUtilsTest {
     
     @Test
     public void testMemcpy_partial() {
-        requireNativeLibrary();
         byte[] src = {1, 2, 3, 4, 5, 6, 7, 8};
         byte[] dest = {0, 0, 0, 0, 0, 0, 0, 0};
         
@@ -58,7 +57,6 @@ public class RafaeliaUtilsTest {
     
     @Test
     public void testMemset() {
-        requireNativeLibrary();
         byte[] array = new byte[10];
         
         RafaeliaUtils.memset(array, 42, 10);
@@ -70,7 +68,6 @@ public class RafaeliaUtilsTest {
     
     @Test
     public void testMemset_partial() {
-        requireNativeLibrary();
         byte[] array = new byte[10];
         
         RafaeliaUtils.memset(array, 99, 5);
