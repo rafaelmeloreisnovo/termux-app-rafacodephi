@@ -79,6 +79,23 @@ Portanto:
 
 A próxima versão funcional de rede deve construir/publicar pacotes Android/Bionic no prefixo RAFCODEPHI, assinar metadados APT com raiz de confiança persistente e só então remover o `apt_update_guard`. Pacotes Linux/glibc usados nos gates QEMU não podem ser promovidos diretamente para o Android.
 
+## Hotfix de rota — 2026-10-02
+
+A matriz `termux-app_v0.118.0+f8e0f31-apt-android-7-github-debug_canonical-matrix` foi confrontada com o contrato V1. O bootstrap embutido nessa matriz é `profile=bridge` e não satisfaz `bootstrap_profile_requirement=real-pkg`.
+
+A causa de roteamento está no caminho genérico `scripts/build_apk_matrix.sh`: o marcador `termux-packages-source-contract` é normalizado para a rota `local`, que materializa o bootstrap bridge. Esse artefato não pode ser promovido por mudança de rótulo.
+
+Para o fechamento atual, a autoridade de produção do bootstrap real permanece `rafaelmeloreisnovo/termux-packages`, e a rota canônica de consumo é este workflow V1. O PR que introduz este receipt documental força nova execução do workflow V1 no mesmo head do app para gerar um candidato ARM32/ARM64 a partir do source-build real, mantendo:
+
+```text
+bridge_allowed=false
+legacy_prefix_allowed=false
+claim_allowed=false
+device_runtime_proof=TOKEN_VAZIO
+```
+
+A matriz bridge anterior permanece evidência histórica e não é reutilizada como prova de `real-pkg`.
+
 ---
 
 **Invariante:** `fonte != build != APK != instalação != runtime != claim`.
