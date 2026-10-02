@@ -16,7 +16,9 @@ BOOTSTRAP_PACKAGES=(apt bash busybox dpkg ca-certificates coreutils termux-tools
 RUNTIME_PACKAGES=(openssl curl git python procps)
 VECTRAS_PACKAGES=(proot)
 API_PACKAGES=(termux-api)
-REQUIRED_PACKAGES=()
+# Canonical real-pkg promotion payload. Profile resolution below may narrow this
+# for cheaper structural lanes, but real promotion keeps proot and termux-api in scope.
+REQUIRED_PACKAGES=(apt bash busybox proot dpkg ca-certificates coreutils termux-tools termux-api)
 read -r -a REQUIRED_ARCHES <<< "$ARCHES_SELECTOR"
 
 info() { printf '[rafcodephi-packages-bridge] %s\n' "$*"; }
