@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #include "rafaelia_gpu_orchestrator.h"
+#include "gpu_compute_evidence_gate.h"
 
 JNIEXPORT jint JNICALL
 Java_com_termux_lowlevel_GpuOrchestrator_nativeRefreshCapabilities(
@@ -34,6 +35,15 @@ Java_com_termux_lowlevel_GpuOrchestrator_nativeRecordTotalCost(
     if (cpu_total_ns <= 0 || gpu_total_ns <= 0 ||
         sample_count < 0 || work_bytes < 0) {
         return (jint)RGO_ERR_ARGS;
+    }
+
+    /*
+     * Presence of an OpenCL/Vulkan runtime is discovery evidence only.
+     * Do not let externally supplied timing/correctness booleans promote a GPU
+     * backend until this authority path has a real dispatch/readback producer.
+     */
+    if (!rgpu_compute_dispatch_proven((rgpu_backend_t)backend)) {
+        return (jint)RGO_ERR_NOT_QUALIFIED;
     }
 
     m.cpu_total_ns = (uint64_t)cpu_total_ns;

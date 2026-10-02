@@ -1,4 +1,5 @@
 #include "rafaelia_gpu_orchestrator.h"
+#include "gpu_compute_evidence_gate.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -52,7 +53,15 @@ int main(void) {
     m.gpu_total_ns = 1000000u;
     assert(rgpu_measurement_qualifies(&p, &m) == 0);
 
-    printf("RGO_TEST PASS cores=%u caps=0x%x\n",
+    /*
+     * Hotfix invariant: mathematical qualification is not enough to promote
+     * a backend. No real GPU dispatch/readback producer is currently bound to
+     * this authority path, so dispatch evidence must remain fail-closed.
+     */
+    assert(rgpu_compute_dispatch_proven(RGO_GPU_BACKEND_OPENCL) == 0);
+    assert(rgpu_compute_dispatch_proven(RGO_GPU_BACKEND_VULKAN) == 0);
+
+    printf("RGO_TEST PASS cores=%u caps=0x%x dispatch_proven=0\n",
            rgpu_get_core_count(), rgpu_runtime_caps());
     return 0;
 }
