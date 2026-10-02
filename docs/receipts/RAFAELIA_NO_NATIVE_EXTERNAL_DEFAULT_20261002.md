@@ -25,6 +25,7 @@ Make the RAFAELIA module default to a low-friction package profile:
 - Excluded `RafaeliaBatchScheduler` and `RafaeliaBatchWorker` from the default source set when Work runtime is disabled.
 - Replaced public `native` utility methods in `RafaeliaUtils` with Java fallbacks for memory, vector, ANOVA, sequence, radix, and zero-curve helpers.
 - Added `tests/test_rafaelia_dependency_profile_contract.py`.
+- Updated `docs/ENGINEERING_RUNBOOK_RAFCODEPHI.md` with the real ARM validator gate, the `LEGACY_PREFIX_BINARY_RISK` promotion stop, and the device-bound `pkg install` promotion sequence.
 
 ## Evidence
 
