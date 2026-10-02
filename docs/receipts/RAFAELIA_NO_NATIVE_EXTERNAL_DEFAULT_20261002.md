@@ -66,12 +66,44 @@ Additional local limitation: `javac` is not installed in this executor.
 
 This receipt proves the source/config contract check and records the link-gap correction. It does not yet prove a post-correction APK, `.so` absence inside a produced APK, device execution, physical ARM32/ARM64 behavior, or release-signing reproducibility.
 
-claim_allowed: `false` for Android package/build/device claims until a fresh SDK-backed CI rerun and artifact inspection complete.
+claim_allowed: `false` for Android package/build/device claims until an SDK-backed build and artifact inspection run.
 
 ## R3
 
 F_ok: default source profile removes required RAFAELIA NDK/Work dependency path; public utility JNI dependency removed; contract test passes; missing GPU evidence-gate object is now declared in the existing native target.
 
-F_gap: fresh post-correction CI results, Android SDK-backed unit test, APK artifact inspection, device install, and provider protection remain open.
+F_gap: Android SDK unavailable here, so Gradle unit test/APK artifact inspection/device install/provider protection remain open.
 
-F_next: rerun the affected CI workflows from the corrected head; promote only if linker, artifact, and device gates pass independently.
+F_next: run `:rafaelia:testDebugUnitTest` and APK inspection in an SDK-equipped runner; then inspect produced APK for absence/presence of native libs according to selected profile.
+
+## Post-merge evidence — observed 2026-10-02
+
+The change was merged through PR `#478` at merge commit `e5502d15982ebcd803c495a8792f630052ad132c`.
+
+PASS after the manifest correction:
+
+- Android ARM32 Compatibility — run `37026122234`
+- Android ARM32 Compatibility (NDK 29) — run `37026121965`
+- RAFAELIA Pipeline — run `37026122305`
+- Vectra-grade Benchmarks — run `37026122416`
+- Rafaelia Native Safety — run `37026122180`
+- Safety Gates CI — run `37026122994`
+- Bootstrap Package Install Contract — run `37026122891`
+- Real Pkg Promotion Contract — run `37026121760`
+- ABI policy, top42 and audit benchmark contracts — runs `37026121838`, `37026123002`, `37026123591`
+
+Independent unresolved gates:
+
+- Provider Protection Gate — run `37026123446`, FAIL; live ruleset mismatch, `claim_allowed=false`.
+- Loader APK Secure Handoff — run `37026122315`, FAIL; artifact inspection reported `DEX=2` and host/loader debug certificate mismatch.
+- RafCodePhi Beta Build — run `37026122197`, IN_PROGRESS at receipt time.
+
+Post-merge state: `IMPLEMENTED_AND_CI_VALIDATED` for the bounded source/config/build scope; `TOKEN_VAZIO` remains for device execution, release signing, provider enforcement and final artifact absence/presence claims.
+
+## Post-merge R3
+
+F_ok: implementation merged; affected ARM32/NDK29/linker/pipeline/Vectra gates passed after correction.
+
+F_gap: provider protection, loader DEX/signer contract, beta completion, physical device and release evidence.
+
+F_next: resolve the provider and loader gates in their own authorized scope, then rerun only the final artifact/device gates.
