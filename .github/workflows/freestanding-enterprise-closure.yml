@@ -147,6 +147,8 @@ jobs:
             scripts/run-docker.sh
             scripts/run-rafcodephi-bootstrap-docker.sh
             scripts/build-rafcodephi-real-bootstrap.sh
+            scripts/repair_rafcodephi_bootstrap_symlinks.py
+            scripts/tests/test_rafcodephi_bootstrap_symlink_repair.py
             scripts/generate-bootstraps.sh
             packages/libxml2/build.sh
           )
@@ -154,6 +156,8 @@ jobs:
             test -f "$path" || { echo "missing source capability: $path" >&2; exit 1; }
           done
           grep -Fq 'libllvm18' packages/libxml2/build.sh
+          grep -Fq 'repair_rafcodephi_bootstrap_symlinks.py' scripts/build-rafcodephi-real-bootstrap.sh
+          python3 scripts/tests/test_rafcodephi_bootstrap_symlink_repair.py
           mkdir -p build/reports
           python3 scripts/apply-rafcodephi-build-properties.py \
             --properties scripts/properties.sh \
@@ -379,6 +383,27 @@ jobs:
           print(json.dumps(doc, indent=2, sort_keys=True))
           PY
 
+      - name: Pack portable per-arch DEB custody
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          for arch in arm aarch64; do
+            deb_dir="termux-packages/artifacts/rafcodephi-bootstrap/debs/$arch"
+            [[ -d "$deb_dir" ]] || continue
+            if ! find "$deb_dir" -maxdepth 1 -type f -name '*.deb' -print -quit | grep -q .; then
+              continue
+            fi
+            test -s "$deb_dir/SHA256SUMS"
+            (cd "$deb_dir"; sha256sum -c SHA256SUMS >/dev/null)
+            archive="build/reports/rafcodephi-deb-custody-${arch}.tar"
+            tar --sort=name --format=posix --mtime='@0' --owner=0 --group=0 --numeric-owner \
+              -cf "$archive" -C "$deb_dir" .
+            sha256sum "$archive" > "$archive.sha256"
+            echo "RAFCODEPHI_DEB_CUSTODY_ARCHIVE=$arch path=$archive"
+          done
+
       - name: Upload enterprise candidate and custody evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -392,4 +417,6 @@ jobs:
             build/freestanding-source/
             build/reports/
             termux-packages/build/reports/
-            termux-packages/artifacts/rafcodephi-bootstrap/
+            termux-packages/artifacts/rafcodephi-bootstrap/*.zip
+            termux-packages/artifacts/rafcodephi-bootstrap/*.txt
+            termux-packages/artifacts/rafcodephi-bootstrap/*.json
