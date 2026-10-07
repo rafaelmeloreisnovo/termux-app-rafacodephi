@@ -147,6 +147,7 @@ jobs:
             scripts/run-docker.sh
             scripts/run-rafcodephi-bootstrap-docker.sh
             scripts/build-rafcodephi-real-bootstrap.sh
+            scripts/repair_rafcodephi_bootstrap_symlinks.py
             scripts/generate-bootstraps.sh
             packages/libxml2/build.sh
           )
@@ -154,6 +155,7 @@ jobs:
             test -f "$path" || { echo "missing source capability: $path" >&2; exit 1; }
           done
           grep -Fq 'libllvm18' packages/libxml2/build.sh
+          grep -Fq 'repair_rafcodephi_bootstrap_symlinks.py' scripts/build-rafcodephi-real-bootstrap.sh
           mkdir -p build/reports
           python3 scripts/apply-rafcodephi-build-properties.py \
             --properties scripts/properties.sh \
