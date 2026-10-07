@@ -12,7 +12,7 @@ on:
       - 'tests/test_verify_apk_evidence.py'
       - 'data/contracts/apk_*.json'
       - '.github/workflows/apk-evidence-gate.yml'
-      - '.github/workflows/00-rafaelia-control-plane.yml'
+      - '.github/workflows/00_START_HERE.yml'
 
 permissions:
   contents: read
@@ -28,11 +28,11 @@ defaults:
 jobs:
   static-and-unit:
     name: "🧾 APK evidence — parser + contracts"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
 

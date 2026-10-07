@@ -1,4 +1,5 @@
 #include "rafz.h"
+#include "include/rafz_pure_primitives.h"
 
 #define RAFZ_GUARD 0x52415A46u /* RAZF */
 #define RAFZ_CRC32C_POLY 0x82F63B78u
@@ -109,21 +110,15 @@ rafz_u32 rafz_crc32c(const void *data, rafz_u32 bytes) {
 }
 
 rafz_u8 rafz_bagua_rol3(rafz_u8 value) {
-    rafz_u8 v = (rafz_u8)(value & 7u);
-    return (rafz_u8)((((rafz_u32)v << 1u) | ((rafz_u32)v >> 2u)) & 7u);
+    return rafz_pure_bagua_rol3(value);
 }
 
 rafz_u8 rafz_bagua_ror3(rafz_u8 value) {
-    rafz_u8 v = (rafz_u8)(value & 7u);
-    return (rafz_u8)((((rafz_u32)v >> 1u) | ((rafz_u32)v << 2u)) & 7u);
+    return rafz_pure_bagua_ror3(value);
 }
 
 rafz_s32 rafz_q16_step(rafz_s32 current) {
-    rafz_s32 high = current >> 16;
-    rafz_u32 low = (rafz_u32)current & 0xFFFFu;
-    rafz_s32 scaled = high * (rafz_s32)RAFZ_Q16_GEOM;
-    scaled += (rafz_s32)((low * (rafz_u32)RAFZ_Q16_GEOM) >> 16u);
-    return scaled + (rafz_s32)RAFZ_Q16_FORCE;
+    return rafz_pure_q16_step(current);
 }
 
 rafz_status rafz_init(rafz_ctx *ctx, void *arena, rafz_u32 arena_bytes) {

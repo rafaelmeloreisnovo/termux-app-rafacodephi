@@ -8,6 +8,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 HEADER = ROOT / "rafaelia/src/main/cpp/zero/include/rafz.h"
 CORE = ROOT / "rafaelia/src/main/cpp/zero/rafz.c"
+PURE_PRIMITIVES = ROOT / "rafaelia/src/main/cpp/zero/include/rafz_pure_primitives.h"
 MODULE_MK = ROOT / "rafaelia/src/main/cpp/Android.mk"
 APP_MK = ROOT / "app/src/main/cpp/Android.mk"
 MODULE_JAVA = ROOT / "rafaelia/src/main/java/com/termux/rafaelia/RafaeliaZero.java"
@@ -18,7 +19,8 @@ EVIDENCE_CONTRACT = ROOT / "configs/rafaelia-zero-operational-evidence-contract.
 
 EXPECTED_BLOBS = {
     HEADER: "019254937a4d7d50c3a862baa72966722faa38e2",
-    CORE: "327f66261719c96e36afb668c180b1628b8c2669",
+    CORE: "f3457789b74db24aaef91895e8fb433673faeaa5",
+    PURE_PRIMITIVES: "4109cdafbc74cc5ae1d1b1499c4313d4b9bdce40",
 }
 FORBIDDEN_CORE = (b"malloc(", b"calloc(", b"realloc(", b"free(", b"fopen(", b"printf(", b"syscall(")
 
@@ -40,6 +42,7 @@ def main() -> int:
     required_paths = (
         HEADER,
         CORE,
+        PURE_PRIMITIVES,
         MODULE_MK,
         APP_MK,
         MODULE_JAVA,
@@ -65,6 +68,8 @@ def main() -> int:
                 errors.append(f"forbidden-core:{token.decode('ascii')}")
         if data.count(b'#include "rafz.h"') != 1:
             errors.append("core-include-contract")
+        if data.count(b'#include "include/rafz_pure_primitives.h"') != 1:
+            errors.append("pure-primitives-include-contract")
 
     checks = {
         MODULE_MK: ["LOCAL_MODULE := termux_rafaelia_zero", "zero/rafz.c", "zero/rafz_android_jni.c"],

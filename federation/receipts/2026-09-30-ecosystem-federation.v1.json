@@ -1,0 +1,50 @@
+{
+  "schema": "rafaelia.ecosystem-federation-receipt/v1",
+  "date": "2026-09-30",
+  "state": "MIXED",
+  "materialized": [
+    "federation/functional-freestanding-leaf.v1.json",
+    "federation/ecosystem-member.v1.json"
+  ],
+  "workflows": [
+    {
+      "name": "Safety Gates CI",
+      "state": "PASS"
+    },
+    {
+      "name": "audit-benchmark-contract",
+      "state": "PASS"
+    },
+    {
+      "name": "top42-bench",
+      "state": "PASS"
+    },
+    {
+      "name": "abi-policy-consistency",
+      "state": "PASS"
+    },
+    {
+      "name": "Rafaelia Native Safety",
+      "state": "PASS"
+    },
+    {
+      "name": "Provider Protection Gate",
+      "state": "FAIL",
+      "observed": [
+        "MISSING_RULE_TYPES",
+        "REQUIRED_STATUS_CHECKS_MISMATCH"
+      ]
+    },
+    {
+      "name": "RAFAELIA Pipeline",
+      "state": "QUEUED"
+    }
+  ],
+  "evidence_boundary": "D3-D8 not inferred from static/runtime-gate success",
+  "claim_allowed": false,
+  "R3": {
+    "F_ok": "multiple local gates green",
+    "F_gap": "provider ruleset plus queued pipeline",
+    "F_next": "ruleset reconciliation then package/runtime chain"
+  }
+}

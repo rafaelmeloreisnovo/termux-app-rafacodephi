@@ -1,0 +1,635 @@
+#!/usr/bin/env python3
+"""Inventory and enforce RAFCODEPhi freestanding boundaries.
+
+The runtime core stays independent from this tool. Python is used only as a
+build/audit surface. SOURCE, ARTIFACT, EXECUTION, EVIDENCE and CLAIM remain
+separate states.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from collections import Counter, defaultdict
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+CONFIG = ROOT / "configs" / "freestanding-pure-core.v1.json"
+SOURCE_EXTS = {".c", ".h", ".S", ".s", ".cc", ".cpp", ".hpp", ".inc"}
+HEAP_RE = re.compile(r"\b(?:malloc|calloc|realloc|free)\s*\(")
+SYSCALL_RE = re.compile(
+    r"\b(?:syscall|__NR_|SYS_|proot_sys_|raf_sys_|fs_sc[0-6]|"
+    r"freestanding_(?:read|write|open|close|exit))",
+    re.I,
+)
+JNI_RE = re.compile(r"\b(?:JNIEnv|JNIEXPORT|Java_[A-Za-z0-9_]+)\b")
+FLOW_RES = {
+    "if": re.compile(r"\bif\s*\("),
+    "for": re.compile(r"\bfor\s*\("),
+    "while": re.compile(r"\bwhile\s*\("),
+    "switch": re.compile(r"\bswitch\s*\("),
+    "goto": re.compile(r"\bgoto\b"),
+    "ternary": re.compile(r"\?"),
+}
+EXTERNAL_INCLUDE_RE = re.compile(r"^\s*#\s*include\s*<([^>]+)>", re.M)
+ASM_RETURN = {"ret"}
+ASM_EXACT_BRANCH = {
+    "b", "bl", "blx", "br", "blr", "cbz", "cbnz", "tbz", "tbnz",
+}
+ARM_COND = {
+    "beq", "bne", "bcs", "bcc", "bhs", "blo", "bmi", "bpl", "bvs",
+    "bvc", "bhi", "bls", "bge", "blt", "bgt", "ble",
+}
+
+
+def rel(path: Path) -> str:
+    return path.relative_to(ROOT).as_posix()
+
+
+def sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for block in iter(lambda: fh.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def source_files() -> list[Path]:
+    return sorted(
+        p for p in ROOT.rglob("*")
+        if p.is_file()
+        and p.suffix in SOURCE_EXTS
+        and ".git" not in p.parts
+        and "build" not in p.parts
+    )
+
+
+def focus_files(cfg: dict) -> list[Path]:
+    out: list[Path] = []
+    for root_name in cfg["inventory_roots"]:
+        base = ROOT / root_name
+        if not base.exists():
+            continue
+        out.extend(
+            p for p in base.rglob("*")
+            if p.is_file() and p.suffix in SOURCE_EXTS
+        )
+    return sorted(set(out))
+
+
+def lexical_record(path: Path) -> dict:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    includes = EXTERNAL_INCLUDE_RE.findall(text)
+    flow = {name: len(rx.findall(text)) for name, rx in FLOW_RES.items()}
+    return {
+        "path": rel(path),
+        "bytes": path.stat().st_size,
+        "sha256": sha256(path),
+        "external_includes": includes,
+        "heap_calls": len(HEAP_RE.findall(text)),
+        "syscall_markers": len(SYSCALL_RE.findall(text))
+        + len(re.findall(r"\bsvc\s*#?0\b", text, flags=re.I))
+        + len(re.findall(r"\bint\s+\$0x80\b", text, flags=re.I)),
+        "jni_markers": len(JNI_RE.findall(text)),
+        "flow": flow,
+        "flow_total": sum(flow.values()),
+    }
+
+
+def classify(record: dict) -> str:
+    includes = set(record["external_includes"])
+    hosted_headers = {
+        "jni.h", "dlfcn.h", "unistd.h", "pthread.h", "stdio.h",
+        "stdlib.h", "time.h", "android/log.h",
+    }
+    if record["jni_markers"] or includes & hosted_headers:
+        return "HOSTED_ADAPTER"
+    if record["syscall_markers"]:
+        return "PLATFORM_GATE"
+    if record["heap_calls"]:
+        return "HEAP_DEPENDENT"
+    if record["external_includes"]:
+        return "PORTABLE_C_WITH_TOOLCHAIN_HEADERS"
+    return "FREESTANDING_CANDIDATE"
+
+
+def strip_c_comments(text: str) -> str:
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    text = re.sub(r"//[^\n]*", "", text)
+    return text
+
+
+def audit_pure_source(cfg: dict) -> list[str]:
+    errors: list[str] = []
+    patterns = {
+        name: re.compile(expr, re.M)
+        for name, expr in cfg["pure_core_forbidden"].items()
+    }
+    for name in cfg["pure_core_files"]:
+        path = ROOT / name
+        if not path.exists():
+            errors.append(f"missing pure-core file: {name}")
+            continue
+        text = strip_c_comments(path.read_text(encoding="utf-8"))
+        for kind, rx in patterns.items():
+            matches = list(rx.finditer(text))
+            if matches:
+                errors.append(
+                    f"{name}: forbidden {kind} marker count={len(matches)}"
+                )
+    return errors
+
+
+def parse_asm_branches(asm_text: str) -> list[str]:
+    found: list[str] = []
+    for raw in asm_text.splitlines():
+        line = raw.split("//", 1)[0].split("@", 1)[0].strip()
+        if not line or line.startswith((".", "#")) or line.endswith(":"):
+            continue
+        token = line.split(None, 1)[0].lower()
+        operand = line[len(token):].strip().lower()
+        if token == "bx" and operand in {"lr", "r14"}:
+            continue
+        if token in ASM_RETURN:
+            continue
+        if token in ASM_EXACT_BRANCH or token in ARM_COND or token.startswith("b."):
+            found.append(line)
+    return found
+
+
+def compile_probe(cfg: dict) -> tuple[list[dict], list[str]]:
+    clang = shutil.which("clang")
+    if not clang:
+        return [], ["clang not found: assembly/vector probe NOT_RUN"]
+    source = ROOT / cfg["assembly_probe"]["source"]
+    results: list[dict] = []
+    errors: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="raf-pure-core-") as td:
+        outdir = Path(td)
+        policy = cfg.get("compile_policy", {})
+        warning_flags = policy.get("warnings", [])
+        codegen_flags = policy.get("codegen", [])
+
+        vector_names = cfg["assembly_probe"].get("host_vector_sources")
+        if vector_names is None:
+            legacy = cfg["assembly_probe"].get("host_vector_source")
+            vector_names = [legacy] if legacy else []
+        for vector_name in vector_names:
+            vector_source = ROOT / vector_name
+            vector_bin = outdir / (vector_source.stem + ".bin")
+            extra_sources = [
+                str(ROOT / name)
+                for name in cfg["assembly_probe"]
+                    .get("host_vector_extra_sources", {})
+                    .get(vector_name, [])
+            ]
+            include_args = [
+                arg
+                for name in cfg["assembly_probe"].get("host_vector_include_dirs", [])
+                for arg in ("-I", str(ROOT / name))
+            ]
+            vector_compile = subprocess.run(
+                [clang, "-std=c11", "-O2", *warning_flags, *include_args, str(vector_source), *extra_sources, "-o", str(vector_bin)],
+                cwd=ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=False,
+            )
+            vector_item = {
+                "target": "host-native-" + vector_source.stem,
+                "compile_exit": vector_compile.returncode,
+                "run_exit": None,
+                "branches": [],
+            }
+            if vector_compile.returncode != 0:
+                errors.append(
+                    f"{vector_name}: host vector compile failed: "
+                    + vector_compile.stdout.strip()[:1200]
+                )
+            else:
+                vector_run = subprocess.run(
+                    [str(vector_bin)],
+                    cwd=ROOT,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    check=False,
+                )
+                vector_item["run_exit"] = vector_run.returncode
+                if vector_run.returncode != 0:
+                    errors.append(
+                        f"{vector_name}: host vectors failed count={vector_run.returncode}"
+                    )
+            results.append(vector_item)
+
+        for target in cfg["assembly_probe"]["targets"]:
+            out = outdir / (target.replace("/", "_") + ".s")
+            cmd = [
+                clang,
+                f"--target={target}",
+                "-std=c11",
+                "-O2",
+                "-ffreestanding",
+                "-nostdlib",
+                "-nostdinc",
+                "-fno-builtin",
+                "-fno-stack-protector",
+                "-fno-unwind-tables",
+                "-fno-asynchronous-unwind-tables",
+                *codegen_flags,
+                *warning_flags,
+                "-S",
+                str(source),
+                "-o",
+                str(out),
+            ]
+            cp = subprocess.run(
+                cmd,
+                cwd=ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=False,
+            )
+            item = {
+                "target": target,
+                "compile_exit": cp.returncode,
+                "branches": [],
+            }
+            if cp.returncode != 0:
+                errors.append(
+                    f"{target}: compile failed: {cp.stdout.strip()[:1200]}"
+                )
+            else:
+                asm = out.read_text(encoding="utf-8", errors="replace")
+                branches = parse_asm_branches(asm)
+                item["branches"] = branches
+                if branches:
+                    errors.append(
+                        f"{target}: non-terminal control transfer(s): "
+                        + " | ".join(branches[:12])
+                    )
+            results.append(item)
+    return results, errors
+
+
+def exact_elf_probe(cfg: dict, preserve: bool) -> tuple[list[dict], list[str]]:
+    probe = cfg.get("exact_elf_probe")
+    if not probe:
+        return [], ["exact ELF probe config missing"]
+    clang = shutil.which("clang")
+    readelf = shutil.which("readelf")
+    nm = shutil.which("nm")
+    missing = [name for name, tool in (("clang", clang), ("readelf", readelf), ("nm", nm)) if not tool]
+    if missing:
+        return [], ["exact ELF tools missing: " + ", ".join(missing)]
+
+    source = ROOT / probe["source"]
+    policy = cfg.get("compile_policy", {})
+    warning_flags = policy.get("warnings", [])
+    codegen_flags = policy.get("codegen", [])
+    roots = list(probe.get("roots", []))
+    entry = probe["entry"]
+    forbidden_sections = set(probe.get("forbidden_sections", []))
+    max_globals = int(probe.get("max_global_defined_symbols", len(roots)))
+
+    results: list[dict] = []
+    errors: list[str] = []
+    reports_dir = ROOT / "reports"
+    preserved_dir = reports_dir / "freestanding-elf"
+    if preserve:
+        preserved_dir.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory(prefix="raf-exact-elf-") as td:
+        outdir = Path(td)
+        for spec in probe["targets"]:
+            target = spec["target"]
+            name = spec["name"]
+            extra = list(spec.get("extra", []))
+            out = outdir / f"rafz-pure-{name}.elf"
+            retain = [f"-Wl,-u,{symbol}" for symbol in roots]
+            cmd = [
+                clang,
+                f"--target={target}",
+                *extra,
+                "-std=c11",
+                "-Oz",
+                "-ffreestanding",
+                "-nostdlib",
+                "-nostdinc",
+                "-fno-builtin",
+                "-fno-stack-protector",
+                "-fno-unwind-tables",
+                "-fno-asynchronous-unwind-tables",
+                "-fno-pic",
+                "-fno-pie",
+                "-fvisibility=hidden",
+                "-ffunction-sections",
+                "-fdata-sections",
+                *codegen_flags,
+                *warning_flags,
+                "-fuse-ld=lld",
+                "-static",
+                str(source),
+                *retain,
+                f"-Wl,-e,{entry},--gc-sections,--icf=all,--build-id=none,--no-undefined",
+                "-o",
+                str(out),
+            ]
+            cp = subprocess.run(
+                cmd,
+                cwd=ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=False,
+            )
+            item: dict = {
+                "target": target,
+                "name": name,
+                "link_exit": cp.returncode,
+                "sha256": None,
+                "bytes": None,
+                "interp": None,
+                "needed": [],
+                "undefined": [],
+                "relocations": [],
+                "global_defined_symbols": [],
+                "forbidden_sections_present": [],
+                "artifact_state": "TOKEN_VAZIO_ARTIFACT_UNBOUND",
+            }
+            if cp.returncode != 0:
+                errors.append(f"{target}: exact ELF link failed: {cp.stdout.strip()[:1600]}")
+                results.append(item)
+                continue
+
+            ph = subprocess.run([readelf, "-lW", str(out)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+            dyn = subprocess.run([readelf, "-dW", str(out)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+            syms = subprocess.run([nm, "-u", str(out)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+            defs = subprocess.run([nm, "-g", "--defined-only", str(out)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+            rels = subprocess.run([readelf, "-rW", str(out)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+            sect = subprocess.run([readelf, "-SW", str(out)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+
+            interp = " INTERP " in ph.stdout or "Requesting program interpreter" in ph.stdout
+            needed = [line.strip() for line in dyn.stdout.splitlines() if "(NEEDED)" in line]
+            undefined = [line.strip() for line in syms.stdout.splitlines() if line.strip()]
+            global_defined = []
+            for line in defs.stdout.splitlines():
+                parts = line.split()
+                if len(parts) >= 3:
+                    global_defined.append(parts[-1])
+            relocation_rows = []
+            for line in rels.stdout.splitlines():
+                stripped = line.strip()
+                if re.match(r"^[0-9a-fA-F]+\s+", stripped):
+                    relocation_rows.append(stripped)
+            forbidden_present = sorted(
+                section for section in forbidden_sections
+                if re.search(rf"\]\s+{re.escape(section)}(?:\s|$)", sect.stdout)
+            )
+
+            item.update({
+                "sha256": sha256(out),
+                "bytes": out.stat().st_size,
+                "interp": interp,
+                "needed": needed,
+                "undefined": undefined,
+                "relocations": relocation_rows,
+                "global_defined_symbols": sorted(global_defined),
+                "forbidden_sections_present": forbidden_present,
+            })
+
+            if interp:
+                errors.append(f"{target}: PT_INTERP detected")
+            if needed:
+                errors.append(f"{target}: DT_NEEDED detected")
+            if undefined:
+                errors.append(f"{target}: undefined external symbol(s): {' | '.join(undefined[:12])}")
+            if relocation_rows:
+                errors.append(f"{target}: final ELF relocation(s) remain: {' | '.join(relocation_rows[:12])}")
+            if forbidden_present:
+                errors.append(f"{target}: forbidden section(s): {', '.join(forbidden_present)}")
+            unexpected_globals = sorted(set(global_defined) - set(roots))
+            missing_roots = sorted(set(roots) - set(global_defined))
+            if unexpected_globals:
+                errors.append(f"{target}: unexpected global symbol(s): {', '.join(unexpected_globals)}")
+            if missing_roots:
+                errors.append(f"{target}: required retained symbol(s) missing: {', '.join(missing_roots)}")
+            if len(global_defined) > max_globals:
+                errors.append(f"{target}: global symbol surface {len(global_defined)} exceeds {max_globals}")
+
+            target_errors_before = len(errors)
+            # Re-evaluate only this item's structural predicates for a local state.
+            local_ok = (
+                not interp and not needed and not undefined and not relocation_rows
+                and not forbidden_present and not unexpected_globals and not missing_roots
+                and len(global_defined) <= max_globals
+            )
+            item["artifact_state"] = "STRUCTURAL_ELF_PASS" if local_ok else "FAIL"
+            if preserve:
+                shutil.copy2(out, preserved_dir / out.name)
+            results.append(item)
+
+    if preserve:
+        (reports_dir / "freestanding-exact-elf.json").write_text(
+            json.dumps({
+                "schema": "rafaelia.freestanding-exact-elf/v1",
+                "artifacts": results,
+                "claim_allowed": False,
+                "physical_android": "TOKEN_VAZIO",
+            }, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    return results, errors
+
+
+def validate_token_vazio_contract() -> tuple[dict, list[str]]:
+    validator = ROOT / "tools" / "validate_token_vazio_dictionary.py"
+    if not validator.is_file():
+        return {"state": "TOKEN_VAZIO_NOT_OBSERVED"}, ["TOKEN_VAZIO validator missing"]
+    cp = subprocess.run(
+        [sys.executable, str(validator)],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    errors: list[str] = []
+    try:
+        payload = json.loads(cp.stdout)
+    except json.JSONDecodeError:
+        payload = {"state": "FAIL", "claim_allowed": False}
+        errors.append("TOKEN_VAZIO validator emitted invalid JSON")
+    if cp.returncode != 0:
+        errors.append("TOKEN_VAZIO dictionary validation failed")
+    return payload, errors
+
+
+def validate_source_alias_graph() -> tuple[dict, list[str]]:
+    validator = ROOT / "tools" / "validate_source_alias_graph.py"
+    if not validator.is_file():
+        return {"state": "TOKEN_VAZIO_NOT_OBSERVED"}, ["source alias validator missing"]
+    cp = subprocess.run(
+        [sys.executable, str(validator)],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    errors: list[str] = []
+    try:
+        payload = json.loads(cp.stdout)
+    except json.JSONDecodeError:
+        payload = {"state":"FAIL","claim_allowed":False}
+        errors.append("source alias validator emitted invalid JSON")
+    if cp.returncode != 0:
+        errors.append("source alias graph validation failed")
+    return payload, errors
+
+
+def build_report(cfg: dict, assembly: list[dict], pure_errors: list[str]) -> dict:
+    all_sources = source_files()
+    focus = focus_files(cfg)
+    focus_records = []
+    for path in focus:
+        rec = lexical_record(path)
+        rec["class"] = classify(rec)
+        focus_records.append(rec)
+
+    digest_paths: dict[str, list[str]] = defaultdict(list)
+    for path in all_sources:
+        digest_paths[sha256(path)].append(rel(path))
+    duplicate_groups = [
+        {"sha256": digest, "paths": paths, "count": len(paths)}
+        for digest, paths in digest_paths.items()
+        if len(paths) > 1
+    ]
+    duplicate_groups.sort(key=lambda x: (-x["count"], x["paths"][0]))
+
+    classes = Counter(rec["class"] for rec in focus_records)
+    return {
+        "schema": "rafaelia.freestanding-boundary-inventory/v1",
+        "baseline_commit": cfg["baseline_commit"],
+        "source_files_total": len(all_sources),
+        "source_unique_blobs": len(digest_paths),
+        "exact_duplicate_groups": len(duplicate_groups),
+        "exact_duplicate_excess": sum(g["count"] - 1 for g in duplicate_groups),
+        "focus_files": len(focus_records),
+        "focus_class_counts": dict(sorted(classes.items())),
+        "focus_heap_call_files": sum(1 for r in focus_records if r["heap_calls"]),
+        "focus_syscall_marker_files": sum(
+            1 for r in focus_records if r["syscall_markers"]
+        ),
+        "focus_jni_marker_files": sum(
+            1 for r in focus_records if r["jni_markers"]
+        ),
+        "pure_core_source_policy": "PASS" if not pure_errors else "FAIL",
+        "pure_core_assembly_probe": assembly,
+        "claim_allowed": False,
+        "physical_android": "TOKEN_VAZIO",
+        "duplicates": duplicate_groups,
+        "focus": focus_records,
+    }
+
+
+def write_reports(report: dict) -> None:
+    reports = ROOT / "reports"
+    reports.mkdir(exist_ok=True)
+    json_path = reports / "freestanding-boundary-inventory.json"
+    md_path = reports / "freestanding-boundary-inventory.md"
+    json_path.write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    lines = [
+        "# Freestanding Boundary Inventory",
+        "",
+        f"- baseline: `{report['baseline_commit']}`",
+        f"- all C/C++/ASM source files: **{report['source_files_total']}**",
+        f"- unique source blobs: **{report['source_unique_blobs']}**",
+        f"- exact duplicate excess: **{report['exact_duplicate_excess']}**",
+        f"- focused low-level files: **{report['focus_files']}**",
+        f"- focused files with explicit heap calls: **{report['focus_heap_call_files']}**",
+        f"- focused files with syscall markers: **{report['focus_syscall_marker_files']}**",
+        f"- focused files with JNI markers: **{report['focus_jni_marker_files']}**",
+        f"- pure-core source policy: **{report['pure_core_source_policy']}**",
+        "",
+        "## Focus classes",
+        "",
+        "| class | files |",
+        "|---|---:|",
+    ]
+    for name, count in report["focus_class_counts"].items():
+        lines.append(f"| {name} | {count} |")
+    lines.extend([
+        "",
+        "## Claim boundary",
+        "",
+        "Inventory and assembly probes are build evidence only. "
+        "They are not physical Android execution and do not promote a release claim.",
+        "",
+    ])
+    md_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--strict", action="store_true")
+    parser.add_argument("--write-report", action="store_true")
+    parser.add_argument("--compile-probe", action="store_true")
+    parser.add_argument("--exact-elf", action="store_true")
+    args = parser.parse_args()
+
+    cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
+    pure_errors = audit_pure_source(cfg)
+    assembly: list[dict] = []
+    assembly_errors: list[str] = []
+    if args.compile_probe:
+        assembly, assembly_errors = compile_probe(cfg)
+
+    exact_elf: list[dict] = []
+    exact_elf_errors: list[str] = []
+    if args.exact_elf:
+        exact_elf, exact_elf_errors = exact_elf_probe(cfg, args.write_report)
+
+    token_vazio_contract, token_vazio_errors = validate_token_vazio_contract()
+    source_alias_graph, source_alias_errors = validate_source_alias_graph()
+    report = build_report(cfg, assembly, pure_errors)
+    report["token_vazio_contract"] = token_vazio_contract
+    report["source_alias_graph"] = source_alias_graph
+    if args.write_report:
+        write_reports(report)
+
+    print(json.dumps({
+        "source_files_total": report["source_files_total"],
+        "source_unique_blobs": report["source_unique_blobs"],
+        "exact_duplicate_excess": report["exact_duplicate_excess"],
+        "focus_files": report["focus_files"],
+        "focus_class_counts": report["focus_class_counts"],
+        "focus_heap_call_files": report["focus_heap_call_files"],
+        "pure_core_source_policy": report["pure_core_source_policy"],
+        "assembly_probe": assembly,
+        "exact_elf_probe": exact_elf,
+        "token_vazio_contract": token_vazio_contract,
+        "source_alias_graph": source_alias_graph,
+        "claim_allowed": False,
+    }, indent=2, sort_keys=True))
+
+    errors = pure_errors + assembly_errors + exact_elf_errors + token_vazio_errors + source_alias_errors
+    for err in errors:
+        print(f"ERROR: {err}", file=sys.stderr)
+    if args.strict and errors:
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

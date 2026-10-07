@@ -1,0 +1,52 @@
+{
+  "schema": "rafaelia.provider_ruleset_target/v3",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "default_branch": "master",
+  "target": {
+    "ref_condition": "~DEFAULT_BRANCH",
+    "enforcement": "active",
+    "required_rules": [
+      "deletion",
+      "non_fast_forward",
+      "required_linear_history",
+      "required_signatures",
+      "code_quality",
+      "pull_request",
+      "required_status_checks"
+    ],
+    "pull_request": {
+      "required_approving_review_count": 0,
+      "require_code_owner_review": false,
+      "required_review_thread_resolution": true,
+      "dismiss_stale_reviews_on_push": false,
+      "require_last_push_approval": false,
+      "allowed_merge_methods": [
+        "squash",
+        "rebase"
+      ]
+    },
+    "required_status_checks": {
+      "strict_required_status_checks_policy": true,
+      "contexts": [
+        "provider-protection"
+      ],
+      "always_run_workflow": ".github/workflows/provider-protection-gate.yml"
+    },
+    "bypass_policy": {
+      "always_bypass_actors": "MUST_BE_EXPLICITLY_IDENTIFIED_AND_JUSTIFIED_OR_REMOVED",
+      "justified_actors": [],
+      "unknown_identity_state": "TOKEN_VAZIO_PENDING_IDENTITY_AND_JUSTIFICATION",
+      "do_not_expand_bypass": true
+    }
+  },
+  "claim_allowed": false,
+  "invariants": [
+    "TARGET_FILE != LIVE_PROVIDER_STATE",
+    "TARGET_FILE != OBSERVATION_RECEIPT",
+    "BYPASS_ACTOR_TYPE_AND_ID_ARE_PART_OF_IDENTITY",
+    "CI_PASS != PROVIDER_ENFORCEMENT",
+    "TOKEN_VAZIO != PASS"
+  ],
+  "supersedes_policy_source": "governance/provider/PROVIDER_RULESET_TARGET.v2.json",
+  "supersession_note": "V3 generalizes bypass governance from Integration-only IDs to every always-bypass actor type+ID. V2 remains historical policy evidence."
+}

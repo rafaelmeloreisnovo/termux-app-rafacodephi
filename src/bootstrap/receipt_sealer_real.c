@@ -180,24 +180,35 @@ void sha256_update(struct sha256_ctx *ctx, const uint8_t *data, uint32_t len) {
 
 /* Finalize SHA-256 and get digest */
 void sha256_finalize(struct sha256_ctx *ctx, uint8_t *digest) {
-    uint64_t bitlen = ctx->len * 8;
+    uint64_t bitlen = ctx->len * 8u;
     uint32_t i = ctx->buflen;
 
-    /* Append 0x80 byte */
-    ctx->buf[i++] = 0x80;
+    /* Append the mandatory 1 bit. */
+    ctx->buf[i++] = 0x80u;
 
-    /* Pad with zeros */
-    while (i % 64 != 56) {
-        ctx->buf[i++] = 0x00;
+    /*
+     * FIPS 180-4 requires the 64-bit length to start at byte 56.
+     * If the current block no longer has eight bytes available, finish this
+     * block first and place the length in a second block.
+     */
+    if (i > 56u) {
+        while (i < SHA256_BLOCK_SIZE) {
+            ctx->buf[i++] = 0x00u;
+        }
+        sha256_process_block(ctx);
+        i = 0u;
     }
 
-    /* Append length in bits (big-endian) */
-    store_be64(ctx->buf + i, bitlen);
-    sha256_process_block(ctx);
+    while (i < 56u) {
+        ctx->buf[i++] = 0x00u;
+    }
 
-    /* Store hash (big-endian) */
-    for (i = 0; i < 8; i++) {
-        store_be32(digest + i * 4, ctx->h[i]);
+    store_be64(ctx->buf + 56u, bitlen);
+    sha256_process_block(ctx);
+    ctx->buflen = 0u;
+
+    for (i = 0u; i < 8u; i++) {
+        store_be32(digest + i * 4u, ctx->h[i]);
     }
 }
 
@@ -244,24 +255,26 @@ int verify_receipt_sha256(struct Receipt *receipt, const char *json_data, uint32
     return 0;  /* Valid */
 }
 
-/* CRC32C (Castagnoli polynomial) fallback for fast checksum */
-static const uint32_t crc32c_table[256] = {
-    0x00000000, 0xf26b4ba9, 0xe5d697ab, 0x17bd3c02,
-    0xcbab3a57, 0x39c071fe, 0x2e7dacfc, 0xdc160755,
-    0x970e60e5, 0x6565b24c, 0x72d86e4e, 0x80b3c5e7,
-    0x5ca5c3b2, 0xaece681b, 0xb973b419, 0x4b189ab0,
-    /* ... remaining 252 entries truncated for brevity ... */
-};
-
+/* CRC32C (Castagnoli) freestanding fallback.
+ *
+ * The previous source declared a 256-entry lookup table but materialized only
+ * sixteen entries, leaving the rest zero-initialized by C. That was not a
+ * valid general CRC32C implementation. Keep the reference path table-free and
+ * deterministic; hardware acceleration may be dispatched elsewhere only when
+ * equivalence is proven.
+ */
 uint32_t crc32c_compute(const uint8_t *data, uint32_t len) {
-    uint32_t crc = 0xFFFFFFFFUL;
+    uint32_t crc = 0xFFFFFFFFu;
 
-    for (uint32_t i = 0; i < len; i++) {
-        uint8_t byte = data[i];
-        crc = (crc >> 8) ^ crc32c_table[(crc ^ byte) & 0xFF];
+    for (uint32_t i = 0u; i < len; i++) {
+        crc ^= (uint32_t)data[i];
+        for (uint32_t bit = 0u; bit < 8u; bit++) {
+            uint32_t mask = 0u - (crc & 1u);
+            crc = (crc >> 1u) ^ (0x82F63B78u & mask);
+        }
     }
 
-    return crc ^ 0xFFFFFFFFUL;
+    return crc ^ 0xFFFFFFFFu;
 }
 
 /* Seal receipt with both SHA-256 and CRC32C */

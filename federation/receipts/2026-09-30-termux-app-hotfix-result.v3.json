@@ -1,0 +1,44 @@
+{
+  "schema": "rafaelia.ecosystem-federation-hotfix-result/v3",
+  "date": "2026-09-30",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "supersedes": "federation/receipts/2026-09-30-ecosystem-hotfix.v2.json",
+  "evidence": {
+    "rafaelia_pipeline": {
+      "run_id": 36705656507,
+      "state": "PASS",
+      "gates": [
+        "psi_perception_contract",
+        "chi_feedback_invariants",
+        "sigma_android_compatibility",
+        "delta_unit_tests",
+        "rho_arm64_debug_apt_android_5",
+        "rho_arm64_debug_apt_android_7",
+        "omega_terminal_gate"
+      ]
+    },
+    "provider_protection": {
+      "run_id": 36705656293,
+      "state": "FAIL",
+      "reason": "LIVE_RULESET_NONCONFORMANCE"
+    }
+  },
+  "provider_live_boundary": {
+    "ruleset_id": 21908888,
+    "updated_at": "2026-09-26T20:05:43.907-03:00",
+    "apply_state": "BLOCKED_EXTERNAL_ADMIN_AUTHORITY"
+  },
+  "evidence_boundary": {
+    "D6_installed_prefix": "TOKEN_VAZIO",
+    "D7_apt_pkg_transaction": "TOKEN_VAZIO",
+    "D8_ARM32_physical": "TOKEN_VAZIO",
+    "D8_ARM64_physical": "TOKEN_VAZIO"
+  },
+  "claim_allowed": false,
+  "rollback": "No live provider mutation was applied. Revert this receipt/federation delta independently from any future provider administration.",
+  "R3": {
+    "F_ok": "Termux RAFAELIA internal pipeline PASS",
+    "F_gap": "provider protection FAIL plus physical D6-D8 evidence gaps",
+    "F_next": "authorized ruleset administration then exact provider PASS receipt; package/runtime physical gates remain separate"
+  }
+}

@@ -9,6 +9,31 @@ Este documento consolida a trilha oficial de build/release/CI do repositório em
 - execução em GitHub Actions coerente com build local;
 - geração e publicação de artefatos sem desviar da trilha de release oficial.
 
+## Fronteira low-level C/ASM
+
+Para código freestanding, usar quatro classes explícitas:
+
+```text
+PURE_CORE       = sem libc/heap/syscall/JNI/I/O/plataforma
+PLATFORM_GATE   = entrada ELF + syscall/ABI do sistema
+HOSTED_ADAPTER  = Android/JNI/POSIX/dlopen
+TOOLING_TEST    = compilador/linker/Python/shell/CI; não integra o runtime core
+```
+
+Não usar “freestanding” como sinônimo de “syscall-only”. Um binário pode ser
+`-nostdlib` e ainda depender diretamente da ABI do kernel.
+
+Gate canônico:
+
+```bash
+python3 tools/audit_freestanding_boundaries.py \
+  --strict --compile-probe --write-report
+```
+
+A política e o inventário detalhado vivem em
+[`FREESTANDING_PURE_CORE_INVENTORY_V2.md`](./FREESTANDING_PURE_CORE_INVENTORY_V2.md)
+e `configs/freestanding-pure-core.v1.json`.
+
 ## Fonte de Verdade
 
 1. **Versões Android/NDK/Build Tools:** `gradle.properties`.

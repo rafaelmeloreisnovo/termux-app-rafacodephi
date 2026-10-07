@@ -123,3 +123,45 @@ claim_allowed
 - If a gate reveals a new gap, index it instead of weakening the gate.
 - Do not copy Vectra assembly/register/attractor rules into this root file as Termux authority; those belong to the Vectra/local module that owns them.
 - Do not copy private/sensitive payload into a public receipt when a hash/pseudonym/typed reference is sufficient.
+
+## Canonical TOKEN_VAZIO + freestanding atlas
+
+For low-level/freestanding work, load these local contracts before broad crawling:
+
+- `configs/token-vazio-dictionary.v1.json` — canonical typed empty-state vocabulary.
+- `schemas/token-vazio-instance.v1.schema.json` — gap/roadmap instance contract.
+- `docs/TOKEN_VAZIO_CANONICAL_DICTIONARY_V1.md` — lifecycle and routing semantics.
+- `docs/FREESTANDING_CODE_INVENTORY_V3.md` — current low-level authority/risk atlas.
+
+Rules:
+
+- Prefer the most specific defined `TOKEN_VAZIO_*`; raw `TOKEN_VAZIO` is legacy/unspecified and must never be interpreted as PASS/FAIL/zero.
+- Every material empty state names its missing field, evidence needed, closure gate and next observable probe.
+- `PURE_CORE` remains syscall-free. ELF entry/syscall/OS ABI belongs to `PLATFORM_GATE`; JNI/Android/POSIX belongs to `HOSTED_BOUNDARY`.
+- Never promote `rmr/Rrr/q16_fixed.h` branchless/no-loop declarations without new source/vector/assembly evidence.
+- Never treat `src/main/jni/blake3_wrapper.h` as BLAKE3 conformance or cryptographic integrity evidence while its placeholder compression remains.
+- Historical/staging duplicates are not deleted merely because their blob hashes match; bind canonical authority and consumers first.
+
+<!-- RAFAELIA_FREESTANDING_POLICY_V1 -->
+## Freestanding / dependency-minimization gate
+
+Default engineering direction: move implementation toward the smallest **authorial, low-level, deterministic and freestanding** core that the target can truthfully support. This is a direction plus gate, not permission to relabel hosted code as freestanding.
+
+Rules:
+
+- Prefer repository-owned primitives over a new external dependency when the local implementation can be smaller, auditable, testable and maintainable.
+- Keep pure/freestanding cores free of network access, package managers, dynamic downloads, hosted runtimes, GC, heap, libc, syscalls and platform APIs unless the owning scoped contract explicitly permits that item.
+- Keep unavoidable OS/Android/JVM/JNI/POSIX/toolchain integrations at an explicit hosted/platform boundary. A build-time tool is not automatically a runtime dependency, and neither may be hidden.
+- Any new or retained external dependency must state: purpose, owner/source, license, version or immutable identity when available, build-time/runtime scope, reason it cannot yet be replaced, tests/evidence, rollback and the smallest credible authorial replacement path. Unknown fields remain `TOKEN_VAZIO`.
+- Never copy/vendor third-party code and call it authorial. Provenance and license survive transformation.
+- Do not add a dependency merely to shorten code. Optimize for reconstructibility, bounded complexity and falsifiable behavior, not dependency-count theater.
+- Node.js 20 is EOL and MUST NOT be introduced or retained as an active CI/tooling baseline. If Node is actually required, use a maintained LTS line; the repository migration baseline on 2026-10-07 is Node 24. Do not add Node to a repository that does not need it.
+- For low-level changes, inspect emitted artifacts/ABI where applicable; source resemblance alone is not freestanding evidence.
+- Preserve `SOURCE != ARTIFACT != EXECUTION != EVIDENCE != CLAIM`, `TOKEN_VAZIO != 0`, and `IMPLEMENTED_UNTESTED != PASS`.
+- Before merging a dependency-reduction change, prove that required behavior did not silently disappear. Removal without equivalent behavior or an explicit scope reduction is a regression, not a freestanding win.
+
+For every material dependency delta record:
+
+`boundary -> previous dependency -> replacement/retention reason -> execution -> evidence -> rollback -> remaining TOKEN_VAZIO`.
+
+<!-- /RAFAELIA_FREESTANDING_POLICY_V1 -->

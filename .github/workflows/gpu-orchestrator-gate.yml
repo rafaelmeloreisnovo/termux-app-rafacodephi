@@ -5,6 +5,8 @@ on:
     paths:
       - 'app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c'
       - 'app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.h'
+      - 'app/src/main/cpp/lowlevel/gpu_compute_evidence_gate.c'
+      - 'app/src/main/cpp/lowlevel/gpu_compute_evidence_gate.h'
       - 'app/src/main/cpp/lowlevel/gpu_orchestrator_jni.c'
       - 'app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator_test.c'
       - 'app/src/main/java/com/termux/lowlevel/GpuOrchestrator.java'
@@ -15,6 +17,8 @@ on:
     paths:
       - 'app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c'
       - 'app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.h'
+      - 'app/src/main/cpp/lowlevel/gpu_compute_evidence_gate.c'
+      - 'app/src/main/cpp/lowlevel/gpu_compute_evidence_gate.h'
       - 'app/src/main/cpp/lowlevel/gpu_orchestrator_jni.c'
       - 'app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator_test.c'
       - 'app/src/main/java/com/termux/lowlevel/GpuOrchestrator.java'
@@ -27,12 +31,13 @@ jobs:
   host-contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Compile fail-closed orchestrator contract
         run: |
           set -euo pipefail
           cc -std=c11 -O2 -Wall -Wextra -Werror \
             app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c \
+            app/src/main/cpp/lowlevel/gpu_compute_evidence_gate.c \
             app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator_test.c \
             -ldl -o /tmp/rafaelia_gpu_orchestrator_test
       - name: Run qualification semantics
@@ -43,4 +48,6 @@ jobs:
           grep -q 'rgpu_measurement_qualifies' app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c
           grep -q 'RGO_ROUTE_GPU_NOT_QUALIFIED' app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c
           grep -q 'RGO_ROUTE_THERMAL_GUARD' app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c
+          grep -q 'rgpu_compute_dispatch_proven' app/src/main/cpp/lowlevel/gpu_orchestrator_jni.c
+          grep -q 'return 0;' app/src/main/cpp/lowlevel/gpu_compute_evidence_gate.c
           ! grep -q 'pthread_' app/src/main/cpp/lowlevel/rafaelia_gpu_orchestrator.c

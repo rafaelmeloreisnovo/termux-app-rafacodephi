@@ -10,7 +10,7 @@ on:
     paths:
       - '.github/workflows/beta-build.yml'
       - '.github/workflows/beta-real-bootstrap-contract.yml'
-      - '.github/workflows/00-rafaelia-control-plane.yml'
+      - '.github/workflows/00_START_HERE.yml'
       - 'scripts/build_apk_matrix.sh'
       - 'scripts/prepare_bootstrap_env.sh'
       - 'app/src/main/java/com/termux/app/BetaRealBootstrapRepair.java'
@@ -58,7 +58,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
 

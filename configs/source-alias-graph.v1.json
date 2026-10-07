@@ -1,0 +1,513 @@
+{
+  "schema": "rafaelia.source-alias-graph/v1",
+  "observed_commit": "b9052bda9a88017941124d2e1efd5f8019fbbb74",
+  "observed_tree": "443764cae7b5ece35aa11dabcf312fb042fa3fff",
+  "source_extensions": [
+    ".c",
+    ".h",
+    ".S",
+    ".s",
+    ".cc",
+    ".cpp",
+    ".hpp",
+    ".inc"
+  ],
+  "authority_prefixes": [
+    "rafaelia/src/main/cpp/zero/",
+    "app/src/main/cpp/lowlevel/",
+    "src/bootstrap/",
+    "bootstrap/",
+    "bootstrap_rafaelia/"
+  ],
+  "staging_prefixes": [
+    "Arme/Add/",
+    "BugOrAdd/",
+    "rmr/Rrr/",
+    "rafaelia/old/"
+  ],
+  "source_files": 361,
+  "unique_source_blobs": 318,
+  "duplicate_groups": 29,
+  "duplicate_excess": 43,
+  "status_counts": {
+    "CANONICAL_BOUND": 5,
+    "CANONICAL_AMBIGUOUS": 0,
+    "TOKEN_VAZIO_AUTHORITY_BLOCKED": 24
+  },
+  "groups": [
+    {
+      "group_id": "DUP-BLOB-714C4883730C",
+      "git_blob_sha1": "714c4883730c369a74ff54f760f5b135edc1a887",
+      "count": 4,
+      "excess": 3,
+      "status": "CANONICAL_BOUND",
+      "canonical_path": "app/src/main/cpp/lowlevel/baremetal_nomalloc.h",
+      "authority_candidates": [
+        "app/src/main/cpp/lowlevel/baremetal_nomalloc.h"
+      ],
+      "paths": [
+        "Arme/Add/baremetal_nomalloc.h",
+        "BugOrAdd/baremetal_nomalloc.h",
+        "app/src/main/cpp/lowlevel/baremetal_nomalloc.h",
+        "rmr/Rrr/baremetal_nomalloc.h"
+      ],
+      "aliases": [
+        "Arme/Add/baremetal_nomalloc.h",
+        "BugOrAdd/baremetal_nomalloc.h",
+        "rmr/Rrr/baremetal_nomalloc.h"
+      ],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-47E3E3790849",
+      "git_blob_sha1": "47e3e3790849ada96ede9e226d0caf35b60b4770",
+      "count": 3,
+      "excess": 2,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/raf_asm_b1.S",
+        "BugOrAdd/raf_asm_b1.S",
+        "rmr/Rrr/raf_asm_b1.S"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-127723595A06",
+      "git_blob_sha1": "127723595a0626a0b65419ef87a212eface3aab3",
+      "count": 3,
+      "excess": 2,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_arena.h",
+        "BugOrAdd/rafaelia_arena.h",
+        "rmr/Rrr/rafaelia_arena.h"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-5B20719DE9EA",
+      "git_blob_sha1": "5b20719de9ea24b96b56a82cbb41fcb16c595422",
+      "count": 3,
+      "excess": 2,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_b2.S",
+        "BugOrAdd/rafaelia_b2.S",
+        "rmr/Rrr/rafaelia_b2.S"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-E63AA7804751",
+      "git_blob_sha1": "e63aa7804751cfa8122d9dc2aca2fabaff6c4713",
+      "count": 3,
+      "excess": 2,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_b4.S",
+        "BugOrAdd/rafaelia_b4.S",
+        "rmr/Rrr/rafaelia_b4.S"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-CC9C22B14CA6",
+      "git_blob_sha1": "cc9c22b14ca6db06d08f4fbb30d57e4db058a49a",
+      "count": 3,
+      "excess": 2,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_b5.S",
+        "BugOrAdd/rafaelia_b5.S",
+        "rmr/Rrr/rafaelia_b5.S"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-AE42737B94C0",
+      "git_blob_sha1": "ae42737b94c02e46696d90dfd02e969b6faefa11",
+      "count": 3,
+      "excess": 2,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_b6.S",
+        "BugOrAdd/rafaelia_b6.S",
+        "rmr/Rrr/rafaelia_b6.S"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-FDD546B76C6B",
+      "git_blob_sha1": "fdd546b76c6be5e333f71ba1c51a13c08c063e4a",
+      "count": 3,
+      "excess": 2,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_b7.S",
+        "BugOrAdd/rafaelia_b7.S",
+        "rmr/Rrr/rafaelia_b7.S"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-1240141E4038",
+      "git_blob_sha1": "1240141e4038f19e1d2dfbb0a0eb5dc44ff5b402",
+      "count": 3,
+      "excess": 2,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_b8.S",
+        "BugOrAdd/rafaelia_b8.S",
+        "rmr/Rrr/rafaelia_b8.S"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-C8D13276B4CE",
+      "git_blob_sha1": "c8d13276b4ce7f71eb0c222b510de30c1747b4ce",
+      "count": 3,
+      "excess": 2,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_bitraf.c",
+        "BugOrAdd/rafaelia_bitraf.c",
+        "rmr/Rrr/rafaelia_bitraf.c"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-568C6D344527",
+      "git_blob_sha1": "568c6d344527a2a7209c4bbc526646378d8d0573",
+      "count": 3,
+      "excess": 2,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_gpu_mid.c",
+        "BugOrAdd/rafaelia_gpu_mid.c",
+        "rmr/Rrr/rafaelia_gpu_mid.c"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-1BDEC9CA261E",
+      "git_blob_sha1": "1bdec9ca261ea0048779005afaa90f913cc08c0e",
+      "count": 3,
+      "excess": 2,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_gpu_mid.h",
+        "BugOrAdd/rafaelia_gpu_mid.h",
+        "rmr/Rrr/rafaelia_gpu_mid.h"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-911D182D5BCF",
+      "git_blob_sha1": "911d182d5bcfe17e73bed79c52ae58bbbc612165",
+      "count": 3,
+      "excess": 2,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_sigma_omega.c",
+        "BugOrAdd/rafaelia_sigma_omega.c",
+        "rmr/Rrr/rafaelia_sigma_omega.c"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-5DB94102096E",
+      "git_blob_sha1": "5db94102096e2117979d3869a0f33eb33b19d0af",
+      "count": 2,
+      "excess": 1,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/baremetal_nomalloc.c",
+        "BugOrAdd/baremetal_nomalloc.c"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-5CE930EE1614",
+      "git_blob_sha1": "5ce930ee1614ee6bfc7174eb41640b3b73fc30b1",
+      "count": 2,
+      "excess": 1,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_b1.S",
+        "BugOrAdd/rafaelia_b1.S"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-2B3BAD0F0812",
+      "git_blob_sha1": "2b3bad0f0812aa7b153fda47f0e3ca9de6b76125",
+      "count": 2,
+      "excess": 1,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_b3.S",
+        "rmr/Rrr/rafaelia_b3.S"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-33A1E335D6CE",
+      "git_blob_sha1": "33a1e335d6ce28a0e429c7976f4ec071ba2162e4",
+      "count": 2,
+      "excess": 1,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_core.c",
+        "BugOrAdd/rafaelia_core.c"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-60E5AE043158",
+      "git_blob_sha1": "60e5ae043158b7226c63c135cfea0091f024a9fc",
+      "count": 2,
+      "excess": 1,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_glue.c",
+        "BugOrAdd/rafaelia_glue.c"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-663DA45E0341",
+      "git_blob_sha1": "663da45e0341196b3edca808dbbd4e11ab4c28a4",
+      "count": 2,
+      "excess": 1,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_jni_direct.c",
+        "BugOrAdd/rafaelia_jni_direct.c"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-1184686B6FCA",
+      "git_blob_sha1": "1184686b6fca4d620afd2da93193a67ad316656c",
+      "count": 2,
+      "excess": 1,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_orchestrator.c",
+        "BugOrAdd/rafaelia_orchestrator.c"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-C7EEE9FA11EF",
+      "git_blob_sha1": "c7eee9fa11efb445fe79e9a04d590609beaa58a5",
+      "count": 2,
+      "excess": 1,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/rafaelia_types.h",
+        "BugOrAdd/rafaelia_types.h"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-CF1A7886FE2D",
+      "git_blob_sha1": "cf1a7886fe2d013df6e62c7e2bc9fea6a2411dbd",
+      "count": 2,
+      "excess": 1,
+      "status": "CANONICAL_BOUND",
+      "canonical_path": "app/src/main/cpp/lowlevel/baremetal_asm.S",
+      "authority_candidates": [
+        "app/src/main/cpp/lowlevel/baremetal_asm.S"
+      ],
+      "paths": [
+        "Arme/Add/repo_baremetal_orig.S",
+        "app/src/main/cpp/lowlevel/baremetal_asm.S"
+      ],
+      "aliases": [
+        "Arme/Add/repo_baremetal_orig.S"
+      ],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-0FE3DEDB7011",
+      "git_blob_sha1": "0fe3dedb701139926ce4f6908ee5c3b367161168",
+      "count": 2,
+      "excess": 1,
+      "status": "CANONICAL_BOUND",
+      "canonical_path": "app/src/main/cpp/lowlevel/rafaelia_commit_gate_ll.c",
+      "authority_candidates": [
+        "app/src/main/cpp/lowlevel/rafaelia_commit_gate_ll.c"
+      ],
+      "paths": [
+        "Arme/Add/repo_commit_gate.c",
+        "app/src/main/cpp/lowlevel/rafaelia_commit_gate_ll.c"
+      ],
+      "aliases": [
+        "Arme/Add/repo_commit_gate.c"
+      ],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-25F4E4EFA134",
+      "git_blob_sha1": "25f4e4efa134d3d4282f2ca56d58bd00528326b4",
+      "count": 2,
+      "excess": 1,
+      "status": "CANONICAL_BOUND",
+      "canonical_path": "app/src/main/cpp/lowlevel/rafaelia_commit_gate_ll.h",
+      "authority_candidates": [
+        "app/src/main/cpp/lowlevel/rafaelia_commit_gate_ll.h"
+      ],
+      "paths": [
+        "Arme/Add/repo_commit_gate.h",
+        "app/src/main/cpp/lowlevel/rafaelia_commit_gate_ll.h"
+      ],
+      "aliases": [
+        "Arme/Add/repo_commit_gate.h"
+      ],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-F1A8380158F9",
+      "git_blob_sha1": "f1a8380158f9a493cfaf5900fbc267751f8d2455",
+      "count": 2,
+      "excess": 1,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "Arme/Add/repo_mvp_puro.s",
+        "mvp/rafaelia_mvp_puro.s"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-CC5AF8163E0A",
+      "git_blob_sha1": "cc5af8163e0ab87287dabdb0880b2c50598add8c",
+      "count": 2,
+      "excess": 1,
+      "status": "CANONICAL_BOUND",
+      "canonical_path": "app/src/main/cpp/lowlevel/rafaelia_toroidal_inference.h",
+      "authority_candidates": [
+        "app/src/main/cpp/lowlevel/rafaelia_toroidal_inference.h"
+      ],
+      "paths": [
+        "Arme/Add/repo_toroidal.h",
+        "app/src/main/cpp/lowlevel/rafaelia_toroidal_inference.h"
+      ],
+      "aliases": [
+        "Arme/Add/repo_toroidal.h"
+      ],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-1C3E10CD6128",
+      "git_blob_sha1": "1c3e10cd612882a3fe0912c3a073d755df47c38c",
+      "count": 2,
+      "excess": 1,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "BugOrAdd/bitstack.c",
+        "rmr/Rrr/bitstack.c"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-F10F3F14E5F4",
+      "git_blob_sha1": "f10f3f14e5f4c544d5a1b82ca6acc1339b370f99",
+      "count": 2,
+      "excess": 1,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "BugOrAdd/rafaelia_bench.S",
+        "BugOrAdd/rafaelia_core_armv7_bench.S"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    },
+    {
+      "group_id": "DUP-BLOB-4BCEC566CAC2",
+      "git_blob_sha1": "4bcec566cac2a639b3299545bb9307db1954ae91",
+      "count": 2,
+      "excess": 1,
+      "status": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "canonical_path": null,
+      "authority_candidates": [],
+      "paths": [
+        "rafaelia/old/raf_cat_hz.c",
+        "rafaelia/old/rafhz.c"
+      ],
+      "aliases": [],
+      "claim_allowed": false
+    }
+  ],
+  "rule": "Exact blob identity proves byte equality only. Canonical authority is bound only when exactly one path is under an explicit authority prefix; otherwise authority remains typed empty.",
+  "deletion_allowed": false,
+  "claim_allowed": false
+}

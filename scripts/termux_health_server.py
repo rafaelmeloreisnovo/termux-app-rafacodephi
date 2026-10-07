@@ -19,7 +19,7 @@ from typing import Callable, Mapping, Sequence
 SCHEMA = "raf.termux-health.v1"
 RUNTIME = "termux-rafcodephi"
 DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = 8765
+DEFAULT_PORT = 8766
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1"}
 ALLOWED_PATHS = {"/health", "/v1/health"}
 COMMIT_RE = re.compile(r"^[0-9a-fA-F]{7,64}$")

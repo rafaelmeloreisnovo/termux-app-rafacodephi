@@ -1,0 +1,273 @@
+{
+  "schema": "rafaelia.token-vazio-dictionary/v1",
+  "version": 1,
+  "generated_at": "2026-09-26",
+  "invariant": "TOKEN_VAZIO != 0 != false != PASS != FAIL != NOT_APPLICABLE != NOT_REQUESTED",
+  "semantics": {
+    "meaning": "A typed absence of evidence, authority, capability, definition, execution, or closure required for a bounded claim.",
+    "rule": "Never fill a missing field by inference. Preserve the empty state, name why it is empty, define its closure gate, and route the next observable probe.",
+    "lifecycle": [
+      "OPEN",
+      "BLOCKED",
+      "SUPERSEDED",
+      "CLOSED"
+    ],
+    "transition": "observation -> typed TOKEN_VAZIO -> next_probe -> evidence -> successor/closure -> newly exposed typed TOKEN_VAZIO"
+  },
+  "non_empty_states": [
+    "PASS",
+    "FAIL",
+    "NOT_APPLICABLE",
+    "NOT_REQUESTED",
+    "IMPLEMENTED_UNTESTED",
+    "READY_TO_TEST",
+    "BLOCKED",
+    "SUPERSEDED",
+    "CLOSED"
+  ],
+  "types": [
+    {
+      "code": "TOKEN_VAZIO_DEFINITION_UNRESOLVED",
+      "family": "definition",
+      "definition": "The object, term, contract, or success condition is not defined precisely enough to test.",
+      "use_when": "A term or requirement is ambiguous.",
+      "closure_gate": "A versioned definition plus falsifiable acceptance criteria exists.",
+      "default_urgency": "high",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_SCOPE_UNBOUND",
+      "family": "scope",
+      "definition": "The scope boundary needed to evaluate a claim is not fixed.",
+      "use_when": "A statement could refer to source, object, ELF, APK, device, repository, or ecosystem without saying which.",
+      "closure_gate": "Bind repository/ref/path/artifact/scale and claim boundary.",
+      "default_urgency": "high",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_NOT_OBSERVED",
+      "family": "evidence",
+      "definition": "The required observation has not been seen.",
+      "use_when": "A source or provider state may exist but has not been read.",
+      "closure_gate": "Direct readback from the authoritative source.",
+      "default_urgency": "medium",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_NOT_RUN",
+      "family": "execution",
+      "definition": "The defined test or execution has not been run.",
+      "use_when": "Code/test exists without an observed execution receipt.",
+      "closure_gate": "Run the bounded test and retain its exact receipt.",
+      "default_urgency": "medium",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_EVIDENCE_INSUFFICIENT",
+      "family": "evidence",
+      "definition": "Evidence exists but is insufficient for the requested claim.",
+      "use_when": "A partial, synthetic, stale, or lower-scale observation cannot support the claim.",
+      "closure_gate": "Acquire the missing independent/current/scale-matched evidence.",
+      "default_urgency": "high",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_PROVENANCE_UNBOUND",
+      "family": "provenance",
+      "definition": "Observed bytes/result are not bound to an exact source/ref/hash lineage.",
+      "use_when": "Artifact or receipt cannot yet be traced to producer identity.",
+      "closure_gate": "Bind source commit + artifact hash + transformation/receipt.",
+      "default_urgency": "critical",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_ARTIFACT_UNBOUND",
+      "family": "artifact",
+      "definition": "Source state is known but the produced artifact identity is not bound.",
+      "use_when": "A build claim lacks exact ELF/APK/object hash or equivalent artifact identity.",
+      "closure_gate": "Produce and record exact artifact identity/hash.",
+      "default_urgency": "high",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_EXECUTION_UNBOUND",
+      "family": "execution",
+      "definition": "An artifact exists but no exact execution context/receipt is bound.",
+      "use_when": "Artifact presence is being confused with execution.",
+      "closure_gate": "Bind artifact hash + runtime target + exit/result receipt.",
+      "default_urgency": "high",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_CONFORMANCE_UNPROVEN",
+      "family": "conformance",
+      "definition": "A named algorithm, ABI, standard, or property is claimed without a passing conformance/KAT gate.",
+      "use_when": "Source labels or comments assert a property that has not been proven.",
+      "closure_gate": "Pass authoritative vectors/KAT/ABI/property gate on the exact artifact.",
+      "default_urgency": "critical",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_STALE_EVIDENCE",
+      "family": "evidence",
+      "definition": "Evidence is older than the state it is being used to describe.",
+      "use_when": "A prior commit/build/provider state is being reused for a newer state.",
+      "closure_gate": "Re-run or rebind evidence to the current exact state.",
+      "default_urgency": "high",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_CONTRADICTION",
+      "family": "integrity",
+      "definition": "Two authoritative or source-level observations conflict.",
+      "use_when": "Documentation and source, two sources, or two receipts disagree.",
+      "closure_gate": "Resolve by source authority plus successor receipt; preserve both historical observations.",
+      "default_urgency": "critical",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_DEPENDENCY_BLOCKED",
+      "family": "dependency",
+      "definition": "Closure depends on another unresolved object or gate.",
+      "use_when": "The next test cannot be validly executed before another dependency closes.",
+      "closure_gate": "Close the named predecessor dependency or provide a valid replacement.",
+      "default_urgency": "medium",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_AUTHORITY_BLOCKED",
+      "family": "authority",
+      "definition": "The action needs authority not present in the current execution scope.",
+      "use_when": "A mutation/review/promotion is technically possible but not authorized.",
+      "closure_gate": "Explicit authorized action/review from the governing authority.",
+      "default_urgency": "critical",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_EXTERNAL_AUTHORITY",
+      "family": "authority",
+      "definition": "Closure depends on a provider, administrator, reviewer, or external system outside the current write authority.",
+      "use_when": "Repository settings, credentials, legal approval, or external provider action is required.",
+      "closure_gate": "Observed external-authority decision/state change.",
+      "default_urgency": "high",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_PRIVACY_BLOCKED",
+      "family": "privacy",
+      "definition": "The required action would expose or process data without a resolved privacy basis/minimization boundary.",
+      "use_when": "Raw logs, paths, identifiers, user content, or personal data cannot be copied safely yet.",
+      "closure_gate": "Resolve data minimization, lawful/authorized use, retention, and redaction boundary.",
+      "default_urgency": "critical",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_SECURITY_BLOCKED",
+      "family": "security",
+      "definition": "A security precondition, trust boundary, secret handling rule, or threat control is unresolved.",
+      "use_when": "Proceeding could weaken isolation, signing, integrity, authentication, or secret handling.",
+      "closure_gate": "Pass the named security gate/threat-control review without weakening it.",
+      "default_urgency": "critical",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_LEGAL_REVIEW",
+      "family": "legal",
+      "definition": "A legal/licensing/compliance conclusion requires qualified review or missing legal facts.",
+      "use_when": "Licensing, attribution, jurisdiction, certification, or liability cannot be concluded from technical evidence alone.",
+      "closure_gate": "Obtain and record the required legal facts/review; do not infer legal clearance.",
+      "default_urgency": "high",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_GOVERNANCE_BLOCKED",
+      "family": "governance",
+      "definition": "A governance rule, branch/ruleset policy, approval, or promotion contract is unmet.",
+      "use_when": "Technical evidence exists but policy forbids promotion.",
+      "closure_gate": "Satisfy the exact governance gate or authorized successor policy.",
+      "default_urgency": "high",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_RISK_UNRESOLVED",
+      "family": "risk",
+      "definition": "A material risk is known but probability/impact/control or acceptance is unresolved.",
+      "use_when": "The system could proceed only by silently accepting an unbounded risk.",
+      "closure_gate": "Bound risk + mitigation + residual risk + owner/acceptance or remove the risk.",
+      "default_urgency": "high",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_ENVIRONMENT_UNAVAILABLE",
+      "family": "environment",
+      "definition": "The required runtime/device/environment is unavailable.",
+      "use_when": "A physical device, emulator feature, filesystem, network, or OS condition is required.",
+      "closure_gate": "Execute in the specified environment and bind receipt to it.",
+      "default_urgency": "medium",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_TOOLCHAIN_UNAVAILABLE",
+      "family": "toolchain",
+      "definition": "A required compiler/linker/assembler/analyzer version or target is unavailable.",
+      "use_when": "The source cannot yet be transformed/tested for a target architecture.",
+      "closure_gate": "Provide/pin the exact toolchain and rerun the gate.",
+      "default_urgency": "medium",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_PROVIDER_STATE_UNKNOWN",
+      "family": "provider",
+      "definition": "The live external/provider state required for a claim is unknown.",
+      "use_when": "Ruleset, CI provider, package source, API state, or remote status has not been read.",
+      "closure_gate": "Read authoritative live provider state and bind timestamp/ref.",
+      "default_urgency": "high",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_DELIVERY_BLOCKED",
+      "family": "delivery",
+      "definition": "The artifact exists or may be correct, but delivery/promotion is intentionally blocked.",
+      "use_when": "A release/install/export/publish step lacks a required gate.",
+      "closure_gate": "Close the named delivery gate and produce a delivery receipt.",
+      "default_urgency": "medium",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING",
+      "family": "physical",
+      "definition": "Build/emulation/static evidence exists but physical-device evidence is absent.",
+      "use_when": "CI/QEMU/source evidence is being considered for a handset/hardware claim.",
+      "closure_gate": "Run exact artifact on named authorized physical target and record a minimal receipt.",
+      "default_urgency": "high",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_PERFORMANCE_UNMEASURED",
+      "family": "measurement",
+      "definition": "A performance/energy/latency/throughput claim lacks a governed measurement series.",
+      "use_when": "A fast-looking implementation has no comparable measured baseline.",
+      "closure_gate": "Run governed benchmark with environment, n, metric, baseline, dispersion, and receipt.",
+      "default_urgency": "medium",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_COMPATIBILITY_UNPROVEN",
+      "family": "compatibility",
+      "definition": "Compatibility across architecture/version/provider is not demonstrated.",
+      "use_when": "A single target result is being generalized to other targets.",
+      "closure_gate": "Pass target-specific compatibility matrix gates.",
+      "default_urgency": "high",
+      "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_CAUSALITY_UNPROVEN",
+      "family": "causality",
+      "definition": "Association, ordering, or correlation exists without causal identification.",
+      "use_when": "A mechanism or cause would be inferred from non-causal evidence.",
+      "closure_gate": "Supply causal design/mechanistic evidence or keep the claim non-causal.",
+      "default_urgency": "high",
+      "claim_allowed": false
+    }
+  ]
+}

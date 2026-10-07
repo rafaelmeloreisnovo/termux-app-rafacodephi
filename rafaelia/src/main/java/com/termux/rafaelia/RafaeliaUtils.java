@@ -80,7 +80,14 @@ public final class RafaeliaUtils {
      * @param n Number of bytes to copy (must be > 0 and within array bounds)
      * @throws IllegalArgumentException if parameters are invalid
      */
-    public static native void memcpy(byte[] dest, byte[] src, int n);
+    public static void memcpy(byte[] dest, byte[] src, int n) {
+        if (dest == null || src == null || n <= 0) return;
+        int copyN = n;
+        if (copyN > dest.length) copyN = dest.length;
+        if (copyN > src.length) copyN = src.length;
+        if (copyN <= 0) return;
+        System.arraycopy(src, 0, dest, 0, copyN);
+    }
     
     /**
      * Optimized memory set using bare-metal C/ASM implementation.
@@ -91,7 +98,14 @@ public final class RafaeliaUtils {
      * @param n Number of bytes to set (must be > 0 and within array bounds)
      * @throws IllegalArgumentException if parameters are invalid
      */
-    public static native void memset(byte[] array, int value, int n);
+    public static void memset(byte[] array, int value, int n) {
+        if (array == null || n <= 0) return;
+        int setN = n > array.length ? array.length : n;
+        byte v = (byte) value;
+        for (int i = 0; i < setN; i++) {
+            array[i] = v;
+        }
+    }
     
     // ==================== Fast Mathematical Operations ====================
     
@@ -244,14 +258,19 @@ public final class RafaeliaUtils {
      * @param featureType Base channel type (HASH, TEXT, PHONEME, IMAGE_FFT)
      * @return Native context handle (pointer), or 0 on error
      */
-    public static native long initVA(int spaceDim, int featureType);
+    public static long initVA(int spaceDim, int featureType) {
+        if (spaceDim <= 0 || featureType < FEATURE_HASH || featureType > FEATURE_IMAGE_FFT) return 0L;
+        return 0L;
+    }
     
     /**
      * Release VA context and free resources.
      * 
      * @param ctx Native context handle (from initVA)
      */
-    public static native void releaseVA(long ctx);
+    public static void releaseVA(long ctx) {
+        if (ctx == Long.MIN_VALUE) return;
+    }
     
     /**
      * Compute cosine similarity between two vectors.
@@ -261,7 +280,14 @@ public final class RafaeliaUtils {
      * @param v2 Second vector (must not be null and same length as v1)
      * @return Cosine similarity [-1, 1], or 0 if inputs are invalid
      */
-    public static native float cosineSimilarity(float[] v1, float[] v2);
+    public static float cosineSimilarity(float[] v1, float[] v2) {
+        if (v1 == null || v2 == null || v1.length != v2.length || v1.length == 0) return 0.0f;
+        float mag1 = magnitude(v1);
+        float mag2 = magnitude(v2);
+        float denom = mag1 * mag2;
+        if (denom < EPSILON) return 0.0f;
+        return dotProduct(v1, v2) / denom;
+    }
     
     /**
      * Compute Euclidean distance between two vectors.
@@ -271,7 +297,15 @@ public final class RafaeliaUtils {
      * @param v2 Second vector (must not be null and same length as v1)
      * @return Euclidean distance, or 0 if inputs are invalid
      */
-    public static native float euclideanDistance(float[] v1, float[] v2);
+    public static float euclideanDistance(float[] v1, float[] v2) {
+        if (v1 == null || v2 == null || v1.length != v2.length || v1.length == 0) return 0.0f;
+        float sumSq = 0.0f;
+        for (int i = 0; i < v1.length; i++) {
+            float diff = v1[i] - v2[i];
+            sumSq += diff * diff;
+        }
+        return sqrt(sumSq);
+    }
     
     /**
      * Test reversal invariance.
@@ -281,7 +315,15 @@ public final class RafaeliaUtils {
      * @param threshold Stability threshold (must be >= 0)
      * @return true if reversal invariant, false otherwise
      */
-    public static native boolean testReversalInvariance(float[] v, float threshold);
+    public static boolean testReversalInvariance(float[] v, float threshold) {
+        if (v == null || v.length == 0 || threshold < 0.0f) return false;
+        for (int i = 0; i < v.length / 2; i++) {
+            if (Math.abs(v[i] - v[v.length - 1 - i]) > threshold) {
+                return false;
+            }
+        }
+        return true;
+    }
     
     // ==================== ANOVA Operations ====================
     
@@ -293,7 +335,46 @@ public final class RafaeliaUtils {
      * @param y Dependent variable (must not be null, same length as x)
      * @return ANOVA result with coefficients and SS decomposition, or null on error
      */
-    public static native AnovaResult fitLeastSquares(float[] x, float[] y);
+    public static AnovaResult fitLeastSquares(float[] x, float[] y) {
+        if (x == null || y == null || x.length != y.length || x.length < 3) return null;
+
+        int n = x.length;
+        float sumX = 0.0f;
+        float sumY = 0.0f;
+        float sumXY = 0.0f;
+        float sumX2 = 0.0f;
+
+        for (int i = 0; i < n; i++) {
+            sumX += x[i];
+            sumY += y[i];
+            sumXY += x[i] * y[i];
+            sumX2 += x[i] * x[i];
+        }
+
+        float meanX = sumX / n;
+        float meanY = sumY / n;
+        float denom = n * sumX2 - sumX * sumX;
+        if (Math.abs(denom) < EPSILON) return null;
+
+        float slope = (n * sumXY - sumX * sumY) / denom;
+        float intercept = meanY - slope * meanX;
+        float ssTotal = 0.0f;
+        float ssModel = 0.0f;
+        float ssError = 0.0f;
+
+        for (int i = 0; i < n; i++) {
+            float yPred = intercept + slope * x[i];
+            float diffTotal = y[i] - meanY;
+            float diffModel = yPred - meanY;
+            float diffError = y[i] - yPred;
+
+            ssTotal += diffTotal * diffTotal;
+            ssModel += diffModel * diffModel;
+            ssError += diffError * diffError;
+        }
+
+        return new AnovaResult(new float[] {intercept, slope}, ssTotal, ssModel, ssError);
+    }
     
     /**
      * Compute ANOVA SS decomposition.
@@ -303,46 +384,212 @@ public final class RafaeliaUtils {
      * @param yPred Predicted values (must not be null, same length as y)
      * @return Array [SS_T, SS_M, SS_E], or null on error
      */
-    public static native float[] computeSSDecomposition(float[] y, float[] yPred);
+    public static float[] computeSSDecomposition(float[] y, float[] yPred) {
+        if (y == null || yPred == null || y.length != yPred.length || y.length == 0) return null;
+
+        float sumY = 0.0f;
+        for (float value : y) {
+            sumY += value;
+        }
+        float meanY = sumY / y.length;
+        float ssTotal = 0.0f;
+        float ssModel = 0.0f;
+        float ssError = 0.0f;
+
+        for (int i = 0; i < y.length; i++) {
+            float diffTotal = y[i] - meanY;
+            float diffModel = yPred[i] - meanY;
+            float diffError = y[i] - yPred[i];
+
+            ssTotal += diffTotal * diffTotal;
+            ssModel += diffModel * diffModel;
+            ssError += diffError * diffError;
+        }
+
+        return new float[] {ssTotal, ssModel, ssError};
+    }
 
     // ==================== Numeric Base Operations (raf_numbase) ====================
 
     /** Convert {@code n} to its string representation in {@code base} (2–36). */
-    public static native String toBase(long n, int base);
+    public static String toBase(long n, int base) {
+        if (base < 2 || base > 36) return null;
+        return Long.toString(n, base).toUpperCase(java.util.Locale.ROOT);
+    }
 
     /** Parse a base-{@code base} string back to a {@code long}. */
-    public static native long fromBase(String s, int base);
+    public static long fromBase(String s, int base) {
+        if (s == null || base < 2 || base > 36) return 0L;
+        try {
+            return Long.parseLong(s.trim(), base);
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
 
     /** F(0)=0, F(1)=1, F(2)=1, F(3)=2 … */
-    public static native long fibonacci(int n);
+    public static long fibonacci(int n) {
+        if (n <= 0) return 0L;
+        long a = 0L;
+        long b = 1L;
+        for (int i = 1; i < n; i++) {
+            long next = a + b;
+            a = b;
+            b = next;
+        }
+        return b;
+    }
 
     /** T(0)=0, T(1)=0, T(2)=1; T(n)=T(n-1)+T(n-2)+T(n-3) → 0,0,1,1,2,4,7,13 … */
-    public static native long tribonacci(int n);
+    public static long tribonacci(int n) {
+        if (n <= 1) return 0L;
+        if (n == 2) return 1L;
+        long a = 0L;
+        long b = 0L;
+        long c = 1L;
+        for (int i = 3; i <= n; i++) {
+            long next = a + b + c;
+            a = b;
+            b = c;
+            c = next;
+        }
+        return c;
+    }
 
     /** P(0)=2, P(1)=3; P(n)=next prime ≥ P(n-2)+P(n-1) → 2,3,5,11,17,29 … */
-    public static native long primonacci(int n);
+    public static long primonacci(int n) {
+        if (n <= 0) return 2L;
+        if (n == 1) return 3L;
+        long a = 2L;
+        long b = 3L;
+        for (int i = 2; i <= n; i++) {
+            long next = nextPrime(a + b);
+            a = b;
+            b = next;
+        }
+        return b;
+    }
 
     /**
      * Any sequence value mod m.
      * @param type 0=fibonacci 1=tribonacci 2=primonacci
      */
-    public static native long seqMod(int type, int n, int mod);
+    public static long seqMod(int type, int n, int mod) {
+        if (mod <= 0) return 0L;
+        if (type == 0) return sequenceModFib(n, mod);
+        if (type == 1) return sequenceModTri(n, mod);
+        if (type == 2) return primonacci(n) % mod;
+        return 0L;
+    }
 
     /**
      * Pisano period π(m): Fibonacci mod m returns to state (0,1) after π(m) steps.
      * π(10)=60, π(7)=16, π(14)=24, π(70)=120.
      */
-    public static native int pisanoPeriod(int m);
+    public static int pisanoPeriod(int m) {
+        if (m <= 0) return 0;
+        if (m == 1) return 1;
+        int prev = 0;
+        int curr = 1;
+        int limit = m > 1_000_000 ? 6_000_000 : 6 * m;
+        for (int i = 1; i <= limit; i++) {
+            int next = (prev + curr) % m;
+            prev = curr;
+            curr = next;
+            if (prev == 0 && curr == 1) return i;
+        }
+        return 0;
+    }
 
     /**
      * Radix economy for {@code base} over integers up to {@code nMax}.
      * Lower value = more efficient representation.
      */
-    public static native double baseEfficiency(int base, long nMax);
+    public static double baseEfficiency(int base, long nMax) {
+        if (base < 2 || base > 36 || nMax <= 0L) return 0.0;
+        long limit = nMax > 1_000_000L ? 1_000_000L : nMax;
+        long digits = 0L;
+        for (long n = 1L; n <= limit; n++) {
+            digits += Long.toString(n, base).length();
+        }
+        return (double) digits / (double) limit;
+    }
 
     /**
      * JSON describing how Z/baseAZ and Z/baseBZ coexist:
      * rings, Pisano periods, and coincidences at multiples of LCM(baseA, baseB).
      */
-    public static native String zeroCurveDual(int baseA, int baseB);
+    public static String zeroCurveDual(int baseA, int baseB) {
+        if (baseA < 2 || baseB < 2) return "{}";
+        long lcm = lcm(baseA, baseB);
+        return "{\"baseA\":" + baseA
+            + ",\"baseB\":" + baseB
+            + ",\"lcm\":" + lcm
+            + ",\"pisanoA\":" + pisanoPeriod(baseA)
+            + ",\"pisanoB\":" + pisanoPeriod(baseB)
+            + "}";
+    }
+
+    private static long sequenceModFib(int n, int mod) {
+        if (n <= 0) return 0L;
+        long a = 0L;
+        long b = 1L % mod;
+        for (int i = 1; i < n; i++) {
+            long next = (a + b) % mod;
+            a = b;
+            b = next;
+        }
+        return b;
+    }
+
+    private static long sequenceModTri(int n, int mod) {
+        if (n <= 1) return 0L;
+        if (n == 2) return 1L % mod;
+        long a = 0L;
+        long b = 0L;
+        long c = 1L % mod;
+        for (int i = 3; i <= n; i++) {
+            long next = (a + b + c) % mod;
+            a = b;
+            b = c;
+            c = next;
+        }
+        return c;
+    }
+
+    private static long nextPrime(long value) {
+        long candidate = value <= 2L ? 2L : value;
+        if ((candidate & 1L) == 0L && candidate != 2L) candidate++;
+        while (!isPrime(candidate)) {
+            candidate += candidate == 2L ? 1L : 2L;
+        }
+        return candidate;
+    }
+
+    private static boolean isPrime(long value) {
+        if (value < 2L) return false;
+        if (value == 2L) return true;
+        if ((value & 1L) == 0L) return false;
+        for (long d = 3L; d <= value / d; d += 2L) {
+            if (value % d == 0L) return false;
+        }
+        return true;
+    }
+
+    private static long lcm(long a, long b) {
+        long gcd = gcd(a, b);
+        if (gcd == 0L) return 0L;
+        return Math.abs((a / gcd) * b);
+    }
+
+    private static long gcd(long a, long b) {
+        long x = Math.abs(a);
+        long y = Math.abs(b);
+        while (y != 0L) {
+            long r = x % y;
+            x = y;
+            y = r;
+        }
+        return x;
+    }
 }

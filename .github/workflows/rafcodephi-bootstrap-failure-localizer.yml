@@ -75,9 +75,9 @@ jobs:
         run: |
           set -uo pipefail
           mkdir -p build/reports
-          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-real-bootstrap.sh
+          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-real-bootstrap.sh scripts/run-rafcodephi-bootstrap-docker.sh
           set +e
-          ./scripts/run-docker.sh ./scripts/build-rafcodephi-real-bootstrap.sh --architectures arm \
+          bash ./scripts/run-rafcodephi-bootstrap-docker.sh ./scripts/build-rafcodephi-real-bootstrap.sh --architectures arm \
             2>&1 | tee build/reports/bootstrap-arm.log
           rc=${PIPESTATUS[0]}
           set -e
@@ -96,7 +96,7 @@ jobs:
           set -uo pipefail
           mkdir -p build/reports
           set +e
-          ./scripts/run-docker.sh ./scripts/build-rafcodephi-real-bootstrap.sh --architectures aarch64 \
+          bash ./scripts/run-rafcodephi-bootstrap-docker.sh ./scripts/build-rafcodephi-real-bootstrap.sh --architectures aarch64 \
             2>&1 | tee build/reports/bootstrap-aarch64.log
           rc=${PIPESTATUS[0]}
           set -e

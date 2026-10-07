@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
+import com.termux.app.fragments.settings.CapabilityContractPreferencesFragment;
 import com.termux.rafacodephi.R;
 import com.termux.shared.activities.ReportActivity;
 import com.termux.shared.file.FileUtils;
@@ -65,6 +66,7 @@ public class SettingsActivity extends AppCompatActivity {
             // stay on the Fragment/UI thread. Running this block in a raw
             // background Thread made the Settings screen race with its own
             // adapter and left RAFCODEPHI entries intermittently unconfigured.
+            configureCapabilityContractPreference(context);
             configureRafcodephiControlCenterPreference(context);
             configureAndroid15WizardPreference(context);
             configureSystemAuditPreference(context);
@@ -76,6 +78,21 @@ public class SettingsActivity extends AppCompatActivity {
             configureTermuxWidgetPreference(context);
             configureAboutPreference(context);
             configureDonatePreference(context);
+        }
+
+        private void configureCapabilityContractPreference(@NonNull Context context) {
+            Preference contractPreference = findPreference("rafcodephi_capability_contract");
+            if (contractPreference != null) {
+                contractPreference.setOnPreferenceClickListener(preference -> {
+                    if (!isAdded()) return false;
+                    requireActivity().getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.settings, new CapabilityContractPreferencesFragment())
+                        .addToBackStack("rafcodephi_capability_contract")
+                        .commit();
+                    return true;
+                });
+            }
         }
 
         private void configureRafcodephiControlCenterPreference(@NonNull Context context) {

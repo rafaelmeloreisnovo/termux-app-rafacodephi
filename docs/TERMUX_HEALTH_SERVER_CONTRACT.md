@@ -13,10 +13,12 @@ end_to_end_device: TOKEN_VAZIO
 mutating_commands: false
 ```
 
-O servidor fornece uma única observação sanitizada do runtime local:
+O servidor fornece uma única observação sanitizada do runtime local.
+
+A porta `8766` é reservada a este health endpoint. `8765` permanece fora deste servidor e é reservada ao RafGitTools Raf Bridge/Kiwi. Isso evita disputa de bind no loopback quando os dois processos estão ativos no mesmo dispositivo.
 
 ```text
-GET http://127.0.0.1:8765/health
+GET http://127.0.0.1:8766/health
 ```
 
 Ele não é terminal remoto, shell, executor de job ou API administrativa.

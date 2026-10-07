@@ -27,6 +27,7 @@ Este hub reorganiza a leitura do repositório em uma estrutura mais clara, forma
 | Operar build/release/CI | [`ENGINEERING_SYSTEM_RUNBOOK.md`](./ENGINEERING_SYSTEM_RUNBOOK.md) | [`RUNTIME_TRUTH_TABLE.md`](./RUNTIME_TRUTH_TABLE.md) |
 | Avaliar maturidade operacional | [`EXCELENCIA_OPERACIONAL_MATRIX.md`](./EXCELENCIA_OPERACIONAL_MATRIX.md) | [`AUDIT_CLAIMS_POLICY.md`](./AUDIT_CLAIMS_POLICY.md) |
 | Verificar se a documentação reflete o código-fonte | [`RAFAELIA_CODE_DOC_SYNC.md`](./RAFAELIA_CODE_DOC_SYNC.md) | [`RAFAELIA_CODE_DOC_SYNC_REPORT.md`](./RAFAELIA_CODE_DOC_SYNC_REPORT.md) |
+| Inventariar C/ASM e separar pure core de syscall/JNI | [`FREESTANDING_PURE_CORE_INVENTORY_V2.md`](./FREESTANDING_PURE_CORE_INVENTORY_V2.md) | `tools/audit_freestanding_boundaries.py` |
 | Navegar por toda a documentação | [`../INDICE_DOCUMENTACAO.md`](../INDICE_DOCUMENTACAO.md) | [`RAFAELIA_5_LEVEL_DOCUMENTATION_NAVIGATION.md`](./RAFAELIA_5_LEVEL_DOCUMENTATION_NAVIGATION.md) |
 | Entender RAFAELIA e seus conceitos | [`rafaelia/README.md`](./rafaelia/README.md) | [`RAFAELIA_CONCEPT_CARRY_MAP.md`](./RAFAELIA_CONCEPT_CARRY_MAP.md) |
 | Revisar auditorias e gaps | [`RAFAELIA_GAP_MATRIX.md`](./RAFAELIA_GAP_MATRIX.md) | [`RAFAELIA_CODE_DOC_SYNC_REPORT.md`](./RAFAELIA_CODE_DOC_SYNC_REPORT.md) |

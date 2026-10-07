@@ -1,0 +1,51 @@
+{
+  "schema": "rafaelia.freestanding-jvm-module/v1",
+  "id": "rafcodephi-platform-runtime",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "authority": "RafCodePhi/Termux owns Android runtime/provider/bootstrap implementation and platform gates",
+  "authority_path": "app/",
+  "module_kind": "PLATFORM_RUNTIME",
+  "boundary": "PLATFORM_GATE",
+  "jvm_is_freestanding": false,
+  "hosted_adapter_policy": "Android/JNI/POSIX/provider services are hosted boundaries; PURE_CORE remains syscall-free",
+  "required_flags": [
+    "SOURCE_BOUND",
+    "AUTHORITY_BOUND",
+    "FAIL_CLOSED",
+    "SHADOW_GUARD"
+  ],
+  "friction_controls": {
+    "tail_recursion": false,
+    "reflection_dispatch": false,
+    "shadow_state": "PLATFORM_STATE_OWNED_BY_PROVIDER_BOUNDARY",
+    "warning_transport": "BITMASK_OR_TYPED_STATUS"
+  },
+  "state": "IMPLEMENTED_UNTESTED",
+  "urgency": "P0",
+  "claim_allowed": false,
+  "central_contract": "rafaelmeloreisnovo/RafGitTools:docs/architecture/FREESTANDING_JVM_ORCHESTRATION_V1.md",
+  "token_vazio": [
+    {
+      "id": "TOKEN_VAZIO_RAFCODEPHI_PROVIDER_PIPELINE_CURRENT_HEAD",
+      "missing": "same-head typed orchestration/provider execution receipt",
+      "evidence_needed": "request identity + provider action/result + exact artifact/commit receipt",
+      "urgency": "P1",
+      "next": "bind one bounded provider action to the typed orchestration contract and execute the provider gate"
+    },
+    {
+      "id": "TOKEN_VAZIO_RAFCODEPHI_ARM32_ARM64_PHYSICAL_RUNTIME",
+      "missing": "physical ARM32 and ARM64 runtime receipts for current artifacts",
+      "evidence_needed": "APK/artifact hash + device ABI + install/launch/provider result receipt",
+      "urgency": "P0",
+      "next": "run physical ARM32 and ARM64 evidence without inheriting historical VERIFIED state"
+    },
+    {
+      "id": "TOKEN_VAZIO_RAFCODEPHI_PROVIDER_ENFORCEMENT",
+      "missing": "provider/admin enforcement state where repository source cannot prove server-side policy",
+      "evidence_needed": "authorized provider readback and rejection receipt for the enforced path",
+      "urgency": "P0",
+      "next": "preserve fail-closed until authorized provider state is observed"
+    }
+  ],
+  "rollback": "close draft PR or revert only this leaf; preserve package identity, ARM32 support and hosted/freestanding boundaries"
+}

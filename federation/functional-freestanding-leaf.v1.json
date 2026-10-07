@@ -1,0 +1,29 @@
+{
+  "schema": "rafcodephi.functional-federation-leaf/v1",
+  "mode": "freestanding-concrete-contract",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "authority": "android-shell-runtime",
+  "conditions": {
+    "relationship_is_not_authority_merge": true,
+    "source_body_copy_required": false,
+    "missing_evidence_may_be_promoted": false,
+    "freestanding_must_be_evidenced": true,
+    "local_gate_required_before_promotion": true,
+    "claim_promotion_by_failover": false
+  },
+  "required_paths": [
+    "scripts/verify_pa_freestanding_elf.sh",
+    "tools/audit_freestanding_boundaries.py",
+    "app/src/main/cpp/freestanding/raf_pa_core.c"
+  ],
+  "verification_commands": [
+    "python3 tools/audit_freestanding_boundaries.py"
+  ],
+  "freestanding_evidence": "app/src/main/cpp/freestanding/raf_pa_core.c",
+  "integration": {
+    "body_copy_allowed": false,
+    "authority_transfer_allowed": false,
+    "contract_or_artifact_boundary_required": true
+  },
+  "claim_allowed": false
+}

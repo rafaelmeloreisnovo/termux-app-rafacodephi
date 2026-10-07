@@ -1,0 +1,67 @@
+{
+  "schema": "rafaelia.provider_ruleset_admin_delta/v1",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "target_branch": "master",
+  "authority": "GitHub provider ruleset administration",
+  "apply_state": "BLOCKED_EXTERNAL_ADMIN_AUTHORITY",
+  "precondition": {
+    "ruleset_id": 21908888,
+    "ruleset_updated_at": "2026-09-26T20:05:43.907-03:00",
+    "on_mismatch": "ABORT_STALE_PLAN"
+  },
+  "desired_policy_source": "governance/provider/PROVIDER_RULESET_TARGET.v3.json",
+  "operations": [
+    {
+      "kind": "ENSURE_REQUIRED_STATUS_CHECKS",
+      "strict": true,
+      "contexts": [
+        "provider-protection"
+      ]
+    },
+    {
+      "kind": "ALIGN_PULL_REQUEST_POLICY",
+      "require_code_owner_review": false,
+      "required_review_thread_resolution": true,
+      "allowed_merge_methods": [
+        "squash",
+        "rebase"
+      ]
+    },
+    {
+      "kind": "REVIEW_ALWAYS_BYPASS_ACTOR",
+      "actor_type": "RepositoryRole",
+      "actor_id": 5,
+      "required_resolution": "IDENTIFY_AND_JUSTIFY_OR_REMOVE"
+    },
+    {
+      "kind": "REVIEW_ALWAYS_BYPASS_ACTOR",
+      "actor_type": "Integration",
+      "actor_id": 20150,
+      "required_resolution": "IDENTIFY_AND_JUSTIFY_OR_REMOVE"
+    },
+    {
+      "kind": "REVIEW_ALWAYS_BYPASS_ACTOR",
+      "actor_type": "Integration",
+      "actor_id": 29110,
+      "required_resolution": "IDENTIFY_AND_JUSTIFY_OR_REMOVE"
+    },
+    {
+      "kind": "REVIEW_ALWAYS_BYPASS_ACTOR",
+      "actor_type": "Integration",
+      "actor_id": 73253,
+      "required_resolution": "IDENTIFY_AND_JUSTIFY_OR_REMOVE"
+    },
+    {
+      "kind": "REVIEW_ALWAYS_BYPASS_ACTOR",
+      "actor_type": "Integration",
+      "actor_id": 1144995,
+      "required_resolution": "IDENTIFY_AND_JUSTIFY_OR_REMOVE"
+    }
+  ],
+  "postcondition": {
+    "execute_route": "10_PROVIDER",
+    "required_receipt_gate": "PASS",
+    "claim_allowed": false
+  },
+  "rollback": "Preserve pre-change provider snapshot and revert only through provider administration with a successor receipt."
+}

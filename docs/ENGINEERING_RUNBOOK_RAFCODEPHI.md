@@ -1,5 +1,10 @@
 # ENGINEERING_RUNBOOK_RAFCODEPHI
 
+> **Estado documental:** complementar/histórico. O baseline `3f97ef42...`
+> registrado abaixo não representa o head atual. Para operação corrente, começar
+> em `docs/ENGINEERING_SYSTEM_RUNBOOK.md`, `docs/STATUS.md` e
+> `docs/FREESTANDING_PURE_CORE_INVENTORY_V2.md`.
+
 > Repository: `rafaelmeloreisnovo/termux-app-rafacodephi`
 > Initial documentation audit baseline: `b207970fc7a8630a534956cb544350cfd61ba33a`
 > Reconciled with current `master`: `3f97ef42ae9756b9f7fb4965b941b5b3048fc8d1` (PR #415 freestanding gate; no overlap with prior 12-file documentation patch).
@@ -195,9 +200,12 @@ O modo obrigatório falha quando `final_status != DEVICE_VALIDATED`.
 
 ```bash
 ./scripts/device_pkg_smoke.sh
+REQUIRE_REAL_PKG=true ./scripts/device_pkg_smoke.sh
 ```
 
 Um PASS estrutural/bridge/freestanding-host não prova `pkg update` nem `pkg install` físicos.
+
+Só promover `pkg` real quando o smoke obrigatório emitir `DEVICE_REAL_PKG_VALIDATED`.
 
 ## 11. Payload source-built RAFCODEPHI ARM/ARM64
 
@@ -205,9 +213,26 @@ No checkout correto e pinado de `termux-packages`:
 
 ```bash
 ./scripts/build-rafcodephi-real-bootstrap.sh --architectures arm,aarch64
+python3 scripts/build_real_arm_bootstrap_core.py --arch all
+python3 scripts/validate_real_arm_bootstrap_core.py rewritten-bootstrap-aarch64.zip rewritten-bootstrap-arm.zip
 ```
 
 Depois importe o par com `RAF_BOOTSTRAP_SOURCE=source-built-real` e os caminhos de ZIP/manifest correspondentes. O importador valida identidade/prefixo/par ARM; o estado físico continua separado.
+
+Se o validador reportar `LEGACY_PREFIX_BINARY_RISK`, o risco bloqueia promoção: não reescrever bytes ELF às cegas, não declarar `pkg` real, e não transformar bootstrap estrutural em evidência de device.
+
+A promoção física mínima continua device-bound:
+
+```bash
+DEVICE_SMOKE_REQUIRED=true ./scripts/device_runtime_smoke.sh path/to/app.apk
+REQUIRE_REAL_PKG=true ./scripts/device_pkg_smoke.sh
+pkg update -y
+pkg install -y nano
+pkg install -y python
+pkg install -y git
+```
+
+O estado esperado de promoção é `DEVICE_REAL_PKG_VALIDATED`; qualquer outro final_status preserva `TOKEN_VAZIO`/BLOCKED para `pkg update` e `pkg install`.
 
 ## 12. Repositório binário custom
 

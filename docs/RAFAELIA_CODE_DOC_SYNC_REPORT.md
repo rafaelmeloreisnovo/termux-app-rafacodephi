@@ -1,5 +1,15 @@
 # RAFAELIA CODE DOC SYNC REPORT
 
+## Sucessor observado — 2026-09-26 / PR #463
+
+- baseline de entrada: `master@988d3c24cf3a4a676ff0cab0512a2436a8d1c704`;
+- commit do gate observado: `38e02d288b24a48bbbc0fe0909af541442f05bd0`;
+- control-plane run `36245846563`: inventário `success`, policy/runtime `success`, Ω summary `success`;
+- `pure_core_source_policy=PASS`; probes ARMv7/AArch64: `compile_exit=0`, zero transferências não terminais detectadas;
+- RAFAELIA ZERO compatibility: `PASS`; runtime host simulation: `PASS`;
+- `physical_android=TOKEN_VAZIO`, `whole_binary_no_branch=TOKEN_VAZIO`, `claim_allowed=false`;
+- `Provider Protection Gate` continua FAIL por configuração do ruleset de `master`, separado deste delta de código.
+
 ## F_ok
 - `README.md`, `docs/README.md` e `docs/EXCELENCIA_OPERACIONAL_MATRIX.md` agora descrevem a rota até o platô estrutural com foco em coerência operacional.
 - `INDICE_DOCUMENTACAO.md` já expõe `docs/README.md`, `docs/EXCELENCIA_OPERACIONAL_MATRIX.md`, `docs/RAFAELIA_CODE_DOC_SYNC.md` e `docs/RAFAELIA_CODE_DOC_SYNC_REPORT.md` como pontos formais de navegação.

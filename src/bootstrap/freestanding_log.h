@@ -1,7 +1,8 @@
 /*
- * freestanding_log.h — Freestanding logging via the canonical syscall layer
+ * freestanding_log.h — PLATFORM_GATE logging via the canonical syscall layer
  *
- * Replaces stdio.h printf() and android/log.h without external runtime
+ * Freestanding from libc, but intentionally kernel-ABI dependent; this file
+ * is not PURE_CORE. Replaces stdio.h printf() and android/log.h without external runtime
  * dependencies. write(2) is provided by freestanding_syscalls.h so logging
  * follows the same ABI-correct ARM32/ARM64/x86/x86_64 path as the rest of the
  * bootstrap instead of carrying a second ARM64-only syscall implementation.

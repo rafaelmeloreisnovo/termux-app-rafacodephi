@@ -89,6 +89,7 @@ jobs:
             scripts/apply-rafcodephi-build-properties.py
             scripts/validate-rafcodephi-build-properties.sh
             scripts/run-docker.sh
+            scripts/run-rafcodephi-bootstrap-docker.sh
             scripts/build-rafcodephi-real-bootstrap.sh
             scripts/generate-bootstraps.sh
             packages/libxml2/build.sh
@@ -140,8 +141,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/reports
-          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-real-bootstrap.sh
-          ./scripts/run-docker.sh \
+          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-real-bootstrap.sh scripts/run-rafcodephi-bootstrap-docker.sh
+          bash ./scripts/run-rafcodephi-bootstrap-docker.sh \
             ./scripts/build-rafcodephi-real-bootstrap.sh \
             --architectures arm,aarch64 \
             2>&1 | tee build/reports/rafcodephi-beta-real-bootstrap.log

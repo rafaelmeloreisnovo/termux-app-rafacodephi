@@ -1,0 +1,145 @@
+{
+  "schema": "rafaelia.freestanding-work-cursor/v1",
+  "state": "ACTIVE_REVIEW_BRANCH",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "base_commit": "5cca02e357d023be593c7a7b2369e39ded7d2eb9",
+  "branch": "rafaelia/freestanding-bitraf42-v1-20260926",
+  "pull_request": 468,
+  "predecessor_head": "997af99a2be3c78d3ce5cbb3d4cbe6ffa3607e1e",
+  "authority": {
+    "pure_core": "rafaelia/src/main/cpp/zero",
+    "platform_gate": [
+      "src/bootstrap",
+      "bootstrap"
+    ],
+    "hosted_boundary": [
+      "app/src/main/cpp/lowlevel",
+      "rafaelia/src/main/cpp/zero/rafz_android_jni.c"
+    ],
+    "staging_history": [
+      "Arme/Add",
+      "BugOrAdd",
+      "rmr/Rrr"
+    ]
+  },
+  "resume_protocol": [
+    "read this cursor",
+    "verify PR 465 head",
+    "read last receipt",
+    "execute only active_node gate",
+    "append successor receipt",
+    "advance only from observed evidence"
+  ],
+  "history": [
+    {
+      "seq": 1,
+      "commit": "12b5b7abc5454cb3bf861e077e44e431a6421c67",
+      "receipt": "docs/receipts/FREESTANDING_ATLAS_TOKEN_VAZIO_V3_20260926.md",
+      "state": "SOURCE_OBSERVED"
+    },
+    {
+      "seq": 2,
+      "commit": "a0a76a2c7c1d2143090e448d6d8dd0c78d960035",
+      "receipt": "docs/receipts/FREESTANDING_PURE_Q16_V1_20260926.md",
+      "state": "CI_SCOPE_PASS",
+      "evidence": "run 36273254098 / job 108491098854: host vector run_exit=0; ARMv7/AArch64 compile_exit=0 branches=[]"
+    },
+    {
+      "seq": 3,
+      "commit": "2a015af1bff0950b58d5274c1096ffc67f6228ad",
+      "receipt": "docs/receipts/TOKEN_VAZIO_GATE_PASS_20260926.md",
+      "state": "CI_SCOPE_PASS",
+      "evidence": "run 36273429715 / job 108491587952: dictionary_types=27; dictionary_errors=[]; pure-core PASS"
+    },
+    {
+      "seq": 4,
+      "commit": "dab7c580d1bc21f8ca75b950d9b09a3ab6d04844",
+      "receipt": "docs/receipts/FREESTANDING_BLAKE3_SINGLE_KAT_PASS_20260926.md",
+      "state": "BOUNDED_CONFORMANCE_PASS",
+      "evidence": "run 36273719073 / job 108492364111: official BLAKE3 single-block KAT 0/1/63/64 run_exit=0; ARMv7/AArch64 branches=[]"
+    },
+    {
+      "seq": 5,
+      "commit": "c055c2841fac1d7a1c7b808c858d2a570b6d0695",
+      "receipt": "docs/receipts/SOURCE_ALIAS_GRAPH_GATE_PASS_20260926.md",
+      "state": "CI_SCOPE_PASS",
+      "evidence": "run 36273837084 / job 108492683126: 29 groups, 43 excess, 5 canonical, 24 authority-blocked, errors=[]"
+    },
+    {
+      "seq": 6,
+      "commit": "9023b9f1542e27ab63eabd9107c54995d54652e4",
+      "receipt": "docs/receipts/FREESTANDING_CRC32C_GATE_PASS_20260926.md",
+      "state": "CI_SCOPE_PASS",
+      "evidence": "run 36274066348 / job 108494115794: CRC host vector compile_exit=0 run_exit=0; ARMv7/AArch64 compile_exit=0 branches=[]; pure-core source policy PASS"
+    },
+    {
+      "seq": 7,
+      "commit": "9d86c6d710a815982f1a81703659db00d79b8b40",
+      "receipt": "docs/receipts/FREESTANDING_BITRAF42_NATIVE_SAFETY_FAIL_01_20260926.md",
+      "state": "FAIL_CLOSED",
+      "evidence": "run 36277312669 / job 108502444769: exact protected rafz.h blob drift; BITRAF semantics not implicated"
+    },
+    {
+      "seq": 8,
+      "commit": "cc3f310b25e40a9668b5627fe834bf0063c9ee31",
+      "receipt": "docs/receipts/FREESTANDING_BITRAF42_GATE_PASS_20260926.md",
+      "state": "CI_SCOPE_PASS",
+      "evidence": "run 36277368782 / job 108502635508: host-native-pure_bitraf42_vectors compile_exit=0 run_exit=0; armv7a-none-eabi compile_exit=0 branches=[]; aarch64-none-elf compile_exit=0 branches=[]; pure_core_source_policy=PASS; RAFAELIA ZERO compatibility=PASS"
+    },
+    {
+      "seq": 9,
+      "commit": "997af99a2be3c78d3ce5cbb3d4cbe6ffa3607e1e",
+      "receipt": "docs/receipts/FREESTANDING_EXACT_ELF_GATE_PASS_20260926.md",
+      "state": "STRUCTURAL_ELF_PASS",
+      "evidence": "START HERE run 36277588450 / job 108503320657; artifact 10917464522; ARMv7 6532 bytes sha256 eb0040559275fadfba3f4117dbe7d0008f4d8fc555f31f26cf975af5507629d7; AArch64 5808 bytes sha256 4215646cbbcb54c7d6cc0808aa16cc7186b6aff0c34d0e6c8640ec0b58a86c26; no INTERP/NEEDED/UND/relocs/forbidden dynamic sections; 4 bounded globals"
+    }
+  ],
+  "active_node": {
+    "id": "N090_PHYSICAL_ARM32_ARM64",
+    "state": "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING",
+    "action": "collect physical ARM32 and ARM64 device receipts against the same pure-core semantic vectors and bind device/toolchain/artifact/source identities without promoting host simulation",
+    "success": "both physical architectures execute the bounded pure-core vector suite with zero failures and receipts bind source commit, compiler identity, ABI/device identity and produced artifact hashes",
+    "failure": "missing architecture, vector mismatch, compiler/runtime drift, identity/hash gap, or hosted simulation presented as physical proof"
+  },
+  "queued_nodes": [],
+  "open_tokens": [
+    [
+      "G-FS-PHYSICAL-ARM-DUAL-001",
+      "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING",
+      "physical ARM32 + ARM64 pure-core vector receipts bound to exact source/toolchain/device identity"
+    ],
+    [
+      "G-FS-BLAKE3-001",
+      "TOKEN_VAZIO_CONFORMANCE_UNPROVEN",
+      "src/main/jni/blake3_wrapper.h"
+    ],
+    [
+      "G-FS-DUP-001",
+      "TOKEN_VAZIO_PROVENANCE_UNBOUND",
+      "43 duplicate excess source copies"
+    ],
+    [
+      "G-FS-WHOLE-ELF-001",
+      "TOKEN_VAZIO_ARTIFACT_UNBOUND",
+      "whole-binary control-free"
+    ],
+    [
+      "G-FS-PHYS-ARM32",
+      "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING",
+      "armeabi-v7a"
+    ],
+    [
+      "G-FS-PHYS-ARM64",
+      "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING",
+      "arm64-v8a"
+    ],
+    [
+      "G-GOV-PROVIDER-001",
+      "TOKEN_VAZIO_GOVERNANCE_BLOCKED",
+      "Provider Protection run 36273253772"
+    ]
+  ],
+  "claim_allowed": false,
+  "merged_predecessor_pr": 465,
+  "merged_predecessor_commit": "5cca02e357d023be593c7a7b2369e39ded7d2eb9"
+}
