@@ -121,6 +121,24 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
         ]
         self.assertEqual(mutable, [], msg=f"mutable refs in START HERE closure: {mutable}")
 
+    def test_freestanding_workflow_family_external_refs_are_immutable(self) -> None:
+        paths = [
+            self.root / ".github/workflows/freestanding-runtime-gate.yml",
+            self.root / ".github/workflows/freestanding-pkg-runtime.yml",
+            self.root / ".github/workflows/freestanding-enterprise-closure.yml",
+        ]
+        records = self.action_audit.audit(self.root, paths)
+        mutable = [
+            record
+            for record in records
+            if record["state"] not in {"PINNED_SHA", "LOCAL_ACTION"}
+        ]
+        self.assertEqual(
+            mutable,
+            [],
+            msg=f"mutable refs in governed freestanding workflow family: {mutable}",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
