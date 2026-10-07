@@ -17,9 +17,9 @@
       "physical_android": "TOKEN_VAZIO"
     },
     "candidate": {
-      "commit": "1e63d81ddc71d5b3ff7730f201a8cd70979ca218",
-      "branch": "hotfix/rafcodephi-bootstrap-output-v1-20260916",
-      "state": "PR_119_CANONICAL_DOCKER_HANDOFF_VALIDATION",
+      "commit": "97cd0fd25b194b3d857b3f6a2ac330ff0efb003c",
+      "branch": "main",
+      "state": "PINNED_MAIN_SOURCE_CANDIDATE_UNTESTED_HEAVY_CI",
       "promotion_target": "canonical",
       "supersedes_commit": "1fc540b0c296581c5793c109e3834589f85a0114",
       "historical_pull_request": 89,
@@ -28,8 +28,14 @@
       "equivalent_duplicate_closed": 90,
       "claim_allowed": false,
       "physical_android": "TOKEN_VAZIO",
-      "pull_request": 119,
-      "previous_candidate_commit": "1ffe3e9b00b03813ec3a0d3976abf9f9460659e5"
+      "pull_request": 135,
+      "previous_candidate_commit": "1e63d81ddc71d5b3ff7730f201a8cd70979ca218",
+      "earlier_candidate_commit": "1ffe3e9b00b03813ec3a0d3976abf9f9460659e5",
+      "previous_candidate_pull_request": 119,
+      "source_fixes_included": [
+        121,
+        135
+      ]
     }
   },
   "invariants": {
