@@ -17,11 +17,11 @@
       "physical_android": "TOKEN_VAZIO"
     },
     "candidate": {
-      "commit": "1e63d81ddc71d5b3ff7730f201a8cd70979ca218",
-      "branch": "hotfix/rafcodephi-bootstrap-output-v1-20260916",
-      "state": "PR_119_CANONICAL_DOCKER_HANDOFF_VALIDATION",
+      "commit": "97cd0fd25b194b3d857b3f6a2ac330ff0efb003c",
+      "branch": "main",
+      "state": "EXACT_SOURCE_PIN_SYMLINK_REPAIR_CI_PENDING",
       "promotion_target": "canonical",
-      "supersedes_commit": "1fc540b0c296581c5793c109e3834589f85a0114",
+      "supersedes_commit": "1e63d81ddc71d5b3ff7730f201a8cd70979ca218",
       "historical_pull_request": 89,
       "historical_pull_request_merged": true,
       "historical_merge_commit": "8a3587789c415912c04b83fc4bb82fe69c55d595",

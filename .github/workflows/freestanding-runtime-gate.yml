@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@v7
       - name: Validate cold-start and runtime-validator syntax
         run: |
           set -euo pipefail
@@ -71,7 +71,7 @@ jobs:
             extra: '-marm'
 
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@v7
 
       - name: Install LLVM and QEMU user-mode tools
         run: |
@@ -137,7 +137,7 @@ jobs:
           print('RAFCODEPHI_EMULATED_RUNTIME_BOUNDARY=PASS')
           PY
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@v7
         with:
           name: freestanding-runtime-${{ matrix.name }}
           path: build/freestanding/
@@ -162,7 +162,7 @@ jobs:
             extra: '-marm'
 
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@v7
 
       - name: Install LLVM and QEMU user-mode tools
         run: |
@@ -236,7 +236,7 @@ jobs:
             echo 'claim_allowed=false'
           } > /tmp/zipraf-phase-a-${{ matrix.name }}.receipt
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@v7
         with:
           name: zipraf-phase-a-${{ matrix.name }}
           path: |
@@ -252,7 +252,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Download both architecture evidence bundles
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@v8
         with:
           pattern: freestanding-runtime-*
           merge-multiple: true
@@ -314,7 +314,7 @@ jobs:
           PY
 
       - name: Upload dual-ABI custody receipt
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@v7
         with:
           name: freestanding-runtime-matrix
           path: build/freestanding-matrix/freestanding-runtime-matrix.json
