@@ -21,7 +21,7 @@ defaults:
 jobs:
   arm32:
     name: "📱 ARM32 v7 — ${{ inputs.ndk_lane }}"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
       TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS: '1'
