@@ -139,6 +139,26 @@ Portanto:
 
 Descoberta ou callability não é execução.
 
+## Fecho de dependências do front door
+
+A rota operacional agora tem um gate adicional de custódia:
+
+```text
+00_START_HERE
+  -> resolver reusable-workflow closure
+  -> exigir SHA imutável para toda referência externa
+  -> executar especialistas
+  -> receipt
+```
+
+O mapa completo está em `docs/WORKFLOW_DEPENDENCY_BOUNDARY_V1.md`.
+
+O runner foi fixado em `ubuntu-24.04` nos workflows alcançáveis que usavam
+`ubuntu-latest`. Vectra deixou de instalar `pytest` dinamicamente e usa o
+runner stdlib autoral de funções de contrato simples. Essas mudanças reduzem
+mutabilidade e dependência de rede, mas a CI continua uma camada
+`CI_PROVIDER/HOSTED_BOUNDARY`, nunca `PURE_CORE`.
+
 ## Fronteira de evidência
 
 `SOURCE != ARTIFACT != EXECUTION != EVIDENCE != CLAIM`
@@ -175,8 +195,8 @@ Workflows especialistas continuam úteis para diagnóstico focal. O START HERE �
 
 ## R3
 
-`F_ok`: rota única, combos inválidos removidos, gate route-aware, scanner corrigido, Vectra callable/evidence-envelope e provider protection tipado como especialista.
+`F_ok`: rota única e route-aware preservada; fecho transitivo agora tem identidade externa imutável por contrato; runner line reduzida a `ubuntu-24.04`; dependência dinâmica de pytest removida do gate Vectra.
 
-`F_gap`: o CI desta mudança precisa executar; PA físico, série n>=30, energia calibrada e comparabilidade entre aparelhos continuam fora do alcance do runner hospedado.
+`F_gap`: este successor permanece `IMPLEMENTED_UNTESTED` até exact-head CI; provider enforcement/quota e PA físico continuam independentes.
 
-`F_next`: observar CI do PR; só depois considerar integração em `master`.
+`F_next`: executar os gates no exact head; somente depois considerar promoção e a próxima família de workflows fora do front door.
