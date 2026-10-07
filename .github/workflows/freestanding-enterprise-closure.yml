@@ -78,7 +78,8 @@ jobs:
             scripts/validate_freestanding_device_receipt.py
           python3 -m unittest \
             tests.test_freestanding_device_receipt \
-            tests.test_inject_freestanding_gate_manifest -v
+            tests.test_inject_freestanding_gate_manifest \
+            tests.test_freestanding_custody_paths -v
           /bin/sh -n scripts/device_promote_freestanding_runtime.sh
           python3 -m json.tool \
             docs/contracts/raf.freestanding-runtime-evidence.v1.schema.json >/dev/null
@@ -392,4 +393,7 @@ jobs:
             build/freestanding-source/
             build/reports/
             termux-packages/build/reports/
-            termux-packages/artifacts/rafcodephi-bootstrap/
+            termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+            termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-*.zip
+            termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-*-symlink-repair.json
+            termux-packages/artifacts/rafcodephi-bootstrap/debs/*/SHA256SUMS
