@@ -1,3 +1,5 @@
+# ci_track: internal
+# ci_abis: armeabi-v7a,arm64-v8a
 name: Freestanding runtime gate
 
 on:
@@ -30,11 +32,15 @@ on:
       - 'docs/ZIPRAF_BIT_LAYER_DECODER_BRIDGE_V1.md'
       - '.github/workflows/freestanding-runtime-gate.yml'
 
+permissions:
+  contents: read
+
 jobs:
   cold-start-builder-contract:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Validate cold-start and runtime-validator syntax
         run: |
           set -euo pipefail
@@ -49,7 +55,8 @@ jobs:
           grep -q 'device_runtime_state.*TOKEN_VAZIO' scripts/validate_freestanding_gate_emulated_runtime.py
 
   static-elf:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -64,7 +71,7 @@ jobs:
             extra: '-marm'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Install LLVM and QEMU user-mode tools
         run: |
@@ -130,14 +137,15 @@ jobs:
           print('RAFCODEPHI_EMULATED_RUNTIME_BOUNDARY=PASS')
           PY
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: freestanding-runtime-${{ matrix.name }}
           path: build/freestanding/
 
   zipraf-bit-layer-phase-a:
     name: ZIPRAF Bit Layer Phase A / ${{ matrix.name }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -154,7 +162,7 @@ jobs:
             extra: '-marm'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Install LLVM and QEMU user-mode tools
         run: |
@@ -228,7 +236,7 @@ jobs:
             echo 'claim_allowed=false'
           } > /tmp/zipraf-phase-a-${{ matrix.name }}.receipt
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: zipraf-phase-a-${{ matrix.name }}
           path: |
@@ -240,10 +248,11 @@ jobs:
     needs:
       - cold-start-builder-contract
       - static-elf
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     steps:
       - name: Download both architecture evidence bundles
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           pattern: freestanding-runtime-*
           merge-multiple: true
@@ -305,7 +314,7 @@ jobs:
           PY
 
       - name: Upload dual-ABI custody receipt
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: freestanding-runtime-matrix
           path: build/freestanding-matrix/freestanding-runtime-matrix.json
