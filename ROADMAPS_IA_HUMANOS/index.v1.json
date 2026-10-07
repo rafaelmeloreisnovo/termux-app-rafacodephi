@@ -1,0 +1,152 @@
+{
+  "schema": "rafaelia.roadmaps-ia-humanos.index.v1",
+  "scope": {
+    "consumer": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "producer": "rafaelmeloreisnovo/termux-packages",
+    "snapshot_date": "2026-10-07",
+    "freshness": "SNAPSHOT_REVALIDATE_SOURCE",
+    "active_promotion": "HOLD",
+    "claim_allowed": false,
+    "release_allowed": false,
+    "physical_android": "TOKEN_VAZIO"
+  },
+  "entrypoint": "ROADMAPS_IA_HUMANOS/README.md",
+  "runbook": "ROADMAPS_IA_HUMANOS/CHECKPOINTS_7MU.md",
+  "invariants": [
+    "SOURCE != ARTIFACT != EXECUTION != EVIDENCE != CLAIM",
+    "TOKEN_VAZIO != 0",
+    "IMPLEMENTED_UNTESTED != PASS"
+  ],
+  "source_refs": {
+    "failure_run": "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/actions/runs/37660128059",
+    "failure_job": "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/actions/runs/37660128059/job/112925303754",
+    "producer_repo": "https://github.com/rafaelmeloreisnovo/termux-packages",
+    "consumer_workflow": ".github/workflows/freestanding-enterprise-closure.yml",
+    "start_here_v2_2": "https://docs.google.com/document/d/1T4OIN2RC1I-KFsdaQTCqieeZUGYBXissWrdrZMG0DN8/edit",
+    "hotstate_v4_5": "https://docs.google.com/document/d/1d0J5SkF2S2emBq6jLuTkhYVaSOQiWazJWyRCTMJ-iRI/edit",
+    "muwrite_ledger": "https://docs.google.com/document/d/1NEU7lg7iUZf1u7lX-SEKuc-knSDGlF5gOx7qzXcJ1yc/edit",
+    "overlapping_consumer_prs": [
+      "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/pull/481",
+      "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/pull/482",
+      "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/pull/483",
+      "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/pull/484",
+      "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/pull/487"
+    ]
+  },
+  "failure_axes": [
+    {
+      "id": "STEP7_PROFILE_SEAL",
+      "state": "FAIL_OBSERVED_HISTORICAL",
+      "evidence": "missing installed entries: bin/sh,libexec/termux-api",
+      "source_step": 7,
+      "source_job": 112925303754,
+      "claim_scope": "source-build profile seal only"
+    },
+    {
+      "id": "STEP15_ARTIFACT_TRANSPORT",
+      "state": "FAIL_OBSERVED_HISTORICAL",
+      "evidence": "upload-artifact rejected colon in Debian epoch filename",
+      "source_step": 15,
+      "source_job": 112925303754,
+      "claim_scope": "artifact upload transport only"
+    },
+    {
+      "id": "SUBSEQUENT_LAUNCHER_EXIT126",
+      "state": "OBSERVED_SEPARATE_SUBSEQUENT_RUN",
+      "evidence": "env './scripts/build-rafcodephi-real-bootstrap.sh': Permission denied",
+      "source_run": 37699530923,
+      "claim_scope": "source launcher, not historic step7"
+    }
+  ],
+  "steps": [
+    {
+      "id": "C1",
+      "title": "Estado e autoridade",
+      "status": "PARTIAL_HOLD",
+      "requires": [
+        "current source SHA",
+        "consumer single PR",
+        "producer authority"
+      ],
+      "receipt": "consumer SHA, producer SHA, owner, decision"
+    },
+    {
+      "id": "C2",
+      "title": "Fronteiras causais",
+      "status": "PASS_SCOPED_HISTORICAL_LOG",
+      "requires": [
+        "split step7 profile seal",
+        "split step15 upload",
+        "do not conflate exit126"
+      ],
+      "receipt": "run/job/step/error"
+    },
+    {
+      "id": "C3",
+      "title": "Falsificadores baratos",
+      "status": "PENDING_EXACT_HEAD",
+      "requires": [
+        "symlinks and normalizer fixtures",
+        "launcher interpreter/args/exit",
+        "colon-safe custody fixture",
+        "rights gate"
+      ],
+      "receipt": "command, repo SHA, result"
+    },
+    {
+      "id": "C4",
+      "title": "Um produtor, um consumidor",
+      "status": "HOLD_UNRESOLVED_AUTHORITY",
+      "requires": [
+        "deduplicate PRs 481-484 and 487",
+        "select authoritative producer SHA",
+        "keep predecessor rollback"
+      ],
+      "receipt": "selected producer+consumer+supersedes"
+    },
+    {
+      "id": "C5",
+      "title": "Gates exatos de CI",
+      "status": "NOT_PROVEN_EXACT_HEAD",
+      "requires": [
+        "fast contracts",
+        "dual ABI source build",
+        "ZIP and manifest SHA256 readback",
+        "artifact transport readback",
+        "embedded APK hash matrix"
+      ],
+      "receipt": "exact head CI, artifacts and checksums"
+    },
+    {
+      "id": "C6",
+      "title": "Custódia, direitos e dispositivo",
+      "status": "BLOCKED",
+      "requires": [
+        "third-party DEB rights/permissions",
+        "source-to-payload hash verification",
+        "live provider enforcement",
+        "ARM32 and ARM64 same APK physical receipts"
+      ],
+      "receipt": "rights decision, hashes, server readback and device receipts"
+    },
+    {
+      "id": "C7",
+      "title": "Decisão, rollback e μWRITE",
+      "status": "HOLD",
+      "requires": [
+        "evaluate gates individually",
+        "append one delta to Drive ledger",
+        "refresh hotstate only on verifiable change",
+        "define rollback and promote only with authority"
+      ],
+      "receipt": "µID, parent, evidence, gap, next, rollback"
+    }
+  ],
+  "next": "Re-read exact current PR and producer heads; run cheap falsifier once; consume an authoritative terminal dual-ABI build without duplicate heavy CI.",
+  "stop_conditions": [
+    "missing source or authority -> ROUTE_STATE_BLOCKED",
+    "missing evidence -> TOKEN_VAZIO",
+    "license P0 unresolved -> no raw third-party DEB redistribution",
+    "provider/device unproved -> release_allowed=false"
+  ]
+}
