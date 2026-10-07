@@ -1,0 +1,148 @@
+{
+  "schema": "rafaelia.roadmaps_ia_humanos.7m.v1",
+  "version": 1,
+  "created_at_date": "2026-10-07",
+  "scope": {
+    "repo": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "workflow_run_id": 37660128059,
+    "job_id": 112925303754,
+    "producer_repo": "rafaelmeloreisnovo/termux-packages"
+  },
+  "semantic_7m": [
+    "Meta",
+    "Mapa",
+    "Medida",
+    "Mudança mínima",
+    "Matriz de testes",
+    "Manifesto e receipts",
+    "Memória e controle"
+  ],
+  "status_policy": "states are dated observations, never live proof; exact-HEAD readback required",
+  "invariants": [
+    "SOURCE != ARTIFACT != EXECUTION != EVIDENCE != CLAIM",
+    "TOKEN_VAZIO != 0",
+    "IMPLEMENTED_UNTESTED != PASS",
+    "P0_RIGHTS_FIRST",
+    "NO_DUPLICATE_HEAVY_RUN"
+  ],
+  "links": {
+    "canonical_start": "https://docs.google.com/document/d/1T4OIN2RC1I-KFsdaQTCqieeZUGYBXissWrdrZMG0DN8/edit",
+    "hotstate": "https://docs.google.com/document/d/1d0J5SkF2S2emBq6jLuTkhYVaSOQiWazJWyRCTMJ-iRI/edit",
+    "ledger": "https://docs.google.com/document/d/1NEU7lg7iUZf1u7lX-SEKuc-knSDGlF5gOx7qzXcJ1yc/edit",
+    "matrix": "https://docs.google.com/spreadsheets/d/1m_QeBOrEAsX8UGMeaLADjwnmZvsbDHRM6ZYay9nss7Y/edit",
+    "original_job": "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/actions/runs/37660128059/job/112925303754",
+    "producer_run": "https://github.com/rafaelmeloreisnovo/termux-packages/actions/runs/37698771017",
+    "consumer_run": "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/actions/runs/37700322813"
+  },
+  "steps": [
+    {
+      "id": "M1",
+      "checkpoint_id": "CP-01",
+      "title": "Meta e limite",
+      "state": "SOURCE_OBSERVED",
+      "depends_on": [],
+      "evidence": [
+        "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi",
+        "https://docs.google.com/document/d/1T4OIN2RC1I-KFsdaQTCqieeZUGYBXissWrdrZMG0DN8/edit"
+      ],
+      "claim_allowed": false,
+      "release_allowed": false
+    },
+    {
+      "id": "M2",
+      "checkpoint_id": "CP-02",
+      "title": "Mapa de autoridade",
+      "state": "BLOCKED_SELECTION",
+      "depends_on": [
+        "M1"
+      ],
+      "evidence": [
+        "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/pull/482",
+        "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/pull/484"
+      ],
+      "claim_allowed": false,
+      "release_allowed": false
+    },
+    {
+      "id": "M3",
+      "checkpoint_id": "CP-03",
+      "title": "Medida e causa",
+      "state": "HISTORICAL_CAUSE_OBSERVED",
+      "depends_on": [
+        "M2"
+      ],
+      "evidence": [
+        "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/actions/runs/37660128059/job/112925303754",
+        "https://docs.google.com/document/d/1d0J5SkF2S2emBq6jLuTkhYVaSOQiWazJWyRCTMJ-iRI/edit"
+      ],
+      "claim_allowed": false,
+      "release_allowed": false
+    },
+    {
+      "id": "M4",
+      "checkpoint_id": "CP-04",
+      "title": "Mudança mínima",
+      "state": "PENDING_VERIFICATION",
+      "depends_on": [
+        "M3"
+      ],
+      "evidence": [
+        "https://github.com/rafaelmeloreisnovo/termux-packages/commit/5197a49c3abf2084ce123ef5584dcddc5f2c3783"
+      ],
+      "claim_allowed": false,
+      "release_allowed": false
+    },
+    {
+      "id": "M5",
+      "checkpoint_id": "CP-05",
+      "title": "Matriz de testes",
+      "state": "WAITING_TERMINAL_EVIDENCE",
+      "depends_on": [
+        "M4"
+      ],
+      "evidence": [
+        "https://github.com/rafaelmeloreisnovo/termux-packages/actions/runs/37698771017",
+        "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/actions/runs/37700322813"
+      ],
+      "claim_allowed": false,
+      "release_allowed": false
+    },
+    {
+      "id": "M6",
+      "checkpoint_id": "CP-06",
+      "title": "Manifesto e receipts",
+      "state": "BLOCKED_NO_COMPLETE_RECEIPT",
+      "depends_on": [
+        "M5"
+      ],
+      "evidence": [
+        "https://docs.google.com/spreadsheets/d/1m_QeBOrEAsX8UGMeaLADjwnmZvsbDHRM6ZYay9nss7Y/edit"
+      ],
+      "claim_allowed": false,
+      "release_allowed": false
+    },
+    {
+      "id": "M7",
+      "checkpoint_id": "CP-07",
+      "title": "Memória, controle e promoção",
+      "state": "HOLD",
+      "depends_on": [
+        "M6"
+      ],
+      "evidence": [
+        "https://docs.google.com/document/d/1NEU7lg7iUZf1u7lX-SEKuc-knSDGlF5gOx7qzXcJ1yc/edit",
+        "https://docs.google.com/document/d/1d0J5SkF2S2emBq6jLuTkhYVaSOQiWazJWyRCTMJ-iRI/edit"
+      ],
+      "claim_allowed": false,
+      "release_allowed": false
+    }
+  ],
+  "hard_gates": {
+    "claim_allowed": false,
+    "release_allowed": false,
+    "physical_android": "TOKEN_VAZIO",
+    "rights_export": "TOKEN_VAZIO",
+    "provider_enforcement": "TOKEN_VAZIO"
+  },
+  "next": "read current terminal statuses of already-started producer and consumer; select single PR after focused falsifier"
+}
