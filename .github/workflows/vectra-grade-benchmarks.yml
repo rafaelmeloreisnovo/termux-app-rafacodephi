@@ -71,13 +71,10 @@ jobs:
           chmod +x ./scripts/ci_android_preflight.sh || true
           ./scripts/ci_android_preflight.sh
 
-      - name: Install benchmark contract test dependency
-        run: python3 -m pip install --disable-pip-version-check pytest
-
       - name: Validate industrial benchmark V3 + beta orchestrator contracts
         id: contracts
         run: |
-          python3 -m pytest -q \
+          python3 scripts/run_plain_test_functions.py \
             tests/test_industrial_benchmark_v3_contract.py \
             tests/test_beta_orchestrator_contract.py
 
