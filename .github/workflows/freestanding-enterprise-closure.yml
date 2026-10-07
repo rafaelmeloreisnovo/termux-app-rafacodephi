@@ -379,6 +379,24 @@ jobs:
           print(json.dumps(doc, indent=2, sort_keys=True))
           PY
 
+      # GitHub artifact paths cannot contain ':' but Debian versioned .deb
+      # basenames can. Preserve exact bytes and internal filenames in a TAR;
+      # publish the archive with an independent transport SHA256 receipt.
+      - name: Stage portable Debian package evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          debdir=termux-packages/artifacts/rafcodephi-bootstrap/debs
+          if [[ -d "$debdir" ]]; then
+            mkdir -p build/reports
+            tar -C termux-packages/artifacts/rafcodephi-bootstrap \
+              -cf build/reports/rafcodephi-debs.tar debs
+            tar -tf build/reports/rafcodephi-debs.tar >/dev/null
+            sha256sum build/reports/rafcodephi-debs.tar \
+              > build/reports/rafcodephi-debs.tar.sha256
+          fi
+
       - name: Upload enterprise candidate and custody evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -392,4 +410,6 @@ jobs:
             build/freestanding-source/
             build/reports/
             termux-packages/build/reports/
-            termux-packages/artifacts/rafcodephi-bootstrap/
+            termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+            termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-*.zip
+            termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-*-symlink-repair.json
