@@ -291,7 +291,7 @@ public final class BootstrapWizardSource {
             }
             // Canonical Termux SYMLINKS.txt uses './' prefixes.
             while (link.startsWith("./")) link = link.substring(2);
-            if (link.isEmpty() || link.equals(".") || link.contains("//")
+            if (link.isEmpty() || link.startsWith("/") || link.equals(".") || link.contains("//")
                 || link.contains("/./") || link.endsWith("/.")) {
                 throw new SecurityException("UNSAFE_BOOTSTRAP_SYMLINK_DESTINATION_" + number + ":" + link);
             }
