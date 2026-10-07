@@ -14,6 +14,7 @@
 | Entrada principal | [`docs/README.md`](./docs/README.md) |
 | Verdade operacional atual | [`docs/STATUS.md`](./docs/STATUS.md) |
 | Navegação completa | [`INDICE_DOCUMENTACAO.md`](./INDICE_DOCUMENTACAO.md) |
+| Roadmaps IA + humanos (7M) | [`ROADMAPS_IA_HUMANOS/README.md`](./ROADMAPS_IA_HUMANOS/README.md) |
 | Execução de build/release/CI | [`docs/ENGINEERING_SYSTEM_RUNBOOK.md`](./docs/ENGINEERING_SYSTEM_RUNBOOK.md) |
 | Excelência operacional | [`docs/EXCELENCIA_OPERACIONAL_MATRIX.md`](./docs/EXCELENCIA_OPERACIONAL_MATRIX.md) |
 
