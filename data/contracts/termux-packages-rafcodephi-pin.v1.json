@@ -17,9 +17,9 @@
       "physical_android": "TOKEN_VAZIO"
     },
     "candidate": {
-      "commit": "77625363a031a081edd1db93d3f7a48e9bfff7f9",
-      "branch": "hotfix/rafcodephi-apt-blocker-false-positive-20261007",
-      "state": "PR_134_EXACT_HEAD_PENDING_REQUIRED_CI",
+      "commit": "d623875c07eb5083144f4c982b36d7db254d9741",
+      "branch": "main",
+      "state": "PR_134_MERGED_EXACT_HEAD_CI_PENDING",
       "promotion_target": "canonical",
       "supersedes_commit": "1fc540b0c296581c5793c109e3834589f85a0114",
       "historical_pull_request": 89,
@@ -29,7 +29,10 @@
       "claim_allowed": false,
       "physical_android": "TOKEN_VAZIO",
       "pull_request": 134,
-      "previous_candidate_commit": "1e63d81ddc71d5b3ff7730f201a8cd70979ca218"
+      "previous_candidate_commit": "1e63d81ddc71d5b3ff7730f201a8cd70979ca218",
+      "previous_candidate_pr_head_commit": "77625363a031a081edd1db93d3f7a48e9bfff7f9",
+      "merge_commit": "d623875c07eb5083144f4c982b36d7db254d9741",
+      "merged_at": "2026-10-07T22:49:06Z"
     }
   },
   "invariants": {
