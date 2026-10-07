@@ -24,6 +24,7 @@ on:
       - 'scripts/validate_freestanding_device_receipt.py'
       - 'tests/test_freestanding_device_receipt.py'
       - 'tests/test_inject_freestanding_gate_manifest.py'
+      - 'tests/test_rafcodephi_portable_custody.py'
       - 'docs/contracts/raf.freestanding-runtime-evidence.v1.schema.json'
       - '.github/workflows/freestanding-enterprise-closure.yml'
   pull_request:
@@ -43,6 +44,7 @@ on:
       - 'scripts/validate_freestanding_device_receipt.py'
       - 'tests/test_freestanding_device_receipt.py'
       - 'tests/test_inject_freestanding_gate_manifest.py'
+      - 'tests/test_rafcodephi_portable_custody.py'
       - 'docs/contracts/raf.freestanding-runtime-evidence.v1.schema.json'
       - '.github/workflows/freestanding-enterprise-closure.yml'
 
@@ -64,7 +66,7 @@ jobs:
     name: Evidence and custody contracts
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 1
@@ -79,6 +81,7 @@ jobs:
           python3 -m unittest \
             tests.test_freestanding_device_receipt \
             tests.test_inject_freestanding_gate_manifest -v
+          python3 tests/test_rafcodephi_portable_custody.py
           /bin/sh -n scripts/device_promote_freestanding_runtime.sh
           python3 -m json.tool \
             docs/contracts/raf.freestanding-runtime-evidence.v1.schema.json >/dev/null
@@ -103,7 +106,7 @@ jobs:
     timeout-minutes: 240
     steps:
       - name: Checkout RAFCODEPHI app
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 1
@@ -119,14 +122,14 @@ jobs:
             | tee build/reports/freestanding-packages-pin.json
 
       - name: Setup Java 21
-        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: temurin
           java-version: '21'
           cache: gradle
 
       - name: Checkout exact patched termux-packages source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@v7
         with:
           repository: rafaelmeloreisnovo/termux-packages
           ref: ${{ env.TERMUX_PACKAGES_SHA }}
@@ -156,6 +159,8 @@ jobs:
             test -f "$path" || { echo "missing source capability: $path" >&2; exit 1; }
           done
           grep -Fq 'libllvm18' packages/libxml2/build.sh
+          grep -Fq 'repair_rafcodephi_bootstrap_symlinks.py' scripts/build-rafcodephi-real-bootstrap.sh
+          python3 scripts/tests/test_rafcodephi_bootstrap_symlink_repair.py
           mkdir -p build/reports
           python3 scripts/apply-rafcodephi-build-properties.py \
             --properties scripts/properties.sh \
@@ -383,9 +388,30 @@ jobs:
           print(json.dumps(doc, indent=2, sort_keys=True))
           PY
 
+      - name: Pack portable per-arch DEB custody
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          for arch in arm aarch64; do
+            deb_dir="termux-packages/artifacts/rafcodephi-bootstrap/debs/$arch"
+            [[ -d "$deb_dir" ]] || continue
+            if ! find "$deb_dir" -maxdepth 1 -type f -name '*.deb' -print -quit | grep -q .; then
+              continue
+            fi
+            test -s "$deb_dir/SHA256SUMS"
+            (cd "$deb_dir"; sha256sum -c SHA256SUMS >/dev/null)
+            archive="build/reports/rafcodephi-deb-custody-${arch}.tar"
+            tar --sort=name --format=posix --mtime='@0' --owner=0 --group=0 --numeric-owner \
+              -cf "$archive" -C "$deb_dir" .
+            sha256sum "$archive" > "$archive.sha256"
+            echo "RAFCODEPHI_DEB_CUSTODY_ARCHIVE=$arch path=$archive"
+          done
+
       - name: Upload enterprise candidate and custody evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@v7
         with:
           name: freestanding-enterprise-${{ github.sha }}
           retention-days: 14
