@@ -27,5 +27,24 @@ class SymlinkTests(unittest.TestCase):
             parse("dash←./bin/sh\ndash←bin/sh\n")
 
 
+    def test_rights_gated_artifact_custody(self):
+        workflow = (ROOT / ".github/workflows/freestanding-enterprise-closure.yml").read_text()
+        self.assertIn("BLOCKED_UNVERIFIED_LICENSE_RIGHTS", workflow)
+        self.assertIn("sha256sum -c SHA256SUMS", workflow)
+        upload = workflow.split("- name: Upload enterprise candidate and custody evidence", 1)[1]
+        self.assertNotIn("            termux-packages/artifacts/rafcodephi-bootstrap/\n", upload)
+        self.assertIn("RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt", upload)
+
+    def test_candidate_remains_unpromoted(self):
+        import json
+        pinned = json.loads(
+            (ROOT / "data/contracts/termux-packages-rafcodephi-pin.v1.json").read_text()
+        )
+        candidate = pinned["channels"]["candidate"]
+        self.assertFalse(candidate["claim_allowed"])
+        self.assertEqual("TOKEN_VAZIO", candidate["physical_android"])
+        self.assertNotEqual("MERGED_BASELINE", candidate["state"])
+
+
 if __name__ == "__main__":
     unittest.main()
