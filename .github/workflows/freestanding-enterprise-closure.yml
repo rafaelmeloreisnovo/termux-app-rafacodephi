@@ -387,23 +387,28 @@ jobs:
           print(json.dumps(doc, indent=2, sort_keys=True))
           PY
 
-      # GitHub artifact paths cannot contain ':' but Debian versioned .deb
-      # basenames can. Preserve exact bytes and internal filenames in a TAR;
-      # publish the archive with an independent transport SHA256 receipt.
-      - name: Stage portable Debian package evidence
+      # Debian versions may contain ':', which upload-artifact forbids in paths.
+      # P0 licensing: retain package hashes, never redistribute third-party
+      # package bytes without a separately reviewed permission/evidence gate.
+      - name: Stage rights-gated Debian evidence
         if: always()
         shell: bash
         run: |
           set -euo pipefail
           debdir=termux-packages/artifacts/rafcodephi-bootstrap/debs
-          if [[ -d "$debdir" ]]; then
-            mkdir -p build/reports
-            tar -C termux-packages/artifacts/rafcodephi-bootstrap \
-              -cf build/reports/rafcodephi-debs.tar debs
-            tar -tf build/reports/rafcodephi-debs.tar >/dev/null
-            sha256sum build/reports/rafcodephi-debs.tar \
-              > build/reports/rafcodephi-debs.tar.sha256
-          fi
+          mkdir -p build/reports/rafcodephi-deb-hashes
+          for arch in arm aarch64; do
+            if [[ -s "$debdir/$arch/SHA256SUMS" ]]; then
+              (cd "$debdir/$arch" && sha256sum -c SHA256SUMS)
+              cp "$debdir/$arch/SHA256SUMS" \
+                "build/reports/rafcodephi-deb-hashes/$arch.sha256"
+            fi
+          done
+          printf '%s\n' \
+            'raw_deb_artifact_export=BLOCKED_UNVERIFIED_LICENSE_RIGHTS' \
+            'raw_deb_artifact_bytes=TOKEN_VAZIO' \
+            'package_hashes=SHA256SUMS_PER_ARCH' \
+            > build/reports/rafcodephi-deb-export-boundary.txt
 
       - name: Upload enterprise candidate and custody evidence
         if: always()
