@@ -109,6 +109,24 @@ class BootstrapProfileTests(unittest.TestCase):
                 mod.materialize(path, profile="real-pkg", arch="arm",
                                 package_name="com.termux.rafacodephi", source_repo="local-test")
 
+    def test_symlink_parser_normalizes_canonical_relative_paths(self) -> None:
+        links = mod.parse_symlink_destinations(
+            b"dash\xe2\x86\x90./bin/sh\n"
+            b"termux-api-broadcast\xe2\x86\x90./libexec/termux-api\n"
+        )
+        self.assertEqual({"bin/sh", "libexec/termux-api"}, links)
+
+    def test_symlink_parser_rejects_duplicate_normalized_destinations(self) -> None:
+        with self.assertRaises(mod.ProfileError):
+            mod.parse_symlink_destinations(
+                b"dash\xe2\x86\x90./bin/sh\n"
+                b"dash\xe2\x86\x90bin/sh\n"
+            )
+
+    def test_symlink_parser_rejects_traversal(self) -> None:
+        with self.assertRaises(mod.ProfileError):
+            mod.parse_symlink_destinations(b"dash\xe2\x86\x90./../bin/sh\n")
+
     def test_unsafe_zip_entry_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "unsafe.zip"

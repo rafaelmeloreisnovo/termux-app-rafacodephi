@@ -139,6 +139,12 @@ def parse_symlink_destinations(zf: zipfile.ZipFile, names: set[str]) -> set[str]
         target, link = parts
         if link.startswith("/") or ".." in link or "\\" in link:
             raise SystemExit(f"unsafe symlink destination line {number}: {link!r}")
+        # Termux upstream emits './bin/sh' and './libexec/termux-api'.
+        # Normalize only the harmless leading './', never traversal.
+        while link.startswith("./"):
+            link = link[2:]
+        if not link or any(part in ("", ".", "..") for part in link.split("/")):
+            raise SystemExit(f"unsafe normalized symlink destination line {number}: {link!r}")
         if link in destinations or link in names:
             raise SystemExit(f"duplicate/conflicting symlink destination: {link}")
         if target.startswith("/") and LEGACY_PREFIX.decode() in target:
@@ -283,7 +289,13 @@ def validate(zip_path: Path, manifest_path: Path, arch: str) -> dict[str, object
             raise SystemExit("dpkg status does not contain the embedded termux-api package")
 
         symlinks = zf.read("SYMLINKS.txt")
-        if b"termux-api-broadcast\xe2\x86\x90libexec/termux-api" not in symlinks:
+        if not any(
+            entry in symlinks.splitlines()
+            for entry in (
+                b"termux-api-broadcast\xe2\x86\x90libexec/termux-api",
+                b"termux-api-broadcast\xe2\x86\x90./libexec/termux-api",
+            )
+        ):
             raise SystemExit("termux-api compatibility symlink is missing")
 
         api_client = zf.read("libexec/termux-api-broadcast")

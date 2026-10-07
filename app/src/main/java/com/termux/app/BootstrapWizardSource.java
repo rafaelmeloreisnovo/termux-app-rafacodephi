@@ -289,6 +289,12 @@ public final class BootstrapWizardSource {
             if (link.startsWith("/") || link.contains("..") || link.contains("\\")) {
                 throw new SecurityException("UNSAFE_BOOTSTRAP_SYMLINK_DESTINATION_" + number + ":" + link);
             }
+            // Canonical Termux SYMLINKS.txt uses './' prefixes.
+            while (link.startsWith("./")) link = link.substring(2);
+            if (link.isEmpty() || link.startsWith("/") || link.equals(".") || link.contains("//")
+                || link.contains("/./") || link.endsWith("/.")) {
+                throw new SecurityException("UNSAFE_BOOTSTRAP_SYMLINK_DESTINATION_" + number + ":" + link);
+            }
             if (!destinations.add(link)) {
                 throw new IllegalArgumentException("DUPLICATE_BOOTSTRAP_SYMLINK_DESTINATION_" + number + ":" + link);
             }

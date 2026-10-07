@@ -24,7 +24,8 @@ on:
       - 'scripts/validate_freestanding_device_receipt.py'
       - 'tests/test_freestanding_device_receipt.py'
       - 'tests/test_inject_freestanding_gate_manifest.py'
-      - 'tests/test_rafcodephi_portable_custody.py'
+      - 'tests/test_raf_bootstrap_profile.py'
+      - 'tests/test_rafcodephi_relative_symlinks.py'
       - 'docs/contracts/raf.freestanding-runtime-evidence.v1.schema.json'
       - '.github/workflows/freestanding-enterprise-closure.yml'
   pull_request:
@@ -44,7 +45,8 @@ on:
       - 'scripts/validate_freestanding_device_receipt.py'
       - 'tests/test_freestanding_device_receipt.py'
       - 'tests/test_inject_freestanding_gate_manifest.py'
-      - 'tests/test_rafcodephi_portable_custody.py'
+      - 'tests/test_raf_bootstrap_profile.py'
+      - 'tests/test_rafcodephi_relative_symlinks.py'
       - 'docs/contracts/raf.freestanding-runtime-evidence.v1.schema.json'
       - '.github/workflows/freestanding-enterprise-closure.yml'
 
@@ -80,8 +82,9 @@ jobs:
             scripts/validate_freestanding_device_receipt.py
           python3 -m unittest \
             tests.test_freestanding_device_receipt \
-            tests.test_inject_freestanding_gate_manifest -v
-          python3 tests/test_rafcodephi_portable_custody.py
+            tests.test_inject_freestanding_gate_manifest \
+            tests.test_raf_bootstrap_profile \
+            tests.test_rafcodephi_relative_symlinks -v
           /bin/sh -n scripts/device_promote_freestanding_runtime.sh
           python3 -m json.tool \
             docs/contracts/raf.freestanding-runtime-evidence.v1.schema.json >/dev/null
@@ -151,8 +154,6 @@ jobs:
             scripts/run-rafcodephi-bootstrap-docker.sh
             scripts/build-rafcodephi-real-bootstrap.sh
             scripts/repair_rafcodephi_bootstrap_symlinks.py
-            scripts/tests/test_rafcodephi_bootstrap_symlink_repair.py
-            scripts/tests/test_rafcodephi_real_bootstrap_workflow_contract.py
             scripts/generate-bootstraps.sh
             packages/libxml2/build.sh
           )
@@ -160,8 +161,7 @@ jobs:
             test -f "$path" || { echo "missing source capability: $path" >&2; exit 1; }
           done
           grep -Fq 'libllvm18' packages/libxml2/build.sh
-          python3 scripts/tests/test_rafcodephi_bootstrap_symlink_repair.py
-          python3 scripts/tests/test_rafcodephi_real_bootstrap_workflow_contract.py
+          grep -Fq 'repair_rafcodephi_bootstrap_symlinks.py' scripts/build-rafcodephi-real-bootstrap.sh
           mkdir -p build/reports
           python3 scripts/apply-rafcodephi-build-properties.py \
             --properties scripts/properties.sh \
@@ -390,90 +390,28 @@ jobs:
           print(json.dumps(doc, indent=2, sort_keys=True))
           PY
 
-      - name: Stage portable DEB custody without invalid artifact paths
+      # Debian versions may contain ':', which upload-artifact forbids in paths.
+      # P0 licensing: retain package hashes, never redistribute third-party
+      # package bytes without a separately reviewed permission/evidence gate.
+      - name: Stage rights-gated Debian evidence
         if: always()
         shell: bash
-        env:
-          SOURCE_BUILD_OUTCOME: ${{ steps.real_bootstrap.outcome }}
-          MAX_DEB_CUSTODY_BYTES: '1073741824'
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          import hashlib
-          import json
-          import os
-          import tarfile
-          from pathlib import Path
-
-          source = Path('termux-packages/artifacts/rafcodephi-bootstrap/debs')
-          out = Path('build/reports/portable-deb-custody')
-          out.mkdir(parents=True, exist_ok=True)
-          succeeded = os.environ.get('SOURCE_BUILD_OUTCOME') == 'success'
-          limit = int(os.environ['MAX_DEB_CUSTODY_BYTES'])
-          files = []
-          for path in sorted(source.rglob('*')) if source.is_dir() else []:
-              if path.is_symlink():
-                  raise SystemExit(f'unsafe symlink in DEB custody source: {path}')
-              if path.is_file():
-                  files.append(path)
-
-          def digest(path):
-              h = hashlib.sha256()
-              with path.open('rb') as stream:
-                  for chunk in iter(lambda: stream.read(1024 * 1024), b''):
-                      h.update(chunk)
-              return h.hexdigest()
-
-          entries = [
-              {
-                  'name': path.relative_to(source).as_posix(),
-                  'size': path.stat().st_size,
-                  'sha256': digest(path),
-              }
-              for path in files
-          ]
-          total = sum(item['size'] for item in entries)
-          archive = out / 'source-debs.tar'
-          state = 'METADATA_ONLY_AFTER_SOURCE_FAILURE'
-          archive_sha256 = 'TOKEN_VAZIO'
-          if succeeded and files and total <= limit:
-              with tarfile.open(archive, 'w') as tf:
-                  for path in files:
-                      info = tf.gettarinfo(str(path), arcname='debs/' + path.relative_to(source).as_posix())
-                      if not info.isfile():
-                          raise SystemExit(f'non-regular DEB custody entry: {path}')
-                      info.mtime = 0
-                      info.uid = 0
-                      info.gid = 0
-                      info.uname = ''
-                      info.gname = ''
-                      with path.open('rb') as payload:
-                          tf.addfile(info, payload)
-              archive_sha256 = digest(archive)
-              state = 'PAYLOAD_ARCHIVED'
-          elif succeeded:
-              state = 'BLOCKED_CUSTODY_MISSING_OR_OVER_LIMIT'
-
-          receipt = {
-              'schema': 'rafcodephi.portable-deb-custody/v1',
-              'state': state,
-              'source_build_outcome': os.environ.get('SOURCE_BUILD_OUTCOME', 'TOKEN_VAZIO'),
-              'file_count': len(entries),
-              'total_source_bytes': total,
-              'max_payload_bytes': limit,
-              'files': entries,
-              'tar_sha256': archive_sha256,
-              'claim_allowed': False,
-              'release_allowed': False,
-              'physical_android': 'TOKEN_VAZIO',
-          }
-          (out / 'receipt.json').write_text(
-              json.dumps(receipt, indent=2, sort_keys=True) + '\n', encoding='utf-8'
-          )
-          print(f"DEB_CUSTODY_STATE={state} files={len(entries)} bytes={total}")
-          if succeeded and state != 'PAYLOAD_ARCHIVED':
-              raise SystemExit('source build succeeded but complete DEB custody was not archived')
-          PY
+          debdir=termux-packages/artifacts/rafcodephi-bootstrap/debs
+          mkdir -p build/reports/rafcodephi-deb-hashes
+          for arch in arm aarch64; do
+            if [[ -s "$debdir/$arch/SHA256SUMS" ]]; then
+              (cd "$debdir/$arch" && sha256sum -c SHA256SUMS)
+              cp "$debdir/$arch/SHA256SUMS" \
+                "build/reports/rafcodephi-deb-hashes/$arch.sha256"
+            fi
+          done
+          printf '%s\n' \
+            'raw_deb_artifact_export=BLOCKED_UNVERIFIED_LICENSE_RIGHTS' \
+            'raw_deb_artifact_bytes=TOKEN_VAZIO' \
+            'package_hashes=SHA256SUMS_PER_ARCH' \
+            > build/reports/rafcodephi-deb-export-boundary.txt
 
       - name: Upload enterprise candidate and custody evidence
         if: always()
