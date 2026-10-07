@@ -51,46 +51,55 @@ when all selected local work executes successfully but publication/release evide
 
 `BootstrapReadinessGate` is the one read-only runtime readiness contract consumed by both Wizard and Beta Orchestrator.
 
-Required runtime-resolved targets:
+The current source has **two distinct scopes**. `evaluateStartup()` requires only these runtime-resolved targets:
 
 ```text
-$PREFIX
-$PREFIX/bin
-$HOME
-$HOME/storage
-$PREFIX/bin/sh
-$PREFIX/bin/pkg
-$PREFIX/bin/apkmanager
-$PREFIX/bin/shellbash
-$PREFIX/bin/busybox-safe
-$PREFIX/bin/proot-safe
+$PREFIX                  directory read/write/execute
+$PREFIX/bin              directory read/write/execute
+$HOME                    directory read/write/execute
+$PREFIX/bin/sh           executable
+$PREFIX/bin/pkg          executable
 ```
 
-Optional observations:
+These are **observations, not startup blockers**: `$HOME/storage`;
+compatibility wrappers `apkmanager`, `shellbash`, `busybox-safe`,
+`proot-safe`; and native binaries `apt`, `apt-get`, `dpkg`, `bash`,
+`busybox`, `proot`. Their absence stays visible as `UNAVAILABLE`.
+The full package runtime independently inventories native executables; its
+aggregate PASS requires startup PASS **and** the installed profile contract,
+rather than treating an optional wrapper as a substitute for a native package
+manager.
+
+### 3.1 Installed profile contract (FULL_PACKAGE_RUNTIME only)
+
+`$PREFIX/BOOTSTRAP_PROFILE.json` is mandatory for the **full** package
+readiness gate `evaluate()`, not the minimal startup gate. The current
+source requires:
 
 ```text
-$PREFIX/bin/busybox
-$PREFIX/bin/proot
+schema               = rafcodephi-bootstrap-profile/v1
+profile              = real-pkg
+package_layer        = real-pkg
+runtime_materialized = true
+package_name         = current Android package
+prefix               = runtime-resolved PREFIX
+arch                 = current ABI mapping
+claim_allowed        = false
+release_allowed      = false
+device_validation    = TOKEN_VAZIO
 ```
 
-Absence of optional real binaries does not override the safe-shim contract.
+`required_entries` must be bounded, relative and remain canonically inside
+`$PREFIX`. Materialized targets must exist; `SYMLINKS.txt` is a
+source-archive installation instruction consumed by the installer and is
+not required as an installed runtime file. A `bridge` profile may describe
+another source/build path, but it **does not** satisfy this full real-pkg gate.
 
-### 3.1 Installed profile contract
-
-`$PREFIX/BOOTSTRAP_PROFILE.json` is mandatory for readiness. The gate validates it independently from install-time strict/debug behavior:
-
-```text
-schema            = rafcodephi-bootstrap-profile/v1
-profile           ∈ {bridge, real-pkg}
-package_name      = current Android package
-prefix            = runtime-resolved PREFIX
-arch              = current ABI mapping
-claim_allowed     = false
-release_allowed   = false
-device_validation = TOKEN_VAZIO
-```
-
-`required_entries` must be bounded, relative, remain canonically inside `$PREFIX`, and exist.
+This section supersedes the older combined-target list, which incorrectly
+treated optional wrappers and storage as startup blockers and allowed a
+`bridge` profile in the real-pkg full-runtime contract. The device export
+remains separately authoritative for **installed** state: current source
+correctness is not physical proof that the observed APK contains it.
 
 The profile is read with a 64 KiB bound. The readiness gate contains no `mkdir`, `chmod`, delete, bootstrap install or repair operation. Mutation belongs to `TermuxInstaller`/Wizard. This avoids using `BootstrapBaremetalGuard.validateAfterBootstrap()` as a UI readiness oracle because that install-time guard may create/chmod directories and its debug strictness policy is not equivalent to a fail-closed read-only gate.
 
