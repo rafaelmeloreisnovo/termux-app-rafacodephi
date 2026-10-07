@@ -1,3 +1,5 @@
+# ci_track: ops
+# ci_abis: n/a
 name: "🧪 RAFCODEPHI E2E Product Proof"
 
 run-name: "TORRE / Termux RAFCODEPHI / ${{ inputs.torre_correlation_id || github.run_id }}"
