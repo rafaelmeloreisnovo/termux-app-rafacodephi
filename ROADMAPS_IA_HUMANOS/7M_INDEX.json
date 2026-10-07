@@ -46,7 +46,39 @@
         "https://docs.google.com/document/d/1T4OIN2RC1I-KFsdaQTCqieeZUGYBXissWrdrZMG0DN8/edit"
       ],
       "claim_allowed": false,
-      "release_allowed": false
+      "release_allowed": false,
+      "owner_scope": "termux-app-rafacodephi (documentary boundary)",
+      "checklist": [
+        {
+          "id": "M1.1",
+          "action": "Confirmar objetivo e ABIs alvo",
+          "state": "SOURCE_OBSERVED"
+        },
+        {
+          "id": "M1.2",
+          "action": "Confirmar claim_allowed=false e release_allowed=false",
+          "state": "SOURCE_OBSERVED"
+        },
+        {
+          "id": "M1.3",
+          "action": "Verificar autoridade de promoção e direitos P0 no HEAD atual",
+          "state": "PENDING"
+        }
+      ],
+      "exit_criteria": "intenção, limites, autoridade e permissão explicitamente documentados",
+      "rollback_rule": "preservar HOLD",
+      "required_receipt_fields": [
+        "source_ref",
+        "exact_head",
+        "owner",
+        "expected",
+        "observed",
+        "result_state",
+        "evidence",
+        "gap",
+        "next",
+        "rollback"
+      ]
     },
     {
       "id": "M2",
@@ -61,7 +93,39 @@
         "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/pull/484"
       ],
       "claim_allowed": false,
-      "release_allowed": false
+      "release_allowed": false,
+      "owner_scope": "termux-packages (producer) + termux-app-rafacodephi (consumer)",
+      "checklist": [
+        {
+          "id": "M2.1",
+          "action": "Resolver produtor e consumidor por repositório e SHA",
+          "state": "SOURCE_OBSERVED"
+        },
+        {
+          "id": "M2.2",
+          "action": "Ler HEADs atuais das PRs alternativas, sem merge cumulativo",
+          "state": "PENDING"
+        },
+        {
+          "id": "M2.3",
+          "action": "Escolher exatamente um sucessor com justificativa e supersedes",
+          "state": "PENDING"
+        }
+      ],
+      "exit_criteria": "chosen_pr+chosen_sha+producer_sha+owner+reason+supersedes",
+      "rollback_rule": "não promover PR concorrente",
+      "required_receipt_fields": [
+        "source_ref",
+        "exact_head",
+        "owner",
+        "expected",
+        "observed",
+        "result_state",
+        "evidence",
+        "gap",
+        "next",
+        "rollback"
+      ]
     },
     {
       "id": "M3",
@@ -76,7 +140,39 @@
         "https://docs.google.com/document/d/1d0J5SkF2S2emBq6jLuTkhYVaSOQiWazJWyRCTMJ-iRI/edit"
       ],
       "claim_allowed": false,
-      "release_allowed": false
+      "release_allowed": false,
+      "owner_scope": "termux-app-rafacodephi (diagnóstico)",
+      "checklist": [
+        {
+          "id": "M3.1",
+          "action": "Conferir step 7 e entradas ausentes bin/sh,libexec/termux-api",
+          "state": "SOURCE_OBSERVED"
+        },
+        {
+          "id": "M3.2",
+          "action": "Conferir step 15 e rejeição de ':' em nome de DEB",
+          "state": "SOURCE_OBSERVED"
+        },
+        {
+          "id": "M3.3",
+          "action": "Comparar cada causa histórica com o HEAD sucessor antes de corrigir",
+          "state": "PENDING"
+        }
+      ],
+      "exit_criteria": "fingerprint distinto para source/build e transporte/provider com estado SUPERSEDED ou FAIL_EXACT_HEAD",
+      "rollback_rule": "preservar logs imutáveis",
+      "required_receipt_fields": [
+        "source_ref",
+        "exact_head",
+        "owner",
+        "expected",
+        "observed",
+        "result_state",
+        "evidence",
+        "gap",
+        "next",
+        "rollback"
+      ]
     },
     {
       "id": "M4",
@@ -90,7 +186,39 @@
         "https://github.com/rafaelmeloreisnovo/termux-packages/commit/5197a49c3abf2084ce123ef5584dcddc5f2c3783"
       ],
       "claim_allowed": false,
-      "release_allowed": false
+      "release_allowed": false,
+      "owner_scope": "repo produtor para bootstrap; app para integração",
+      "checklist": [
+        {
+          "id": "M4.1",
+          "action": "Rodar falsificador focal da invocação Bash/exit126 no produtor",
+          "state": "PENDING"
+        },
+        {
+          "id": "M4.2",
+          "action": "Verificar symlink pós-normalização e política de direitos no consumidor",
+          "state": "PENDING"
+        },
+        {
+          "id": "M4.3",
+          "action": "Executar menor diff reversível e revisão no HEAD exato",
+          "state": "PENDING"
+        }
+      ],
+      "exit_criteria": "diff mínimo + teste focal PASS_EXACT_HEAD + revisão P0",
+      "rollback_rule": "reverter somente mudança candidata",
+      "required_receipt_fields": [
+        "source_ref",
+        "exact_head",
+        "owner",
+        "expected",
+        "observed",
+        "result_state",
+        "evidence",
+        "gap",
+        "next",
+        "rollback"
+      ]
     },
     {
       "id": "M5",
@@ -105,7 +233,39 @@
         "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/actions/runs/37700322813"
       ],
       "claim_allowed": false,
-      "release_allowed": false
+      "release_allowed": false,
+      "owner_scope": "GitHub Actions provider com fonte por repo",
+      "checklist": [
+        {
+          "id": "M5.1",
+          "action": "Ler execução já iniciada no produtor e consumidor antes de dispatch",
+          "state": "PENDING"
+        },
+        {
+          "id": "M5.2",
+          "action": "Executar run-only-fail focal, sem duplicar builds pesados",
+          "state": "PENDING"
+        },
+        {
+          "id": "M5.3",
+          "action": "Exigir execução terminal ARM32 e ARM64 vinculada ao HEAD",
+          "state": "PENDING"
+        }
+      ],
+      "exit_criteria": "tested_head+run_id+job_id+ABI+conclusion terminal",
+      "rollback_rule": "HOLD sem promover testes não executados",
+      "required_receipt_fields": [
+        "source_ref",
+        "exact_head",
+        "owner",
+        "expected",
+        "observed",
+        "result_state",
+        "evidence",
+        "gap",
+        "next",
+        "rollback"
+      ]
     },
     {
       "id": "M6",
@@ -119,7 +279,39 @@
         "https://docs.google.com/spreadsheets/d/1m_QeBOrEAsX8UGMeaLADjwnmZvsbDHRM6ZYay9nss7Y/edit"
       ],
       "claim_allowed": false,
-      "release_allowed": false
+      "release_allowed": false,
+      "owner_scope": "termux-app-rafacodephi (custódia do APK)",
+      "checklist": [
+        {
+          "id": "M6.1",
+          "action": "Validar par fonte/DEB+TAR+SHA-256 e direitos de redistribuição",
+          "state": "PENDING"
+        },
+        {
+          "id": "M6.2",
+          "action": "Provar hashes dos bootstraps efetivamente embutidos no APK",
+          "state": "PENDING"
+        },
+        {
+          "id": "M6.3",
+          "action": "Coletar recibos físicos ARM32 e ARM64 para o mesmo build",
+          "state": "PENDING"
+        }
+      ],
+      "exit_criteria": "cadeia fonte→artefato→APK→dispositivo com recibos e identidade",
+      "rollback_rule": "bloquear release e manter arquivos forenses",
+      "required_receipt_fields": [
+        "source_ref",
+        "exact_head",
+        "owner",
+        "expected",
+        "observed",
+        "result_state",
+        "evidence",
+        "gap",
+        "next",
+        "rollback"
+      ]
     },
     {
       "id": "M7",
@@ -134,7 +326,39 @@
         "https://docs.google.com/document/d/1d0J5SkF2S2emBq6jLuTkhYVaSOQiWazJWyRCTMJ-iRI/edit"
       ],
       "claim_allowed": false,
-      "release_allowed": false
+      "release_allowed": false,
+      "owner_scope": "governança RAFAELIA + owner autorizado",
+      "checklist": [
+        {
+          "id": "M7.1",
+          "action": "Verificar CP-01..CP-06, licenças e enforcement provider",
+          "state": "PENDING"
+        },
+        {
+          "id": "M7.2",
+          "action": "Aprovar ou HOLD com receipt e rollback",
+          "state": "PENDING"
+        },
+        {
+          "id": "M7.3",
+          "action": "Apendar delta material em μWRITE e atualizar ponteiros mínimos",
+          "state": "PENDING"
+        }
+      ],
+      "exit_criteria": "APPROVED_WITH_PROOF ou HOLD_WITH_RECEIPT sem lacunas promovidas",
+      "rollback_rule": "sucessor supersedes e rollback rastreado",
+      "required_receipt_fields": [
+        "source_ref",
+        "exact_head",
+        "owner",
+        "expected",
+        "observed",
+        "result_state",
+        "evidence",
+        "gap",
+        "next",
+        "rollback"
+      ]
     }
   ],
   "hard_gates": {
@@ -144,5 +368,36 @@
     "rights_export": "TOKEN_VAZIO",
     "provider_enforcement": "TOKEN_VAZIO"
   },
-  "next": "read current terminal statuses of already-started producer and consumer; select single PR after focused falsifier"
+  "next": "read current terminal statuses of already-started producer and consumer; select single PR after focused falsifier",
+  "operational_readme": "Cada checklist é intenção versionada, não prova de execução; somente readback exato permite promover estados.",
+  "historical_failure_fingerprints": [
+    {
+      "stage": "SOURCE_BUILD_PROFILE_SEAL",
+      "step": 7,
+      "job_id": 112925303754,
+      "run_id": 37660128059,
+      "marker": "missing installed entries: bin/sh,libexec/termux-api",
+      "class": "HISTORICAL_SOURCE",
+      "promotion": "NEVER_FROM_THIS_LOG"
+    },
+    {
+      "stage": "UPLOAD_ARTIFACT_PROVIDER",
+      "step": 15,
+      "job_id": 112925303754,
+      "run_id": 37660128059,
+      "marker": "ca-certificates-java_1:2026.05.14_all.deb / Contains ... Colon :",
+      "class": "HISTORICAL_PROVIDER",
+      "promotion": "NEVER_FROM_THIS_LOG"
+    }
+  ],
+  "receipt_example": {
+    "checkpoint_id": "CP-0X",
+    "status": "TOKEN_VAZIO",
+    "source_ref": "TOKEN_VAZIO",
+    "exact_head": "TOKEN_VAZIO",
+    "evidence": "TOKEN_VAZIO",
+    "gap": "TOKEN_VAZIO",
+    "next": "TOKEN_VAZIO",
+    "rollback": "TOKEN_VAZIO"
+  }
 }
