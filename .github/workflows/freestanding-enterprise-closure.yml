@@ -390,15 +390,14 @@ jobs:
           name: freestanding-enterprise-${{ github.sha }}
           retention-days: 14
           if-no-files-found: warn
+          # Archive only GitHub-portable paths: .deb epoch filenames may contain ':'.
+          # Keep bootstrap bytes and per-DEB digests; raw .deb bytes are not uploaded.
           path: |
             dist/apk-matrix/
             dist/source-contract/
             build/freestanding-source/
             build/reports/
             termux-packages/build/reports/
-            # GitHub artifacts reject ':' in .deb epoch filenames; preserve safe
-            # raw bootstrap ZIPs, exact symlink repair receipts and per-DEB digests.
-            # The original .deb bytes remain source-build outputs, not uploaded.
             termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
             termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-*.zip
             termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-*-symlink-repair.json
