@@ -46,6 +46,10 @@ USES_RE = re.compile(
     r"^\s*(?:-\s*)?uses:\s*['\"]?([^@'\"\s]+)@([^'\"\s#]+)",
     re.MULTILINE,
 )
+LOCAL_WORKFLOW_RE = re.compile(
+    r"^\s*(?:-\s*)?uses:\s*['\"]?(\./\.github/workflows/[^'\"\s#]+)",
+    re.MULTILINE,
+)
 VERSION_RE = re.compile(r"^v?(\d+)(?:\.\d+){0,2}(?:[-+][0-9A-Za-z.-]+)?$")
 SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 FLOATING_REFS = {"main", "master", "develop", "dev", "latest", "head"}
