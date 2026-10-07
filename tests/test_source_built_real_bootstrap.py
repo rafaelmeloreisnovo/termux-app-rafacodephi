@@ -56,6 +56,7 @@ def make_zip(
     legacy: bool = False,
     unsafe_repo: bool = False,
     info_overrides: dict[str, str] | None = None,
+    prefixed_symlinks: bool = False,
 ) -> None:
     required = [
         "BOOTSTRAP_INFO",
@@ -102,9 +103,11 @@ def make_zip(
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("BOOTSTRAP_INFO", bootstrap_info(arch, info_overrides))
         zf.writestr("BOOTSTRAP_PROFILE.json", json.dumps(profile, sort_keys=True))
+        symlink_prefix = "./" if prefixed_symlinks else ""
         zf.writestr(
             "SYMLINKS.txt",
-            "dash←bin/sh\ntermux-api-broadcast←libexec/termux-api\n",
+            f"dash←{symlink_prefix}bin/sh\n"
+            f"termux-api-broadcast←{symlink_prefix}libexec/termux-api\n",
         )
         zf.writestr("bin/dash", elf_for_arch(arch))
         zf.writestr("bin/pkg", pkg)
@@ -240,6 +243,32 @@ def test_source_built_real_import_accepts_canonical_sh_symlink(tmp_path: Path) -
     report = json.loads(profile_validation.stdout)
     assert report["structural_state"] == "PASS"
     assert report["device_validation"] == "TOKEN_VAZIO"
+
+
+def test_source_built_real_import_accepts_prefixed_termux_symlinks(tmp_path: Path) -> None:
+    """Regressions: the producer records './bin/sh' and './libexec/termux-api'."""
+    for arch in ("arm", "aarch64"):
+        archive = tmp_path / f"bootstrap-{arch}.zip"
+        manifest = tmp_path / f"manifest-{arch}.txt"
+        dest = tmp_path / f"validated-{arch}.zip"
+        receipt = tmp_path / f"receipt-{arch}.json"
+        make_zip(archive, arch=arch, prefixed_symlinks=True)
+        make_manifest(manifest, archive, arch=arch)
+        result = run_import(archive, manifest, dest, receipt, arch=arch)
+        assert result.returncode == 0, result.stderr
+        assert dest.read_bytes() == archive.read_bytes()
+        profile_check = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "tools/raf_bootstrap_profile.py"),
+                "validate", "--zip", str(dest),
+                "--expected-profile", "real-pkg",
+                "--expected-arch", arch, "--package-name", PACKAGE,
+            ],
+            capture_output=True, text=True, check=False,
+        )
+        assert profile_check.returncode == 0, profile_check.stderr
+        assert json.loads(profile_check.stdout)["claim_allowed"] is False
 
 
 def test_source_built_real_import_accepts_aarch64_pair_member(tmp_path: Path) -> None:
