@@ -1,0 +1,86 @@
+{
+  "schema": "rafaelia.rafcodephi.control-center-device-gap.v1",
+  "date_ref": "2026-10-07",
+  "evidence_type": "USER_SUBMITTED_ARCHIVE_PLUS_REPOSITORY_SOURCE_READBACK",
+  "producer_repo": "rafaelmeloreisnovo/termux-packages",
+  "consumer_repo": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "consumer_master_observed_sha": "d0277bcc6c0354935b907f9f8d18f22af294610f",
+  "scope": "INTERNAL_TERMUX_RAFCODEPHI_SCREEN",
+  "package": "com.termux.rafacodephi",
+  "input_zip_sha256": "5a5d1ada7cbd0a1a79bdd5cf442d5119602aaf6e8c9e2aa1e1b023e0247febf3",
+  "methods_v3_sha256": "d009b4993e828f518708f5a8e1ac943efb8b40228a38c23bcd93c69fbf91308a",
+  "predecessor_audit_sha256": "f6417ed143ff8e2b628a43ec20f6dc9a1241c978a43c319ceb58860535d1d815",
+  "portable_successor_sha256": "dae15f46cd6e54a04f33be26654c85c04c7a0d32d80c374f0298a7747837e756",
+  "structural_archive_tests": {
+    "pass_scoped": 7,
+    "fail_closed_mutations": 4,
+    "claim_allowed": false
+  },
+  "installed_runtime": {
+    "bootstrap": "BLOCKED",
+    "reason": "BOOTSTRAP_REAL_PROFILE_CONTRACT_BLOCKED",
+    "prefix": "PASS",
+    "prefix_bin": "BLOCKED",
+    "home": "BLOCKED",
+    "sh": "BLOCKED",
+    "pkg": "BLOCKED",
+    "required_profile": "BLOCKED",
+    "apk_sha256": "TOKEN_VAZIO",
+    "embedded_bootstrap_sha256": "TOKEN_VAZIO",
+    "source_commit": "TOKEN_VAZIO"
+  },
+  "sensor_inventory": {
+    "accelerometer": "PASS",
+    "light": "PASS",
+    "proximity": "PASS",
+    "gyroscope": "UNAVAILABLE",
+    "magnetometer": "UNAVAILABLE",
+    "sensor_callback_latency": "TOKEN_VAZIO"
+  },
+  "pa": {
+    "single_physical": "NOT_MEASURED",
+    "governed_distribution_n30": "NOT_MEASURED",
+    "series_count": 0
+  },
+  "method_v3_gates": {
+    "EXECUTION_PROOF": "NOT_MEASURED",
+    "MEASUREMENT_VALIDITY": "NOT_MEASURED",
+    "SERIES_VALIDITY": "NOT_MEASURED",
+    "ENVIRONMENT_VALIDITY": "TOKEN_VAZIO",
+    "COMPARABILITY_VALIDITY": "BLOCKED",
+    "ENERGY_VALIDITY": "BLOCKED",
+    "PUBLICATION_VALIDITY": "BLOCKED"
+  },
+  "priority": [
+    {
+      "id": "P0_BYTE_IDENTITY",
+      "state": "TOKEN_VAZIO",
+      "next": "Get installed APK sha256 + embedded bootstrap sha256 + exact CI source head"
+    },
+    {
+      "id": "P0_BOOTSTRAP",
+      "state": "BLOCKED",
+      "next": "Compare producer candidate and in-app safe Wizard/readback; no destructive repair without authority"
+    },
+    {
+      "id": "P1_PA_SINGLE",
+      "state": "NOT_MEASURED",
+      "next": "Opt-in one protocol-v2 physical observation only after runtime readiness"
+    },
+    {
+      "id": "P1_GOVERNED_N30",
+      "state": "NOT_MEASURED",
+      "next": "Explicit homogeneous governed n>=30 raw receipts"
+    },
+    {
+      "id": "P0_RIGHTS_AND_RELEASE",
+      "state": "TOKEN_VAZIO",
+      "next": "Review authorship/licenses/permissions/custody and provider enforcement"
+    }
+  ],
+  "boundary": "LOCAL_ARCHIVE_PASS_DOES_NOT_MEAN_DEVICE_OR_APK_OR_BENCHMARK_PASS",
+  "source_hotfix_proven": false,
+  "claim_allowed": false,
+  "release_allowed": false,
+  "rollback": "DO_NOT_MODIFY_APP_DATA_OR_PREFIX; preserve original ZIP and baseline main"
+}
