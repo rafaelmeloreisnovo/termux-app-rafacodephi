@@ -54,7 +54,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_RAF_CHANNEL: candidate
+  TERMUX_PACKAGES_RAF_CHANNEL: closure
   TERMUX_PACKAGES_RAF_REQUIRE_PINNED: 'true'
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
@@ -161,6 +161,7 @@ jobs:
           bash scripts/validate-rafcodephi-build-properties.sh
 
       - name: Source-build real ARM32 and ARM64 bootstrap pair
+        id: real_bootstrap
         working-directory: termux-packages
         shell: bash
         run: |
@@ -379,6 +380,91 @@ jobs:
           print(json.dumps(doc, indent=2, sort_keys=True))
           PY
 
+      - name: Stage portable DEB custody without invalid artifact paths
+        if: always()
+        shell: bash
+        env:
+          SOURCE_BUILD_OUTCOME: ${{ steps.real_bootstrap.outcome }}
+          MAX_DEB_CUSTODY_BYTES: '1073741824'
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import tarfile
+          from pathlib import Path
+
+          source = Path('termux-packages/artifacts/rafcodephi-bootstrap/debs')
+          out = Path('build/reports/portable-deb-custody')
+          out.mkdir(parents=True, exist_ok=True)
+          succeeded = os.environ.get('SOURCE_BUILD_OUTCOME') == 'success'
+          limit = int(os.environ['MAX_DEB_CUSTODY_BYTES'])
+          files = []
+          for path in sorted(source.rglob('*')) if source.is_dir() else []:
+              if path.is_symlink():
+                  raise SystemExit(f'unsafe symlink in DEB custody source: {path}')
+              if path.is_file():
+                  files.append(path)
+
+          def digest(path):
+              h = hashlib.sha256()
+              with path.open('rb') as stream:
+                  for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          entries = [
+              {
+                  'name': path.relative_to(source).as_posix(),
+                  'size': path.stat().st_size,
+                  'sha256': digest(path),
+              }
+              for path in files
+          ]
+          total = sum(item['size'] for item in entries)
+          archive = out / 'source-debs.tar'
+          state = 'METADATA_ONLY_AFTER_SOURCE_FAILURE'
+          archive_sha256 = 'TOKEN_VAZIO'
+          if succeeded and files and total <= limit:
+              with tarfile.open(archive, 'w') as tf:
+                  for path in files:
+                      info = tf.gettarinfo(str(path), arcname='debs/' + path.relative_to(source).as_posix())
+                      if not info.isfile():
+                          raise SystemExit(f'non-regular DEB custody entry: {path}')
+                      info.mtime = 0
+                      info.uid = 0
+                      info.gid = 0
+                      info.uname = ''
+                      info.gname = ''
+                      with path.open('rb') as payload:
+                          tf.addfile(info, payload)
+              archive_sha256 = digest(archive)
+              state = 'PAYLOAD_ARCHIVED'
+          elif succeeded:
+              state = 'BLOCKED_CUSTODY_MISSING_OR_OVER_LIMIT'
+
+          receipt = {
+              'schema': 'rafcodephi.portable-deb-custody/v1',
+              'state': state,
+              'source_build_outcome': os.environ.get('SOURCE_BUILD_OUTCOME', 'TOKEN_VAZIO'),
+              'file_count': len(entries),
+              'total_source_bytes': total,
+              'max_payload_bytes': limit,
+              'files': entries,
+              'tar_sha256': archive_sha256,
+              'claim_allowed': False,
+              'release_allowed': False,
+              'physical_android': 'TOKEN_VAZIO',
+          }
+          (out / 'receipt.json').write_text(
+              json.dumps(receipt, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
+          print(f"DEB_CUSTODY_STATE={state} files={len(entries)} bytes={total}")
+          if succeeded and state != 'PAYLOAD_ARCHIVED':
+              raise SystemExit('source build succeeded but complete DEB custody was not archived')
+          PY
+
       - name: Upload enterprise candidate and custody evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -386,10 +472,13 @@ jobs:
           name: freestanding-enterprise-${{ github.sha }}
           retention-days: 14
           if-no-files-found: warn
+          compression-level: 0
           path: |
             dist/apk-matrix/
             dist/source-contract/
             build/freestanding-source/
             build/reports/
             termux-packages/build/reports/
-            termux-packages/artifacts/rafcodephi-bootstrap/
+            termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+            termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-*.zip
+            termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-*-symlink-repair.json
