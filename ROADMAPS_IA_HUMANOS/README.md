@@ -6,6 +6,7 @@
 
 - **Humano:** [7M Termux — roteiro com checklists e checkpoints](./TERMUX_RAFCODEPHI_7M.md).
 - **IA/automação:** [7M_INDEX.json — passos, dependências, estados e evidências](./7M_INDEX.json).
+- **Comprovante de campo (2026-10-07, não promovido):** [Control Center / Vectra V3 — bootstrap bloqueado, PA não medido, diagnóstico source-versus-device](./20261007_CONTROL_CENTER_V3_DEVICE_GAP.md) · [receipt tipado](./receipts/20261007_RAFCODEPHI_CONTROL_CENTER_V3.json).
 - **Fonte canônica de estado:** [CURRENT_STATE Ω — HOTSTATE V4.5](https://docs.google.com/document/d/1d0J5SkF2S2emBq6jLuTkhYVaSOQiWazJWyRCTMJ-iRI/edit).
 - **Protocolo de despacho:** [START HERE Ω V2.2](https://docs.google.com/document/d/1T4OIN2RC1I-KFsdaQTCqieeZUGYBXissWrdrZMG0DN8/edit).
 - **História append-only:** [μWRITE LEDGER Ω V2](https://docs.google.com/document/d/1NEU7lg7iUZf1u7lX-SEKuc-knSDGlF5gOx7qzXcJ1yc/edit).
