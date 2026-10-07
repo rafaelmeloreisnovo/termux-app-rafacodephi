@@ -379,6 +379,19 @@ jobs:
           print(json.dumps(doc, indent=2, sort_keys=True))
           PY
 
+      - name: Bundle raw producer bootstrap evidence for artifact transport
+        if: always()
+        shell: bash
+        run: |
+          set -u
+          mkdir -p build/artifact-bundles
+          source_dir=termux-packages/artifacts/rafcodephi-bootstrap
+          bundle=build/artifact-bundles/rafcodephi-bootstrap.tar
+          if [[ -d "$source_dir" ]]; then
+            tar -C termux-packages/artifacts -cf "$bundle" rafcodephi-bootstrap
+            sha256sum "$bundle" > "$bundle.sha256"
+          fi
+
       - name: Upload enterprise candidate and custody evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -391,5 +404,5 @@ jobs:
             dist/source-contract/
             build/freestanding-source/
             build/reports/
+            build/artifact-bundles/
             termux-packages/build/reports/
-            termux-packages/artifacts/rafcodephi-bootstrap/
