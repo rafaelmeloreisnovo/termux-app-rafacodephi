@@ -24,6 +24,8 @@ on:
       - 'scripts/validate_freestanding_device_receipt.py'
       - 'tests/test_freestanding_device_receipt.py'
       - 'tests/test_inject_freestanding_gate_manifest.py'
+      - 'tests/test_raf_bootstrap_profile.py'
+      - 'tests/test_rafcodephi_relative_symlinks.py'
       - 'docs/contracts/raf.freestanding-runtime-evidence.v1.schema.json'
       - '.github/workflows/freestanding-enterprise-closure.yml'
   pull_request:
@@ -43,6 +45,8 @@ on:
       - 'scripts/validate_freestanding_device_receipt.py'
       - 'tests/test_freestanding_device_receipt.py'
       - 'tests/test_inject_freestanding_gate_manifest.py'
+      - 'tests/test_raf_bootstrap_profile.py'
+      - 'tests/test_rafcodephi_relative_symlinks.py'
       - 'docs/contracts/raf.freestanding-runtime-evidence.v1.schema.json'
       - '.github/workflows/freestanding-enterprise-closure.yml'
 
@@ -78,7 +82,9 @@ jobs:
             scripts/validate_freestanding_device_receipt.py
           python3 -m unittest \
             tests.test_freestanding_device_receipt \
-            tests.test_inject_freestanding_gate_manifest -v
+            tests.test_inject_freestanding_gate_manifest \
+            tests.test_raf_bootstrap_profile \
+            tests.test_rafcodephi_relative_symlinks -v
           /bin/sh -n scripts/device_promote_freestanding_runtime.sh
           python3 -m json.tool \
             docs/contracts/raf.freestanding-runtime-evidence.v1.schema.json >/dev/null
