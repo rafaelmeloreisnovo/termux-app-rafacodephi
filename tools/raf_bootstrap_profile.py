@@ -92,6 +92,11 @@ def parse_symlink_destinations(data: bytes) -> set[str]:
         if len(parts) != 2 or not parts[0] or not parts[1]:
             raise ProfileError(f"malformed SYMLINKS.txt line {number}: {line!r}")
         target, link = parts
+        # Termux SYMLINKS.txt records paths relative to '.', not the ZIP root.
+        while link.startswith("./"):
+            link = link[2:]
+        if not link or any(part in ("", ".", "..") for part in link.split("/")):
+            raise ProfileError(f"unsafe normalized symlink destination: {link!r}")
         safe_name(link)
         if link in destinations:
             raise ProfileError(f"duplicate symlink destination: {link}")
