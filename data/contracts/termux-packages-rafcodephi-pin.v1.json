@@ -28,14 +28,18 @@
       "equivalent_duplicate_closed": 90,
       "claim_allowed": false,
       "physical_android": "TOKEN_VAZIO",
-      "previous_candidate_commit": "1e63d81ddc71d5b3ff7730f201a8cd70979ca218",
-      "earlier_candidate_commit": "1ffe3e9b00b03813ec3a0d3976abf9f9460659e5",
-      "previous_candidate_pull_request": 119,
-      "source_fix_merged_pull_requests": [
-        134,
-        135
-      ],
-      "source_evidence_gate": "DEB_PROVEN_SYMLINK_REPAIR_TEST_AND_FULL_DUAL_ARCH_BUILD_REQUIRED"
+      "pull_request": 119,
+      "previous_candidate_commit": "1ffe3e9b00b03813ec3a0d3976abf9f9460659e5"
+    },
+    "closure": {
+      "commit": "97cd0fd25b194b3d857b3f6a2ac330ff0efb003c",
+      "branch": "main",
+      "state": "MERGED_SOURCE_PIN__UNTESTED_IN_APP_CI",
+      "supersedes_commit": "1e63d81ddc71d5b3ff7730f201a8cd70979ca218",
+      "reason": "Use the merged DEB-evidence symlink repair and APT guard falsifier",
+      "source_runtime_evidence": "TOKEN_VAZIO",
+      "claim_allowed": false,
+      "physical_android": "TOKEN_VAZIO"
     }
   },
   "invariants": {
