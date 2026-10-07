@@ -166,6 +166,8 @@ jobs:
             --properties scripts/properties.sh \
             --receipt build/reports/rafcodephi-freestanding-properties.json
           bash scripts/validate-rafcodephi-build-properties.sh
+          # Cheap positive/negative symlink fixtures before the 240-minute dual-arch build.
+          python3 scripts/tests/test_rafcodephi_bootstrap_symlink_repair.py
 
       - name: Source-build real ARM32 and ARM64 bootstrap pair
         working-directory: termux-packages
@@ -414,12 +416,15 @@ jobs:
           name: freestanding-enterprise-${{ github.sha }}
           retention-days: 14
           if-no-files-found: warn
+          # Archive only GitHub-portable paths: .deb epoch filenames may contain ':'.
+          # Keep bootstrap bytes and per-DEB digests; raw .deb bytes are not uploaded.
           path: |
             dist/apk-matrix/
             dist/source-contract/
             build/freestanding-source/
             build/reports/
             termux-packages/build/reports/
-            termux-packages/artifacts/rafcodephi-bootstrap/*.zip
-            termux-packages/artifacts/rafcodephi-bootstrap/*.txt
-            termux-packages/artifacts/rafcodephi-bootstrap/*.json
+            termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+            termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-*.zip
+            termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-*-symlink-repair.json
+            termux-packages/artifacts/rafcodephi-bootstrap/debs/*/SHA256SUMS
