@@ -20,6 +20,14 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
         cls.scanner = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.scanner)
 
+        action_audit_path = cls.root / "scripts/audit_github_actions_refs.py"
+        action_spec = importlib.util.spec_from_file_location(
+            "action_reference_audit", action_audit_path
+        )
+        assert action_spec and action_spec.loader
+        cls.action_audit = importlib.util.module_from_spec(action_spec)
+        action_spec.loader.exec_module(cls.action_audit)
+
     def test_start_here_exposes_only_valid_human_routes(self) -> None:
         for token in (
             "01_DIAGNOSTICO",
@@ -95,6 +103,23 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
     def test_start_here_never_calls_device_smoke_as_physical_proof(self) -> None:
         self.assertNotIn("device-runtime-smoke.yml", self.control)
         self.assertIn("CI_PASS_DOES_NOT_EQUAL_PHYSICAL_ANDROID_PROOF", self.control)
+
+    def test_start_here_reusable_workflow_closure_is_immutable(self) -> None:
+        paths = self.action_audit.workflow_closure(
+            self.root, ".github/workflows/00_START_HERE.yml"
+        )
+        relative = {path.relative_to(self.root).as_posix() for path in paths}
+        self.assertIn(".github/workflows/00_START_HERE.yml", relative)
+        self.assertIn(".github/workflows/_reusable-arm32-compat.yml", relative)
+        self.assertIn(".github/workflows/provider-protection-gate.yml", relative)
+
+        records = self.action_audit.audit(self.root, paths)
+        mutable = [
+            record
+            for record in records
+            if record["state"] not in {"PINNED_SHA", "LOCAL_ACTION"}
+        ]
+        self.assertEqual(mutable, [], msg=f"mutable refs in START HERE closure: {mutable}")
 
 
 if __name__ == "__main__":
