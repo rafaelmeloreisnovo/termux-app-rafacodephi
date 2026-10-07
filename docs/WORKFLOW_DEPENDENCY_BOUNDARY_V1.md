@@ -73,6 +73,25 @@ evidence, provider enforcement evidence or physical-device evidence.
 The third item removes a network/package dependency from this gate; it does **not**
 make Python or the hosted runner freestanding.
 
+## Governed freestanding workflow family
+
+These workflows are not made reachable from the operator front door by this
+change, but their external Action identities are now regression-tested as a
+separate governed family:
+
+- `.github/workflows/freestanding-runtime-gate.yml`;
+- `.github/workflows/freestanding-pkg-runtime.yml`;
+- `.github/workflows/freestanding-enterprise-closure.yml`.
+
+They declare `ci_track` / `ci_abis`, use bounded hosted runners, and pin
+external Actions by exact commit identity. Existing `@v4` behavior was
+preserved by resolving the current `v4` tag targets rather than silently
+upgrading major versions.
+
+This still does not make their build infrastructure freestanding. For example,
+package-manager/toolchain acquisition remains a declared `CI_PROVIDER`
+boundary until an authorial replacement has equivalent behavior and evidence.
+
 ## External boundaries intentionally retained
 
 The following remain external/hosted and must not be hidden:
@@ -127,7 +146,7 @@ No arrow may be skipped by inference.
 
 ## R3
 
-`F_ok`: front-door dependency boundary is explicit and machine-auditable.
+`F_ok`: front-door dependency boundary is explicit and machine-auditable; the freestanding workflow family has an independent immutable-reference regression gate.
 
 `F_gap`: exact-head CI, provider enforcement, artifact quota, physical runtime and
 repository-wide historical workflow migration remain independent.
