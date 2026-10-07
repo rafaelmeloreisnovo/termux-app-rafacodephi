@@ -31,18 +31,18 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: "📥 1. Checkout"
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
 
       - name: "☕ 2. Java 17"
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: temurin
           java-version: '17'
 
       - name: "🤖 3. Android SDK"
-        uses: android-actions/setup-android@v4
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
 
       - name: "📦 4. Toolchain Android"
         run: ./scripts/ci_android_preflight.sh
@@ -68,7 +68,7 @@ jobs:
         run: ./scripts/rafaelia_ci_smoke.sh
 
       - name: "📦 10. Publicar inventário"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: source-code-inventory-${{ github.sha }}
           if-no-files-found: error
