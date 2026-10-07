@@ -40,3 +40,13 @@
 ## Atualização sem regressão
 
 Para mudança material, acrescente um registro com `μID|timestamp|source/ref|parent|kind|Δsummary|routes|evidence|gap|next|hash/ref`. Não edite receipts anteriores para fingir que o erro nunca existiu. Um checkpoint só pode virar PASS com fonte de evidência nova e exata. Separar provider, source e device. Direitos autorais/licenças: verificar antes de incorporar código de terceiros.
+
+## Ponte canônica Drive ↔ GitHub (leitura mínima)
+
+- **Bootstrap de navegação:** [START HERE — RAFAELIA Ω CANONICAL V2.2 DISPATCH](https://docs.google.com/document/d/1T4OIN2RC1I-KFsdaQTCqieeZUGYBXissWrdrZMG0DN8/edit).
+- **Estado corrente antes do histórico:** [CURRENT_STATE Ω — HOTSTATE V4.5](https://docs.google.com/document/d/1d0J5SkF2S2emBq6jLuTkhYVaSOQiWazJWyRCTMJ-iRI/edit).
+- **Recibos de mudanças, append-only:** [START HERE μWRITE LEDGER Ω V2](https://docs.google.com/document/d/1NEU7lg7iUZf1u7lX-SEKuc-knSDGlF5gOx7qzXcJ1yc/edit).
+- **Implementação e CI:** [PR #484 — candidato de integração](https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/pull/484), sob autoridade do repositório consumidor; [produtor `termux-packages`](https://github.com/rafaelmeloreisnovo/termux-packages) é autoridade para source-build e reparo de links.
+- **Deduplicação documental:** [PR #488](https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/pull/488) é a rota documental ativa. [PR #489](https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/pull/489) foi encerrado sem merge por sobreposição. [PR #487](https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/pull/487) foi encerrado sem merge como correção redundante do transporte de artefatos.
+
+**Revalidação:** os estados acima foram observados em 2026-10-07 e podem mudar. Abrir o estado corrente e o PR exato antes de executar; nenhum link deste índice converte `NOT_RUN` em `PASS`. Não atualizar o bootstrap canônico a cada incidente: registrar somente um delta material no ledger e, se necessário, ajustar o ponteiro em CURRENT_STATE.
