@@ -39,6 +39,17 @@ Rotas humanas:
 | `provider-security` | `.github/workflows/provider-protection-gate.yml` | ruleset live do `master` | configuração live pode bloquear o Enterprise preflight |
 | `governance` | `scripts/ci/workflow_control_plane.py` | inventário de todos os YML/YAML | discovery != execution |
 
+## Dependências / imutabilidade do front door
+
+Mapa de reconstrução: `docs/WORKFLOW_DEPENDENCY_BOUNDARY_V1.md`.
+
+O fecho transitivo de reusable workflows a partir de `00_START_HERE.yml` é
+auditado com `--reachable-from ... --require-immutable`: toda Action externa
+nessa rota deve usar SHA completo. Isto endurece custódia/supply-chain; não
+transforma GitHub Actions, runner, JDK ou Android SDK em código freestanding.
+
+`FRONT_DOOR_IMMUTABLE != REPOSITORY_WIDE_IMMUTABLE != PHYSICAL_EXECUTION`.
+
 ## Provider protection — autoridade
 
 A trilha `provider-security` usa a cadeia:

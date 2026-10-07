@@ -35,8 +35,8 @@
 | pkg help | PROVADO ESTRUTURAL | bridge/camada estrutural | smoke físico |
 | payload ARM/ARM64 real | PROVADO ESTRUTURAL; MATERIALIZAÇÃO DEPENDE DO RUN | source-build + validação par/hashes/ABI/prefixo | receipt imutável + device |
 | `pkg` real | PROVADO ESTRUTURAL NO PAYLOAD, TOKEN_VAZIO NO DEVICE | package stack real exigida | `DEVICE_REAL_PKG_VALIDATED` |
-| `pkg update` | BLOCKED/TOKEN_VAZIO NO DEVICE | repositório custom ainda bloqueado | repo publicado/assinado + smoke |
-| `pkg install` | BLOCKED/TOKEN_VAZIO NO DEVICE | mesmo gate | instalação física com receipt |
+| `pkg update` | FUTURO | device pkg smoke exige `DEVICE_REAL_PKG_VALIDATED` | repo publicado/assinado + smoke |
+| `pkg install` | FUTURO | device pkg smoke exige `DEVICE_REAL_PKG_VALIDATED` | instalação física com receipt |
 | `apt` | PROVADO ESTRUTURAL NO PAYLOAD, TOKEN_VAZIO NO DEVICE | ELF custom-prefix exigido | execução física + repo custom |
 | `apt-get` | PROVADO ESTRUTURAL NO PAYLOAD, TOKEN_VAZIO NO DEVICE | ELF custom-prefix exigido | execução física + repo custom |
 | `dpkg` | PROVADO ESTRUTURAL NO PAYLOAD, TOKEN_VAZIO NO DEVICE | ELF/status database | execução física |

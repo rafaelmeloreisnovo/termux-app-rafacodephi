@@ -46,6 +46,10 @@ USES_RE = re.compile(
     r"^\s*(?:-\s*)?uses:\s*['\"]?([^@'\"\s]+)@([^'\"\s#]+)",
     re.MULTILINE,
 )
+LOCAL_WORKFLOW_RE = re.compile(
+    r"^\s*(?:-\s*)?uses:\s*['\"]?(\./\.github/workflows/[^'\"\s#]+)",
+    re.MULTILINE,
+)
 VERSION_RE = re.compile(r"^v?(\d+)(?:\.\d+){0,2}(?:[-+][0-9A-Za-z.-]+)?$")
 SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 FLOATING_REFS = {"main", "master", "develop", "dev", "latest", "head"}
@@ -79,10 +83,49 @@ def classify(action: str, ref: str) -> tuple[str, str]:
     return "UNTRACKED_REF", "referência não classificada; revisão humana necessária"
 
 
-def audit(root: Path) -> list[dict[str, Any]]:
+def workflow_closure(root: Path, entry: str) -> list[Path]:
+    """Return the reusable-workflow source closure rooted at one workflow.
+
+    This proves only local workflow topology. It is not execution evidence.
+    """
+    workflow_dir = (root / ".github" / "workflows").resolve()
+    entry_path = (root / entry).resolve()
+    try:
+        entry_path.relative_to(workflow_dir)
+    except ValueError as exc:
+        raise SystemExit(f"entry is outside .github/workflows: {entry}") from exc
+    if not entry_path.is_file():
+        raise SystemExit(f"entry workflow not found: {entry}")
+
+    seen: set[Path] = set()
+    pending = [entry_path]
+    while pending:
+        path = pending.pop()
+        if path in seen:
+            continue
+        seen.add(path)
+        text = path.read_text(encoding="utf-8")
+        for match in LOCAL_WORKFLOW_RE.finditer(text):
+            rel = match.group(1)[2:]
+            target = (root / rel).resolve()
+            try:
+                target.relative_to(workflow_dir)
+            except ValueError as exc:
+                raise SystemExit(f"local workflow edge escapes workflow root: {rel}") from exc
+            if target.suffix not in {".yml", ".yaml"}:
+                raise SystemExit(f"local workflow edge is not YAML: {rel}")
+            if not target.is_file():
+                raise SystemExit(f"local workflow edge missing: {rel}")
+            if target not in seen:
+                pending.append(target)
+    return sorted(seen)
+
+
+def audit(root: Path, paths: list[Path] | None = None) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     workflow_dir = root / ".github" / "workflows"
-    paths = sorted((*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")))
+    if paths is None:
+        paths = sorted((*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")))
 
     for path in paths:
         text = path.read_text(encoding="utf-8")
@@ -153,13 +196,23 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="fail on known unsupported majors or floating branch refs",
     )
+    parser.add_argument(
+        "--reachable-from",
+        help="audit only the transitive local reusable-workflow closure rooted at this path",
+    )
+    parser.add_argument(
+        "--require-immutable",
+        action="store_true",
+        help="fail when an external reference in scope is not a full 40-hex commit SHA",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     root = Path(args.root).resolve()
-    records = audit(root)
+    scoped_paths = workflow_closure(root, args.reachable_from) if args.reachable_from else None
+    records = audit(root, scoped_paths)
     report = markdown_report(records)
     print(report, end="")
 
@@ -175,6 +228,11 @@ def main() -> int:
             "policy_sources": POLICY_SOURCES,
             "records": records,
             "summary": dict(Counter(record["state"] for record in records)),
+            "scope": {
+                "reachable_from": args.reachable_from or None,
+                "workflow_count": len(scoped_paths) if scoped_paths is not None else None,
+                "require_immutable": args.require_immutable,
+            },
             "claim_allowed": False,
             "claim_reason": "reference audit is not workflow execution evidence",
         }
@@ -187,6 +245,25 @@ def main() -> int:
     if args.strict and failures:
         print(f"ERROR: {len(failures)} policy violation(s).", file=sys.stderr)
         return 1
+
+    if args.require_immutable:
+        mutable = [
+            record
+            for record in records
+            if record["state"] not in {"PINNED_SHA", "LOCAL_ACTION"}
+        ]
+        if mutable:
+            print(
+                f"ERROR: {len(mutable)} mutable external reference(s) in governed scope.",
+                file=sys.stderr,
+            )
+            for record in mutable:
+                print(
+                    f"  {record['file']}:{record['line']} "
+                    f"{record['action']}@{record['ref']} [{record['state']}]",
+                    file=sys.stderr,
+                )
+            return 1
 
     print(
         "OK: reference policy audit completed; execution evidence remains separate.",

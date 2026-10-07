@@ -236,7 +236,11 @@ jobs:
           STRICT: ${{ needs.route.outputs.strict_governance }}
         run: |
           set -euo pipefail
-          args=(--json reports/action-reference-audit.json)
+          args=(
+            --json reports/action-reference-audit.json
+            --reachable-from .github/workflows/00_START_HERE.yml
+            --require-immutable
+          )
           [[ "$STRICT" == "true" ]] && args+=(--strict)
           python3 scripts/audit_github_actions_refs.py "${args[@]}"
 

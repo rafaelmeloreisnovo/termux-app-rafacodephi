@@ -21,14 +21,14 @@ defaults:
 jobs:
   arm32:
     name: "📱 ARM32 v7 — ${{ inputs.ndk_lane }}"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
       TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS: '1'
 
     steps:
       - name: "📥 Checkout"
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
 
@@ -42,7 +42,7 @@ jobs:
           esac
 
       - name: "☕ Java 21"
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: temurin
           java-version: '21'
@@ -135,7 +135,7 @@ jobs:
           } > "$report/receipt.env"
 
       - name: "📦 Artefatos ARM32"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: arm32-v7-${{ inputs.ndk_lane }}-${{ github.sha }}
           if-no-files-found: error
