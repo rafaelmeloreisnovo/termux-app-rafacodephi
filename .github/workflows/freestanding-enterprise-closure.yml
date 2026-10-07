@@ -392,4 +392,8 @@ jobs:
             build/freestanding-source/
             build/reports/
             termux-packages/build/reports/
-            termux-packages/artifacts/rafcodephi-bootstrap/
+            termux-packages/artifacts/rafcodephi-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
+            termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-arm.zip
+            termux-packages/artifacts/rafcodephi-bootstrap/rafcodephi-bootstrap-aarch64.zip
+            termux-packages/artifacts/rafcodephi-bootstrap/debs/arm/SHA256SUMS
+            termux-packages/artifacts/rafcodephi-bootstrap/debs/aarch64/SHA256SUMS
