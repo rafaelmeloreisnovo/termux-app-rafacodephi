@@ -17,19 +17,25 @@
       "physical_android": "TOKEN_VAZIO"
     },
     "candidate": {
-      "commit": "1e63d81ddc71d5b3ff7730f201a8cd70979ca218",
-      "branch": "hotfix/rafcodephi-bootstrap-output-v1-20260916",
-      "state": "PR_119_CANONICAL_DOCKER_HANDOFF_VALIDATION",
+      "commit": "97cd0fd25b194b3d857b3f6a2ac330ff0efb003c",
+      "branch": "main",
+      "state": "EXACT_SOURCE_PIN_SYMLINK_REPAIR_CI_PENDING",
       "promotion_target": "canonical",
-      "supersedes_commit": "1fc540b0c296581c5793c109e3834589f85a0114",
+      "supersedes_commit": "1e63d81ddc71d5b3ff7730f201a8cd70979ca218",
       "historical_pull_request": 89,
       "historical_pull_request_merged": true,
       "historical_merge_commit": "8a3587789c415912c04b83fc4bb82fe69c55d595",
       "equivalent_duplicate_closed": 90,
       "claim_allowed": false,
       "physical_android": "TOKEN_VAZIO",
-      "pull_request": 119,
-      "previous_candidate_commit": "1ffe3e9b00b03813ec3a0d3976abf9f9460659e5"
+      "previous_candidate_commit": "1e63d81ddc71d5b3ff7730f201a8cd70979ca218",
+      "earlier_candidate_commit": "1ffe3e9b00b03813ec3a0d3976abf9f9460659e5",
+      "previous_candidate_pull_request": 119,
+      "source_fix_merged_pull_requests": [
+        134,
+        135
+      ],
+      "source_evidence_gate": "DEB_PROVEN_SYMLINK_REPAIR_TEST_AND_FULL_DUAL_ARCH_BUILD_REQUIRED"
     }
   },
   "invariants": {
