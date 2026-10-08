@@ -6,7 +6,14 @@ static unsigned checks;
 static int expect(const char *s,unsigned n,int expected) {
     int got=rafn_l0_parse(s,n,&plan);
     ++checks;
-    return got==expected ? 0 : (int)checks;
+    if(got!=expected) return (int)checks;
+    /* On any failure, the plan must be unambiguously empty even when a
+     * previous successful parse or partial nodes were present. */
+    if(got!=RAFN_L0_OK &&
+       (plan.rule_count || plan.node_count || plan.order_count ||
+        plan.has_default || plan.rules[0].name[0] || plan.nodes[0].output[0] ||
+        plan.mark[0] || plan.default_target[0])) return (int)(checks+64u);
+    return 0;
 }
 int main(void) {
     int e;
