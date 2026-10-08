@@ -121,7 +121,7 @@ static int rafn_l0_finalize(struct rafn_l0_plan *p) {
     }
     return RAFN_L0_OK;
 }
-static int rafn_l0_parse(const char *source,unsigned length,struct rafn_l0_plan *p) {
+static int rafn_l0_parse_impl(const char *source,unsigned length,struct rafn_l0_plan *p) {
     unsigned at=0;
     int active_rule=-1;
     if(!source||!p) return RAFN_L0_INVALID;
@@ -197,5 +197,14 @@ static int rafn_l0_parse(const char *source,unsigned length,struct rafn_l0_plan 
         } else return RAFN_L0_SYNTAX;
     }
     return rafn_l0_finalize(p);
+}
+/* A failed parse cannot leak a partially ordered rule/target table to the
+ * future executor. No heap, headers, calls into the OS or external symbols. */
+static int rafn_l0_parse(const char *source,unsigned length,struct rafn_l0_plan *p) {
+    int rc;
+    if(!p) return RAFN_L0_INVALID;
+    rc=rafn_l0_parse_impl(source,length,p);
+    if(rc!=RAFN_L0_OK) rafn_l0_zero(p,(unsigned)sizeof(*p));
+    return rc;
 }
 #endif
