@@ -1,0 +1,93 @@
+# ci_track: internal
+# ci_abis: armeabi-v7a,arm64-v8a
+name: RAFNINJA L0 freestanding plan gate
+
+on:
+  push:
+    branches: [master, 'rafaelia/freestanding-*']
+    paths:
+      - 'rafaelia/src/main/cpp/zero/rafz_ninja_l0.h'
+      - 'tests/rafninja_l0_selftest.c'
+      - '.github/workflows/rafninja-l0-gate.yml'
+  pull_request:
+    paths:
+      - 'rafaelia/src/main/cpp/zero/rafz_ninja_l0.h'
+      - 'tests/rafninja_l0_selftest.c'
+      - '.github/workflows/rafninja-l0-gate.yml'
+permissions:
+  contents: read
+jobs:
+  pure-core-dual-abi:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: armv7a-linux-androideabi21
+            arch: armv7
+            emulator: qemu-arm
+          - target: aarch64-linux-android21
+            arch: aarch64
+            emulator: qemu-aarch64
+    steps:
+      - uses: actions/checkout@v7
+      - name: Prepare cross-toolchain and QEMU user mode
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld binutils qemu-user
+      - name: Host semantics and negative falsifiers
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/rafninja-l0
+          clang -std=c11 -O2 -Wall -Wextra -Werror -Wshadow -pedantic \
+            tests/rafninja_l0_selftest.c -o build/rafninja-l0/host-selftest
+          build/rafninja-l0/host-selftest
+          echo 'RAFNINJA_L0_HOST_GRAPH_AND_NEGATIVE_CASES=PASS'
+      - name: Build bare freestanding ELF without hosted symbols
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=build/rafninja-l0
+          clang --target='${{ matrix.target }}' -std=c11 -Os \
+            -Wall -Wextra -Werror -Wshadow -pedantic \
+            -ffreestanding -nostdinc -fno-builtin -fno-stack-protector \
+            -fno-pic -fno-pie -fno-unwind-tables -fno-asynchronous-unwind-tables \
+            -c tests/rafninja_l0_selftest.c -o "$ROOT/plan.o"
+          test -z "$(nm -u "$ROOT/plan.o")"
+          clang --target='${{ matrix.target }}' -ffreestanding -nostdinc -fno-builtin \
+            -fno-pic -fno-pie -c src/bootstrap/start_arm.S -o "$ROOT/entry.o"
+          clang --target='${{ matrix.target }}' -fuse-ld=lld -nostdlib -static \
+            -Wl,-no-pie,-e,_start,--gc-sections,--build-id=none \
+            "$ROOT/plan.o" "$ROOT/entry.o" -o "$ROOT/rafninja-l0-${{ matrix.arch }}"
+          readelf -hW "$ROOT/rafninja-l0-${{ matrix.arch }}"
+          ! readelf -lW "$ROOT/rafninja-l0-${{ matrix.arch }}" | grep -q ' INTERP '
+          ! readelf -dW "$ROOT/rafninja-l0-${{ matrix.arch }}" 2>/dev/null | grep -q 'NEEDED'
+          test -z "$(nm -u "$ROOT/rafninja-l0-${{ matrix.arch }}")"
+          sha256sum "$ROOT/rafninja-l0-${{ matrix.arch }}" > "$ROOT/rafninja-l0-${{ matrix.arch }}.sha256"
+      - name: Execute ARM user-mode semantics (not physical Android)
+        shell: bash
+        run: |
+          set -euo pipefail
+          '${{ matrix.emulator }}' 'build/rafninja-l0/rafninja-l0-${{ matrix.arch }}'
+          {
+            echo 'schema=rafninja-l0-freestanding/v1'
+            echo 'architecture=${{ matrix.arch }}'
+            echo 'host_vectors=PASS'
+            echo 'elf_no_libc_interp_needed_undef=PASS'
+            echo 'emulated_elf_execution=PASS'
+            echo 'ninja_compatibility=SUBSET_ONLY'
+            echo 'command_execution=NOT_IMPLEMENTED'
+            echo 'physical_android=TOKEN_VAZIO'
+            echo 'apk_integration=TOKEN_VAZIO'
+            echo 'claim_allowed=false'
+          } > 'build/rafninja-l0/receipt-${{ matrix.arch }}.txt'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rafninja-l0-${{ matrix.arch }}
+          path: |
+            build/rafninja-l0/rafninja-l0-${{ matrix.arch }}
+            build/rafninja-l0/rafninja-l0-${{ matrix.arch }}.sha256
+            build/rafninja-l0/receipt-${{ matrix.arch }}.txt
+          if-no-files-found: error
