@@ -93,12 +93,21 @@ final class BootstrapLoaderClient {
             String expectedAbi = currentBootstrapAbi();
             String expectedBlake3 = BootstrapIntegrityVerifier.expectedHashForCurrentAbi()
                     .toLowerCase(Locale.US);
+            String recordedBlake3 = data.optString("blake3", "").toLowerCase(Locale.US);
+            String state = data.optString("state", "");
+            boolean canonical = "HOST_ACCEPTED_CANONICAL_BOOTSTRAP".equals(state)
+                    && expectedBlake3.equals(recordedBlake3);
+            boolean userConfirmed = BootstrapWizardSource.RECEIPT_STATE_USER_CONFIRMED.equals(state)
+                    && data.optInt("consent_count", 0) == 2
+                    && "WIZARD_DOCUMENT".equals(data.optString("source"))
+                    && expectedBlake3.equals(data.optString("canonical_blake3", "").toLowerCase(Locale.US))
+                    && !expectedBlake3.equals(recordedBlake3);
             boolean valid = "termux.rafacodephi.bootstrap_handoff_receipt.v1".equals(
                             data.optString("schema"))
-                    && "HOST_ACCEPTED_CANONICAL_BOOTSTRAP".equals(data.optString("state"))
+                    && (canonical || userConfirmed)
                     && expectedAbi.equals(data.optString("abi"))
                     && SHA256.matcher(expectedBlake3).matches()
-                    && expectedBlake3.equals(data.optString("blake3").toLowerCase(Locale.US))
+                    && SHA256.matcher(recordedBlake3).matches()
                     && data.optLong("bytes", -1L) == zip.length()
                     && !data.optBoolean("claim_allowed", true);
             if (valid) return true;
