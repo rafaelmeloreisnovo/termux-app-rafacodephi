@@ -1,0 +1,1 @@
+"""Bootstrap registry regression tests."""
