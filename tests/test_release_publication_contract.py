@@ -11,6 +11,7 @@ class ReleasePublicationContract(unittest.TestCase):
         top, signing, publishing = workflow.split("  sign-release:", 1)[0], workflow.split("  sign-release:", 1)[1].split("  prepare-release-draft:", 1)[0], workflow.split("  prepare-release-draft:", 1)[1]
         self.assertIn("contents: read", top)
         self.assertNotIn("contents: write", signing)
+        self.assertIn("if: github.actor == 'rafaelmeloreisnovo'", signing)
         self.assertIn("needs: sign-release", publishing)
         self.assertIn("contents: write", publishing)
         self.assertIn("github.event_name == 'workflow_dispatch'", publishing)
