@@ -32,8 +32,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: rafcodephi-v1-termux-packages-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Preserve each exact producer run->ZIP->APK custody chain. Replacing a
+  # producer in flight loses receipts even if a later run reaches green.
+  # Only supersede speculative PR contract previews.
+  group: rafcodephi-v1-termux-packages-${{ github.event_name }}-${{ github.event_name == 'repository_dispatch' && github.event.client_payload.producer_run_id || (github.event_name == 'workflow_dispatch' && github.run_id || (github.event.pull_request.number || github.ref)) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   CLAIM_ALLOWED: 'false'
