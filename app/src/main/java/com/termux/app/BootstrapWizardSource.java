@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Locale;
@@ -39,6 +40,20 @@ public final class BootstrapWizardSource {
     private static final int MAX_PROFILE_BYTES = 64 * 1024;
     private static final int MAX_SYMLINKS_BYTES = 1024 * 1024;
     private static final Pattern HASH_256 = Pattern.compile("^[0-9a-f]{64}$");
+
+    public static final String RECEIPT_STATE_USER_CONFIRMED =
+        "HOST_ACCEPTED_USER_CONFIRMED_BOOTSTRAP";
+
+    /** Only the manually selected ZIP can use the two-dialog variant route. */
+    public static final class BootstrapHashMismatch extends SecurityException {
+        public final String expectedBlake3;
+        public final String observedBlake3;
+        BootstrapHashMismatch(String expected, String actual) {
+            super("BOOTSTRAP_BLAKE3_MISMATCH expected=" + expected + " actual=" + actual);
+            expectedBlake3 = expected;
+            observedBlake3 = actual;
+        }
+    }
 
     private BootstrapWizardSource() {}
 
@@ -67,6 +82,28 @@ public final class BootstrapWizardSource {
     /** Copy, validate and atomically accept a user-selected bootstrap.zip. */
     @NonNull
     public static JSONObject accept(@NonNull Context context, @NonNull Uri uri) throws Exception {
+        return acceptInternal(context, uri, null);
+    }
+
+    /**
+     * Called only after the wizard's two distinct affirmative dialogs.
+     * The URI is re-read, and the final digest MUST equal the one displayed
+     * before user consent. No wildcard or unsafe hash bypass exists.
+     */
+    @NonNull
+    public static JSONObject acceptConfirmed(@NonNull Context context,
+                                            @NonNull Uri uri,
+                                            @NonNull String approvedBlake3) throws Exception {
+        String approved = approvedBlake3.toLowerCase(Locale.US);
+        if (!HASH_256.matcher(approved).matches()) {
+            throw new SecurityException("BOOTSTRAP_VARIANT_APPROVAL_INVALID");
+        }
+        return acceptInternal(context, uri, approved);
+    }
+
+    @NonNull
+    private static JSONObject acceptInternal(@NonNull Context context, @NonNull Uri uri,
+                                             @Nullable String approvedBlake3) throws Exception {
         TermuxRuntimePaths.init(context);
         File dir = inbox(context);
         if (!dir.exists() && !dir.mkdirs() && !dir.isDirectory()) {
@@ -106,10 +143,17 @@ public final class BootstrapWizardSource {
             throw new IllegalStateException("EXTERNAL_BOOTSTRAP_CANONICAL_BLAKE3_UNAVAILABLE");
         }
         String actual = BootstrapIntegrityVerifier.blake3Hex(tmp, MAX_BOOTSTRAP_BYTES).toLowerCase(Locale.US);
-        if (!expected.equals(actual)) {
+        boolean variant = !expected.equals(actual);
+        if (variant && approvedBlake3 == null) {
             tmp.delete();
-            throw new SecurityException("BOOTSTRAP_BLAKE3_MISMATCH expected=" + expected + " actual=" + actual);
+            throw new BootstrapHashMismatch(expected, actual);
         }
+        if (approvedBlake3 != null && (!variant || !approvedBlake3.equals(actual))) {
+            tmp.delete();
+            throw new SecurityException("BOOTSTRAP_VARIANT_CONSENT_HASH_CHANGED");
+        }
+        // SHA-256 is a second exact-file identity witness, not an override.
+        String observedSha256 = sha256Hex(tmp);
 
         File target = zipFile(context);
         if (target.exists() && !target.delete()) {
@@ -123,8 +167,11 @@ public final class BootstrapWizardSource {
 
         JSONObject receipt = new JSONObject();
         receipt.put("schema", RECEIPT_SCHEMA);
-        receipt.put("state", RECEIPT_STATE);
+        receipt.put("state", variant ? RECEIPT_STATE_USER_CONFIRMED : RECEIPT_STATE);
         receipt.put("source", "WIZARD_DOCUMENT");
+        receipt.put("consent_count", variant ? 2 : 0);
+        receipt.put("canonical_blake3", expected);
+        receipt.put("sha256", observedSha256);
         receipt.put("abi", currentBootstrapAbi());
         receipt.put("blake3", actual);
         receipt.put("bytes", target.length());
@@ -159,11 +206,18 @@ public final class BootstrapWizardSource {
         if (!zip.isFile() || receipt == null) return null;
         String expected = BootstrapIntegrityVerifier.expectedHashForCurrentAbi().toLowerCase(Locale.US);
         String recorded = receipt.optString("blake3", "").toLowerCase(Locale.US);
+        boolean canonicalReceipt = RECEIPT_STATE.equals(receipt.optString("state"))
+            && expected.equals(recorded);
+        boolean approvedVariant = RECEIPT_STATE_USER_CONFIRMED.equals(receipt.optString("state"))
+            && receipt.optInt("consent_count", -1) == 2
+            && "WIZARD_DOCUMENT".equals(receipt.optString("source"))
+            && expected.equals(receipt.optString("canonical_blake3", "").toLowerCase(Locale.US))
+            && !expected.equals(recorded);
         boolean receiptValid = RECEIPT_SCHEMA.equals(receipt.optString("schema"))
-            && RECEIPT_STATE.equals(receipt.optString("state"))
+            && (canonicalReceipt || approvedVariant)
             && currentBootstrapAbi().equals(receipt.optString("abi"))
             && HASH_256.matcher(expected).matches()
-            && expected.equals(recorded)
+            && HASH_256.matcher(recorded).matches()
             && receipt.optLong("bytes", -1L) == zip.length()
             && !receipt.optBoolean("claim_allowed", true);
         if (!receiptValid) {
@@ -171,9 +225,15 @@ public final class BootstrapWizardSource {
             throw new SecurityException("BOOTSTRAP_WIZARD_RECEIPT_INVALIDATED");
         }
         String actual = BootstrapIntegrityVerifier.blake3Hex(zip, MAX_BOOTSTRAP_BYTES).toLowerCase(Locale.US);
-        if (!expected.equals(actual)) {
+        if (!recorded.equals(actual)) {
             clear(context);
             throw new SecurityException("BOOTSTRAP_WIZARD_HASH_INVALIDATED");
+        }
+        String recordedSha256 = receipt.optString("sha256", "").toLowerCase(Locale.US);
+        if (!HASH_256.matcher(recordedSha256).matches()
+                || !recordedSha256.equals(sha256Hex(zip))) {
+            clear(context);
+            throw new SecurityException("BOOTSTRAP_WIZARD_SHA256_INVALIDATED");
         }
         validateZipContract(zip, TermuxRuntimePaths.isRelocatedLayout());
         try (FileInputStream input = new FileInputStream(zip);
@@ -188,6 +248,33 @@ public final class BootstrapWizardSource {
             }
             return output.toByteArray();
         }
+    }
+
+    /** Must only be consulted after loadAcceptedBytes performed full revalidation. */
+    @Nullable
+    public static String acceptedHashForInstaller(@NonNull Context context) {
+        JSONObject receipt = readAcceptedReceipt(context);
+        if (receipt == null || !zipFile(context).isFile()) return null;
+        String recorded = receipt.optString("blake3", "").toLowerCase(Locale.US);
+        if (!HASH_256.matcher(recorded).matches()) return null;
+        String state = receipt.optString("state");
+        if (!RECEIPT_STATE.equals(state) && !RECEIPT_STATE_USER_CONFIRMED.equals(state)) return null;
+        return recorded;
+    }
+
+    private static String sha256Hex(File file) throws Exception {
+        MessageDigest sha = MessageDigest.getInstance("SHA-256");
+        try (FileInputStream input = new FileInputStream(file)) {
+            byte[] buffer = new byte[65_536];
+            int read;
+            while ((read = input.read(buffer)) != -1) sha.update(buffer, 0, read);
+        }
+        StringBuilder out = new StringBuilder(64);
+        for (byte b : sha.digest()) {
+            out.append(Character.forDigit((b >>> 4) & 15, 16));
+            out.append(Character.forDigit(b & 15, 16));
+        }
+        return out.toString();
     }
 
     @NonNull
