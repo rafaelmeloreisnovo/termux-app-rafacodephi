@@ -409,9 +409,22 @@ public class BetaBootstrapWizardActivity extends AppCompatActivity {
                 });
             } catch (Throwable error) {
                 runOnUiThread(() -> {
+                    String failure = String.valueOf(error.getMessage());
+                    boolean identityMismatch = error instanceof SecurityException
+                        && failure.startsWith("BOOTSTRAP_BLAKE3_MISMATCH ");
+                    String title = identityMismatch ? "bootstrap.zip identity mismatch" : "bootstrap.zip rejected";
+                    String detail = error.getClass().getSimpleName() + ": " + failure;
+                    if (identityMismatch) {
+                        detail += "\n\nThe selected bootstrap.zip differs from the canonical BLAKE3 "
+                            + "pinned to this installed APK and ABI. The ZIP was not accepted or "
+                            + "installed. This does not by itself prove corruption.\n\n"
+                            + "Use the bootstrap from the exact same verified APK/CI build, "
+                            + "or rebuild and pin a new artifact with its provenance. "
+                            + "Do not rename the file, bypass the hash, or clear app data.";
+                    }
                     new AlertDialog.Builder(this)
-                        .setTitle("bootstrap.zip rejected")
-                        .setMessage(error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage()))
+                        .setTitle(title)
+                        .setMessage(detail)
                         .setPositiveButton("OK", null)
                         .show();
                     updateWizardStep();
