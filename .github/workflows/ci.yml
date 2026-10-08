@@ -1,10 +1,19 @@
 name: Safety Gates CI
 
 on:
+  # No duplicate safety run for feature-branch push AND its PR event.
   push:
-    branches: [ master, claude/** ]
+    branches: [ master ]
   pull_request:
     branches: [ master ]
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rafcodephi-safety-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   safety-gates:
@@ -14,10 +23,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set up build environment
+      - name: Set up build environment (install only missing packages)
+        shell: bash
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y build-essential clang gcc-multilib
+          set -euo pipefail
+          if command -v clang >/dev/null && command -v gcc >/dev/null && \
+             test -f /usr/include/gnu/stubs-32.h; then
+            echo 'TOOLCHAIN=RUNNER_PREINSTALLED_NO_APT'
+          else
+            echo 'TOOLCHAIN=MISSING_COMPONENT_PROVISION'
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends build-essential clang gcc-multilib
+          fi
 
       - name: Seven knowledge/work guards — adversarial tests
         run: python3 tests/test_knowledge_work_seven_guards.py
