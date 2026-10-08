@@ -17,6 +17,9 @@ permissions:
 
 jobs:
   sign-release:
+    # Even generating a signed candidate consumes an authorial keystore.
+    # Reject non-owner manual/tag invocations before secrets are injected.
+    if: github.actor == 'rafaelmeloreisnovo'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
