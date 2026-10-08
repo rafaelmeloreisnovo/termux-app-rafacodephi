@@ -73,6 +73,12 @@ def main() -> int:
     ):
         require(text, token)
 
+    # Exact producer dispatches and operator actions cannot cancel a previous
+    # SHA-bound artifact download/APK assembly. Only PR previews are superseded.
+    require(text, "github.event.client_payload.producer_run_id")
+    require(text, "github.event_name == 'workflow_dispatch' && github.run_id")
+    require(text, "cancel-in-progress: ${{ github.event_name == 'pull_request' }}")
+
     forbidden = (
         DEPRECATED_MAGIC_PIN,
         '7b59383c25f7557ba8a29a24f715c5fb5b26cc53',

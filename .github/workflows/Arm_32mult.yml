@@ -2,12 +2,9 @@
 # ci_abis: arm64-v8a,armeabi-v7a
 name: 🔧 Build ARM32 Multi-Page Fix (Unified Workflow)
 
+# Deprecated historical build; no implicit pushes. Canonical ARM lanes live
+# in _reusable-arm32-compat.yml behind START HERE. Explicit manual replay only.
 on:
-  push:
-    branches:
-      - main
-      - develop
-      - 'bugfix/**'
   workflow_dispatch:
     inputs:
       force_arm32_only:
@@ -31,9 +28,13 @@ on:
           - 'false'
           - 'true'
 
+permissions:
+  contents: read
+
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # These two legacy workflows share a display name, not a cancellation scope.
+  group: rafcodephi-legacy-arm32-multipage-${{ github.run_id }}
+  cancel-in-progress: false
 
 env:
   GRADLE_OPTS: "-Xmx8g"

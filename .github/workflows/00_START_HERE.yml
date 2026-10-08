@@ -91,8 +91,10 @@ env:
   PA_PHYSICAL_EXECUTION: "TOKEN_VAZIO"
 
 concurrency:
-  group: rafaelia-start-here-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # PR supersession may cancel previews. Never cancel an operator-selected
+  # manual route or a main governance run when a different event arrives.
+  group: rafaelia-start-here-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || (github.event.pull_request.number || github.ref) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
