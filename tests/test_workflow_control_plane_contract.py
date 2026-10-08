@@ -59,6 +59,19 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
             self.control,
         )
 
+    def test_deprecated_legacy_arm32_workflows_are_manual_only_and_isolated(self) -> None:
+        a = (self.root / ".github/workflows/Arm_32mult.yml").read_text(encoding="utf-8")
+        b = (self.root / ".github/workflows/MultiArm32.yml").read_text(encoding="utf-8")
+        for workflow in (a, b):
+            self.assertIn("# ci_track: deprecated", workflow)
+            self.assertIn("  workflow_dispatch:", workflow)
+            self.assertNotIn("\n  push:", workflow)
+            self.assertIn("permissions:\n  contents: read", workflow)
+            self.assertIn("cancel-in-progress: false", workflow)
+        self.assertIn("rafcodephi-legacy-arm32-multipage-", a)
+        self.assertIn("rafcodephi-legacy-multiarm32-", b)
+        self.assertNotIn("group: ${{ github.workflow }}-${{ github.ref }}", a + b)
+
     def test_final_gate_requires_only_route_required_jobs(self) -> None:
         self.assertIn("required_by_route", self.control)
         self.assertIn("failed_required_jobs", self.control)
