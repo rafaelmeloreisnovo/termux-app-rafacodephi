@@ -17,3 +17,13 @@ R3 = <F_ok: source gate/refactor on PR, F_gap: CI executed exact head, provider 
 ## Canonical ψχρΔΣΩ source/binary scope
 
 The existing rafaelia_pipeline.yml still orchestrates every required stage for ready PR, main push, manual build and release. For a draft PR only ψ Perception and χ Feedback are executed; ρ ARM APK, Δ full tests and Σ Android compatibility are intentionally skipped. Ω terminal requires ψχ but emits FAST_SOURCE_CONTRACT_PASS / FULL_APK_NOT_RUN / CLAIM_ALLOWED=false rather than presenting its source-only verdict as a full Android PASS. Explicit release and manual dispatch remain unchanged.
+
+## Failing baseline gate discovered and surgically fixed
+
+PR #499 START inventory failed its immutable-action-reference test because the two freestanding workflows contained **11 floating major-version action refs**. This was an independent source issue (not the CI speed routing). Exact official GitHub tag commits were verified using the public Git refs API and pinned without changing action major-version behavior:
+
+- actions/checkout@v7 -> 3d3c42e5aac5ba805825da76410c181273ba90b1
+- actions/upload-artifact@v7 -> cf430e030ddbb5b0abf93d22962f4752f3646cd9
+- actions/download-artifact@v8 -> 9000827ccba6bdab643e8b6fd33ac0654aef8333
+
+The separate stale contract asserting PR-only cancellation was updated to match PR+push cancellation while preserving per-run-id isolation for explicit workflow_dispatch routes. Exact-head CI readback is required before promoting these source patches to PASS.
