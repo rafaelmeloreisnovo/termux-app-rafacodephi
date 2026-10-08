@@ -46,6 +46,19 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
         self.assertIn("resolver rota válida", self.control)
         self.assertNotIn("inputs.ndk_lane", self.control)
 
+    def test_operator_routes_are_not_cancelled_by_unrelated_push_or_pr(self) -> None:
+        self.assertIn(
+            "rafaelia-start-here-${{ github.event_name }}-", self.control
+        )
+        self.assertIn(
+            "github.event_name == 'workflow_dispatch' && github.run_id",
+            self.control,
+        )
+        self.assertIn(
+            "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
+            self.control,
+        )
+
     def test_final_gate_requires_only_route_required_jobs(self) -> None:
         self.assertIn("required_by_route", self.control)
         self.assertIn("failed_required_jobs", self.control)
