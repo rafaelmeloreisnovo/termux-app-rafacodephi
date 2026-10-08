@@ -13,3 +13,7 @@ Beta Build was an unconditional push-triggered 240-minute dual-ABI pipeline. Cha
 5. Never call source-only, QEMU-only or CI-only evidence physical Android validation. Record TOKEN_VAZIO, NOT_RUN, FAIL or PASS precisely.
 
 R3 = <F_ok: source gate/refactor on PR, F_gap: CI executed exact head, provider P0, hardware receipts, F_next: CI quick -> ready full -> explicit delivery -> device readback>.
+
+## Canonical ψχρΔΣΩ source/binary scope
+
+The existing rafaelia_pipeline.yml still orchestrates every required stage for ready PR, main push, manual build and release. For a draft PR only ψ Perception and χ Feedback are executed; ρ ARM APK, Δ full tests and Σ Android compatibility are intentionally skipped. Ω terminal requires ψχ but emits FAST_SOURCE_CONTRACT_PASS / FULL_APK_NOT_RUN / CLAIM_ALLOWED=false rather than presenting its source-only verdict as a full Android PASS. Explicit release and manual dispatch remain unchanged.
