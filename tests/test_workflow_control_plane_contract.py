@@ -55,7 +55,7 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
             self.control,
         )
         self.assertIn(
-            "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
+            "cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}",
             self.control,
         )
 

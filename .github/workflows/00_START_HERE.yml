@@ -94,7 +94,9 @@ concurrency:
   # PR supersession may cancel previews. Never cancel an operator-selected
   # manual route or a main governance run when a different event arrives.
   group: rafaelia-start-here-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || (github.event.pull_request.number || github.ref) }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # Superseded master push governance runs are no longer allowed to queue up.
+  # Owner-initiated manual routes retain independent run-id identity.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
 defaults:
   run:

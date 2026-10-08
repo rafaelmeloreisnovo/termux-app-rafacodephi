@@ -265,6 +265,7 @@ jobs:
     name: "ρ ARM64 Debug (${{ matrix.variant }})"
     needs: [psi-perception, chi-feedback]
     if: |
+      (github.event_name != 'pull_request' || !github.event.pull_request.draft) &&
       needs.psi-perception.result == 'success' &&
       needs.chi-feedback.result == 'success' &&
       needs.psi-perception.outputs.build_debug == 'true'
@@ -319,6 +320,7 @@ jobs:
     needs: [psi-perception, chi-feedback, rho-expansion-arm64-debug]
     if: |
       always() &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.draft) &&
       needs.psi-perception.result == 'success' &&
       needs.chi-feedback.result == 'success' &&
       needs.psi-perception.outputs.build_release == 'true' &&
@@ -388,6 +390,7 @@ jobs:
     name: "ρ Full Debug (${{ matrix.variant }})"
     needs: [psi-perception, chi-feedback, rho-expansion-arm64-debug]
     if: |
+      (github.event_name != 'pull_request' || !github.event.pull_request.draft) &&
       needs.psi-perception.result == 'success' &&
       needs.chi-feedback.result == 'success' &&
       needs.rho-expansion-arm64-debug.result == 'success' &&
@@ -453,6 +456,7 @@ jobs:
     name: "Δ Validation - Unit Tests"
     needs: [psi-perception, chi-feedback]
     if: |
+      (github.event_name != 'pull_request' || !github.event.pull_request.draft) &&
       needs.psi-perception.result == 'success' &&
       needs.chi-feedback.result == 'success' &&
       needs.psi-perception.outputs.run_tests == 'true'
@@ -494,7 +498,8 @@ jobs:
     needs: [psi-perception, chi-feedback]
     if: |
       needs.psi-perception.result == 'success' &&
-      needs.chi-feedback.result == 'success'
+      needs.chi-feedback.result == 'success' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.draft)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -553,19 +558,30 @@ jobs:
 
           require_success ψ "$PSI"
           require_success χ "$CHI"
-          require_success Σ "$SIGMA"
 
-          if [[ "${{ needs.psi-perception.outputs.build_debug }}" == "true" ]]; then
-            require_success ρ-arm64-debug "$ARM64_DEBUG"
-          fi
-          if [[ "${{ needs.psi-perception.outputs.build_release }}" == "true" ]]; then
-            require_success ρ-arm64-release "$ARM64_RELEASE"
-          fi
-          if [[ "${{ needs.psi-perception.outputs.build_full_debug }}" == "true" ]]; then
-            require_success ρ-full-debug "$FULL_DEBUG"
-          fi
-          if [[ "${{ needs.psi-perception.outputs.run_tests }}" == "true" ]]; then
-            require_success Δ "$DELTA"
+          # Draft PR: only ψ+χ are authoritative. No artifact, ARM, Δ or Σ
+          # was executed; never promote the terminal receipt to FULL PASS.
+          if [[ "${{ github.event_name }}" == pull_request &&
+                "${{ github.event.pull_request.draft }}" == true ]]; then
+            echo 'CI_LANE=FAST_SOURCE_CONTRACT_ONLY'
+            echo 'ARM32_ARM64_APK=NOT_RUN'
+            echo 'UNIT_TESTS_FULL=NOT_RUN'
+            echo 'ANDROID_COMPATIBILITY=NOT_RUN'
+            echo 'RELEASE_ELIGIBLE=false'
+          else
+            require_success Σ "$SIGMA"
+            if [[ "${{ needs.psi-perception.outputs.build_debug }}" == "true" ]]; then
+              require_success ρ-arm64-debug "$ARM64_DEBUG"
+            fi
+            if [[ "${{ needs.psi-perception.outputs.build_release }}" == "true" ]]; then
+              require_success ρ-arm64-release "$ARM64_RELEASE"
+            fi
+            if [[ "${{ needs.psi-perception.outputs.build_full_debug }}" == "true" ]]; then
+              require_success ρ-full-debug "$FULL_DEBUG"
+            fi
+            if [[ "${{ needs.psi-perception.outputs.run_tests }}" == "true" ]]; then
+              require_success Δ "$DELTA"
+            fi
           fi
 
           {
@@ -591,9 +607,16 @@ jobs:
             exit 1
           fi
 
-          echo '✅ Ω PASS: every requested stage succeeded.'
-          echo >> "$GITHUB_STEP_SUMMARY"
-          echo '**Ω verdict:** ✅ PASS — every requested stage succeeded.' >> "$GITHUB_STEP_SUMMARY"
+          if [[ "${{ github.event_name }}" == pull_request &&
+                "${{ github.event.pull_request.draft }}" == true ]]; then
+            echo 'Ω FAST_SOURCE_CONTRACT=PASS; FULL_APK=NOT_RUN; CLAIM_ALLOWED=false'
+            echo >> "$GITHUB_STEP_SUMMARY"
+            echo '**Ω verdict:** FAST_SOURCE_CONTRACT_PASS / FULL_APK_NOT_RUN / CLAIM_ALLOWED=false' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '✅ Ω PASS: every requested stage succeeded.'
+            echo >> "$GITHUB_STEP_SUMMARY"
+            echo '**Ω verdict:** ✅ PASS — every requested stage succeeded.' >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   # ===========================================================================
   # RELEASE POST-PUBLISH ORCHESTRATION
