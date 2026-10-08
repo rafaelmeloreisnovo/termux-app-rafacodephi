@@ -28,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           if command -v clang >/dev/null && command -v gcc >/dev/null && \
-             test -f /usr/include/gnu/stubs-32.h; then
+             dpkg-query -W -f='${Status}' gcc-multilib 2>/dev/null | grep -Fxq 'install ok installed'; then
             echo 'TOOLCHAIN=RUNNER_PREINSTALLED_NO_APT'
           else
             echo 'TOOLCHAIN=MISSING_COMPONENT_PROVISION'
