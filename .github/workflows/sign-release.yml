@@ -80,7 +80,7 @@ jobs:
           set -euo pipefail
           [[ "${GITHUB_EVENT_NAME}" == workflow_dispatch ]]
           [[ "${GITHUB_ACTOR}" == rafaelmeloreisnovo ]]
-          [[ "${GITHUB_REF}" =~ ^refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]] || {
+          [[ "${GITHUB_REF}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]] || {
             echo '::error::release candidate needs an exact semantic-version tag' >&2
             exit 2
           }
