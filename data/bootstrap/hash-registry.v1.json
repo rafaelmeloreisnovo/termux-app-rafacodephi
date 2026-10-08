@@ -1,0 +1,9 @@
+{
+  "schema": "rafcodephi.bootstrap-hash-registry/v1",
+  "purpose": "Trusted per-ABI ZIP bootstrap identities, manually reviewed and versioned with owner authorization",
+  "trust_root": "repository_reviewed_commit_and_apk_signature; registry contents alone never authenticate remote sources",
+  "update_policy": "OWNER_REVIEW_ONLY_NO_AUTO_PROMOTION",
+  "entries": [],
+  "claim_allowed": false,
+  "release_allowed": false
+}
