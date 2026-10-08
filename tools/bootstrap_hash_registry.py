@@ -68,9 +68,9 @@ def inspect(path: Path, abi: str) -> dict:
                 raise ValueError("ZIP expansion limit: " + name)
         if "SYMLINKS.txt" not in names or "BOOTSTRAP_PROFILE.json" not in names:
             raise ValueError("missing required ZIP bootstrap manifest")
-        profile_bytes = archive.read("BOOTSTRAP_PROFILE.json")
-        if len(profile_bytes) > 64 * 1024:
+        if archive.getinfo("BOOTSTRAP_PROFILE.json").file_size > 64 * 1024:
             raise ValueError("oversized bootstrap profile")
+        profile_bytes = archive.read("BOOTSTRAP_PROFILE.json")
         profile = json.loads(profile_bytes)
         if profile.get("arch") != abi:
             raise ValueError("bootstrap profile ABI mismatch")
@@ -78,9 +78,9 @@ def inspect(path: Path, abi: str) -> dict:
             raise ValueError("unexpected bootstrap release claim")
         if archive.testzip() is not None:
             raise ValueError("ZIP CRC validation failed")
-        symlink_text = archive.read("SYMLINKS.txt")
-        if len(symlink_text) > 1024 * 1024:
+        if archive.getinfo("SYMLINKS.txt").file_size > 1024 * 1024:
             raise ValueError("symlinks manifest too large")
+        symlink_text = archive.read("SYMLINKS.txt")
         installed = set(names)
         for row in symlink_text.decode("utf-8").splitlines():
             if not row:
