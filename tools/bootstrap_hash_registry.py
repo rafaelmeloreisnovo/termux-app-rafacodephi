@@ -17,6 +17,7 @@ from pathlib import Path
 
 ABIS = ("arm", "aarch64", "i686", "x86_64")
 HEX = re.compile(r"^[0-9a-f]{64}$")
+COMMIT_HEX = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 SCHEMA = "rafcodephi.bootstrap-hash-registry/v1"
 CANDIDATE = "rafcodephi.bootstrap-hash-candidates/v1"
 MAX_ZIP = 256 * 1024 * 1024
@@ -124,7 +125,7 @@ def verify_registry(registry: dict) -> None:
             value = item.get(field)
             if not isinstance(value, str) or not value or value == "TOKEN_VAZIO":
                 raise ValueError("registry missing provenance: " + field)
-        if not HEX.fullmatch(item["blake3"]) or not HEX.fullmatch(item["source_commit"]):
+        if not HEX.fullmatch(item["blake3"]) or not COMMIT_HEX.fullmatch(item["source_commit"]):
             raise ValueError("registry BLAKE3/source commit invalid")
         if item.get("claim_allowed") is not False:
             raise ValueError("registry cannot automatically enable claims")
@@ -146,8 +147,8 @@ def main() -> int:
     if args.command == "verify":
         print("BOOTSTRAP_HASH_REGISTRY=PASS entries=" + str(len(registry["entries"])))
         return 0
-    if not HEX.fullmatch(args.source_commit.lower()):
-        raise ValueError("invalid source commit SHA-256 identity field")
+    if not COMMIT_HEX.fullmatch(args.source_commit.lower()):
+        raise ValueError("invalid source commit SHA (40/64 hex)")
     zips = dict(args.zip)
     if len(zips) != len(args.zip) or not {"arm", "aarch64"}.issubset(zips):
         raise ValueError("ARM32 and AArch64 must be provided as a complete pair")
