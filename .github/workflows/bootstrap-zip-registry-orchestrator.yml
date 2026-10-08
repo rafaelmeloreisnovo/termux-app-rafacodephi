@@ -1,0 +1,101 @@
+# P0: hosted producer/registry gate; does not prove installed ARM runtime.
+name: RAFCODEPHI Bootstrap ZIP + Hash Registry
+on:
+  pull_request:
+    paths:
+      - 'data/bootstrap/hash-registry.v1.json'
+      - 'tools/bootstrap_hash_registry.py'
+      - 'tests/test_bootstrap_hash_registry.py'
+      - 'app/src/main/java/com/termux/app/BootstrapWizardSource.java'
+      - 'app/src/main/java/com/termux/app/BootstrapLoaderClient.java'
+      - 'app/src/main/java/com/termux/app/TermuxInstaller.java'
+      - 'app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java'
+      - '.github/workflows/bootstrap-zip-registry-orchestrator.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'data/bootstrap/hash-registry.v1.json'
+      - 'tools/bootstrap_hash_registry.py'
+      - 'tests/test_bootstrap_hash_registry.py'
+      - '.github/workflows/bootstrap-zip-registry-orchestrator.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bootstrap-hashes-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  catalog-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - name: Registry schema, SHA identity and negative test vectors
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p 'test_bootstrap_hash_registry.py' -v
+          python3 tools/bootstrap_hash_registry.py verify --registry data/bootstrap/hash-registry.v1.json
+          echo 'BOOTSTRAP_REGISTRY_CONTRACT=PASS_SCOPED'
+  bridge-producer:
+    if: github.event_name == 'workflow_dispatch'
+    needs: catalog-gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build existing authorial bridge ZIPs; not a real apt/pkg runtime
+        run: |
+          set -euo pipefail
+          RAFCODEPHI_REAL_PKG_BOOTSTRAP=false RAF_BOOTSTRAP_PROFILE=bridge bash scripts/build_bootstrap_profile.sh
+          python3 tools/bootstrap_hash_registry.py emit \
+            --registry data/bootstrap/hash-registry.v1.json \
+            --source-commit "$GITHUB_SHA" \
+            --zip arm app/src/main/cpp/rewritten-bootstrap-arm.zip \
+            --zip aarch64 app/src/main/cpp/rewritten-bootstrap-aarch64.zip \
+            --out build/reports/bootstrap-hash-candidates.json
+          sha256sum app/src/main/cpp/rewritten-bootstrap-arm.zip \
+            app/src/main/cpp/rewritten-bootstrap-aarch64.zip > build/reports/bootstrap-zip.sha256
+          {
+            echo 'bootstrap_mode=BRIDGE_ONLY'
+            echo 'bootstrap_hash_registry=PASS_SCOPED'
+            echo 'automatic_install=false'
+            echo 'physical_android=TOKEN_VAZIO'
+            echo 'real_pkg_runtime=TOKEN_VAZIO'
+            echo 'release_allowed=false'
+          } | tee build/reports/bootstrap-orchestrator-receipt.txt >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload ZIP payloads separately from custody evidence
+        id: payload_upload
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: rafcodephi-bootstrap-arm32-aarch64-bridge-zips
+          path: |
+            app/src/main/cpp/rewritten-bootstrap-arm.zip
+            app/src/main/cpp/rewritten-bootstrap-aarch64.zip
+          if-no-files-found: error
+      - name: Upload provenance, SHA and candidates (not trusted hashes)
+        id: evidence_upload
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: rafcodephi-bootstrap-hash-candidates-and-receipts
+          path: |
+            build/reports/bootstrap-hash-candidates.json
+            build/reports/bootstrap-profile-matrix.json
+            build/reports/bootstrap-zip.sha256
+            build/reports/bootstrap-orchestrator-receipt.txt
+          if-no-files-found: error
+      - name: Fail closed if the provider could not retain artifacts
+        if: always()
+        run: |
+          test "${{ steps.payload_upload.outcome }}" = success || {
+            echo 'BOOTSTRAP_PAYLOAD_ARTIFACT=TOKEN_VAZIO' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          }
+          test "${{ steps.evidence_upload.outcome }}" = success || {
+            echo 'BOOTSTRAP_EVIDENCE_ARTIFACT=TOKEN_VAZIO' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          }

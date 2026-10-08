@@ -127,7 +127,11 @@ public final class TermuxInstaller {
 
         logPhase("zip-load", "loading accepted wizard bootstrap or embedded bootstrap");
         byte[] zipBytes = loadZipBytes(activity);
-        verifyBootstrapZipIntegrity(zipBytes);
+        // The wizard-selected ZIP was verified against a receipt-bound, exact
+        // BLAKE3 and SHA-256 at load time. Embedded bytes keep their APK pin.
+        String acceptedWizardHash = BootstrapWizardSource.acceptedHashForInstaller(activity);
+        if (acceptedWizardHash == null) verifyBootstrapZipIntegrity(zipBytes);
+        else verifyBootstrapZipIntegrity(zipBytes, acceptedWizardHash);
         verifyRelocationContract(zipBytes);
 
         final List<Pair<String, String>> symlinks = new ArrayList<>(64);
@@ -338,7 +342,7 @@ public final class TermuxInstaller {
     private static byte[] loadZipBytes(Context context) throws Exception {
         byte[] selected = BootstrapWizardSource.loadAcceptedBytes(context);
         if (selected != null) {
-            Logger.logInfo(LOG_TAG, "Using wizard-selected canonical bootstrap.zip");
+            Logger.logInfo(LOG_TAG, "Using wizard-selected bootstrap.zip with exact receipt hash");
             return selected;
         }
         Logger.logInfo(LOG_TAG, "No accepted wizard bootstrap selected; using embedded bootstrap");
@@ -348,7 +352,11 @@ public final class TermuxInstaller {
     public static native byte[] getZip();
 
     private static void verifyBootstrapZipIntegrity(byte[] zipBytes) {
-        String expected = BootstrapIntegrityVerifier.expectedHashForCurrentAbi();
+        verifyBootstrapZipIntegrity(zipBytes, BootstrapIntegrityVerifier.expectedHashForCurrentAbi());
+    }
+
+    private static void verifyBootstrapZipIntegrity(byte[] zipBytes, String expected) {
+        if (expected != null) expected = expected.toLowerCase(Locale.US);
         if (expected == null || expected.isEmpty())
             throw new IllegalStateException("BOOTSTRAP_BLAKE3_EXPECTATION_MISSING");
         String actual = BootstrapIntegrityVerifier.blake3Hex(zipBytes);

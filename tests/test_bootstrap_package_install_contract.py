@@ -206,3 +206,43 @@ def test_validator_is_claim_bounded_and_checks_read_only_profile_gate() -> None:
         '"BootstrapReadinessGate.evaluateStartup(this).isPass()"',
     ]:
         assert token in validator
+
+
+def test_alternate_bootstrap_requires_two_explicit_consent_steps_and_exact_byte_recheck() -> None:
+    wizard = read("app/src/main/java/com/termux/app/activities/BetaBootstrapWizardActivity.java")
+    source = read("app/src/main/java/com/termux/app/BootstrapWizardSource.java")
+    installer = read("app/src/main/java/com/termux/app/TermuxInstaller.java")
+    loader = read("app/src/main/java/com/termux/app/BootstrapLoaderClient.java")
+    registry = read("tools/bootstrap_hash_registry.py")
+    for required in (
+        "1/2 — Allow a different bootstrap hash?",
+        "2/2 — Confirm this exact ZIP hash",
+        "mismatch.observedBlake3",
+        "BootstrapWizardSource.acceptConfirmed(this, uri, approvedBlake3)",
+    ):
+        assert required in wizard
+    for required in (
+        "BOOTSTRAP_VARIANT_CONSENT_HASH_CHANGED",
+        "RECEIPT_STATE_USER_CONFIRMED",
+        'receipt.put("consent_count", variant ? 2 : 0)',
+        'receipt.put("sha256", observedSha256)',
+        "BOOTSTRAP_WIZARD_SHA256_INVALIDATED",
+        "sha256Hex(zip)",
+        "acceptedHashForInstaller",
+    ):
+        assert required in source
+    assert "verifyBootstrapZipIntegrity(zipBytes)" in installer
+    assert "verifyBootstrapZipIntegrity(zipBytes, acceptedWizardHash)" in installer
+    assert "userConfirmed = BootstrapWizardSource.RECEIPT_STATE_USER_CONFIRMED" in loader
+    assert '"automatic_install": False' in registry
+    assert '"claim_allowed": False' in registry
+
+
+def test_catalog_never_promotes_unknown_hash_to_trust_automatically() -> None:
+    catalog = read("data/bootstrap/hash-registry.v1.json")
+    assert '"entries": []' in catalog
+    assert "OWNER_REVIEW_ONLY_NO_AUTO_PROMOTION" in catalog
+    script = read("tools/bootstrap_hash_registry.py")
+    assert 'candidate_state' in script
+    assert '"PENDING_OWNER_REVIEW"' in script
+    assert 'item.get("status") != "OWNER_APPROVED"' in script

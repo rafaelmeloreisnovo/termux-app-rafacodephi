@@ -407,30 +407,78 @@ public class BetaBootstrapWizardActivity extends AppCompatActivity {
                         Toast.LENGTH_LONG).show();
                     updateWizardStep();
                 });
+            } catch (BootstrapWizardSource.BootstrapHashMismatch mismatch) {
+                runOnUiThread(() -> confirmAlternateBootstrap(uri, mismatch));
             } catch (Throwable error) {
                 runOnUiThread(() -> {
-                    String failure = String.valueOf(error.getMessage());
-                    boolean identityMismatch = error instanceof SecurityException
-                        && failure.startsWith("BOOTSTRAP_BLAKE3_MISMATCH ");
-                    String title = identityMismatch ? "bootstrap.zip identity mismatch" : "bootstrap.zip rejected";
-                    String detail = error.getClass().getSimpleName() + ": " + failure;
-                    if (identityMismatch) {
-                        detail += "\n\nThe selected bootstrap.zip differs from the canonical BLAKE3 "
-                            + "pinned to this installed APK and ABI. The ZIP was not accepted or "
-                            + "installed. This does not by itself prove corruption.\n\n"
-                            + "Use the bootstrap from the exact same verified APK/CI build, "
-                            + "or rebuild and pin a new artifact with its provenance. "
-                            + "Do not rename the file, bypass the hash, or clear app data.";
-                    }
                     new AlertDialog.Builder(this)
-                        .setTitle(title)
-                        .setMessage(detail)
+                        .setTitle("bootstrap.zip rejected")
+                        .setMessage(error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage()))
                         .setPositiveButton("OK", null)
                         .show();
                     updateWizardStep();
                 });
             }
         }, "wizard-bootstrap-import").start();
+    }
+
+    /**
+     * Two separate, affirmative, non-default confirmations for a LOCAL ZIP whose
+     * BLAKE3 differs from this APK's canonical digest. No auto-loader override.
+     * The selected URI is read again; different bytes invalidate approval.
+     */
+    private void confirmAlternateBootstrap(@NonNull Uri uri,
+                                           @NonNull BootstrapWizardSource.BootstrapHashMismatch mismatch) {
+        String explanation = "The selected ZIP has a different BLAKE3 from this installed APK. "
+            + "This can be a legitimate version or an unsafe package.\n\n"
+            + "Installed APK canonical hash:\n" + mismatch.expectedBlake3
+            + "\n\nSelected file hash:\n" + mismatch.observedBlake3
+            + "\n\nThis does not verify authorship, licensing or package safety. "
+            + "Only install a ZIP you recognize and trust. The current prefix "
+            + "will not be modified by these confirmation dialogs.";
+        new AlertDialog.Builder(this)
+            .setTitle("1/2 — Allow a different bootstrap hash?")
+            .setMessage(explanation)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Review installation risk", (d, which) ->
+                new AlertDialog.Builder(this)
+                    .setTitle("2/2 — Confirm this exact ZIP hash")
+                    .setMessage("Confirm replacement with this exact selected hash:\n"
+                        + mismatch.observedBlake3
+                        + "\n\nThe archive will be checked again for BLAKE3, SHA-256, "
+                        + "ABI and required bootstrap files. A corrupt or changed ZIP stays blocked. "
+                        + "This approval applies to this local selection only.")
+                    .setNegativeButton("Do not install", null)
+                    .setPositiveButton("I confirm this ZIP", (finalDialog, secondChoice) ->
+                        acceptConfirmedBootstrap(uri, mismatch.observedBlake3))
+                    .show())
+            .show();
+    }
+
+    private void acceptConfirmedBootstrap(@NonNull Uri uri, @NonNull String approvedBlake3) {
+        Toast.makeText(this, "Rechecking the exact selected bootstrap.zip…", Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            try {
+                JSONObject receipt = BootstrapWizardSource.acceptConfirmed(this, uri, approvedBlake3);
+                runOnUiThread(() -> {
+                    Toast.makeText(this,
+                        "User-confirmed bootstrap retained: "
+                            + receipt.optString("bootstrap_profile", "UNKNOWN")
+                            + " / installation still requires the runtime gates",
+                        Toast.LENGTH_LONG).show();
+                    updateWizardStep();
+                });
+            } catch (Throwable error) {
+                runOnUiThread(() -> {
+                    new AlertDialog.Builder(this)
+                        .setTitle("Alternate bootstrap still blocked")
+                        .setMessage(error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage()))
+                        .setPositiveButton("OK", null)
+                        .show();
+                    updateWizardStep();
+                });
+            }
+        }, "wizard-bootstrap-confirmed-import").start();
     }
 
     @Override
