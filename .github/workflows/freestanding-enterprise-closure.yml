@@ -68,7 +68,7 @@ jobs:
     name: Evidence and custody contracts
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7 (pinned verified official tag)
         with:
           persist-credentials: false
           fetch-depth: 1
@@ -109,7 +109,7 @@ jobs:
     timeout-minutes: 240
     steps:
       - name: Checkout RAFCODEPHI app
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7 (pinned verified official tag)
         with:
           persist-credentials: false
           fetch-depth: 1
@@ -132,7 +132,7 @@ jobs:
           cache: gradle
 
       - name: Checkout exact patched termux-packages source
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7 (pinned verified official tag)
         with:
           repository: rafaelmeloreisnovo/termux-packages
           ref: ${{ env.TERMUX_PACKAGES_SHA }}
@@ -415,7 +415,7 @@ jobs:
 
       - name: Upload enterprise candidate and custody evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7 (pinned verified official tag)
         with:
           name: freestanding-enterprise-${{ github.sha }}
           retention-days: 14
