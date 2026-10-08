@@ -58,7 +58,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_RAF_CHANNEL: closure
+  TERMUX_PACKAGES_RAF_CHANNEL: canonical
   TERMUX_PACKAGES_RAF_REQUIRE_PINNED: 'true'
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
@@ -105,6 +105,8 @@ jobs:
   source-built-candidate:
     name: Source-built gate-bearing APK candidate
     needs: contract-fast
+    # A draft runs contracts only; exact-source APK/ARM proof runs on ready/main/manual.
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     steps:
