@@ -88,6 +88,24 @@ def materialize(source_path: Path, output_path: Path) -> dict[str, object]:
         1,
     )
 
+    # Fix two historical HTTP literal lengths in the materialized build only.
+    # Copy exactly the payload bytes; never place a C terminating NUL on the wire.
+    # Keep Browser.sh immutable as a historical predecessor.
+    wire_fixes = (
+        (
+            r'MC(p,(const u8*)"Accept: text/html,text/plain;q=0.9,*/*;q=0.8\r\n",47u);p+=47;',
+            r'MC(p,(const u8*)"Accept: text/html,text/plain;q=0.9,*/*;q=0.8\r\n",46u);p+=46;',
+        ),
+        (
+            r'MC(p,(const u8*)"Accept-Language: pt-BR,pt;q=0.9,en;q=0.8\r\n",43u);p+=43;',
+            r'MC(p,(const u8*)"Accept-Language: pt-BR,pt;q=0.9,en;q=0.8\r\n",42u);p+=42;',
+        ),
+    )
+    for old, new in wire_fixes:
+        if secured.count(old) != 1:
+            raise ValueError("expected exactly one historical HTTP header length pattern")
+        secured = secured.replace(old, new, 1)
+
     downgrade_block_present = OLD_BLOCK in secured
     forbidden_present = [token for token in FORBIDDEN if token in secured]
     required_missing = [token for token in REQUIRED if token not in secured]
