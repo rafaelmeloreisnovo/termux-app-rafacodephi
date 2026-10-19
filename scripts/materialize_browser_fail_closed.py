@@ -106,6 +106,20 @@ def materialize(source_path: Path, output_path: Path) -> dict[str, object]:
             raise ValueError("expected exactly one historical HTTP header length pattern")
         secured = secured.replace(old, new, 1)
 
+    # Historical 'usize' was 32-bit on x86_64/AArch64: truncates syscall pointers.
+    # Preserve the raw generator; emit ABI-specific pointer width only in successor.
+    old_usize = "typedef unsigned int       usize;"
+    if secured.count(old_usize) != 1:
+        raise ValueError("historical pointer-width contract source drift")
+    secured = secured.replace(
+        old_usize,
+        "#if defined(__aarch64__) || defined(__x86_64__)\n"
+        "typedef unsigned long long usize;\n"
+        "#else\n"
+        "typedef unsigned int       usize;\n"
+        "#endif", 1
+    )
+
     # Bounded, explicit successor to the immutable historical Browser.sh source.
     # Input-specific patterns must match exactly once or the materializer fails.
     entropy_source = r'''#pragma once
