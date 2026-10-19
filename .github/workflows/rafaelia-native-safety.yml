@@ -28,3 +28,9 @@ jobs:
 
       - name: Verify Rafaelia native safety contracts
         run: python3 scripts/verify_rafaelia_native_safety.py
+
+      - name: Browser HTTPS downgrade materialization gate
+        run: python3 scripts/validate_browser_fail_closed.py
+
+      - name: Browser CSPRNG generator and native ClientHello canary gate
+        run: python3 scripts/validate_browser_entropy_materialization.py

@@ -77,6 +77,14 @@ def main() -> int:
             output.is_file() and bool(output.stat().st_mode & 0o111),
             oct(output.stat().st_mode) if output.is_file() else "missing",
         )
+        check(
+            "http_literal_lengths_no_embedded_terminator",
+            'q=0.8\\r\\n",46u);p+=46;' in materialized
+            and 'en;q=0.8\\r\\n",42u);p+=42;' in materialized
+            and 'q=0.8\\r\\n",47u);p+=47;' not in materialized
+            and 'en;q=0.8\\r\\n",43u);p+=43;' not in materialized,
+            "Accept=46 and Accept-Language=42 bytes, no trailing NUL on wire",
+        )
 
     try:
         matrix = json.loads(MATRIX.read_text(encoding="utf-8"))
