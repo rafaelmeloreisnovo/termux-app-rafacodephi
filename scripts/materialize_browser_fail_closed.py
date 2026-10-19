@@ -196,6 +196,21 @@ static s32 TLS_INIT(TLSCtx*t){
 }
 ''' + secured[end:]
 
+    # TLS entropy errors must carry a defined alert on every ABI.
+    alert_marker = "#define TLS_HT_FINISHED       0x14u"
+    if secured.count(alert_marker) != 1:
+        raise ValueError("TLS alert insertion source drift")
+    secured = secured.replace(
+        alert_marker,
+        alert_marker + "\n#define TLS_ALERT_INTERNAL_ERROR 80u", 1
+    )
+
+    # The obsolete descriptor must not contradict the materialized source.
+    old_comment = "client random (pseudo-random Q16-based)"
+    if secured.count(old_comment) != 1:
+        raise ValueError("TLSCtx random comment source drift")
+    secured = secured.replace(old_comment, "client random: getrandom only", 1)
+
     old_hello = 'static u32 TLS_BUILD_CLIENT_HELLO(TLSCtx*t,const char*host,u8*buf,u32 cap){\n    /* Usamos ponteiro p que avança — sem nomes de variável adicionais */\n'
     new_hello = r'''static u32 TLS_BUILD_CLIENT_HELLO(TLSCtx*t,const char*host,u8*buf,u32 cap){
     /* Wire serialization ONLY. HTTPS/TLS authentication remains disabled. */
