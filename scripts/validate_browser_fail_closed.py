@@ -86,6 +86,34 @@ def main() -> int:
             "Accept=46 and Accept-Language=42 bytes, no trailing NUL on wire",
         )
 
+    # This gate must reject the exact 2026-10-21 regression from PR #500:
+    # TLS downgrade protection alone is not a sufficient entropy/buffer gate.
+    check(
+        "entropy_source_getrandom_only",
+        all(token in materialized for token in (
+            'cat > "$D/br_entropy.h"',
+            "BR_GETRANDOM(void*buf",
+            "BR_RANDOM_FILL(t->random",
+            "if(TLS_INIT(&_TLS)!=0)",
+            "TLS entropy unavailable: aborting before ClientHello",
+            "MC0(p,n);",
+        )) and not any(token in materialized for token in (
+            "0xDEADBEEF", "AI u32 PRNG", "LFSR + PHI64",
+        )),
+        "Kernel getrandom with fail-closed errors and no deterministic fallback",
+    )
+    check(
+        "clienthello_bounds_and_error_gate",
+        all(token in materialized for token in (
+            "if(!t||!host||!buf)return 0u;",
+            "cap<92u+hlen",
+            "c<=0x20u||c>=0x7Fu",
+            "if(!chlen)",
+            "TLS ClientHello length invalid",
+        )),
+        "ClientHello host/SNI/capacity bounds; invalid length fails closed",
+    )
+
     try:
         matrix = json.loads(MATRIX.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
