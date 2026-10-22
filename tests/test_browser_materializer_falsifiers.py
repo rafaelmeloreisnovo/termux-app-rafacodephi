@@ -75,7 +75,7 @@ class MaterializerFailClosedFalsifiers(unittest.TestCase):
             "        TLS_INIT(&_TLS);",
             "        u32 chlen=TLS_BUILD_CLIENT_HELLO(&_TLS,ctx->host,_NB,NET_BUF);",
             "#define TLS_HT_FINISHED       0x14u",
-            '    u32 hlen=SL(host);',
+            '    u32 hlen=SL(host);\n    *p++=0x00;*p++=0x00; /* type */',
             'typedef unsigned int       usize;',
         )
         for marker in source_markers:
