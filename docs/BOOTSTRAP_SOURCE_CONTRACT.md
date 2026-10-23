@@ -30,7 +30,12 @@ No `app/build.gradle` atual não há task registrada `:app:downloadBootstraps` n
 RAF_BOOTSTRAP_SOURCE=local bash scripts/verify_bootstrap_contract.sh --prepare
 ```
 
-Ela NÃO comprova `pkg update`/`pkg install`. Para runtime, a única rota candidata apropriada é
+Ela NÃO comprova `pkg update`/`pkg install`. Na rota `source-built-real`,
+`--prepare` preserva os oito hashes dos ZIPs no arquivo local
+`build/reports/rafcodephi-bootstrap-env.sh`; é obrigatório executar
+`source build/reports/rafcodephi-bootstrap-env.sh` na sessão de build que
+executará `./gradlew :app:assembleDebug`. O arquivo não serve como recibo físico.
+Para runtime, a única rota candidata apropriada é
 `RAF_BOOTSTRAP_SOURCE=source-built-real` com os ZIPs ARM/AArch64 e manifesto
 de `termux-packages` pinado (seções 6–9), sem promoção enquanto houver
 `BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED`. A task
