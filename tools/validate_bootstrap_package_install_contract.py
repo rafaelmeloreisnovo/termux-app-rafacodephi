@@ -97,6 +97,9 @@ def validate() -> list[str]:
                   'bash scripts/prepare_bootstrap_env.sh --print-env',
                   'UPSTREAM_PREFIX_BINARY_RISK'):
         require(contract_prepare, token, "bootstrap prepare route", errors)
+    for token in ('rafcodephi-bootstrap-env.sh', 'mktemp build/reports/.rafcodephi-bootstrap-env.',
+                  'mv -f "$temp_env" "$env_file"', 'export_count'):
+        require(contract_prepare, token, "source-built hash export custody", errors)
     forbid(contract_prepare, "./gradlew :app:downloadBootstraps",
            "bootstrap prepare route: nonexistent Gradle task", errors)
     for token in ("Bootstrap source:", "bash scripts/build_bootstrap_profile.sh", "Verifying bootstrap contract"):
