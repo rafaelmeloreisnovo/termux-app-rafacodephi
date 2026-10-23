@@ -197,7 +197,69 @@ check_bootstraps(){
 case "${1:-}" in
   --prepare)
     check_free_space
-    ./gradlew :app:downloadBootstraps --no-daemon
+    case "${RAF_BOOTSTRAP_SOURCE:-local}" in
+      local)
+        log "Preparing local BRIDGE_ONLY bootstrap; pkg update/install and device runtime remain TOKEN_VAZIO"
+        bash scripts/build_bootstrap_profile.sh
+        ;;
+      source-built-real)
+        log "Importing hash-bound source-built-real ARM/AArch64 pair; device runtime remains TOKEN_VAZIO"
+        # Preserve the exact embedded ZIP digests for the subsequent Gradle invocation.
+        # These exports are build inputs, never evidence of device installation.
+        mkdir -p build/reports
+        env_file="build/reports/rafcodephi-bootstrap-env.sh"
+        temp_env="$(mktemp build/reports/.rafcodephi-bootstrap-env.XXXXXX)"
+        if bash scripts/prepare_bootstrap_env.sh --print-env > "$temp_env"; then
+          export_count="$(grep -Ec '^export TERMUX_BOOTSTRAP_(SHA256|BLAKE3)_(AARCH64|ARM|I686|X86_64)=[0-9a-f]{64}
+        ;;
+      upstream)
+        fail "UPSTREAM_PREFIX_BINARY_RISK: upstream com.termux bootstrap is not RAFCODEPHI runtime proof; use source-built-real"
+        ;;
+      *)
+        fail "Unsupported RAF_BOOTSTRAP_SOURCE='${RAF_BOOTSTRAP_SOURCE}'"
+        ;;
+    esac
+    check_bootstraps
+    check_runtime_prefix
+    ;;
+  --prepare-dev)
+    check_free_space
+    bash scripts/generate_developer_bootstraps.sh
+    check_bootstraps
+    check_runtime_prefix
+    ;;
+  --check)
+    check_bootstraps
+    check_runtime_prefix
+    ;;
+  --runtime-prefix-only)
+    check_runtime_prefix
+    ;;
+  *)
+    echo "Usage: bash scripts/verify_bootstrap_contract.sh [--prepare|--prepare-dev|--check|--runtime-prefix-only]" >&2
+    exit 1
+    ;;
+esac
+ "$temp_env" || true)"
+          [[ "$export_count" == "8" ]] || {
+            rm -f "$temp_env"
+            fail "Source-built hash environment incomplete: expected 8 exact ZIP digests, got $export_count"
+          }
+          chmod 600 "$temp_env"
+          mv -f "$temp_env" "$env_file"
+          log "Hash-bound build environment saved: $env_file (source this file before Gradle assemble)"
+        else
+          rm -f "$temp_env"
+          fail "Source-built preflight failed; no replacement environment published"
+        fi
+        ;;
+      upstream)
+        fail "UPSTREAM_PREFIX_BINARY_RISK: upstream com.termux bootstrap is not RAFCODEPHI runtime proof; use source-built-real"
+        ;;
+      *)
+        fail "Unsupported RAF_BOOTSTRAP_SOURCE='${RAF_BOOTSTRAP_SOURCE}'"
+        ;;
+    esac
     check_bootstraps
     check_runtime_prefix
     ;;

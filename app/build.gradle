@@ -332,3 +332,12 @@ tasks.register("validateSideBySideContract", Exec) {
     workingDir rootProject.projectDir
     commandLine "python3", "scripts/validate_side_by_side_contract.py"
 }
+
+// P0: .incbin must never read stale or missing bootstrap bytes. Preparation
+// is an explicit upstream/source-built-real action, NOT an implicit bridge
+// generation side effect of assembleDebug/assembleRelease.
+tasks.matching { it.name == "preBuild" ||
+                 it.name.startsWith("externalNativeBuild") ||
+                 it.name.startsWith("generateJsonModel") }.configureEach {
+    dependsOn(tasks.named("verifyBootstrapZipsPresent"))
+}
