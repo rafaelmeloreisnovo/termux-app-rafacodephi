@@ -28,6 +28,9 @@ def test_rewritten_bootstraps_are_declared_and_preflight_materialized() -> None:
         assert f'.incbin "{zip_name}"' in asm
 
     assert "verifyBootstrapZipsPresent" in build_gradle
+    assert 'dependsOn(tasks.named("verifyBootstrapZipsPresent"))' in build_gradle
+    assert 'it.name == "preBuild"' in build_gradle
+    assert 'it.name.startsWith("externalNativeBuild")' in build_gradle
     assert "externalNativeBuild" in build_gradle
     assert "validateSideBySideContract" in build_gradle
     assert "Bootstrap source:" in preflight
@@ -246,3 +249,21 @@ def test_catalog_never_promotes_unknown_hash_to_trust_automatically() -> None:
     assert 'candidate_state' in script
     assert '"PENDING_OWNER_REVIEW"' in script
     assert 'item.get("status") != "OWNER_APPROVED"' in script
+
+
+def test_bootstrap_prepare_routes_never_call_nonexistent_gradle_task() -> None:
+    prepare = read("scripts/verify_bootstrap_contract.sh")
+    assert "RAF_BOOTSTRAP_SOURCE:-local" in prepare
+    assert "bash scripts/build_bootstrap_profile.sh" in prepare
+    assert "bash scripts/prepare_bootstrap_env.sh --print-env" in prepare
+    assert "UPSTREAM_PREFIX_BINARY_RISK" in prepare
+    assert "./gradlew :app:downloadBootstraps" not in prepare
+
+
+def test_runtime_pkg_claim_is_not_inferred_from_bootstrap_generation() -> None:
+    producer = read("scripts/prepare_bootstrap_env.sh")
+    script = read("scripts/device_pkg_smoke.sh")
+    assert "BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED" in producer
+    assert "RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED" in producer
+    assert "REQUIRE_REAL_PKG" in script
+    assert "DEVICE_REAL_PKG_VALIDATED" in script
