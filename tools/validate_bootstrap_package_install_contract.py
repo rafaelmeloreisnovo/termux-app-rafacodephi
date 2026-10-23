@@ -87,8 +87,18 @@ def validate() -> list[str]:
         require(asm, f'.incbin "{zip_name}"', "native incbin", errors)
         require(build_gradle, zip_name, "gradle bootstrap input declaration", errors)
         require(build_script, zip_name, "bootstrap generation script", errors)
-    for token in ("verifyBootstrapZipsPresent", "externalNativeBuild", "validateSideBySideContract"):
+    for token in ("verifyBootstrapZipsPresent", "externalNativeBuild", "validateSideBySideContract",
+                  'dependsOn(tasks.named("verifyBootstrapZipsPresent"))',
+                  'it.name == "preBuild"', 'it.name.startsWith("externalNativeBuild")'):
         require(build_gradle, token, "gradle bootstrap contract", errors)
+    contract_prepare = read(ROOT / "scripts/verify_bootstrap_contract.sh", errors)
+    for token in ('RAF_BOOTSTRAP_SOURCE:-local', 'source-built-real',
+                  'bash scripts/build_bootstrap_profile.sh',
+                  'bash scripts/prepare_bootstrap_env.sh --print-env',
+                  'UPSTREAM_PREFIX_BINARY_RISK'):
+        require(contract_prepare, token, "bootstrap prepare route", errors)
+    forbid(contract_prepare, "./gradlew :app:downloadBootstraps",
+           "bootstrap prepare route: nonexistent Gradle task", errors)
     for token in ("Bootstrap source:", "bash scripts/build_bootstrap_profile.sh", "Verifying bootstrap contract"):
         require(prepare, token, "bootstrap preflight materializer", errors)
 
