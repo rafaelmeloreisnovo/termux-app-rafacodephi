@@ -8,11 +8,28 @@ O app só deve ser considerado operacional quando houver bootstrap íntegro, ver
 
 ## Fonte de verdade
 
-Os arquivos bootstrap esperados são gerados pela task Gradle existente:
+**Não existe garantia de uma task Gradle `downloadBootstraps` no grafo atual.**
+A preparação é explícita, e o build valida os ZIPs antes de consumir `.incbin`.
+O modo padrão abaixo só gera ponte local `BUILD_ONLY`, **não** instala pacotes:
 
 ```bash
-./gradlew :app:downloadBootstraps --no-daemon
+RAF_BOOTSTRAP_SOURCE=local bash scripts/verify_bootstrap_contract.sh --prepare
 ```
+
+Para payload real, obtenha o par ARM/AArch64 e o manifesto do
+`rafaelmeloreisnovo/termux-packages` pinado; então execute:
+
+```bash
+RAF_BOOTSTRAP_SOURCE=source-built-real \
+RAF_REAL_BOOTSTRAP_ZIP_ARM=/path/rafcodephi-bootstrap-arm.zip \
+RAF_REAL_BOOTSTRAP_ZIP_AARCH64=/path/rafcodephi-bootstrap-aarch64.zip \
+RAF_REAL_BOOTSTRAP_MANIFEST=/path/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt \
+bash scripts/verify_bootstrap_contract.sh --prepare
+```
+
+Mesmo esse import é SOURCE/ARTIFACT, não DEVICE_REAL_PKG_VALIDATED.
+Enquanto o repositório binário customizado estiver não publicado,
+`pkg update`/`pkg install` permanecem bloqueados por projeto.
 
 Os arquivos esperados ficam em:
 
