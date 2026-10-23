@@ -197,7 +197,22 @@ check_bootstraps(){
 case "${1:-}" in
   --prepare)
     check_free_space
-    ./gradlew :app:downloadBootstraps --no-daemon
+    case "${RAF_BOOTSTRAP_SOURCE:-local}" in
+      local)
+        log "Preparing local BRIDGE_ONLY bootstrap; pkg update/install and device runtime remain TOKEN_VAZIO"
+        bash scripts/build_bootstrap_profile.sh
+        ;;
+      source-built-real)
+        log "Importing hash-bound source-built-real ARM/AArch64 pair; device runtime remains TOKEN_VAZIO"
+        bash scripts/prepare_bootstrap_env.sh --print-env >/dev/null
+        ;;
+      upstream)
+        fail "UPSTREAM_PREFIX_BINARY_RISK: upstream com.termux bootstrap is not RAFCODEPHI runtime proof; use source-built-real"
+        ;;
+      *)
+        fail "Unsupported RAF_BOOTSTRAP_SOURCE='${RAF_BOOTSTRAP_SOURCE}'"
+        ;;
+    esac
     check_bootstraps
     check_runtime_prefix
     ;;
