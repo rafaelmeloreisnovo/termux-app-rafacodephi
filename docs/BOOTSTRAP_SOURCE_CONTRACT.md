@@ -24,13 +24,18 @@ source/test/workflow > machine-readable contract > receipt > documentation
 
 ## 2. Correção canônica da auditoria Gradle
 
-No grafo Gradle documentado não existe a task `:app:downloadBootstraps` como autoridade atual. A rota estrutural é:
+No `app/build.gradle` atual não há task registrada `:app:downloadBootstraps` nem `:app:generateRafcodephiBootstraps`. A preparação explícita do bridge de desenvolvimento é:
 
 ```bash
-./gradlew :app:generateRafcodephiBootstraps --no-daemon
+RAF_BOOTSTRAP_SOURCE=local bash scripts/verify_bootstrap_contract.sh --prepare
 ```
 
-que chama a geração local correspondente. Referências históricas a download remoto automático não descrevem o grafo corrente.
+Ela NÃO comprova `pkg update`/`pkg install`. Para runtime, a única rota candidata apropriada é
+`RAF_BOOTSTRAP_SOURCE=source-built-real` com os ZIPs ARM/AArch64 e manifesto
+de `termux-packages` pinado (seções 6–9), sem promoção enquanto houver
+`BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED`. A task
+`verifyBootstrapZipsPresent` é verificada antes do `preBuild`/native `.incbin`
+e não fabrica ZIPs implicitamente.
 
 ## 3. Arquivos produzidos no app
 
