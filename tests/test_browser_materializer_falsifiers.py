@@ -33,6 +33,20 @@ class MaterializerFailClosedFalsifiers(unittest.TestCase):
             self.assertNotIn("[FALLBACK] Usando HTTP para demo", materialized)
             self.assertNotIn("crypto não implementado — usando HTTP para demo", materialized)
             self.assertEqual(report["https_policy"], "FAIL_CLOSED")
+            self.assertFalse(report["tls_implemented"])
+            # Negative regression guard: #500 removed #503 entropy and bounds.
+            self.assertIn('cat > "$D/br_entropy.h"', materialized)
+            self.assertIn('BR_RANDOM_FILL(t->random', materialized)
+            self.assertIn('if(TLS_INIT(&_TLS)!=0)', materialized)
+            self.assertIn('TLS entropy unavailable: aborting before ClientHello', materialized)
+            self.assertIn('if(!t||!host||!buf)return 0u;', materialized)
+            self.assertIn('cap<92u+hlen', materialized)
+            self.assertIn('c<=0x20u||c>=0x7Fu', materialized)
+            self.assertIn('if(!chlen)', materialized)
+            self.assertIn('TLS ClientHello length invalid', materialized)
+            self.assertNotIn('0xDEADBEEF', materialized)
+            self.assertNotIn('AI u32 PRNG', materialized)
+            self.assertNotIn('LFSR + PHI64', materialized)
             return True
 
     def test_baseline_materializes_without_downgrade(self):
@@ -52,6 +66,23 @@ class MaterializerFailClosedFalsifiers(unittest.TestCase):
         mutant = self.predecessor.replace(needle, r'",46u);p+=46;', 1)
         self.assertFalse(self._run(mutant))
 
+
+    def test_security_source_drift_fails_closed(self):
+        # Every source-bound replacement must be unique; avoid silent partial hardening.
+        source_markers = (
+            "/* Gerador pseudo-aleatório determinístico para random[]",
+            "static u32 TLS_BUILD_CLIENT_HELLO(TLSCtx*t,const char*host,u8*buf,u32 cap){",
+            "        TLS_INIT(&_TLS);",
+            "        u32 chlen=TLS_BUILD_CLIENT_HELLO(&_TLS,ctx->host,_NB,NET_BUF);",
+            "#define TLS_HT_FINISHED       0x14u",
+            '    u32 hlen=SL(host);\n    *p++=0x00;*p++=0x00; /* type */',
+            'typedef unsigned int       usize;',
+        )
+        for marker in source_markers:
+            with self.subTest(marker=marker):
+                self.assertEqual(self.predecessor.count(marker), 1)
+                mutant = self.predecessor.replace(marker, "P0_INVALID_SOURCE_ANCHOR", 1)
+                self.assertFalse(self._run(mutant))
 
 if __name__ == "__main__":
     unittest.main()
