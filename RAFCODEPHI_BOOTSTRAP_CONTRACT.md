@@ -25,8 +25,13 @@ RAF_REAL_BOOTSTRAP_ZIP_ARM=/path/rafcodephi-bootstrap-arm.zip \
 RAF_REAL_BOOTSTRAP_ZIP_AARCH64=/path/rafcodephi-bootstrap-aarch64.zip \
 RAF_REAL_BOOTSTRAP_MANIFEST=/path/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt \
 bash scripts/verify_bootstrap_contract.sh --prepare
+# no mesmo checkout, antes de assembleDebug:
+source build/reports/rafcodephi-bootstrap-env.sh
+./gradlew :app:assembleDebug --no-daemon
 ```
 
+O arquivo de ambiente é gerado atomicamente a partir dos oito hashes dos ZIPs
+efetivamente embutidos. Não reutilize exports de outro conjunto de arquivos.
 Mesmo esse import é SOURCE/ARTIFACT, não DEVICE_REAL_PKG_VALIDATED.
 Enquanto o repositório binário customizado estiver não publicado,
 `pkg update`/`pkg install` permanecem bloqueados por projeto.
