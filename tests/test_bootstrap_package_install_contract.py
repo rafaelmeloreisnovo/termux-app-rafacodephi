@@ -259,7 +259,8 @@ def test_bootstrap_prepare_routes_never_call_nonexistent_gradle_task() -> None:
     assert "rafcodephi-bootstrap-env.sh" in prepare
     assert "mktemp build/reports/.rafcodephi-bootstrap-env." in prepare
     assert "mv -f \"$temp_env\" \"$env_file\"" in prepare
-    assert 'export_count\" == \"8' in prepare
+    assert '\"$export_count\" != \"8\"' in prepare
+    assert '\"$invalid_count\" != \"0\"' in prepare
     assert "UPSTREAM_PREFIX_BINARY_RISK" in prepare
     assert "./gradlew :app:downloadBootstraps" not in prepare
 
