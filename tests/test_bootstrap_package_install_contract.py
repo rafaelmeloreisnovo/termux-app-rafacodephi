@@ -259,7 +259,8 @@ def test_bootstrap_prepare_routes_never_call_nonexistent_gradle_task() -> None:
     assert "rafcodephi-bootstrap-env.sh" in prepare
     assert "mktemp build/reports/.rafcodephi-bootstrap-env." in prepare
     assert "mv -f \"$temp_env\" \"$env_file\"" in prepare
-    assert 'export_count\" == \"8' in prepare
+    assert '\"$export_count\" != \"8\"' in prepare
+    assert '\"$invalid_count\" != \"0\"' in prepare
     assert "UPSTREAM_PREFIX_BINARY_RISK" in prepare
     assert "./gradlew :app:downloadBootstraps" not in prepare
 
@@ -271,3 +272,18 @@ def test_runtime_pkg_claim_is_not_inferred_from_bootstrap_generation() -> None:
     assert "RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED" in producer
     assert "REQUIRE_REAL_PKG" in script
     assert "DEVICE_REAL_PKG_VALIDATED" in script
+
+def test_bootstrap_prepare_shell_syntax_and_case_closure() -> None:
+    """A token-only contract missed a truncated grep + duplicated case/esac block."""
+    import subprocess
+
+    script = ROOT / "scripts/verify_bootstrap_contract.sh"
+    proc = subprocess.run(["bash", "-n", str(script)], capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+    source = script.read_text(encoding="utf-8")
+    assert source.count("  --prepare)") == 1
+    assert source.count("  --prepare-dev)") == 1
+    assert source.count("  --runtime-prefix-only)") == 1
+    assert source.rstrip().endswith("esac")
+    assert source.count("    check_runtime_prefix") == 4
+    assert 'invalid_count="$(grep -Evc' in source
