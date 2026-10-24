@@ -173,3 +173,8 @@ Before routing the RafPolimata service-matrix core into Termux, read `docs/FREES
 <!-- RAFAELIA_S14_HOST_ADAPTER_ROUTE -->
 ## S14 middleware consumer gate (host only)
 For C routing-plan integration from RafPolimata, read `docs/FREESTANDING_S14_MIDDLEWARE_CONSUMER_BOUNDARY.md` first. The L0 input requires actual tested capability/quality and two bounded tick measurements; it does not query hardware or fire a watchdog. Keep JNI/Android/ART/GPU/NUMA and real rollback OUTSIDE the pure core; use a separately tested hosted adapter only when the Android integration needs it. Preserve ARM32 ABI, bootstrap, keyboard, signing, private logs and zero-delete. This branch has no adapter/APK/device test and cannot claim them. `claim_allowed=false`.
+
+
+<!-- RAFAELIA_S15_OPTIONAL_ANDROID_JNI_GATE -->
+## S15 optional Android JNI middleware — distinct from freestanding L0
+Before modifying Termux bootstrap, JNI, ART, Java, NEON/GPU/NUMA or the S14 middleware interface, read `app/src/main/cpp/lowlevel/middleware_s15/AGENTS.md`, `README.md` and `LICENSE-STATUS.md`. The producer's C source is pinned byte-for-byte by SHA-1 Git blob. The JNI library is a **hosted** boundary gated by `RAFAELIA_S15_MIDDLEWARE ?= 0` in `Android.mk`; a successful JNI return transfers a plan, not a performed operation. Run host, Android NDK shared-link, actual Android.mk and physical device gates separately. The default APK/bootstrap must not be replaced, merged, released or installed automatically. Hardware availability, user permission, signing, source rights and rollback remain independent. `claim_allowed=false`.
