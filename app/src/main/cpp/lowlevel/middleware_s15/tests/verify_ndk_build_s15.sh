@@ -25,8 +25,12 @@ RAFAELIA_S15_MIDDLEWARE=1 "$ndk/ndk-build" \
 tool="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin"
 for pair in 'armeabi-v7a ARM' 'arm64-v8a AArch64'; do
   set -- $pair
-  artifact="$work/libs/$1/libtermux_rafaelia_middleware_s15.so"
-  test -s "$artifact"
+  # Targeted ndk-build compiles under NDK_OUT/obj/local; INSTALL is not invoked.
+  artifact="$work/obj/local/$1/libtermux_rafaelia_middleware_s15.so"
+  if [ ! -s "$artifact" ]; then
+    echo "BLOCKED: targeted ndk-build has no $1 shared ELF" >&2
+    exit 6
+  fi
   "$tool/llvm-readelf" -h "$artifact" | grep -q "Machine:.*$2"
   "$tool/llvm-nm" -D "$artifact" |
     grep -q 'Java_com_termux_app_rafaelia_RafaeliaMiddlewareBridge_nativePlan'
