@@ -165,3 +165,7 @@ For every material dependency delta record:
 `boundary -> previous dependency -> replacement/retention reason -> execution -> evidence -> rollback -> remaining TOKEN_VAZIO`.
 
 <!-- /RAFAELIA_FREESTANDING_POLICY_V1 -->
+
+<!-- RAFAELIA_S12_PLATFORM_ADAPTER_BOUNDARY -->
+## S12 authorial L0 consumption rule
+Before routing the RafPolimata service-matrix core into Termux, read `docs/FREESTANDING_SERVICE_S12_ANDROID_BOUNDARY.md`. Never bring Java/SDK/NDK/JNI/ART/JIT, Gradle/R8/D8, syscalls or logging into PURE_CORE; their explicit HOSTED_BOUNDARY/TOOLING_TEST use may be necessary and must not be falsely labelled eliminated. Enforce exact object+ABI+APK+device receipts, preserve ARM32 and ARM64 support, bootstrap/signatures/upstream/licences and rollback. A recognized binary prefix is not binary validation. No mock substitutes for physical installation; no automatic merge or claim promotion.
