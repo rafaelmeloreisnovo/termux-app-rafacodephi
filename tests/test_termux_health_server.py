@@ -129,12 +129,12 @@ class TermuxHealthServerTests(unittest.TestCase):
         with RunningServer(lambda: snapshot) as base_url:
             port = int(base_url.rsplit(":", 1)[-1])
             for headers in (
-                b"Connection: close\\r\\n",
-                b"Host: 127.0.0.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n",
+                b"Connection: close\r\n",
+                b"Host: 127.0.0.1\r\nHost: localhost\r\nConnection: close\r\n",
             ):
                 with self.subTest(headers=headers):
                     with socket.create_connection(("127.0.0.1", port), timeout=2) as sock:
-                        sock.sendall(b"GET /health HTTP/1.1\\r\\n" + headers + b"\\r\\n")
+                        sock.sendall(b"GET /health HTTP/1.1\r\n" + headers + b"\r\n")
                         self.assertIn(b" 400 ", sock.recv(256))
 
     def test_mutating_method_is_rejected(self) -> None:
