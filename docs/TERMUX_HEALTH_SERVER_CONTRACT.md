@@ -196,3 +196,18 @@ F_ok   = servidor local read-only, cliente Kotlin e loopback ponta a ponta execu
 F_gap  = execução nos devices e lifecycle/autostart
 F_next = validar em Termux ARM32/ARM64 e medir p50/p95/p99
 ```
+
+## 2026-10-24 — HTTP Host / idle socket fail-closed (candidate; not promoted)
+
+Implementation anchors: `scripts/termux_health_server.py` methods `_trusted_host`, `_allow_read`, `_send`, `HealthHTTPServer.get_request`; falsifiers in `tests/test_termux_health_server.py`. The listener remains local HTTP only, no TLS, no remote port, no new API command and no autostart. Existing `GET/HEAD` paths, JSON schema and mutation denial remain.
+
+- HTTP/1.1 requires exactly one `Host` header matching the actual bound loopback port (`127.0.0.1`, `localhost`, or `[::1]` for IPv6). Missing, duplicate, non-loopback, wrong-port, and rebinding host strings fail with `400 host_not_loopback`. This is an application-level identity check **not authentication** of other local apps.
+- Accepted read results and method rejections set `Connection: close` and terminate the connection.
+- Connected socket reads have a 3-second idle timeout to limit stalled requests, not a total request deadline or full Slowloris defense. HTTP is intentionally cleartext **on loopback only**; do not advertise secure network transport or external HTTP service.
+- Hosted CI uses the owned exact-source SHA gate from `rafaelmeloreisnovo/actions/rafcode/verify-source`, immutable checkout ref, Python stdlib tests, and a pinned artifact uploader. Dependencies are the Android/Linux host and Python socket runtime; they are not freestanding L0, nor original authorship claims over standard library APIs.
+- CI input `RAF_TERMUX_COMMIT` comes from the workflow run. The snapshot `commit` field reflects the supplied source identifier, not Android runtime attestation or signature verification. Host-side HTTP tests cannot prove device behavior.
+- Provenance and license remain as in root `LICENSE.md`, `COPYING` and `THIRD_PARTY_NOTICES_RAFAELIA.md`; unchanged in this patch.
+
+Expected acceptance: preexisting positive 200/404/405/HEAD tests continue to pass, new hostile-host tests reject as specified, GitHub provider job on exact HEAD succeeds, and an independent human reviews before any merge. Failures remain `FAIL` or `TOKEN_VAZIO` until observed. Physical ARM32/ARM64, battery lifecycle, TLS, network and remote access: NOT_RUN/NOT_SUPPORTED.
+
+Rollback: revert only the candidate changes to HTTP handler/tests/workflow/doc, retain predecessor commits and branches. `claim_allowed=false`; `PROMOTION=HOLD`.
