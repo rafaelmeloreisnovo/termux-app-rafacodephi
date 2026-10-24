@@ -1,0 +1,48 @@
+name: S15 Optional Android Middleware Boundary
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'app/src/main/cpp/lowlevel/middleware_s15/**'
+      - 'app/src/main/cpp/Android.mk'
+      - 'app/src/main/java/com/termux/app/rafaelia/RafaeliaMiddlewareBridge.java'
+      - '.github/workflows/s15-android-middleware-gate.yml'
+  pull_request:
+    paths:
+      - 'app/src/main/cpp/lowlevel/middleware_s15/**'
+      - 'app/src/main/cpp/Android.mk'
+      - 'app/src/main/java/com/termux/app/rafaelia/RafaeliaMiddlewareBridge.java'
+      - '.github/workflows/s15-android-middleware-gate.yml'
+permissions:
+  contents: read
+jobs:
+  host_contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # immutable v4.2.2
+      - name: C11 source pin, sanitizer and Android JNI/Java syntax
+        run: |
+          sh app/src/main/cpp/lowlevel/middleware_s15/tests/verify_host_s15.sh
+      - name: Scope
+        if: always()
+        run: |
+          echo 'HOST_ONLY: source, test, JNI/Java syntax; not Android or signed APK.'
+  android_abi:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # immutable v4.2.2
+      - name: Provision versioned external Android NDK tooling
+        run: |
+          : "${ANDROID_HOME:?ANDROID_HOME is required for SDK manager}"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          sdkmanager --install 'ndk;26.3.11579264'
+          test -x "$ANDROID_HOME/ndk/26.3.11579264/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang"
+      - name: Link JNI host shared library for physical target ABIs
+        run: |
+          sh app/src/main/cpp/lowlevel/middleware_s15/tests/verify_ndk_s15.sh
+      - name: Scope
+        if: always()
+        run: |
+          echo 'NDK JNI shared-link is not APK assembly, install, GPU/NUMA execution or watchdog runtime.'
