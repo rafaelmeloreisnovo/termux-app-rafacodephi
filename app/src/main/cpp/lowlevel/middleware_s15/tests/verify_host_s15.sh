@@ -3,7 +3,7 @@
 set -eu
 self=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cc=${CC:-clang}
-for cmd in "$cc" nm readelf git javac readlink; do
+for cmd in "$cc" nm readelf git javac java readlink; do
   command -v "$cmd" >/dev/null || { echo "BLOCKED: missing $cmd" >&2; exit 3; }
 done
 src="$self/vendor_pinned"
@@ -30,7 +30,8 @@ test -f "$jdk/include/jni.h" || { echo 'BLOCKED: host JDK JNI headers absent' >&
   -c "$self/raf_mw_jni.c" -o "$work/bridge_host.o"
 java_file="$self/../../../java/com/termux/app/rafaelia/RafaeliaMiddlewareBridge.java"
 test -f "$java_file"
-javac -d "$work" "$java_file"
+javac -d "$work" "$java_file" "$self/tests/RafaeliaMiddlewareBridgeHostTest.java"
+java -cp "$work" RafaeliaMiddlewareBridgeHostTest
 # Build contract: feature disabled by default; no modification to old bootstrap path.
 mk="$self/../../Android.mk"
 grep -Fq 'RAFAELIA_S15_MIDDLEWARE ?= 0' "$mk"
