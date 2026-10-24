@@ -175,3 +175,24 @@ LOCAL_LDFLAGS := -Wl,--gc-sections \
     -Wl,-z,max-page-size=16384 \
     -Wl,-z,common-page-size=16384
 include $(BUILD_SHARED_LIBRARY)
+
+# S15: optional, isolated HOSTED_BOUNDARY for pinned S14 authorial L0.
+# Disabled by default: no impact on normal APK/bootstrap or signing.
+# Enabling this builds a separate JNI shared library, NOT a freestanding APK.
+RAFAELIA_S15_MIDDLEWARE ?= 0
+ifeq ($(RAFAELIA_S15_MIDDLEWARE),1)
+ifneq ($(filter $(TARGET_ARCH_ABI),armeabi-v7a arm64-v8a),)
+include $(CLEAR_VARS)
+LOCAL_MODULE := termux_rafaelia_middleware_s15
+LOCAL_SRC_FILES := \
+    lowlevel/middleware_s15/vendor_pinned/raf_mw.c \
+    lowlevel/middleware_s15/raf_mw_jni.c
+LOCAL_CFLAGS := -std=c11 -Os -fPIC -Wall -Wextra -Werror \
+    -ffreestanding -fno-builtin -fno-stack-protector -fno-common \
+    -fno-unwind-tables -fno-asynchronous-unwind-tables
+LOCAL_LDFLAGS := -Wl,--no-undefined -Wl,--gc-sections \
+    -Wl,-z,max-page-size=16384
+LOCAL_ALLOW_UNDEFINED_SYMBOLS := false
+include $(BUILD_SHARED_LIBRARY)
+endif
+endif
