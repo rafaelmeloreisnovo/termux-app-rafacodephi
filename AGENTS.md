@@ -169,3 +169,7 @@ For every material dependency delta record:
 <!-- RAFAELIA_S12_PLATFORM_ADAPTER_BOUNDARY -->
 ## S12 authorial L0 consumption rule
 Before routing the RafPolimata service-matrix core into Termux, read `docs/FREESTANDING_SERVICE_S12_ANDROID_BOUNDARY.md`. Never bring Java/SDK/NDK/JNI/ART/JIT, Gradle/R8/D8, syscalls or logging into PURE_CORE; their explicit HOSTED_BOUNDARY/TOOLING_TEST use may be necessary and must not be falsely labelled eliminated. Enforce exact object+ABI+APK+device receipts, preserve ARM32 and ARM64 support, bootstrap/signatures/upstream/licences and rollback. A recognized binary prefix is not binary validation. No mock substitutes for physical installation; no automatic merge or claim promotion.
+
+<!-- RAFAELIA_S14_HOST_ADAPTER_ROUTE -->
+## S14 middleware consumer gate (host only)
+For C routing-plan integration from RafPolimata, read `docs/FREESTANDING_S14_MIDDLEWARE_CONSUMER_BOUNDARY.md` first. The L0 input requires actual tested capability/quality and two bounded tick measurements; it does not query hardware or fire a watchdog. Keep JNI/Android/ART/GPU/NUMA and real rollback OUTSIDE the pure core; use a separately tested hosted adapter only when the Android integration needs it. Preserve ARM32 ABI, bootstrap, keyboard, signing, private logs and zero-delete. This branch has no adapter/APK/device test and cannot claim them. `claim_allowed=false`.
