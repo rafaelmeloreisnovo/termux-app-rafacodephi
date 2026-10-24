@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # immutable v4.2.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3, Node 24
       - name: C11 source pin, sanitizer and Android JNI/Java syntax
         run: |
           sh app/src/main/cpp/lowlevel/middleware_s15/tests/verify_host_s15.sh
@@ -32,13 +32,26 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # immutable v4.2.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3, Node 24
       - name: Provision versioned external Android NDK tooling
         run: |
           : "${ANDROID_HOME:?ANDROID_HOME is required for SDK manager}"
           echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
-          sdkmanager --install 'ndk;26.3.11579264'
-          test -x "$ANDROID_HOME/ndk/26.3.11579264/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang"
+          pinned="$ANDROID_HOME/ndk/26.3.11579264/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang"
+          if [ ! -x "$pinned" ]; then
+            manager="$(command -v sdkmanager || true)"
+            if [ -z "$manager" ]; then
+              for candidate in "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$ANDROID_HOME/cmdline-tools/bin/sdkmanager"; do
+                if [ -x "$candidate" ]; then manager="$candidate"; break; fi
+              done
+            fi
+            if [ -z "$manager" ]; then
+              echo 'BLOCKED: no pinned NDK or Android command-line sdkmanager present' >&2
+              exit 5
+            fi
+            "$manager" --install 'ndk;26.3.11579264'
+          fi
+          test -x "$pinned"
       - name: Link JNI host shared library for physical target ABIs
         run: |
           sh app/src/main/cpp/lowlevel/middleware_s15/tests/verify_ndk_s15.sh
