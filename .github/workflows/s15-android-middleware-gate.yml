@@ -55,7 +55,10 @@ jobs:
       - name: Link JNI host shared library for physical target ABIs
         run: |
           sh app/src/main/cpp/lowlevel/middleware_s15/tests/verify_ndk_s15.sh
+      - name: Verify project Android.mk opt-in ndk-build
+        run: |
+          sh app/src/main/cpp/lowlevel/middleware_s15/tests/verify_ndk_build_s15.sh
       - name: Scope
         if: always()
         run: |
-          echo 'NDK JNI shared-link is not APK assembly, install, GPU/NUMA execution or watchdog runtime.'
+          echo 'NDK JNI/ndk-build is not APK assembly, install, GPU/NUMA execution or watchdog runtime.'
