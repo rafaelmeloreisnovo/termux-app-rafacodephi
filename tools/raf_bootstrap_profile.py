@@ -325,12 +325,33 @@ def validate(path: Path, *, expected_profile: str | None, expected_arch: str | N
                 block = zf.read(APT_UPDATE_BLOCK).decode(errors="replace")
                 if "RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED" not in block or "exit 100" not in block:
                     raise ProfileError("apt update fail-closed hook invalid")
-            elif not any(
-                line.strip() and not line.lstrip().startswith("#") and
-                ("http://" in line or "https://" in line)
-                for line in sources.splitlines()
-            ):
-                raise ProfileError("apt source has no repository")
+            elif profile_doc.get("package_repo_runtime_state") == "SIGNED_REPOSITORY_CONFIGURED":
+                # Reuse the same first-party source-import trust gate instead of
+                # creating an independent, weaker interpretation here.
+                import importlib.util
+                importer_path = Path(__file__).resolve().parents[1] / "scripts/import_rafcodephi_real_bootstrap.py"
+                importer_spec = importlib.util.spec_from_file_location(
+                    "rafcodephi_signed_apt_importer", importer_path
+                )
+                if importer_spec is None or importer_spec.loader is None:
+                    raise ProfileError("signed APT importer unavailable")
+                importer_module = importlib.util.module_from_spec(importer_spec)
+                importer_spec.loader.exec_module(importer_module)
+                importer_module.validate_signed_apt_contract(
+                    profile_doc, profile_doc, info, zf
+                )
+            elif profile_doc.get("package_repo_runtime_state") is None:
+                # Legacy structural fixture and unlabeled predecessor archives:
+                # they may validate their ELF/package shape, but never inherit
+                # SIGNED_REPOSITORY_CONFIGURED or a device APT runtime claim.
+                if not any(
+                    line.strip() and not line.lstrip().startswith("#") and
+                    ("http://" in line or "https://" in line)
+                    for line in sources.splitlines()
+                ):
+                    raise ProfileError("legacy structural candidate has no apt source")
+            else:
+                raise ProfileError("unknown or unverified APT repository state")
             legacy = scan_legacy(zf)
             if legacy:
                 raise ProfileError(f"legacy prefix in {legacy}")
