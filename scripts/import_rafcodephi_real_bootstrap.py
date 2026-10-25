@@ -22,6 +22,11 @@ PACKAGE = "com.termux.rafacodephi"
 PREFIX = f"/data/data/{PACKAGE}/files/usr"
 API_RECEIVER_COMPONENT = f"{PACKAGE}.api/com.termux.api.TermuxApiReceiver"
 APT_UPDATE_GUARD = "RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED"
+APT_SIGNED_GUARD = "DISABLED_SIGNED_REPOSITORY_CONFIGURED"
+APT_SIGNED_STATE = "SIGNED_REPOSITORY_CONFIGURED"
+APT_SOURCE_PATH = "etc/apt/sources.list.d/termux.sources"
+APT_BLOCK_PATH = "etc/apt/apt.conf.d/00rafcodephi-repository-block"
+APT_KEY_PATH = "etc/apt/keyrings/rafcodephi-archive-key.gpg"
 LEGACY_PREFIX = b"/data/data/com.termux/files/usr"
 PROFILE_SCHEMA = "rafcodephi-bootstrap-profile/v1"
 MANIFEST_SCHEMA = "rafcodephi.real-bootstrap-sourcebuild/v1"
@@ -174,8 +179,62 @@ def require_elf(payload: bytes, label: str, arch: str) -> None:
         raise SystemExit(f"{label} embeds forbidden legacy prefix")
 
 
+def validate_signed_apt_contract(manifest: dict[str, str], profile: dict,
+                                 info: dict[str, str], zf: zipfile.ZipFile) -> None:
+    """Validate signed source config plus independent build-time trust anchor.
+
+    A signed ZIP is *not* evidence that the repository has been published or
+    that Android can resolve/update it. No key material is accepted as trust
+    solely because it was delivered inside the same untrusted ZIP.
+    """
+    from urllib.parse import urlsplit
+
+    url = manifest.get("apt_repository_url", "")
+    candidate = urlsplit(url)
+    if (candidate.scheme != "https" or not candidate.hostname or
+            candidate.username is not None or candidate.password is not None or
+            candidate.port not in (None, 443) or candidate.query or candidate.fragment or
+            any(ch.isspace() or ord(ch) < 32 for ch in url)):
+        raise SystemExit("signed APT URL is not canonical HTTPS")
+    source = zf.read(APT_SOURCE_PATH).decode("utf-8")
+    expect = {
+        "# RAFCODEPHI_PACKAGE_REPOSITORY=SIGNED_REPOSITORY_CONFIGURED",
+        "Enabled: yes", "Types: deb", f"URIs: {url.rstrip('/')}",
+        "Suites: stable", "Components: main", "Architectures: arm aarch64",
+        f"Signed-By: {PREFIX}/{APT_KEY_PATH}",
+    }
+    lines = set(source.splitlines())
+    if not expect.issubset(lines) or "Trusted: yes" in source:
+        raise SystemExit("signed APT source fields do not match the exact manifest")
+    # The predecessor guard must be an inactive comment, never a directive.
+    guard = zf.read(APT_BLOCK_PATH).decode("utf-8")
+    if any(row.strip().startswith("APT::Update::Pre-Invoke")
+           for row in guard.splitlines()):
+        raise SystemExit("signed APT retains a blocking pre-invoke directive")
+    if APT_KEY_PATH not in zf.namelist():
+        raise SystemExit("signed APT archive key absent")
+    trusted_sha = os.environ.get("RAF_APT_TRUSTED_KEY_SHA256", "").lower()
+    if len(trusted_sha) != 64 or any(ch not in "0123456789abcdef" for ch in trusted_sha):
+        raise SystemExit("signed APT requires external RAF_APT_TRUSTED_KEY_SHA256")
+    if hashlib.sha256(zf.read(APT_KEY_PATH)).hexdigest() != trusted_sha:
+        raise SystemExit("signed APT archive key differs from independent pinned hash")
+    if (profile.get("package_repo_runtime_state") != APT_SIGNED_STATE or
+            profile.get("apt_update_guard") != APT_SIGNED_GUARD or
+            profile.get("apt_repository_url") != url or
+            profile.get("apt_repository_trust") != "SIGNED_BY_ARCHIVE_KEY" or
+            info.get("RAFCODEPHI_APT_UPDATE_GUARD") != APT_SIGNED_GUARD or
+            info.get("RAFCODEPHI_APT_REPOSITORY_URL") != url or
+            info.get("RAFCODEPHI_APT_REPOSITORY_TRUST") != "SIGNED_BY_ARCHIVE_KEY"):
+        raise SystemExit("signed APT metadata and archive do not agree")
+
+
 def validate(zip_path: Path, manifest_path: Path, arch: str) -> dict[str, object]:
     manifest = parse_manifest(manifest_path)
+    signed_apt = manifest.get("package_repo_runtime_state") == APT_SIGNED_STATE
+    if signed_apt and manifest.get("apt_repository_trust") != "SIGNED_BY_ARCHIVE_KEY":
+        raise SystemExit("signed APT trust contract missing")
+    selected_guard = APT_SIGNED_GUARD if signed_apt else APT_UPDATE_GUARD
+    selected_state = APT_SIGNED_STATE if signed_apt else "BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED"
     expected_manifest = {
         "schema": MANIFEST_SCHEMA,
         "package_name": PACKAGE,
@@ -186,8 +245,8 @@ def validate(zip_path: Path, manifest_path: Path, arch: str) -> dict[str, object
         "bridge_allowed": "false",
         "legacy_prefix_allowed": "false",
         "termux_api_cli": "EMBEDDED",
-        "package_repo_runtime_state": "BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED",
-        "apt_update_guard": APT_UPDATE_GUARD,
+        "package_repo_runtime_state": selected_state,
+        "apt_update_guard": selected_guard,
         "claim_allowed_device_runtime": "false",
         "device_runtime_proof": "TOKEN_VAZIO",
     }
@@ -228,7 +287,7 @@ def validate(zip_path: Path, manifest_path: Path, arch: str) -> dict[str, object
             "release_allowed": False,
             "device_validation": "TOKEN_VAZIO",
             "real_pkg_relocation_claim_allowed": False,
-            "apt_update_guard": APT_UPDATE_GUARD,
+            "apt_update_guard": selected_guard,
         }
         for key, expected in expected_profile.items():
             if profile.get(key) != expected:
@@ -250,7 +309,7 @@ def validate(zip_path: Path, manifest_path: Path, arch: str) -> dict[str, object
             "RAFCODEPHI_API_PACKAGE": f"{PACKAGE}.api",
             "RAFCODEPHI_API_RECEIVER_COMPONENT": API_RECEIVER_COMPONENT,
             "RAFCODEPHI_API_ACCESS_CONTROL": "SIGNATURE_PERMISSION_NO_SHARED_UID",
-            "RAFCODEPHI_APT_UPDATE_GUARD": APT_UPDATE_GUARD,
+            "RAFCODEPHI_APT_UPDATE_GUARD": selected_guard,
         }
         for key, expected in expected_info.items():
             if bootstrap_info.get(key) != expected:
@@ -323,15 +382,17 @@ def validate(zip_path: Path, manifest_path: Path, arch: str) -> dict[str, object
                 raise SystemExit(f"{optional} embeds forbidden legacy prefix")
 
         sources = zf.read("etc/apt/sources.list.d/termux.sources")
-        if (
+        if signed_apt:
+            validate_signed_apt_contract(manifest, profile, bootstrap_info, zf)
+        elif (
             b"# RAFCODEPHI_PACKAGE_REPOSITORY=BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED" not in sources
             or b"Enabled: no" not in sources
             or b"https://packages.rafcodephi.invalid/termux" not in sources
             or b"termux.net" in sources
         ):
             raise SystemExit("custom-prefix apt repository is not deterministically disabled")
-        apt_block = zf.read("etc/apt/apt.conf.d/00rafcodephi-repository-block")
-        if (
+        apt_block = zf.read(APT_BLOCK_PATH)
+        if not signed_apt and (
             b"APT::Update::Pre-Invoke" not in apt_block
             or b"RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED" not in apt_block
             or b"exit 100" not in apt_block
@@ -355,7 +416,9 @@ def validate(zip_path: Path, manifest_path: Path, arch: str) -> dict[str, object
         "bridge_allowed": False,
         "legacy_prefix_allowed": False,
         "package_repo_runtime_state": manifest.get("package_repo_runtime_state", "NOT_MEASURED"),
-        "apt_update_guard": APT_UPDATE_GUARD,
+        "apt_update_guard": selected_guard,
+        "apt_archive_key_pinned": signed_apt,
+        "apt_repository_url": manifest.get("apt_repository_url", "TOKEN_VAZIO") if signed_apt else "TOKEN_VAZIO",
         "claim_allowed_device_runtime": False,
         "device_runtime_proof": "TOKEN_VAZIO",
     }
