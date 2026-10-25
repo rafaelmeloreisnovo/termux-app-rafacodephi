@@ -1,0 +1,49 @@
+# Candidate-only Android app host contracts. No APK release, signing or installation.
+name: HOLD app APT + bootstrap source contract (isolated)
+on:
+  push:
+    branches:
+      - 'hold/apt-source-gate-20261024'
+    paths:
+      - '.github/workflows/hold-source-apt-app-20261025.yml'
+      - '.github/workflows/rafcodephi-signed-apt-import-contract.yml'
+      - '.github/workflows/beta-real-bootstrap-contract.yml'
+      - '.github/workflows/termux-health-server.yml'
+      - 'tests/test_source_gate_consumers.py'
+permissions:
+  contents: read
+concurrency:
+  group: hold-app-source-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  host-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout immutable app source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Reject untracked or ignored checkout sources
+        uses: rafaelmeloreisnovo/actions/rafcode/verify-source@7ae0fca1090fa3b94f7f86c4c3951bb52189e213
+        with:
+          expected-sha: ${{ github.sha }}
+      - name: Test pinned consumer and signed APT contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tests/test_source_gate_consumers.py tests/test_rafcodephi_signed_apt_import_contract.py
+          python3 -m unittest tests.test_source_gate_consumers -v
+          python3 -m unittest tests.test_rafcodephi_signed_apt_import_contract -v
+          bash -n scripts/prepare_bootstrap_env.sh
+          sh -n scripts/device_signed_apt_smoke.sh
+      - name: Scope boundary
+        run: |
+          {
+            echo "SOURCE_COMMIT=${GITHUB_SHA}"
+            echo "SCOPE=HOST_CONTRACT_ONLY"
+            echo "ANDROID_APK=NOT_RUN"
+            echo "DEVICE_SMOKE=NOT_RUN"
+            echo "CLAIM_ALLOWED=false"
+          } >> "$GITHUB_STEP_SUMMARY"
