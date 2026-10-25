@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/termux_health_server.py'
       - 'tests/test_termux_health_server.py'
+      - 'tests/test_source_gate_consumers.py'
       - 'docs/TERMUX_HEALTH_SERVER_CONTRACT.md'
       - '.github/workflows/termux-health-server.yml'
   push:
@@ -36,9 +37,12 @@ jobs:
           persist-credentials: false
 
       - name: Gate clean exact producer source
-        uses: rafaelmeloreisnovo/actions/rafcode/verify-source@7c03495ebe1d28a11ea419799c4f61427250244f
+        uses: rafaelmeloreisnovo/actions/rafcode/verify-source@7ae0fca1090fa3b94f7f86c4c3951bb52189e213
         with:
           expected-sha: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Cross-repo immutable gate contract tests
+        run: python3 -m unittest tests.test_source_gate_consumers -v
 
       - name: Python identity
         run: python3 --version
