@@ -1,0 +1,50 @@
+name: S17 Real Bootstrap Mutable Index Trust — Fail Closed
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/build_real_arm_bootstrap_core.py'
+      - 'scripts/build_rafaelia_bootstraps.sh'
+      - 'tests/test_s17_pinned_packages_index.py'
+      - '.github/workflows/s17-real-bootstrap-index-pin.yml'
+  pull_request:
+    paths:
+      - 'scripts/build_real_arm_bootstrap_core.py'
+      - 'scripts/build_rafaelia_bootstraps.sh'
+      - 'tests/test_s17_pinned_packages_index.py'
+      - '.github/workflows/s17-real-bootstrap-index-pin.yml'
+permissions:
+  contents: read
+jobs:
+  require_trusted_pin:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # Node24 pinned
+      - name: Verify Python/shell contracts
+        run: |
+          python3 -m py_compile scripts/build_real_arm_bootstrap_core.py
+          bash -n scripts/build_rafaelia_bootstraps.sh
+      - name: Check independent index pin negative/positive cases
+        run: |
+          python3 -m unittest discover -s tests -p 'test_s17_pinned_packages_index.py' -v
+          python3 -O -m unittest discover -s tests -p 'test_s17_pinned_packages_index.py' -v
+      - name: No pin means fail BEFORE bootstrap outputs are written
+        run: |
+          if env -u RAFCODEPHI_INDEX_SHA256_ARM \
+            RAFCODEPHI_REAL_PKG_BOOTSTRAP=true \
+            RAFCODEPHI_REAL_PKG_ARCH=arm \
+            bash scripts/build_rafaelia_bootstraps.sh > /tmp/s17-nullpin-out 2> /tmp/s17-nullpin-err; then
+            echo 'FAIL: unpinned bootstrap was accepted' >&2
+            exit 3
+          fi
+          grep -Fq 'S17 BLOCKED: trusted index pin' /tmp/s17-nullpin-err
+          test ! -e app/src/main/cpp/bootstrap-arm.zip
+          test ! -e app/src/main/cpp/rewritten-bootstrap-arm.zip
+          echo 'PASS: fail closed without touching source/embedded bootstraps'
+      - name: Falsifiability and scope statement
+        if: always()
+        run: |
+          echo 'Pinning Packages bytes is not verification of the trusted signing key.'
+          echo 'No index download, no package build, no apt/pkg runtime, no physical device tested here.'
+          echo 'Real-pkg build remains BLOCKED until independently authenticated index pins exist.'
