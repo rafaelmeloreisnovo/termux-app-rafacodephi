@@ -1,0 +1,82 @@
+name: S16 Isolated APK Canary — STATIC Evidence Only
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/s16_inspect_apk_canary.py'
+      - '.github/workflows/s16-freestanding-apk-canary.yml'
+  pull_request:
+    paths:
+      - 'scripts/s16_inspect_apk_canary.py'
+      - '.github/workflows/s16-freestanding-apk-canary.yml'
+permissions:
+  contents: read
+jobs:
+  debug_diagnostic_apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      RAFAELIA_S15_MIDDLEWARE: '1'
+      RAFCODEPHI_REAL_PKG_BOOTSTRAP: 'false'
+      TERMUX_BOOTSTRAP_VALIDATION_MODE: 'upstream-debug-compat'
+      TERMUX_BOOTSTRAP_BAREMETAL_STRICT: 'false'
+      TERMUX_PACKAGE_VARIANT: 'apt-android-7'
+      TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS: '1'
+      TERMUX_BOOTSTRAP_BLAKE3_STRICT: '1'
+    steps:
+      - name: Checkout exact unmerged commit
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # Node24
+        with:
+          persist-credentials: false
+      - name: JDK 21 for deterministic debug diagnostic CI
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install tools, SDK and pinned NDK from project contract
+        run: |
+          bash scripts/ci_android_preflight.sh
+          : "${ANDROID_HOME:=${ANDROID_SDK_ROOT:?missing SDK}}"
+          sdk="$ANDROID_HOME"
+          test -d "$sdk/ndk/26.3.11579264"
+          command -v b3sum
+      - name: Build and verify diagnostic-only bridge bootstrap
+        run: |
+          bash scripts/verify_bootstrap_contract.sh --prepare-dev
+          test "$RAFCODEPHI_REAL_PKG_BOOTSTRAP" = false
+          echo 'BRIDGE_ONLY_BOOTSTRAP; pkg/apt runtime not proven'
+      - name: Assemble exact-head opt-in debug APK (NOT a release)
+        run: |
+          test "$RAFAELIA_S15_MIDDLEWARE" = '1'
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Inspect generated APKs, debug signatures, JNI ABIs, DEX and embedded bootstrap
+        run: |
+          : "${ANDROID_HOME:=${ANDROID_SDK_ROOT:?missing SDK}}"
+          build_tools="$ANDROID_HOME/build-tools/35.0.0"
+          test -x "$build_tools/aapt"
+          test -x "$build_tools/apksigner"
+          python3 scripts/s16_inspect_apk_canary.py \
+            --dir app/build/outputs/apk/debug \
+            --output build/reports/s16-apk-diagnostic-receipt.json \
+            --head "$GITHUB_SHA" \
+            --aapt "$build_tools/aapt" \
+            --apksigner "$build_tools/apksigner"
+          sha256sum build/reports/s16-apk-diagnostic-receipt.json |
+            tee build/reports/s16-apk-diagnostic-receipt.sha256
+      - name: Upload only redacted diagnostic receipts — NO APK, NO keystore
+        if: success()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: s16-static-apk-evidence-${{ github.sha }}
+          path: |
+            build/reports/s16-apk-diagnostic-receipt.json
+            build/reports/s16-apk-diagnostic-receipt.sha256
+          retention-days: 30
+          if-no-files-found: error
+      - name: Non-promotion receipt
+        if: always()
+        run: |
+          echo 'APK debug canary is constructed with BRIDGE_ONLY bootstrap.'
+          echo 'It does not demonstrate actual apt/pkg/busybox/proot or keyboard.'
+          echo 'No APK artifact published by S16; no device tested.'
+          echo 'No code/CI PASS creates required-check enforcement or human permission.'
