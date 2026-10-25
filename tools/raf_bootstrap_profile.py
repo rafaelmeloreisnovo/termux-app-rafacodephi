@@ -340,6 +340,16 @@ def validate(path: Path, *, expected_profile: str | None, expected_arch: str | N
                 importer_module.validate_signed_apt_contract(
                     profile_doc, profile_doc, info, zf
                 )
+            elif profile_doc.get("package_repo_runtime_state") is None:
+                # Legacy structural fixture and unlabeled predecessor archives:
+                # they may validate their ELF/package shape, but never inherit
+                # SIGNED_REPOSITORY_CONFIGURED or a device APT runtime claim.
+                if not any(
+                    line.strip() and not line.lstrip().startswith("#") and
+                    ("http://" in line or "https://" in line)
+                    for line in sources.splitlines()
+                ):
+                    raise ProfileError("legacy structural candidate has no apt source")
             else:
                 raise ProfileError("unknown or unverified APT repository state")
             legacy = scan_legacy(zf)
