@@ -46,6 +46,15 @@ jobs:
           test ! -e app/src/main/cpp/bootstrap-arm.zip
           test ! -e app/src/main/cpp/rewritten-bootstrap-arm.zip
           echo 'PASS: fail closed without touching source/embedded bootstraps'
+      - name: Regression — S16 static negative fixtures and default bridge generation
+        run: |
+          python3 -m unittest discover -s tests -p 'test_s16_*.py' -v
+          python3 -O -m unittest discover -s tests -p 'test_s16_*.py' -v
+          RAFCODEPHI_REAL_PKG_BOOTSTRAP=false bash scripts/build_rafaelia_bootstraps.sh
+          python3 scripts/s16_verify_bootstrap_kind.py \
+            --folder app/src/main/cpp \
+            --output build/reports/s17-bridge-regression.json
+          echo 'PASS: default bridge profile remains available (not real apt)'
       - name: Falsifiability and scope statement
         if: always()
         run: |
