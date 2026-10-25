@@ -1,0 +1,53 @@
+# App-owned source contract: signed APT provenance, not an APK release.
+name: RAFCODEPHI Signed APT Bootstrap Import Contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/import_rafcodephi_real_bootstrap.py'
+      - 'scripts/bootstrap_pair_transaction.py'
+      - 'scripts/prepare_bootstrap_env.sh'
+      - 'tests/test_rafcodephi_signed_apt_import_contract.py'
+      - '.github/workflows/rafcodephi-signed-apt-import-contract.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'scripts/import_rafcodephi_real_bootstrap.py'
+      - 'scripts/bootstrap_pair_transaction.py'
+      - 'scripts/prepare_bootstrap_env.sh'
+      - 'tests/test_rafcodephi_signed_apt_import_contract.py'
+      - '.github/workflows/rafcodephi-signed-apt-import-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rafcodephi-apt-import-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  signed-source-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout exact Termux app candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Bind owned immutable-source gate
+        uses: rafaelmeloreisnovo/actions/rafcode/verify-source@7c03495ebe1d28a11ea419799c4f61427250244f
+        with:
+          expected-sha: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Test Python host signed APT handoff and negative cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/import_rafcodephi_real_bootstrap.py tests/test_rafcodephi_signed_apt_import_contract.py
+          bash -n scripts/prepare_bootstrap_env.sh
+          python3 -m unittest tests.test_rafcodephi_signed_apt_import_contract -v
+          echo 'SCOPE=HOST_APT_HANDOFF_CONTRACT_NOT_DEVICE_RUNTIME' >> "$GITHUB_STEP_SUMMARY"
+          echo 'APT_PUBLISH=NOT_RUN; APT_ON_DEVICE=NOT_RUN; CLAIM_ALLOWED=false' >> "$GITHUB_STEP_SUMMARY"
