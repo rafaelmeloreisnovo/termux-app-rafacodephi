@@ -24,6 +24,8 @@ on:
       - 'tools/raf_bootstrap_profile.py'
       - 'tests/test_beta_real_bootstrap_policy.py'
       - 'tests/test_rafcodephi_startup_and_settings_contract.py'
+      - 'scripts/import_rafcodephi_real_bootstrap.py'
+
   push:
     branches: [master]
     paths:
@@ -39,6 +41,12 @@ on:
       - 'app/src/main/res/xml/root_preferences.xml'
       - 'tests/test_beta_real_bootstrap_policy.py'
       - 'tests/test_rafcodephi_startup_and_settings_contract.py'
+
+      - 'scripts/prepare_bootstrap_env.sh'
+      - 'scripts/import_rafcodephi_real_bootstrap.py'
+      - 'tools/raf_bootstrap_profile.py'
+      - 'app/src/main/java/com/termux/app/TermuxInstaller.java'
+      - '.github/workflows/00_START_HERE.yml'
 
 permissions:
   contents: read
@@ -60,7 +68,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+
+      - name: Bind tests to exact source
+        uses: rafaelmeloreisnovo/actions/rafcode/verify-source@7c03495ebe1d28a11ea419799c4f61427250244f
+        with:
+          expected-sha: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Python contract tests
         run: |
