@@ -96,6 +96,47 @@ class TermuxHealthServerTests(unittest.TestCase):
             payload = json.loads(raised.exception.read())
         self.assertEqual(payload["reason"], "path_not_allowed")
 
+    def test_http_host_header_does_not_allow_dns_rebinding(self) -> None:
+        snapshot = HEALTH.build_snapshot(started_ns=0, now_ns=0, environment={})
+        with RunningServer(lambda: snapshot) as base_url:
+            for hostile in ("attacker.example", "attacker.example:8766",
+                            "127.0.0.1:1", "0.0.0.0:8766"):
+                with self.subTest(host=hostile):
+                    request = urllib.request.Request(
+                        f"{base_url}/health", headers={"Host": hostile},
+                    )
+                    with self.assertRaises(urllib.error.HTTPError) as error:
+                        urllib.request.urlopen(request, timeout=2)
+                    self.assertEqual(error.exception.code, 400)
+                    self.assertEqual(
+                        json.loads(error.exception.read())["reason"],
+                        "host_not_loopback",
+                    )
+
+    def test_http_localhost_host_is_accepted(self) -> None:
+        snapshot = HEALTH.build_snapshot(started_ns=0, now_ns=0, environment={})
+        with RunningServer(lambda: snapshot) as base_url:
+            port = base_url.rsplit(":", 1)[-1]
+            request = urllib.request.Request(
+                f"{base_url}/health", headers={"Host": f"localhost:{port}"},
+            )
+            with urllib.request.urlopen(request, timeout=2) as response:
+                self.assertEqual(response.status, 200)
+
+    def test_http_missing_and_duplicate_host_are_denied(self) -> None:
+        import socket
+        snapshot = HEALTH.build_snapshot(started_ns=0, now_ns=0, environment={})
+        with RunningServer(lambda: snapshot) as base_url:
+            port = int(base_url.rsplit(":", 1)[-1])
+            for headers in (
+                b"Connection: close\r\n",
+                b"Host: 127.0.0.1\r\nHost: localhost\r\nConnection: close\r\n",
+            ):
+                with self.subTest(headers=headers):
+                    with socket.create_connection(("127.0.0.1", port), timeout=2) as sock:
+                        sock.sendall(b"GET /health HTTP/1.1\r\n" + headers + b"\r\n")
+                        self.assertIn(b" 400 ", sock.recv(256))
+
     def test_mutating_method_is_rejected(self) -> None:
         snapshot = HEALTH.build_snapshot(started_ns=0, now_ns=0, environment={})
         with RunningServer(lambda: snapshot) as base_url:
