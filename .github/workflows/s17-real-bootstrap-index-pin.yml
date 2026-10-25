@@ -6,12 +6,16 @@ on:
       - 'scripts/build_real_arm_bootstrap_core.py'
       - 'scripts/build_rafaelia_bootstraps.sh'
       - 'tests/test_s17_pinned_packages_index.py'
+      - 'AGENTS.md'
+      - 'docs/security/S17_REAL_BOOTSTRAP_INDEX_TRUST.md'
       - '.github/workflows/s17-real-bootstrap-index-pin.yml'
   pull_request:
     paths:
       - 'scripts/build_real_arm_bootstrap_core.py'
       - 'scripts/build_rafaelia_bootstraps.sh'
       - 'tests/test_s17_pinned_packages_index.py'
+      - 'AGENTS.md'
+      - 'docs/security/S17_REAL_BOOTSTRAP_INDEX_TRUST.md'
       - '.github/workflows/s17-real-bootstrap-index-pin.yml'
 permissions:
   contents: read
