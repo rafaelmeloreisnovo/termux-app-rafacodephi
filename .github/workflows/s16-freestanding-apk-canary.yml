@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - 'scripts/s16_inspect_apk_canary.py'
+      - 'scripts/s16_verify_bootstrap_kind.py'
+      - 'tests/test_s16_*.py'
       - '.github/workflows/s16-freestanding-apk-canary.yml'
   pull_request:
     paths:
       - 'scripts/s16_inspect_apk_canary.py'
+      - 'scripts/s16_verify_bootstrap_kind.py'
+      - 'tests/test_s16_*.py'
       - '.github/workflows/s16-freestanding-apk-canary.yml'
 permissions:
   contents: read
@@ -28,6 +32,10 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # Node24
         with:
           persist-credentials: false
+      - name: Verify S16 scanner and bootstrap-policy negative fixtures (host only)
+        run: |
+          python3 -m unittest discover -s tests -p 'test_s16_*.py' -v
+          python3 -O -m unittest discover -s tests -p 'test_s16_*.py' -v
       - name: JDK 21 for deterministic debug diagnostic CI
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
@@ -43,6 +51,11 @@ jobs:
       - name: Build and verify diagnostic-only bridge bootstrap
         run: |
           bash scripts/verify_bootstrap_contract.sh --prepare-dev
+          python3 scripts/s16_verify_bootstrap_kind.py \
+            --folder app/src/main/cpp \
+            --output build/reports/s16-bootstrap-custody.json
+          sha256sum build/reports/s16-bootstrap-custody.json |
+            tee build/reports/s16-bootstrap-custody.sha256
           test "$RAFCODEPHI_REAL_PKG_BOOTSTRAP" = false
           echo 'BRIDGE_ONLY_BOOTSTRAP; pkg/apt runtime not proven'
       - name: Assemble exact-head opt-in debug APK (NOT a release)
@@ -71,6 +84,8 @@ jobs:
           path: |
             build/reports/s16-apk-diagnostic-receipt.json
             build/reports/s16-apk-diagnostic-receipt.sha256
+            build/reports/s16-bootstrap-custody.json
+            build/reports/s16-bootstrap-custody.sha256
           retention-days: 30
           if-no-files-found: error
       - name: Non-promotion receipt
