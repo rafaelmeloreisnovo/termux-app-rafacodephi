@@ -71,7 +71,7 @@ class SignedAptContractTests(unittest.TestCase):
 
     def test_missing_independent_trust_anchor_fails(self):
         with patch.dict(os.environ, {"RAF_APT_TRUSTED_KEY_SHA256": ""}):
-            with self.assertRaisesRegex(SystemExit, "independent"):
+            with self.assertRaisesRegex(SystemExit, "requires external RAF_APT_TRUSTED_KEY_SHA256"):
                 self.check_contract()
 
     def test_wrong_key_fails(self):
