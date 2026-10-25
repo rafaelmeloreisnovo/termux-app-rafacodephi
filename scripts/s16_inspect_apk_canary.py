@@ -45,7 +45,7 @@ def validate_one(apk, aapt, apksigner, readelf, temp):
     if not match or match.group(1) != PACKAGE:
         fail("PACKAGE_IDENTITY_MISMATCH " + apk.name)
     signature = command([apksigner, "verify", "--verbose", str(apk)])
-    if "Verifies" not in signature and not signature.strip():
+    if "Verifies" not in signature:
         fail("SIGNATURE_RECEIPT_EMPTY " + apk.name)
 
     try:
@@ -123,6 +123,9 @@ def main():
         "expected_abismask":sorted(EXPECTED),
         "source_core_sha1_git_blob":"e46b1e24191f901edf91d6ce4c5003fa5d74438f",
         "middleware_enabled_for_this_debug_build":True,
+        "bootstrap_profile":"BRIDGE_ONLY_DIAGNOSTIC_NOT_REAL_PKG",
+        "apt_pkg_proot_operational":False,
+        "suitable_for_installation_or_release":False,
         "source_l0_executed":False,
         "physical_phone_tested":False,
         "bootstrap_runtime_tested":False,
