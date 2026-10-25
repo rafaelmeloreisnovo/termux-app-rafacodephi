@@ -77,6 +77,11 @@ class TestS16Gate(unittest.TestCase):
             if cmd[0]=="apksigner":return ""
             return self.helper(cmd)
         self.check(wrong,"SIGNATURE_RECEIPT_EMPTY")
+    def test_nonsense_nonempty_signature(self):
+        def wrong(cmd):
+            if cmd[0]=="apksigner":return "Exit 0 without verification statement"
+            return self.helper(cmd)
+        self.check(wrong,"SIGNATURE_RECEIPT_EMPTY")
     def test_bad_zip(self):
         self.apk.write_bytes(b"not a zip")
         with patch.object(gate,"command",side_effect=self.helper):
