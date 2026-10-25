@@ -340,12 +340,8 @@ def validate(path: Path, *, expected_profile: str | None, expected_arch: str | N
                 importer_module.validate_signed_apt_contract(
                     profile_doc, profile_doc, info, zf
                 )
-            elif not any(
-                line.strip() and not line.lstrip().startswith("#") and
-                ("http://" in line or "https://" in line)
-                for line in sources.splitlines()
-            ):
-                raise ProfileError("apt source has no repository")
+            else:
+                raise ProfileError("unknown or unverified APT repository state")
             legacy = scan_legacy(zf)
             if legacy:
                 raise ProfileError(f"legacy prefix in {legacy}")
