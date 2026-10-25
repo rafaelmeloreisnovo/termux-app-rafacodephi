@@ -16,7 +16,7 @@ esac
   exit 3
 }
 [ -x "$P/bin/apt-get" ] && [ -x "$P/bin/dpkg" ] &&
-  [ -r "$SOURCE" ] && [ -s "$KEY" ] || {
+  [ -r "$SOURCE" ] && [ -s "$KEY" ] && [ -r "$P/etc/apt/apt.conf.d/00rafcodephi-repository-block" ] || {
   echo 'RAFCODEPHI_DEVICE_APT=BLOCKED reason=missing_real_payload' >&2
   exit 4
 }
