@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import hmac
 import os
 import re
 import shutil
@@ -23,6 +24,7 @@ import subprocess
 import sys
 import tempfile
 import urllib.request
+from urllib.parse import urlsplit
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -368,9 +370,40 @@ def write_manifest(out_dir: Path, arch: str, records: list[PackageRecord], zip_p
     (out_dir / f"real_arm_bootstrap_core_{arch}.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+# S17: hosted supply-chain admission, not part of the freestanding kernel.
+# A matching SHA-256 binds *bytes*, but the human must separately authenticate
+# the Release/InRelease signing key and provenance of each supplied digest.
+# These independent trust roots are not established by the script itself.
+def require_pinned_index(repo: str, arch: str) -> str:
+    if arch not in ARCHES:
+        fail("UNSUPPORTED_INDEX_ARCH: " + arch)
+    parsed = urlsplit(repo)
+    if (parsed.scheme != "https" or not parsed.hostname or
+        parsed.username is not None or parsed.password is not None or
+        parsed.fragment or parsed.port not in (None, 443)):
+        fail("HTTPS_TRUSTED_REPO_REQUIRED")
+    authorized_host = os.environ.get("RAFCODEPHI_APPROVED_REPO_HOST", "packages.termux.dev")
+    if parsed.hostname != authorized_host:
+        fail("UNAPPROVED_REPOSITORY_HOST: " + parsed.hostname)
+    key = "RAFCODEPHI_INDEX_SHA256_" + arch.upper()
+    expected = os.environ.get(key, "").strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", expected):
+        fail("INDEPENDENT_PACKAGES_INDEX_SHA256_PIN_REQUIRED: " + key)
+    return expected
+
+
+def fetch_pinned_index(repo: str, arch: str) -> bytes:
+    expected = require_pinned_index(repo, arch)
+    content = fetch_bytes(f"{repo.rstrip('/')}/dists/stable/main/binary-{arch}/Packages")
+    actual = hashlib.sha256(content).hexdigest()
+    if not hmac.compare_digest(actual, expected):
+        fail("PACKAGES_INDEX_DIGEST_MISMATCH: " + arch)
+    return content
+
+
 def build_arch(repo: str, arch: str, output: Path, cache: Path) -> None:
     print(f"[real-arm-bootstrap-core] fetch index arch={arch}")
-    index = parse_packages(fetch_bytes(f"{repo.rstrip('/')}/dists/stable/main/binary-{arch}/Packages").decode("utf-8"))
+    index = parse_packages(fetch_pinned_index(repo, arch).decode("utf-8"))
     records = dependency_closure(index, CORE_PACKAGES)
     arch_cache = cache / arch
     arch_cache.mkdir(parents=True, exist_ok=True)
@@ -399,6 +432,9 @@ def main() -> int:
     if not shutil.which("ar") or not shutil.which("tar"):
         fail("required host tools missing: ar and tar")
     arches = ARCHES if args.arch == "all" else (args.arch,)
+    # Fail before package/network/cache modifications if even one trust pin is absent.
+    for arch in arches:
+        require_pinned_index(args.repo, arch)
     for arch in arches:
         build_arch(args.repo, arch, args.output, args.cache)
     return 0
