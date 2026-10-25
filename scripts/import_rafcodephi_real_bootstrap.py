@@ -197,14 +197,28 @@ def validate_signed_apt_contract(manifest: dict[str, str], profile: dict,
             any(ch.isspace() or ord(ch) < 32 for ch in url)):
         raise SystemExit("signed APT URL is not canonical HTTPS")
     source = zf.read(APT_SOURCE_PATH).decode("utf-8")
-    expect = {
-        "# RAFCODEPHI_PACKAGE_REPOSITORY=SIGNED_REPOSITORY_CONFIGURED",
-        "Enabled: yes", "Types: deb", f"URIs: {url.rstrip('/')}",
-        "Suites: stable", "Components: main", "Architectures: arm aarch64",
-        f"Signed-By: {PREFIX}/{APT_KEY_PATH}",
+    expected_fields = {
+        "enabled": "yes", "types": "deb", "uris": url.rstrip("/"),
+        "suites": "stable", "components": "main",
+        "architectures": "arm aarch64",
+        "signed-by": f"{PREFIX}/{APT_KEY_PATH}",
     }
-    lines = set(source.splitlines())
-    if not expect.issubset(lines) or "Trusted: yes" in source:
+    fields: dict[str, str] = {}
+    if "# RAFCODEPHI_PACKAGE_REPOSITORY=SIGNED_REPOSITORY_CONFIGURED" not in source.splitlines():
+        raise SystemExit("signed APT source provenance marker missing")
+    for line in source.splitlines():
+        if not line or line.startswith("#"):
+            continue
+        # Deb822 folding and duplicate directives are not supported by this
+        # minimal bootstrap trust contract; fail closed rather than guessing.
+        if line[0].isspace() or ":" not in line:
+            raise SystemExit("signed APT source field malformed or folded")
+        raw_key, raw_value = line.split(":", 1)
+        key = raw_key.lower()
+        if key in fields:
+            raise SystemExit("signed APT source duplicate field")
+        fields[key] = raw_value.strip()
+    if fields != expected_fields:
         raise SystemExit("signed APT source fields do not match the exact manifest")
     # The predecessor guard must be an inactive comment, never a directive.
     guard = zf.read(APT_BLOCK_PATH).decode("utf-8")
@@ -216,6 +230,8 @@ def validate_signed_apt_contract(manifest: dict[str, str], profile: dict,
     trusted_sha = os.environ.get("RAF_APT_TRUSTED_KEY_SHA256", "").lower()
     if len(trusted_sha) != 64 or any(ch not in "0123456789abcdef" for ch in trusted_sha):
         raise SystemExit("signed APT requires external RAF_APT_TRUSTED_KEY_SHA256")
+    if zf.getinfo(APT_KEY_PATH).file_size > 65536:
+        raise SystemExit("signed APT archive key exceeds bounded size")
     if hashlib.sha256(zf.read(APT_KEY_PATH)).hexdigest() != trusted_sha:
         raise SystemExit("signed APT archive key differs from independent pinned hash")
     if (profile.get("package_repo_runtime_state") != APT_SIGNED_STATE or
