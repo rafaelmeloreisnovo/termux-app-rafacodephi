@@ -11,7 +11,28 @@ cd "$ROOT_DIR"
 : "${RAFCODEPHI_REAL_PKG_VALIDATE:=true}"
 : "${RAFCODEPHI_REAL_PKG_REPO:=https://packages.termux.dev/apt/termux-main}"
 
-builder="${TMPDIR:-/tmp}/bootstrap_zip_builder.$$"
+# S17 preflight: a real apt/pkg payload must not silently trust mutable Packages
+# metadata. Reject missing caller-sourced SHA pins BEFORE generating ANY bridge zip.
+# Pins are not proof of signed Release trust; that independent human/source
+# verification remains a required promotion gate.
+case "${RAFCODEPHI_REAL_PKG_BOOTSTRAP}" in
+    true|1|yes|on)
+        case "${RAFCODEPHI_REAL_PKG_ARCH}" in
+            all) s17_arches=(AARCH64 ARM) ;;
+            aarch64) s17_arches=(AARCH64) ;;
+            arm) s17_arches=(ARM) ;;
+            *) echo 'S17: unsupported real-pkg architecture' >&2; exit 2 ;;
+        esac
+        for s17_arch in "${s17_arches[@]}"; do
+            s17_key="RAFCODEPHI_INDEX_SHA256_${s17_arch}"
+            s17_pin="${!s17_key:-}"
+            [[ "${s17_pin}" =~ ^[0-9a-fA-F]{64}$ ]] ||
+              { printf 'S17 BLOCKED: trusted index pin %s required before ZIP generation\n' "${s17_key}" >&2; exit 6; }
+        done
+        ;;
+esac
+
+builder="${TMPDIR:-/tmp}/bootstrap_zip_builder.$"
 generated_root="${ROOT_DIR}/build/generated/rafaelia-bootstrap/common"
 prefix="/data/data/${TERMUX_BOOTSTRAP_PACKAGE_NAME}/files/usr"
 trap 'rm -f "$builder"' EXIT
