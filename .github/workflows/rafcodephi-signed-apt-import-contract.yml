@@ -8,6 +8,7 @@ on:
       - 'scripts/bootstrap_pair_transaction.py'
       - 'scripts/prepare_bootstrap_env.sh'
       - 'tools/raf_bootstrap_profile.py'
+      - 'scripts/device_signed_apt_smoke.sh'
       - 'tests/test_rafcodephi_signed_apt_import_contract.py'
       - '.github/workflows/rafcodephi-signed-apt-import-contract.yml'
   push:
@@ -17,6 +18,7 @@ on:
       - 'scripts/bootstrap_pair_transaction.py'
       - 'scripts/prepare_bootstrap_env.sh'
       - 'tools/raf_bootstrap_profile.py'
+      - 'scripts/device_signed_apt_smoke.sh'
       - 'tests/test_rafcodephi_signed_apt_import_contract.py'
       - '.github/workflows/rafcodephi-signed-apt-import-contract.yml'
   workflow_dispatch:
@@ -50,6 +52,7 @@ jobs:
           set -euo pipefail
           python3 -m py_compile scripts/import_rafcodephi_real_bootstrap.py tools/raf_bootstrap_profile.py tests/test_rafcodephi_signed_apt_import_contract.py
           bash -n scripts/prepare_bootstrap_env.sh
+          sh -n scripts/device_signed_apt_smoke.sh
           python3 -m unittest tests.test_rafcodephi_signed_apt_import_contract -v
           echo 'SCOPE=HOST_APT_HANDOFF_CONTRACT_NOT_DEVICE_RUNTIME' >> "$GITHUB_STEP_SUMMARY"
           echo 'APT_PUBLISH=NOT_RUN; APT_ON_DEVICE=NOT_RUN; CLAIM_ALLOWED=false' >> "$GITHUB_STEP_SUMMARY"
