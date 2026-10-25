@@ -171,6 +171,14 @@ matrix = {
 }
 if matrix["package_repo_runtime_state"] == "TOKEN_VAZIO_INCONSISTENT_ARCH" or matrix["apt_update_guard"] == "TOKEN_VAZIO_INCONSISTENT_ARCH":
     raise SystemExit("mixed signed/blocked APT modes in ARM/AArch64 bootstrap pair")
+# The legacy default is intentionally fail-closed. A signed candidate
+# must have passed the independent key hash gate in both imports.
+allowed = {
+    "BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED": "RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED",
+    "SIGNED_REPOSITORY_CONFIGURED": "DISABLED_SIGNED_REPOSITORY_CONFIGURED",
+}
+if matrix["package_repo_runtime_state"] not in allowed or matrix["apt_update_guard"] != allowed[matrix["package_repo_runtime_state"]]:
+    raise SystemExit("unrecognized or mismatched APT repository state")
 matrix_path.parent.mkdir(parents=True, exist_ok=True)
 matrix_path.write_text(json.dumps(matrix, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
