@@ -51,7 +51,7 @@ jobs:
       arm64-page-size: ${{ steps.prepare.outputs.arm64-page-size }}
     
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       
       - name: 🔍 Detect ABIs & Calculate Page Sizes
         id: prepare
@@ -92,7 +92,7 @@ jobs:
         include: ${{ fromJson(needs.detect-and-prepare.outputs.build-matrix) }}
     
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       
       - name: Setup Java
         uses: actions/setup-java@v6.0.1
@@ -197,7 +197,7 @@ jobs:
     if: always()
     
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       
       - name: ⬇️ Download All Artifacts
         uses: actions/download-artifact@v8

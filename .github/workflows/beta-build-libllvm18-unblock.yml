@@ -43,7 +43,7 @@ jobs:
     timeout-minutes: 240
     steps:
       - name: Checkout RafCodePhi app
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 1
@@ -70,7 +70,7 @@ jobs:
           cache: gradle
 
       - name: Checkout patched termux-packages candidate
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           repository: rafaelmeloreisnovo/termux-packages
           ref: ${{ env.TERMUX_PACKAGES_SHA }}
