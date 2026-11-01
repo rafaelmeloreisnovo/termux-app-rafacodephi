@@ -45,7 +45,20 @@ jobs:
       - name: Seven knowledge/work guards — honest blocked handoff
         run: python3 scripts/validate_knowledge_work_seven_guards.py examples/knowledge-work-seven-guards.handoff-20260913.json --expect BLOCKED
 
-      - name: Syntax check (freestanding ARM64 — core modules)
+      - name: Strict syntax check (freestanding PA platform gate, ARM32 + ARM64)
+        run: |
+          set -euo pipefail
+          SRC=app/src/main/cpp/freestanding/raf_pa_core.c
+          test -s "$SRC"
+          for TARGET in aarch64-linux-android24 armv7a-linux-androideabi24; do
+            clang -target "$TARGET" \
+              -fsyntax-only -nostdlib -nostdinc -ffreestanding \
+              "$SRC"
+            echo "PA_CORE_SYNTAX=PASS target=$TARGET"
+          done
+          echo "PA_CORE_ABI_RUNTIME=TOKEN_VAZIO"
+
+      - name: Observational syntax check (RMR ARM64 modules)
         run: |
           echo "Checking freestanding C syntax (ARM64 target)..."
           clang -target aarch64-linux-gnu \
