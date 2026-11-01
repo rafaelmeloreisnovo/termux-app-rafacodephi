@@ -15,6 +15,11 @@ extern int package_stack_probe_real(void);
 extern int package_stack_local_repo_present(void);
 extern int bootstrap_main(void); /* RAF-NINJA proot probe adapter */
 
+/* RAFCODEPHI modification 2026-11-01: derive literal byte lengths at compile time.
+ * Avoid manual byte counts; no hosted runtime dependency is added.
+ */
+#define RAF_LIT_LEN(literal) ((uint32_t)(sizeof(literal) - 1u))
+
 static int64_t log_message(const char *msg, uint32_t len) {
     return syscall_write(2, msg, len);
 }
@@ -59,37 +64,37 @@ int bootstrap_orchestrator_run(struct RafBootstrapReceipt *receipt) {
     if (!receipt) return -100;
     receipt_init(receipt);
 
-    (void)log_message("RAF-BOOTSTRAP: materialize payload\n", 35);
+    (void)log_message("RAF-BOOTSTRAP: materialize payload\n", RAF_LIT_LEN("RAF-BOOTSTRAP: materialize payload\n"));
     int rc = extract_bootstrap_payload();
     if (rc != 0 && rc != 1) {
         return fail(receipt, RAF_STAGE_PAYLOAD, rc,
-                    "RAF-BOOTSTRAP: payload FAIL\n", 28);
+                    "RAF-BOOTSTRAP: payload FAIL\n", RAF_LIT_LEN("RAF-BOOTSTRAP: payload FAIL\n"));
     }
     receipt->payload_preexisting = (rc == 1);
     receipt->stage = RAF_STAGE_PAYLOAD;
 
-    (void)log_message("RAF-BOOTSTRAP: validate dpkg\n", 29);
+    (void)log_message("RAF-BOOTSTRAP: validate dpkg\n", RAF_LIT_LEN("RAF-BOOTSTRAP: validate dpkg\n"));
     rc = dpkg_install_real();
     if (rc != 0) {
         return fail(receipt, RAF_STAGE_DPKG, rc,
-                    "RAF-BOOTSTRAP: dpkg FAIL\n", 25);
+                    "RAF-BOOTSTRAP: dpkg FAIL\n", RAF_LIT_LEN("RAF-BOOTSTRAP: dpkg FAIL\n"));
     }
     receipt->stage = RAF_STAGE_DPKG;
 
-    (void)log_message("RAF-BOOTSTRAP: probe apt/pkg\n", 29);
+    (void)log_message("RAF-BOOTSTRAP: probe apt/pkg\n", RAF_LIT_LEN("RAF-BOOTSTRAP: probe apt/pkg\n"));
     rc = package_stack_probe_real();
     if (rc != 0) {
         return fail(receipt, RAF_STAGE_PKG, rc,
-                    "RAF-BOOTSTRAP: pkg stack FAIL\n", 30);
+                    "RAF-BOOTSTRAP: pkg stack FAIL\n", RAF_LIT_LEN("RAF-BOOTSTRAP: pkg stack FAIL\n"));
     }
     receipt->local_repo_present = package_stack_local_repo_present();
     receipt->stage = RAF_STAGE_PKG;
 
-    (void)log_message("RAF-BOOTSTRAP: RAF-NINJA proot\n", 32);
+    (void)log_message("RAF-BOOTSTRAP: RAF-NINJA proot\n", RAF_LIT_LEN("RAF-BOOTSTRAP: RAF-NINJA proot\n"));
     rc = bootstrap_main();
     if (rc != 0) {
         return fail(receipt, RAF_STAGE_PROOT, rc,
-                    "RAF-BOOTSTRAP: proot FAIL\n", 26);
+                    "RAF-BOOTSTRAP: proot FAIL\n", RAF_LIT_LEN("RAF-BOOTSTRAP: proot FAIL\n"));
     }
     receipt->stage = RAF_STAGE_PROOT;
 
@@ -98,7 +103,7 @@ int bootstrap_orchestrator_run(struct RafBootstrapReceipt *receipt) {
     receipt->stage = RAF_STAGE_READY_FOR_DEVICE_SMOKE;
     receipt->claim_allowed_pkg_runtime = 0;
     receipt->claim_allowed_device_runtime = 0;
-    (void)log_message("RAF-BOOTSTRAP: READY_FOR_DEVICE_SMOKE\n", 38);
+    (void)log_message("RAF-BOOTSTRAP: READY_FOR_DEVICE_SMOKE\n", RAF_LIT_LEN("RAF-BOOTSTRAP: READY_FOR_DEVICE_SMOKE\n"));
     return 0;
 }
 
