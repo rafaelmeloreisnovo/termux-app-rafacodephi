@@ -58,6 +58,25 @@ jobs:
           done
           echo "PA_CORE_ABI_RUNTIME=TOKEN_VAZIO"
 
+      # The preceding syntax check cannot prove that the PA ELF actually links.
+      # Reuse the repository-owned dual-ABI linker/ELF validator; never promote
+      # this to APK or physical Android runtime evidence.
+      - name: Strict PA freestanding ELF link and ABI gate (ARM32 + ARM64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v clang >/dev/null
+          command -v readelf >/dev/null
+          command -v timeout >/dev/null
+          if ! command -v ld.lld >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends lld
+          fi
+          test -s scripts/verify_pa_freestanding_elf.sh
+          timeout --kill-after=10s 180s sh scripts/verify_pa_freestanding_elf.sh .
+          echo "PA_CORE_ELF_LINK=PASS_SCOPED"
+          echo "PA_CORE_APK_RUNTIME=TOKEN_VAZIO"
+
       - name: Observational syntax check (RMR ARM64 modules)
         run: |
           echo "Checking freestanding C syntax (ARM64 target)..."
