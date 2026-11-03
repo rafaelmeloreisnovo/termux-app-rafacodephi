@@ -30,6 +30,7 @@ APT_KEY_PATH = "etc/apt/keyrings/rafcodephi-archive-key.gpg"
 LEGACY_PREFIX = b"/data/data/com.termux/files/usr"
 PROFILE_SCHEMA = "rafcodephi-bootstrap-profile/v1"
 MANIFEST_SCHEMA = "rafcodephi.real-bootstrap-sourcebuild/v1"
+BUILD_TOOLS_CONTRACT = "rafcodephi.apt-bootstrap-ninja/v1"
 BRIDGE_MARKERS = (
     b"RAFCODEPHI pkg bridge",
     b"real apt backend is not installed yet",
@@ -244,6 +245,30 @@ def validate_signed_apt_contract(manifest: dict[str, str], profile: dict,
         raise SystemExit("signed APT metadata and archive do not agree")
 
 
+def validate_build_tools_contract(manifest: dict, profile: dict, info: dict,
+                                  zf: zipfile.ZipFile, arch: str) -> str:
+    """Additive handoff: legacy archives remain legacy, never Ninja proof."""
+    declarations = (manifest.get("build_tools_contract"),
+                    profile.get("build_tools_contract"),
+                    info.get("RAFCODEPHI_BUILD_TOOLS_CONTRACT"))
+    if all(value is None for value in declarations):
+        return "LEGACY_NOT_DECLARED"
+    if any(value != BUILD_TOOLS_CONTRACT for value in declarations):
+        raise SystemExit("build-tools contract missing, unsupported or inconsistent")
+    if manifest.get("bootstrap_ninja") != "EMBEDDED":
+        raise SystemExit("build-tools manifest does not bind embedded Ninja")
+    if "bin/ninja" not in profile.get("required_entries", []):
+        raise SystemExit("build-tools profile does not require Ninja")
+    if "bin/ninja" not in zf.namelist():
+        raise SystemExit("build-tools Ninja ELF missing")
+    require_elf(zf.read("bin/ninja"), "bin/ninja", arch)
+    stanzas = zf.read("var/lib/dpkg/status").decode("utf-8").split("\n\n")
+    if not any("Package: ninja" in s.splitlines() and
+               "Status: install ok installed" in s.splitlines() for s in stanzas):
+        raise SystemExit("Ninja is not installed in bootstrap dpkg status")
+    return BUILD_TOOLS_CONTRACT
+
+
 def validate(zip_path: Path, manifest_path: Path, arch: str) -> dict[str, object]:
     manifest = parse_manifest(manifest_path)
     signed_apt = manifest.get("package_repo_runtime_state") == APT_SIGNED_STATE
@@ -339,6 +364,8 @@ def validate(zip_path: Path, manifest_path: Path, arch: str) -> dict[str, object
         for name in required_profile:
             if not isinstance(name, str) or name not in available:
                 raise SystemExit(f"profile required installed entry unresolved: {name!r}")
+        build_tools_contract = validate_build_tools_contract(
+            manifest, profile, bootstrap_info, zf, arch)
 
         elf_names: set[str] = set()
         for entry in zf.infolist():
@@ -434,6 +461,7 @@ def validate(zip_path: Path, manifest_path: Path, arch: str) -> dict[str, object
         "package_repo_runtime_state": manifest.get("package_repo_runtime_state", "NOT_MEASURED"),
         "apt_update_guard": selected_guard,
         "apt_archive_key_pinned": signed_apt,
+        "build_tools_contract": build_tools_contract,
         "apt_repository_url": manifest.get("apt_repository_url", "TOKEN_VAZIO") if signed_apt else "TOKEN_VAZIO",
         "claim_allowed_device_runtime": False,
         "device_runtime_proof": "TOKEN_VAZIO",

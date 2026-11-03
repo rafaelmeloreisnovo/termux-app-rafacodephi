@@ -10,6 +10,11 @@ on:
       - 'tools/raf_bootstrap_profile.py'
       - 'scripts/device_signed_apt_smoke.sh'
       - 'tests/test_rafcodephi_signed_apt_import_contract.py'
+      - 'tests/test_apt_bootstrap_ninja_contract.py'
+      - 'tests/test_device_signed_apt_smoke.py'
+      - 'tests/test_source_built_real_bootstrap.py'
+      - 'data/contracts/termux-packages-rafcodephi-pin.v1.json'
+      - 'tests/test_termux_packages_active_route_semantics.py'
       - '.github/workflows/rafcodephi-signed-apt-import-contract.yml'
   push:
     branches: [master]
@@ -20,6 +25,11 @@ on:
       - 'tools/raf_bootstrap_profile.py'
       - 'scripts/device_signed_apt_smoke.sh'
       - 'tests/test_rafcodephi_signed_apt_import_contract.py'
+      - 'tests/test_apt_bootstrap_ninja_contract.py'
+      - 'tests/test_device_signed_apt_smoke.py'
+      - 'tests/test_source_built_real_bootstrap.py'
+      - 'data/contracts/termux-packages-rafcodephi-pin.v1.json'
+      - 'tests/test_termux_packages_active_route_semantics.py'
       - '.github/workflows/rafcodephi-signed-apt-import-contract.yml'
   workflow_dispatch:
 
@@ -54,5 +64,7 @@ jobs:
           bash -n scripts/prepare_bootstrap_env.sh
           sh -n scripts/device_signed_apt_smoke.sh
           python3 -m unittest tests.test_rafcodephi_signed_apt_import_contract -v
+          python3 -m unittest tests.test_apt_bootstrap_ninja_contract tests.test_device_signed_apt_smoke -v
+          python3 tests/test_termux_packages_active_route_semantics.py
           echo 'SCOPE=HOST_APT_HANDOFF_CONTRACT_NOT_DEVICE_RUNTIME' >> "$GITHUB_STEP_SUMMARY"
           echo 'APT_PUBLISH=NOT_RUN; APT_ON_DEVICE=NOT_RUN; CLAIM_ALLOWED=false' >> "$GITHUB_STEP_SUMMARY"
