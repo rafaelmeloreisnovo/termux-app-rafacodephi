@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
+/* SPDX-License-Identifier: GPL-3.0-only */
 #ifndef RAF_TOOL_NAME_GUARD_H
 #define RAF_TOOL_NAME_GUARD_H
 /* Pure C11 boundary: one executable BASENAME, not a path or shell expression.
