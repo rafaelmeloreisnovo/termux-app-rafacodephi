@@ -66,9 +66,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang lld binutils qemu-user
           mkdir -p artifacts/rafbox
-          B="artifacts/rafbox/rafbox-${{ matrix.abi }}"
-          E="${{ matrix.emulator }"
-          clang --target='${{ matrix.target }' ${{ matrix.extra } \
+          B="artifacts/rafbox/rafbox-${{ matrix.abi }}}"
+          E="${{ matrix.emulator }}"
+          clang --target='${{ matrix.target }}' ${{ matrix.extra }} \
             -std=c11 -O2 -Wall -Wextra -Werror \
             -ffreestanding -fno-builtin -fno-stack-protector \
             -nostdlib -static -fuse-ld=lld -Wl,-no-pie,-e,_start,--gc-sections \
@@ -106,7 +106,7 @@ jobs:
           echo 'RAFBOX_EMULATED_PASS_SCOPED'
           {
             echo '## RAFBOX scoped receipt'
-            echo "- commit: ${{ github.sha }"
+            echo "- commit: ${{ github.sha }}"
             echo '- device: TOKEN_VAZIO_NOT_RUN'
             echo '- BusyBox full compatibility: TOKEN_VAZIO_NOT_IMPLEMENTED'
             echo '- release_allowed: false'
