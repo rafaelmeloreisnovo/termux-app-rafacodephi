@@ -1,0 +1,71 @@
+{
+  "R3": {
+    "F_gap": "production artifacts, publication, physical device and independent review",
+    "F_next": "exact-head CI readback then governed build/device validation",
+    "F_ok": "scoped code and host falsifiers passed"
+  },
+  "authority": "User requested hotfix of these two repositories; local producer governs implementation; Drive governs private continuity receipt.",
+  "claim_allowed": false,
+  "code_sha256": {
+    ".github/workflows/rafcodephi-signed-apt-import-contract.yml": "6e315bb701d832b69cc907612d5b0bc8cfc5e76c1cf694173011c6acfcb750ab",
+    "scripts/device_signed_apt_smoke.sh": "253eb2fdf757203932be8bbab2f3183929e7ca22db6cc457f7e92371aaef17b9",
+    "scripts/import_rafcodephi_real_bootstrap.py": "21d3fb01d762a8c9534f409e93fcb305728791853fbdc6d0f5998895db5b356d",
+    "tests/test_apt_bootstrap_ninja_contract.py": "fe54023211db576bdb238ca98acd004e08bb5fbe5fd59fdc59d45319157e4e1a",
+    "tests/test_device_signed_apt_smoke.py": "7db4a0db3873ed40131726abf9c0704967c36e06791f808415376b832b9f6b9f"
+  },
+  "contract": "rafcodephi.apt-bootstrap-ninja/v1",
+  "cross_repository_execution": {
+    "architectures": [
+      "arm",
+      "aarch64"
+    ],
+    "device_proof": false,
+    "path": "actual producer source sealer -> actual live sealer -> actual app importer",
+    "signature_crypto_proof": false,
+    "state": "PASS_SCOPED_SYNTHETIC"
+  },
+  "falsifier": "failed update/show/download/metadata, missing/script/wrong-ABI Ninja, inconsistent declarations, not-installed dpkg or absent/wrong graph output must fail",
+  "gaps": [
+    "TOKEN_VAZIO_NEW_SOURCE_DEB_BUILD",
+    "TOKEN_VAZIO_NEW_APK_BUILD",
+    "TOKEN_VAZIO_PRODUCTION_PUBLICATION",
+    "TOKEN_VAZIO_PHYSICAL_ANDROID",
+    "TOKEN_VAZIO_INDEPENDENT_REVIEW",
+    "CI_PENDING_AT_WRITE"
+  ],
+  "kind": "URGENT_SCOPED_HOTFIX",
+  "mu_id": "MU-TERMUX-APT-BOOTSTRAP-NINJA-20261103-S1",
+  "parent": "BASELINE@2d1d0c5b7b20e9240611515d7c51e90304a6b2e8",
+  "preflight": {
+    "data": "PUBLIC source metadata and synthetic fixtures only",
+    "federated_route": "Drive current-state dispatch -> local Termux producer/consumer indices",
+    "governance": "reversible source candidate; no merge/release/provider mutation",
+    "privacy": "no credentials/device IDs/private corpus copied",
+    "security": "signed APT/key pin/prefix/ABI fail-closed preserved; first failing APT stage must stop",
+    "source_and_target": "bound exact base + scoped paths",
+    "urgency": "P0_FALSE_APT_SUCCESS + P1_MISSING_BOOTSTRAP_NINJA"
+  },
+  "release_allowed": false,
+  "rollback": "abandon unmerged candidate; reviewed compensating revert if merged; preserve predecessor and history",
+  "source": {
+    "base_commit": "2d1d0c5b7b20e9240611515d7c51e90304a6b2e8",
+    "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "role": "ANDROID_RUNTIME_CONSUMER"
+  },
+  "source_not_artifact_not_execution_not_evidence_not_claim": true,
+  "tests": [
+    {
+      "command": "python3 -m unittest tests.test_rafcodephi_signed_apt_import_contract tests.test_apt_bootstrap_ninja_contract tests.test_device_signed_apt_smoke tests.test_raf_bootstrap_profile -v",
+      "exit_code": 0,
+      "gate": "signed_import_ninja_probe_and_profile_unittests",
+      "test_methods": 24
+    },
+    {
+      "execution": "stdlib runner with isolated tmp_path per existing test function",
+      "exit_code": 0,
+      "functions": 9,
+      "gate": "existing_source_built_import_regression"
+    }
+  ],
+  "timestamp": "2026-11-03T10:00:01.858061-03:00"
+}

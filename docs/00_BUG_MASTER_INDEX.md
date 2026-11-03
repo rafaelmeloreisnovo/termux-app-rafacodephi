@@ -194,3 +194,7 @@ Se o source atual ainda não foi examinado para um claim específico, usar `TOKE
 ## 2026-10-24 — bootstrap contract CI coverage
 
 [Source gate receipt](../receipts/BOOTSTRAP_SOURCE_GATE_20261024.md): missing trigger inputs and exact-head verification; no Android runtime promotion.
+
+## Contrato APT / Bootstrap / Ninja V1
+
+[Implementação, limites de evidência, teste no aparelho e receipt](../001_PONTEIRO/APT_BOOTSTRAP_NINJA_V1.md).
