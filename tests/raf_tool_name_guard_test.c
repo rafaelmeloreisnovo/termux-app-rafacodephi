@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
+/* SPDX-License-Identifier: GPL-3.0-only */
 #include "../bootstrap/raf_guard_v1/raf_tool_name_guard.h"
 #include <stdio.h>
 static int checks = 0;
