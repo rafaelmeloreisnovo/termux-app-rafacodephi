@@ -1,0 +1,62 @@
+{
+  "claim_allowed": false,
+  "code_sha256": {
+    ".github/workflows/freestanding-enterprise-closure.yml": "ee34c91c4e7e3be267d06d816fa3405b776378dc1e630701856027e68cf53072",
+    ".github/workflows/rafcodephi-signed-apt-import-contract.yml": "76529198485d47b55d9d7ca77d266b2ff56d2c96e56a3f209d089c97268f7a07",
+    "001_PONTEIRO/APT_BOOTSTRAP_NINJA_V1.md": "c983cf34d275e7c220046c564912280ba8e9eb62e3a1084992f0bcf4a62ac532",
+    "data/contracts/termux-packages-rafcodephi-pin.v1.json": "cfb829e7169cc8b4db7fbc94583506a6c81f8f67c17dec1dc8eae690ca2d483d"
+  },
+  "delta": "Rebind canonical to observed merged producer main 58d6eaf; candidate to PR174 immutable 8a6c938; preserve both previous channel objects in pin_history. PR enterprise proof uses candidate, non-PR uses merged canonical. Align image/NDK29 with the producer SHA-bound setup. No merge/release/provider/secret mutation.",
+  "gaps": [
+    "NEW_HEAD_CI_PENDING",
+    "REAL_ARM_DEBS_PENDING",
+    "NEW_APK_NOT_PROVEN",
+    "PRODUCTION_SIGNED_REPOSITORY_NOT_PUBLISHED",
+    "PHYSICAL_ANDROID_TOKEN_VAZIO",
+    "INDEPENDENT_REVIEW_PENDING"
+  ],
+  "kind": "CI_OBSERVED_STALE_PIN_HOTFIX",
+  "mu_id": "MU-TERMUX-APT-BOOTSTRAP-NINJA-20261103-S3",
+  "observed_failure": {
+    "error": "missing source capability: scripts/run-rafcodephi-bootstrap-docker.sh",
+    "job": 125933418134,
+    "pin": "837afec42ecf5f9ac1bd8b00e65d143bc23a380b",
+    "run": 41640728864
+  },
+  "parent": "MU-TERMUX-APT-BOOTSTRAP-NINJA-20261103-S1",
+  "producer_candidate_commit": "8a6c938d29b0161401fe85fcf7aa2b941f8649dc",
+  "release_allowed": false,
+  "rollback": "revert this successor commit to e01fad8; retain pin_history and receipts",
+  "signed_host_fixture_custody": {
+    "artifact_id": 13233425449,
+    "downloaded_independently": false,
+    "job": 125933244796,
+    "production_key": false,
+    "provider_digest": "sha256:e4258ad5dd953d6ecdc59136349e247de11a0274af437a14b2e35ae2b003442e",
+    "provider_run": 41640722519,
+    "result": "SUCCESS"
+  },
+  "source_parent_commit": "e01fad8c35a350f17307b243e7cdd900e5e98474",
+  "tests": [
+    {
+      "exit_code": 0,
+      "gate": "active_semantic_routes_and_resolver"
+    },
+    {
+      "exit_code": 0,
+      "gate": "actual_enterprise_source_capabilities_shell_on_candidate_checkout"
+    },
+    {
+      "exit_code": 0,
+      "gate": "changed_workflows_YAML_and_Bash",
+      "run_steps": 14,
+      "workflows": 2
+    },
+    {
+      "exit_code": 0,
+      "functions": 3,
+      "gate": "legacy_bridge_contract_functions"
+    }
+  ],
+  "timestamp": "2026-11-03T10:10:32.208529-03:00"
+}

@@ -36,3 +36,7 @@ Gates abertos: build real dos novos DEBs e APK, chave/repositório de produção
 Rollback: fechar PR não integrado; se integrado, revert revisado dos caminhos deste hotfix. Preservar commits, receitas, bootstrap anterior e receipts; não usar force-push ou apagar histórico. Nenhuma proteção de branch ou credencial é alterada por este contrato.
 
 SOURCE ≠ ARTIFACT ≠ EXECUTION ≠ EVIDENCE ≠ CLAIM. `claim_allowed=false` para runtime/release sem os gates correspondentes.
+
+Ponte de build: canal canônico aponta para o main de pacotes observado em `58d6eaf1300c51c5a3749024a02f6448e02599f7`; a prova de PR usa o candidato imutável `8a6c938d29b0161401fe85fcf7aa2b941f8649dc` (PR174). Predecessores completos estão em `pin_history`; candidato não se torna canônico sem integração/rebinding.
+
+Delta da rota de build: [receipt S3](receipts/MU-TERMUX-APT-BOOTSTRAP-NINJA-20261103-S3.json), com falha original, pins, testes e custódia do fixture assinado no CI.
