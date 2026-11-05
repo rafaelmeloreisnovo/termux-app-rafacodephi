@@ -44,6 +44,19 @@ def main() -> int:
     assert candidate["state"] != "MERGED_BASELINE"
     assert candidate["promotion_target"] == "canonical"
     assert canonical["commit"] != candidate["commit"]
+    # Post-merge provenance: the old PR174 source pin is historical, not an active producer.
+    merged_history = {
+        entry["merged_pr"] for entry in doc["pin_history"]
+        if entry.get("event") == "SUPERSEDED_AFTER_MERGE"
+    }
+    assert candidate["pull_request"] not in merged_history
+    assert 174 in merged_history
+    assert canonical["source_lineage_prs"] == [174, 179]
+    assert canonical["build_gate"] == "BLOCKED_REAL_BOOTSTRAP_YAML_PENDING_PR183"
+    assert candidate["state"].startswith("OPEN_DRAFT_")
+    assert candidate["pull_request"] == 183
+    assert any(entry.get("value", {}).get("commit") == canonical["previous_commit"]
+               for entry in doc["pin_history"])
     for channel in (canonical, candidate):
         assert channel["claim_allowed"] is False
         assert channel["physical_android"] == "TOKEN_VAZIO"

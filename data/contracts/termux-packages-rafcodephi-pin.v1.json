@@ -10,22 +10,27 @@
   ],
   "channels": {
     "canonical": {
-      "commit": "58d6eaf1300c51c5a3749024a02f6448e02599f7",
+      "commit": "b5499741aada8a779099b4fd7aa0fd5067169bb8",
       "branch": "main",
       "state": "MERGED_BASELINE",
-      "previous_commit": "837afec42ecf5f9ac1bd8b00e65d143bc23a380b",
-      "source_scope": "observed merged main baseline with bootstrap docker handoff; no new Ninja claim",
+      "previous_commit": "58d6eaf1300c51c5a3749024a02f6448e02599f7",
+      "source_scope": "Observed main after merged PR174 Ninja and PR179 Debian epoch transport. Real-bootstrap workflow YAML remains gated by open PR183; no usable APK or signed APT publication claim.",
+      "source_lineage_prs": [
+        174,
+        179
+      ],
+      "build_gate": "BLOCKED_REAL_BOOTSTRAP_YAML_PENDING_PR183",
       "claim_allowed": false,
       "physical_android": "TOKEN_VAZIO"
     },
     "candidate": {
-      "commit": "8a6c938d29b0161401fe85fcf7aa2b941f8649dc",
-      "branch": "hotfix/apt-bootstrap-ninja-contract-20261103",
-      "state": "OPEN_PR_HOST_CONTRACT_PASSED_BUILD_PENDING",
+      "commit": "bcb1dfec1ecc72cd3acee80b5bf3706cead4849c",
+      "branch": "hotfix/rafcodephi-real-bootstrap-yaml-20261103",
+      "state": "OPEN_DRAFT_CUSTODY_HOTFIX_EXACT_HEAD_TESTS_PENDING",
       "promotion_target": "canonical",
-      "supersedes_commit": "97cd0fd25b194b3d857b3f6a2ac330ff0efb003c",
-      "pull_request": 174,
-      "source_patch_scope": "APT first-failure hotfix and versioned dual-ABI bootstrap Ninja handoff",
+      "supersedes_commit": "8a6c938d29b0161401fe85fcf7aa2b941f8649dc",
+      "pull_request": 183,
+      "source_patch_scope": "PR183 fixes real-bootstrap YAML and sealed ABI TAR+SHA fan-in; prior ARM32/ARM64 builds PASS but postfix fan-in requires new exact-head evidence",
       "claim_allowed": false,
       "physical_android": "TOKEN_VAZIO"
     }
@@ -77,6 +82,39 @@
       },
       "superseded_on": "2026-11-03",
       "reason": "CI source capability gate exposed stale package source route; predecessor preserved"
+    },
+    {
+      "channel": "canonical",
+      "value": {
+        "commit": "58d6eaf1300c51c5a3749024a02f6448e02599f7",
+        "branch": "main",
+        "state": "MERGED_BASELINE",
+        "previous_commit": "837afec42ecf5f9ac1bd8b00e65d143bc23a380b",
+        "source_scope": "observed merged main baseline with bootstrap docker handoff; no new Ninja claim",
+        "claim_allowed": false,
+        "physical_android": "TOKEN_VAZIO"
+      },
+      "superseded_on": "2026-11-04",
+      "reason": "GitHub packages PR174 and PR179 merged; update source baseline to observed main, physical status unchanged"
+    },
+    {
+      "channel": "candidate",
+      "value": {
+        "commit": "8a6c938d29b0161401fe85fcf7aa2b941f8649dc",
+        "branch": "hotfix/apt-bootstrap-ninja-contract-20261103",
+        "state": "OPEN_PR_HOST_CONTRACT_PASSED_BUILD_PENDING",
+        "promotion_target": "canonical",
+        "supersedes_commit": "97cd0fd25b194b3d857b3f6a2ac330ff0efb003c",
+        "pull_request": 174,
+        "source_patch_scope": "APT first-failure hotfix and versioned dual-ABI bootstrap Ninja handoff",
+        "claim_allowed": false,
+        "physical_android": "TOKEN_VAZIO"
+      },
+      "superseded_on": "2026-11-04",
+      "reason": "Prior pinned PR174 ancestry merged into main, no longer active candidate",
+      "event": "SUPERSEDED_AFTER_MERGE",
+      "merged_pr": 174,
+      "merge_commit": "75e452d108fd037329896ca74e29bb8df3cd5e99"
     }
   ]
 }
