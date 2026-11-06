@@ -1,0 +1,115 @@
+# ci_track: internal
+# ci_abis: armeabi-v7a,arm64-v8a
+name: RAFBOX authorial freestanding subset (HOLD)
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'rafaelia/freestanding-rafbox-*'
+    paths:
+      - 'bootstrap/rafbox_v1/**'
+      - 'tests/rafbox_core_v1_selftest.c'
+      - '.github/workflows/rafbox-authorial-v1.yml'
+  pull_request:
+    paths:
+      - 'bootstrap/rafbox_v1/**'
+      - 'tests/rafbox_core_v1_selftest.c'
+      - 'docs/contracts/RAFBOX_BUSYBOX_BOUNDARY_V1.md'
+      - '.github/workflows/rafbox-authorial-v1.yml'
+permissions:
+  contents: read
+jobs:
+  pure-core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Host and pure object validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          for cc in gcc clang; do
+            "$cc" -std=c11 -O2 -Wall -Wextra -Werror -pedantic \
+              -fsanitize=undefined -fno-sanitize-recover=all \
+              tests/rafbox_core_v1_selftest.c -o "/tmp/rafbox-core-$cc"
+            "/tmp/rafbox-core-$cc"
+            printf '%s\n' \
+              '#include "bootstrap/rafbox_v1/rafbox_core.h"' \
+              'int rb(const char *p){return (int)rafbox_select(p);}' > /tmp/rafbox-pure.c
+            "$cc" -std=c11 -O2 -ffreestanding -fno-builtin -fno-stack-protector \
+              -Wall -Wextra -Werror -pedantic -I. -c /tmp/rafbox-pure.c \
+              -o "/tmp/rafbox-pure-$cc.o"
+            test -z "$(nm -u "/tmp/rafbox-pure-$cc.o")"
+          done
+          echo 'RAFBOX_PURE_CORE_PASS; Android=TOKEN_VAZIO'
+  static-elf:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: arm64-v8a
+            target: aarch64-linux-android21
+            emulator: qemu-aarch64
+            extra: ''
+          - abi: armeabi-v7a
+            target: armv7a-linux-androideabi28
+            emulator: qemu-arm
+            extra: '-marm'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Cross-compile and emulate authorial applets
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y clang lld binutils qemu-user
+          mkdir -p artifacts/rafbox
+          B="artifacts/rafbox/rafbox-${{ matrix.abi }}}"
+          E="${{ matrix.emulator }}"
+          clang --target='${{ matrix.target }}' ${{ matrix.extra }} \
+            -std=c11 -O2 -Wall -Wextra -Werror \
+            -ffreestanding -fno-builtin -fno-stack-protector \
+            -nostdlib -static -fuse-ld=lld -Wl,-no-pie,-e,_start,--gc-sections \
+            bootstrap/rafbox_v1/rafbox_linux.c -o "$B"
+          readelf -hW "$B"
+          ! readelf -lW "$B" | grep -q ' INTERP '
+          ! readelf -dW "$B" 2>/dev/null | grep -q 'NEEDED'
+          test -z "$(nm -u "$B")"
+          sha256sum "$B" > "$B.sha256"
+          test "$($E "$B" --list | wc -l)" -eq 6
+          $E "$B" true
+          test "$($E "$B" echo hello rafbox)" = 'hello rafbox'
+          test "$($E "$B" basename /a/b///)" = 'b'
+          test "$($E "$B" dirname /a/b///)" = '/a'
+          printf 'abc\000xyz' >/tmp/rb-in
+          $E "$B" cat /tmp/rb-in >/tmp/rb-out
+          cmp /tmp/rb-in /tmp/rb-out
+          printf 'stream\000in' | $E "$B" cat - >/tmp/rb-stream
+          printf 'stream\000in' >/tmp/rb-expect
+          cmp /tmp/rb-stream /tmp/rb-expect
+          set +e
+          $E "$B" false >/dev/null 2>&1; code_false=$?
+          $E "$B" sh >/dev/null 2>&1; code_sh=$?
+          $E "$B" ash >/dev/null 2>&1; code_ash=$?
+          $E "$B" cp >/dev/null 2>&1; code_cp=$?
+          $E "$B" cat /no-such-rafbox-file-unknown >/dev/null 2>&1; code_cat=$?
+          $E "$B" echo -n extra >/dev/null 2>&1; code_echo=$?
+          set -e
+          test "$code_false" -eq 1
+          test "$code_sh" -eq 64
+          test "$code_ash" -eq 64
+          test "$code_cp" -eq 64
+          test "$code_cat" -eq 66
+          test "$code_echo" -eq 64
+          echo 'RAFBOX_EMULATED_PASS_SCOPED'
+          {
+            echo '## RAFBOX scoped receipt'
+            echo "- commit: ${{ github.sha }}"
+            echo '- device: TOKEN_VAZIO_NOT_RUN'
+            echo '- BusyBox full compatibility: TOKEN_VAZIO_NOT_IMPLEMENTED'
+            echo '- release_allowed: false'
+            echo '- claim_allowed: false'
+            echo "- binary SHA256: $(cut -d ' ' -f1 "$B.sha256")"
+          } >> "$GITHUB_STEP_SUMMARY"
