@@ -21,13 +21,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 1
 
       - name: Checkout exact termux-packages source
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           repository: rafaelmeloreisnovo/termux-packages
           ref: ${{ env.TERMUX_PACKAGES_BUILD_SHA }}

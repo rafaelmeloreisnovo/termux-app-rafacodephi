@@ -29,13 +29,13 @@ jobs:
     timeout-minutes: 330
     steps:
       - name: Checkout app candidate
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 1
 
       - name: Checkout package-source candidate
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           repository: rafaelmeloreisnovo/termux-packages
           ref: ${{ env.TERMUX_PACKAGES_REF }}

@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout app
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
@@ -69,7 +69,7 @@ jobs:
       PRODUCER_ARTIFACT_DIGEST: ${{ github.event.client_payload.artifact_digest || '' }}
     steps:
       - name: Checkout exact app revision
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 1
@@ -112,7 +112,7 @@ jobs:
 
       - name: Checkout pinned termux-packages source
         if: github.event_name != 'repository_dispatch'
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           repository: rafaelmeloreisnovo/termux-packages
           ref: ${{ env.TERMUX_PACKAGES_SHA }}

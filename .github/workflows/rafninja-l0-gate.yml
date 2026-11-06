@@ -31,7 +31,7 @@ jobs:
             arch: aarch64
             emulator: qemu-aarch64
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Prepare cross-toolchain and QEMU user mode
         run: |
           sudo apt-get update
