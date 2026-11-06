@@ -1,4 +1,5 @@
 #include "proot_syscall_bridge.h"
+#include "raf_guard_v1/raf_tool_name_guard.h"
 
 /*
  * RAFCODEPHI PLATFORM_GATE runtime boundary.
@@ -93,7 +94,7 @@ static int raf_tool_path(char *out, raf_word_t cap,
                          const char *prefix, const char *tool) {
     raf_word_t i = 0, j = 0;
     const char suffix[] = "/bin/";
-    if (!out || cap < 2 || !prefix || !tool) return -1;
+    if (!out || cap < 2 || !prefix || !raf_tool_name_is_safe(tool)) return -1;
 
     while (prefix[i]) {
         if (j + 1 >= cap) return -1;
