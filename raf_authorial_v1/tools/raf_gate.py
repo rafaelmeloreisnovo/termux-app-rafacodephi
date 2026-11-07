@@ -62,7 +62,20 @@ def gate(cc, cross=False):
                 obj = str(pathlib.Path(tmp) / (str(index) + ("-cross" if target else "") + ".o"))
                 prefix = [cc] + (["-target", target] if target else [])
                 cmd(prefix + BASE + flags(src) + ["-c", str(src), "-o", obj])
-                if not cross:
+                if cross:
+                    # readelf is target-agnostic: host nm may not understand ARM objects.
+                    symbols = subprocess.run(["readelf", "--wide", "--syms", obj],
+                                             check=True, capture_output=True, text=True).stdout
+                    unresolved = []
+                    for line in symbols.splitlines():
+                        fields = line.split()
+                        if (len(fields) >= 7 and fields[0].endswith(":")
+                                and fields[4] in ("GLOBAL", "WEAK")
+                                and fields[6] == "UND"):
+                            unresolved.append(fields[7] if len(fields) > 7 else "<unnamed>")
+                    if unresolved:
+                        raise AssertionError("undefined ARM core symbol: " + ", ".join(unresolved))
+                else:
                     undef = subprocess.run(["nm", "-u", obj], check=True,
                                            capture_output=True, text=True).stdout.strip()
                     if undef:
