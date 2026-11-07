@@ -16,7 +16,7 @@ BASE = ["-std=c11", "-ffreestanding", "-nostdinc", "-nostdlib", "-fno-builtin",
         "-fdata-sections", "-Wall", "-Wextra", "-Werror", "-pedantic"]
 def flags(path):
     raw = pathlib.Path(path).read_bytes()
-    if not raw or len(raw) > 65536 or b"\0" in raw or b"??/" in raw:
+    if not raw or len(raw) > 65536 or b"\0" in raw or re.search(rb"\?\?[=/'()!<>-]", raw) is not None:
         raise ValueError("unsafe or unbounded source")
     if re.search(rb"\\\r?\n", raw):
         raise ValueError("source line splice is forbidden")
@@ -40,6 +40,7 @@ def falsifiers():
             b"/* RAF_OPT:PROFILE=speed;UNROLL=99 */\nint x;\n",
             b"/* RAF_OPT:PROFILE=stable;UNROLL=1 */\n\\\nint x;\n",
             b"/* RAF_OPT:PROFILE=stable;UNROLL=1 */\n??/\nint x;\n",
+            b"/* RAF_OPT:PROFILE=stable;UNROLL=1 */\n??=\nint x;\n",
             valid + b"\0",
         ):
             p.write_bytes(bad)
