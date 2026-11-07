@@ -73,6 +73,13 @@ def main() -> int:
     ):
         require(text, token)
 
+    # Pull-request previews must follow the existing reviewed canonical producer.
+    # The historical candidate PR183 was merged; selecting it implicitly would
+    # fail source resolution and prevent the real APK handoff CI from starting.
+    require(text, "github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || 'canonical'")
+    if "github.event_name == 'pull_request' && 'candidate'" in text:
+        raise AssertionError('PR preview must not silently select a merged/stale candidate')
+
     # Exact producer dispatches and operator actions cannot cancel a previous
     # SHA-bound artifact download/APK assembly. Only PR previews are superseded.
     require(text, "github.event.client_payload.producer_run_id")
