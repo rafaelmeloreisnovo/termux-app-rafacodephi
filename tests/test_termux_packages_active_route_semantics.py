@@ -41,7 +41,8 @@ def main() -> int:
     canonical = doc["channels"]["canonical"]
     candidate = doc["channels"]["candidate"]
     assert canonical["state"] == "MERGED_BASELINE"
-    assert candidate["state"] != "MERGED_BASELINE"
+    assert canonical["commit"] == "d65cd6c2afa9d16196ba0375aaff36833d530b41"
+    assert candidate["state"] == "BLOCKED_NO_ACTIVE_UNMERGED_CANDIDATE"
     assert candidate["promotion_target"] == "canonical"
     assert canonical["commit"] != candidate["commit"]
     # Post-merge provenance: the old PR174 source pin is historical, not an active producer.
@@ -49,12 +50,12 @@ def main() -> int:
         entry["merged_pr"] for entry in doc["pin_history"]
         if entry.get("event") == "SUPERSEDED_AFTER_MERGE"
     }
-    assert candidate["pull_request"] not in merged_history
+    assert candidate["commit"] == "TOKEN_VAZIO"
     assert 174 in merged_history
-    assert canonical["source_lineage_prs"] == [174, 179]
-    assert canonical["build_gate"] == "BLOCKED_REAL_BOOTSTRAP_YAML_PENDING_PR183"
-    assert candidate["state"].startswith("OPEN_DRAFT_")
-    assert candidate["pull_request"] == 183
+    assert canonical["source_lineage_prs"] == [174, 179, 183, 184]
+    assert canonical["build_gate"] == "BLOCKED_MAIN_EXACT_SHA_APK_AND_SIGNED_APT_NOT_PROVEN"
+    assert 183 in merged_history
+    assert "pull_request" not in candidate
     assert any(entry.get("value", {}).get("commit") == canonical["previous_commit"]
                for entry in doc["pin_history"])
     for channel in (canonical, candidate):
@@ -62,8 +63,13 @@ def main() -> int:
         assert channel["physical_android"] == "TOKEN_VAZIO"
 
     assert resolve("canonical") == canonical["commit"]
-    assert resolve("candidate") == candidate["commit"]
-    assert resolve(candidate["commit"]) == candidate["commit"]
+    disabled = subprocess.run(
+        [sys.executable, str(RESOLVER), "candidate"],
+        cwd=ROOT, text=True, capture_output=True, check=False,
+    )
+    assert disabled.returncode != 0
+    assert "BLOCKED_NO_ACTIVE_UNMERGED_CANDIDATE" in disabled.stderr
+    assert resolve(canonical["commit"]) == canonical["commit"]
 
     for path in ACTIVE_ROUTES:
         assert path.is_file(), f"missing active route: {path.relative_to(ROOT)}"
@@ -84,13 +90,13 @@ def main() -> int:
     assert "TERMUX_PACKAGES_RAF_REF: canonical" in apk_matrix
     assert "default: canonical" in v1 and "resolve_termux_packages_pin.py" in v1
     assert "default: canonical" in control and "resolve_termux_packages_pin.py" in control
-    assert "TERMUX_PACKAGES_RAF_CHANNEL: candidate" in beta
+    assert "TERMUX_PACKAGES_RAF_CHANNEL: canonical" in beta
     assert "resolve_termux_packages_pin.py" in beta
-    assert candidate["commit"] not in beta
+    assert "bcb1dfec1ecc72cd3acee80b5bf3706cead4849c" not in beta
     assert "TERMUX_PACKAGES_RAF_REQUIRE_PINNED: 'true'" in beta
 
     print(
-        "PASS: active Termux routes resolve semantic pin channels; historical/candidate magic SHAs are excluded from executable surfaces; candidate remains fail-closed"
+        "PASS: active Termux routes resolve semantic pin channels; historical/candidate magic SHAs are excluded from executable surfaces; candidate disabled fail-closed; canonical now follows merged producer"
     )
     return 0
 
