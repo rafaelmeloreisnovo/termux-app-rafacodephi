@@ -10,27 +10,28 @@
   ],
   "channels": {
     "canonical": {
-      "commit": "b5499741aada8a779099b4fd7aa0fd5067169bb8",
+      "commit": "d65cd6c2afa9d16196ba0375aaff36833d530b41",
       "branch": "main",
       "state": "MERGED_BASELINE",
-      "previous_commit": "58d6eaf1300c51c5a3749024a02f6448e02599f7",
-      "source_scope": "Observed main after merged PR174 Ninja and PR179 Debian epoch transport. Real-bootstrap workflow YAML remains gated by open PR183; no usable APK or signed APT publication claim.",
+      "previous_commit": "b5499741aada8a779099b4fd7aa0fd5067169bb8",
+      "source_scope": "Observed packages main after merged #174, #179, #183 and #184. PR183 source-build CI run 41904631252 passed at its historical head; main exact-SHA APK handoff, signed APT publishing and Android execution remain unproven.",
       "source_lineage_prs": [
         174,
-        179
+        179,
+        183,
+        184
       ],
-      "build_gate": "BLOCKED_REAL_BOOTSTRAP_YAML_PENDING_PR183",
+      "build_gate": "BLOCKED_MAIN_EXACT_SHA_APK_AND_SIGNED_APT_NOT_PROVEN",
       "claim_allowed": false,
       "physical_android": "TOKEN_VAZIO"
     },
     "candidate": {
-      "commit": "bcb1dfec1ecc72cd3acee80b5bf3706cead4849c",
-      "branch": "hotfix/rafcodephi-real-bootstrap-yaml-20261103",
-      "state": "OPEN_DRAFT_CUSTODY_HOTFIX_EXACT_HEAD_TESTS_PENDING",
+      "commit": "TOKEN_VAZIO",
+      "branch": "TOKEN_VAZIO",
+      "state": "BLOCKED_NO_ACTIVE_UNMERGED_CANDIDATE",
       "promotion_target": "canonical",
-      "supersedes_commit": "8a6c938d29b0161401fe85fcf7aa2b941f8649dc",
-      "pull_request": 183,
-      "source_patch_scope": "PR183 fixes real-bootstrap YAML and sealed ABI TAR+SHA fan-in; prior ARM32/ARM64 builds PASS but postfix fan-in requires new exact-head evidence",
+      "supersedes_commit": "bcb1dfec1ecc72cd3acee80b5bf3706cead4849c",
+      "source_patch_scope": "Previous PR183 merged into canonical main. No distinct active producer code candidate verified. Explicit exact-SHA remains possible under separate review.",
       "claim_allowed": false,
       "physical_android": "TOKEN_VAZIO"
     }
@@ -115,6 +116,54 @@
       "event": "SUPERSEDED_AFTER_MERGE",
       "merged_pr": 174,
       "merge_commit": "75e452d108fd037329896ca74e29bb8df3cd5e99"
+    },
+    {
+      "channel": "canonical",
+      "value": {
+        "commit": "b5499741aada8a779099b4fd7aa0fd5067169bb8",
+        "branch": "main",
+        "state": "MERGED_BASELINE",
+        "previous_commit": "58d6eaf1300c51c5a3749024a02f6448e02599f7",
+        "source_scope": "Observed main after merged PR174 Ninja and PR179 Debian epoch transport. Real-bootstrap workflow YAML remains gated by open PR183; no usable APK or signed APT publication claim.",
+        "source_lineage_prs": [
+          174,
+          179
+        ],
+        "build_gate": "BLOCKED_REAL_BOOTSTRAP_YAML_PENDING_PR183",
+        "claim_allowed": false,
+        "physical_android": "TOKEN_VAZIO"
+      },
+      "superseded_on": "2026-11-07",
+      "reason": "Provider main d65cd6c2 merged producer PR183 and PR184; exact-main APK integration not yet proven",
+      "event": "SUPERSEDED_AFTER_MERGE",
+      "merged_pr": 183,
+      "merged_prs": [
+        183,
+        184
+      ],
+      "merged_head_shas": [
+        "e7f23f46d039d04577c035457c920047f03dc2a1",
+        "9b5afc48cdd14b4d6b6c6c7be4ea1ffb464145e8"
+      ]
+    },
+    {
+      "channel": "candidate",
+      "value": {
+        "commit": "bcb1dfec1ecc72cd3acee80b5bf3706cead4849c",
+        "branch": "hotfix/rafcodephi-real-bootstrap-yaml-20261103",
+        "state": "OPEN_DRAFT_CUSTODY_HOTFIX_EXACT_HEAD_TESTS_PENDING",
+        "promotion_target": "canonical",
+        "supersedes_commit": "8a6c938d29b0161401fe85fcf7aa2b941f8649dc",
+        "pull_request": 183,
+        "source_patch_scope": "PR183 fixes real-bootstrap YAML and sealed ABI TAR+SHA fan-in; prior ARM32/ARM64 builds PASS but postfix fan-in requires new exact-head evidence",
+        "claim_allowed": false,
+        "physical_android": "TOKEN_VAZIO"
+      },
+      "superseded_on": "2026-11-07",
+      "reason": "PR183 merged; former draft is no longer an active unmerged candidate",
+      "event": "SUPERSEDED_AFTER_MERGE",
+      "merged_pr": 183,
+      "merged_head_sha": "e7f23f46d039d04577c035457c920047f03dc2a1"
     }
   ]
 }
