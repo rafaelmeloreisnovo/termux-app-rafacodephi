@@ -1,0 +1,24 @@
+name: RAFCODEPHI authorial C11 core v1
+on:
+  pull_request:
+    paths:
+      - 'raf_authorial_v1/**'
+      - '.github/workflows/raf-authorial-core-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: GCC strict parser, freestanding object and host vectors
+        run: python3 raf_authorial_v1/tools/raf_gate.py gate gcc
+      - name: Clang strict parser, freestanding object and host vectors
+        run: python3 raf_authorial_v1/tools/raf_gate.py gate clang
+  arm-objects:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ARMv7 and AArch64 compile only
+        run: python3 raf_authorial_v1/tools/raf_gate.py cross clang
