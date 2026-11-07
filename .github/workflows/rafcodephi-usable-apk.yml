@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_BUILD_SHA: 8fcb13afd14398b496ec0c90026a6765fa09c54b
+  TERMUX_PACKAGES_BUILD_SHA: d65cd6c2afa9d16196ba0375aaff36833d530b41
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
 
