@@ -1,3 +1,4 @@
+#include "raf_bootstrap_hash.h"
      .global blob
      .global blob_size
      .section .rodata
