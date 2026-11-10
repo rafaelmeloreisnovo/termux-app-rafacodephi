@@ -1,0 +1,31 @@
+{
+  "event": "build-real-pkg-apks-via-ci",
+  "parent": "REAL_PKG_NATIVE_EMBED_20261109.json",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "base_commit": "be50e20b519ceb99e70c9cda2a6cd593bd78e1dc",
+  "authority": "branch-only CI build and artifact delivery; user explicitly requested Via ci",
+  "classification": {
+    "governance": "reversible workflow implementation; no default branch merge or official release",
+    "data": "public source-built package inputs and bounded public verification receipts",
+    "privacy": "no device data or signing secrets uploaded",
+    "security": "immutable artifact and ZIP digests; pinned public key and producer sealer; no bridge fallback"
+  },
+  "action": "prepare exact real-pkg ARM pair, verify current signed HTTPS APT resolution, run consumer contracts, build all APKs, verify embedded ELF payloads and signatures, upload CI artifacts",
+  "producer_commit": "affe71a12c903daf70ac46dcc83ffad7d49a870a",
+  "producer_source_run": 41904631252,
+  "recovery_run": 42657253878,
+  "archive_key_sha256": "12beed0a1af401641bade1ae0d02f94d593bfc6cf8bda76d737d558b92df5f6b",
+  "executions_before_ci": [
+    "CI preparer reproduced both previously validated bootstrap ZIPs byte for byte",
+    "41 selected consumer tests and 6 subtests passed under workflow environment",
+    "repository workflow YAML/Bash validator passed on the new workflow"
+  ],
+  "falsifiers": ["digest mismatch", "key pin mismatch", "sealer mismatch", "conflicting manifest", "missing input", "stale embedded native blob"],
+  "exit_criterion": "CI run succeeds and exposes three signed debug APKs plus input/payload/signature receipts",
+  "rollback": "revert workflow/helper changes on this branch; preserve prior receipts and artifacts",
+  "F_ok": ["local preparation and selected contracts verified"],
+  "F_gap": ["CI execution pending at source receipt creation", "physical Android execution TOKEN_VAZIO", "CI debug key may differ from locally generated debug key"],
+  "F_next": ["execute workflow", "inspect terminal CI result and artifact identities"],
+  "claim_allowed": false,
+  "device_runtime": "TOKEN_VAZIO"
+}
