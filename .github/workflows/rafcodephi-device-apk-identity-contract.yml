@@ -1,0 +1,51 @@
+name: RAFCODEPHI APK Device Identity Contract
+
+on:
+  pull_request:
+    paths:
+      - 'configs/device-apk-attestation-42811514174.v1.json'
+      - 'scripts/attest_installed_apk.py'
+      - 'tests/test_attest_installed_apk.py'
+      - '.github/workflows/rafcodephi-device-apk-identity-contract.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'configs/device-apk-attestation-42811514174.v1.json'
+      - 'scripts/attest_installed_apk.py'
+      - 'tests/test_attest_installed_apk.py'
+      - '.github/workflows/rafcodephi-device-apk-identity-contract.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  host-negative-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CLAIM_ALLOWED_RELEASE: 'false'
+      PHYSICAL_ANDROID: 'TOKEN_VAZIO'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Validate manifest schema and immutable offline hashes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, re
+          from pathlib import Path
+          p = Path('configs/device-apk-attestation-42811514174.v1.json')
+          x = json.loads(p.read_text())
+          assert x['schema'] == 'rafcodephi.device-apk-attestation-manifest/v1'
+          assert x['package'] == 'com.termux.rafacodephi'
+          assert x['ci_run_id'] == '42811514174'
+          assert x['release_allowed'] is False
+          assert set(x['variants']) == {'armeabi-v7a','arm64-v8a','universal'}
+          for v in x['variants'].values():
+              assert re.fullmatch(r'[0-9a-f]{64}', v['sha256'])
+              assert v['bytes'] > 0
+          print('OFFLINE_MANIFEST=PASS_SCOPED')
+          PY
+      - name: Adversarial read-only device-binding fixtures (host-only)
+        run: python3 -m unittest discover -s tests -p test_attest_installed_apk.py -v
