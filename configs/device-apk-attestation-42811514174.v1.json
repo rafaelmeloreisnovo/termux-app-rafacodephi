@@ -1,0 +1,26 @@
+{
+  "schema": "rafcodephi.device-apk-attestation-manifest/v1",
+  "ci_run_id": "42811514174",
+  "package": "com.termux.rafacodephi",
+  "build_track": "CI_ANDROID_DEBUG",
+  "release_allowed": false,
+  "source_commit": "TOKEN_VAZIO",
+  "build_receipt_sha256": "TOKEN_VAZIO",
+  "variants": {
+    "armeabi-v7a": {
+      "sha256": "e220d42015a2742bcf6104b65e9f1ae1ab4059ab4280796365c284cb0d495bce",
+      "bytes": 34859329,
+      "allowed_device_abis": ["armeabi-v7a"]
+    },
+    "arm64-v8a": {
+      "sha256": "a97281b84fe10cfe72bef89097c0c601afcf7b130b9456681c8c85a7d1396c72",
+      "bytes": 37872785,
+      "allowed_device_abis": ["arm64-v8a"]
+    },
+    "universal": {
+      "sha256": "244b0b1253d1eb48e2b918de6a0d43fc9f3f2620148f42bf8f9307478d42f5d6",
+      "bytes": 61119177,
+      "allowed_device_abis": ["armeabi-v7a", "arm64-v8a"]
+    }
+  }
+}
