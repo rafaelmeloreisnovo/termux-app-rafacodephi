@@ -338,6 +338,14 @@ tasks.register("verifyBootstrapZipsPresent") {
     }
 }
 
+// `gradlew clean assembleDebug` may otherwise schedule this generator before
+// :app:clean, which deletes build/generated/bootstrap/raf_bootstrap_hash.h and
+// leaves the assembler with a missing include. If clean tasks are in the same
+// graph, force every one of them to finish before regenerating the hash header.
+tasks.named("verifyBootstrapZipsPresent").configure {
+    mustRunAfter(tasks.named("clean"))
+}
+
 tasks.register("validateSideBySideContract", Exec) {
     group = "verification"
     description = "Validates canonical RAFCODEPHI side-by-side package/bootstrap contract."
@@ -349,7 +357,7 @@ tasks.register("validateSideBySideContract", Exec) {
 // is an explicit upstream/source-built-real action, NOT an implicit bridge
 // generation side effect of assembleDebug/assembleRelease.
 tasks.matching { it.name == "preBuild" ||
-                 it.name.startsWith("externalNativeBuild") ||
+                 (it.name.startsWith("externalNativeBuild") && !it.name.startsWith("externalNativeBuildClean")) ||
                  it.name.startsWith("configureNdkBuild") ||
                  it.name.startsWith("buildNdkBuild") ||
                  it.name.startsWith("generateJsonModel") }.configureEach {

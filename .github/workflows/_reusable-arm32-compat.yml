@@ -25,6 +25,7 @@ jobs:
     timeout-minutes: 60
     env:
       TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS: '1'
+      NDK_LANE: ${{ inputs.ndk_lane }}
 
     steps:
       - name: "📥 Checkout"
@@ -35,39 +36,21 @@ jobs:
       - name: "🧭 Validar lane"
         run: |
           set -euo pipefail
-          case "${{ inputs.ndk_lane }}" in
+          case "$NDK_LANE" in
             canonical) ;;
             ndk29) echo 'JITPACK_NDK_VERSION=29.0.14206865' >> "$GITHUB_ENV" ;;
-            *) echo "lane inválida: ${{ inputs.ndk_lane }}" >&2; exit 2 ;;
+            *) echo "lane inválida: $NDK_LANE" >&2; exit 2 ;;
           esac
 
-      - name: "☕ Java 21"
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+      - name: "🧰 Toolchain único — Bash / Node 24 / JDK 21 / NDK / Ninja / fastboot"
+        uses: ./.github/actions/rafaelia-android-setup
         with:
-          distribution: temurin
           java-version: '21'
-          cache: gradle
-
-      - name: "🤖 Android SDK / NDK"
-        run: ./scripts/setup_android_toolchain.sh
-
-      - name: "🧰 Resolver build-tools"
-        run: |
-          set -euo pipefail
-          BUILD_TOOLS=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n1)
-          echo "$ANDROID_HOME/build-tools/$BUILD_TOOLS" >> "$GITHUB_PATH"
-          APKSIGNER=$(find "${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}/build-tools" \
-            -name apksigner -type f 2>/dev/null | sort -rV | head -1)
-          if [[ -z "$APKSIGNER" ]]; then
-            sdkmanager --install 'build-tools;35.0.1' >/dev/null 2>&1 || true
-            APKSIGNER=$(find "${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}/build-tools" \
-              -name apksigner -type f 2>/dev/null | sort -rV | head -1)
-          fi
-          [[ -n "$APKSIGNER" ]] || { echo 'apksigner não encontrado' >&2; exit 1; }
-          echo "APKSIGNER=$APKSIGNER" >> "$GITHUB_ENV"
+          node-version: '24'
+          prepare-bootstrap: 'true'
 
       - name: "🔨 Build debug APKs"
-        run: ./gradlew clean :app:assembleDebug --no-daemon
+        run: ./gradlew clean :app:assembleDebug --no-daemon --max-workers=2
 
       - name: "🔐 Contrato SDK / NDK"
         run: |
@@ -75,7 +58,7 @@ jobs:
           test "$(awk -F= '/^minSdkVersion=/{print $2}' gradle.properties)" = '21'
           test "$(awk -F= '/^targetSdkVersion=/{print $2}' gradle.properties)" = '28'
           test "$(awk -F= '/^compileSdkVersion=/{print $2}' gradle.properties)" = '35'
-          if [[ "${{ inputs.ndk_lane }}" == 'canonical' ]]; then
+          if [[ "$NDK_LANE" == 'canonical' ]]; then
             test "$(awk -F= '/^ndkVersion=/{print $2}' gradle.properties)" = '26.3.11579264'
           else
             test "${JITPACK_NDK_VERSION:-}" = '29.0.14206865'
@@ -84,13 +67,13 @@ jobs:
       - name: "📦 Coletar APKs e gerar relatório"
         run: |
           set -euo pipefail
-          lane='${{ inputs.ndk_lane }}'
+          lane="$NDK_LANE"
           report="dist/arm32-compatibility/$lane"
           mkdir -p "$report/apks"
 
-          ARM32_APK=$(find app/build/outputs/apk/debug -name 'termux-rafcodephi-debug-armeabi-v7a.apk' | head -n1)
-          ARM64_APK=$(find app/build/outputs/apk/debug -name 'termux-rafcodephi-debug-arm64-v8a.apk' | head -n1)
-          UNIVERSAL_APK=$(find app/build/outputs/apk/debug -name 'termux-rafcodephi-debug-universal.apk' | head -n1)
+          ARM32_APK=$(find app/build/outputs/apk/debug -name 'termux-rafcodephi-debug-armeabi-v7a.apk' -print -quit)
+          ARM64_APK=$(find app/build/outputs/apk/debug -name 'termux-rafcodephi-debug-arm64-v8a.apk' -print -quit)
+          UNIVERSAL_APK=$(find app/build/outputs/apk/debug -name 'termux-rafcodephi-debug-universal.apk' -print -quit)
           test -n "$ARM32_APK" && test -n "$ARM64_APK" && test -n "$UNIVERSAL_APK"
 
           cp "$ARM32_APK" "$report/apks/"
@@ -101,7 +84,7 @@ jobs:
           unzip -l "$ARM32_APK" | tee "$report/native-libs.txt"
           unzip -l "$UNIVERSAL_APK" > "$report/universal-libs.txt"
 
-          lib_path=$(unzip -Z1 "$ARM32_APK" | grep '^lib/armeabi-v7a/.*\.so$' | head -n1)
+          lib_path=$(unzip -Z1 "$ARM32_APK" | awk '/^lib\/armeabi-v7a\/.*\.so$/ && !found { print; found=1 }')
           test -n "$lib_path"
           unzip -p "$ARM32_APK" "$lib_path" > /tmp/arm32-lib.so
           readelf -h /tmp/arm32-lib.so > "$report/readelf-arm32.txt"
@@ -119,7 +102,7 @@ jobs:
           stat app/src/main/cpp/bootstrap-arm.zip > "$report/bootstrap-arm.txt"
           cp INSTALL_ARM32.md "$report/install-notes-arm32.md"
 
-          if find dist -name '*release*unsigned*.apk' | grep -q .; then
+          if [[ -n "$(find dist -name '*release*unsigned*.apk' -print -quit)" ]]; then
             echo 'Unsigned release artifact found in principal output path.' >&2
             exit 1
           fi
@@ -142,13 +125,22 @@ jobs:
           retention-days: 14
           path: dist/arm32-compatibility/${{ inputs.ndk_lane }}/
 
+      - name: "📦 Evidência de inicialização da toolchain"
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: toolchain-startup-${{ inputs.ndk_lane }}-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: build/reports/toolchain-startup.json
+
       - name: "Ω Resumo"
         run: |
           {
             echo '## 📱 ARM32 v7'
             echo
             echo "- ABI: \`armeabi-v7a\`"
-            echo "- lane: \`${{ inputs.ndk_lane }}\`"
+            echo "- lane: \`$NDK_LANE\`"
             echo '- build/contratos estáticos: **PASS**'
             echo '- prova física do Android: **TOKEN_VAZIO**'
             echo

@@ -55,4 +55,4 @@ def test_storage_symlinks_are_best_effort_after_permission() -> None:
     assert "Environment.getExternalStorageDirectory" in installer
     assert "getExternalFilesDirs" in installer
     assert "getExternalMediaDirs" in installer
-    assert "Storage symlinks created successfully" in installer
+    assert "Runtime storage links ready at" in installer
