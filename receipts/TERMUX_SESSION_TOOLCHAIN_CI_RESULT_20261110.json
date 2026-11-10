@@ -1,0 +1,115 @@
+{
+  "schema": "rafcodephi.session-toolchain-ci-result/v1",
+  "event": "termux-session-toolchain-real-apt-ci-completed",
+  "parent_receipt": "receipts/TERMUX_SESSION_TOOLCHAIN_INIT_20261110.json",
+  "observed_at": "2026-11-10T20:13:44-03:00",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "source_commit": "6fde151f437f98deba13a6f80202ad7551384a4e",
+  "pull_request": 528,
+  "workflow": {
+    "run_id": 42921080388,
+    "run_attempt": 1,
+    "job_id": 130195772200,
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/actions/runs/42921080388"
+  },
+  "github_artifacts": {
+    "toolchain": {
+      "id": 13812770490,
+      "name": "RAFCODEPHI-toolchain-startup-42921080388-1",
+      "bytes": 958,
+      "sha256": "4755d89b47c3e5414afed29f02a794be9383aa27c2b93cd46c96916bef81fb5f"
+    },
+    "apks": {
+      "id": 13811362427,
+      "name": "RAFCODEPHI-real-pkg-APKs-42921080388",
+      "bytes": 133916448,
+      "sha256": "8471b61e3017a49c310a0bcc7864f9d66dcc699c36fbfcb871598abf24e0885b"
+    },
+    "bootstraps": {
+      "id": 13811212904,
+      "name": "RAFCODEPHI-real-pkg-bootstraps-42921080388",
+      "bytes": 48359441,
+      "sha256": "1043b41ba2c5e025671c20b7867bdb999ba296b4b6f3059234fef0647bff2c63"
+    }
+  },
+  "apk_matrix": {
+    "arm64_v8a": {"bytes": 37872993, "sha256": "496e59270161577501674e308ec7b88e41299f23dce06e2c4809b7137013de48"},
+    "armeabi_v7a": {"bytes": 34859531, "sha256": "e8579d033e7094fb4ef82cc54eeff4fdd4c70f0911c4f2c239d30ae8c70437ca"},
+    "universal": {"bytes": 61119383, "sha256": "89ea63631e8cfe97665d7fc3af64aa39b804dbf68f25d351e15fd94acab25d57"},
+    "package": "com.termux.rafacodephi",
+    "version_name": "0.118.0-rafacodephi",
+    "signing": "CI_ANDROID_DEBUG_V1_V2"
+  },
+  "toolchain": {
+    "state": "PASS",
+    "bash": "5.2.21",
+    "node": "24.22.2",
+    "jdk": "21.0.13",
+    "fastboot_cli": "37.0.1-15733141",
+    "ndk": "26.3.11579264",
+    "ninja": "1.10.2",
+    "arm_object": "PASS",
+    "aarch64_object": "PASS",
+    "javascript_smoke": "PASS",
+    "jdk_compile_run": "PASS",
+    "ninja_graph_execution": "PASS"
+  },
+  "drive": {
+    "account": "rafaelmeloreisnovo@gmail.com",
+    "parent_folder_id": "1OjObUZuZT6CzFYX3eML6lRCfR0-GNWi6",
+    "universal_apk": {
+      "id": "1aBfx2maiYTQVvfm12HZVcTqNa2-glcV8",
+      "name": "RAFCODEPHI-SESSION-TOOLCHAIN-APT-REAL-universal-run42921080388.apk",
+      "bytes": 61119383,
+      "sha256": "89ea63631e8cfe97665d7fc3af64aa39b804dbf68f25d351e15fd94acab25d57",
+      "url": "https://drive.google.com/file/d/1aBfx2maiYTQVvfm12HZVcTqNa2-glcV8/view?usp=drivesdk",
+      "metadata_readback": "PASS"
+    },
+    "report": {
+      "id": "1gVhfE0RxVgrMA7FZaTmjNKp4qVMweI9c",
+      "name": "RAFCODEPHI-SESSION-TOOLCHAIN-CI-20261110.json",
+      "bytes": 4014,
+      "url": "https://drive.google.com/file/d/1gVhfE0RxVgrMA7FZaTmjNKp4qVMweI9c/view?usp=drivesdk",
+      "metadata_readback": "PASS"
+    }
+  },
+  "supabase": {
+    "project_ref": "ehwltgfrvbkmjqjjfoqn",
+    "table": "raf_private.rafdb_federated_events_v1",
+    "event_key": "rafcode:termux:session-toolchain:run42921080388:20261110:v1",
+    "event_kind": "CI_OBSERVED",
+    "event_state": "PASS",
+    "payload_sha256": "8471b61e3017a49c310a0bcc7864f9d66dcc699c36fbfcb871598abf24e0885b",
+    "readback": "PASS",
+    "claim_allowed": false
+  },
+  "gates": [
+    "73 selected tests and 6 subtests",
+    "26 immutable GitHub Action references",
+    "signed HTTPS APT resolution on ARM32 and ARM64",
+    "real bootstrap pair transactional import",
+    "clean debug APK matrix build",
+    "exact native bootstrap payload equality",
+    "APK v1 and v2 signature verification",
+    "toolchain receipt and artifact uploads"
+  ],
+  "F_ok": [
+    "session/keyboard source startup blockers closed",
+    "host Bash, Node 24, JDK 21, fastboot, NDK and Ninja startup observed",
+    "real APT universal/ARM32/ARM64 APKs built and verified",
+    "GitHub, Supabase and Drive successor evidence materialized"
+  ],
+  "F_gap": [
+    "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING for Android session, keyboard, pkg and fastboot device execution",
+    "TOKEN_VAZIO_EVIDENCE_INSUFFICIENT for Node/OpenJDK/android-tools/NDK inside the signed device package snapshot",
+    "official release signing not promoted"
+  ],
+  "F_next": [
+    "install the exact Drive APK on a physical Android device and retain a bounded receipt",
+    "extend termux-packages with a successor developer-tool package profile"
+  ],
+  "claim_allowed": false,
+  "release_allowed": false
+}
