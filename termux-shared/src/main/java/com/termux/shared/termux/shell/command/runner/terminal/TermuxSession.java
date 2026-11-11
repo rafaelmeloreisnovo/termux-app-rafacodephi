@@ -84,6 +84,19 @@ public class TermuxSession {
                 for (String shellBinary : UnixShellEnvironment.LOGIN_SHELL_BINARIES) {
                     File shellFile = new File(defaultBinPath, shellBinary);
                     if (shellFile.canExecute()) {
+                        // On Android 10 (API29), API30 ELF files can be executable on disk
+                        // but fail in the dynamic linker before Bash gets to run.
+                        // Skip ONLY shells with a proven incompatible Android ELF note.
+                        // Legacy script wrappers and compatible ELF retain their behavior.
+                        if (android.os.Build.VERSION.SDK_INT < 30) {
+                            int requiredApi = BootstrapElfApi.minimumAndroidApi(shellFile);
+                            if (requiredApi > android.os.Build.VERSION.SDK_INT) {
+                                Logger.logWarn(LOG_TAG, "Skipping incompatible shell " +
+                                    shellBinary + ": requires Android API " + requiredApi +
+                                    ", device API " + android.os.Build.VERSION.SDK_INT);
+                                continue;
+                            }
+                        }
                         if (foundCandidates.length() > 0) foundCandidates.append(",");
                         foundCandidates.append(shellBinary);
                         if (executionCommand.executable == null) executionCommand.executable = shellFile.getAbsolutePath();
