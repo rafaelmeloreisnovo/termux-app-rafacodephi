@@ -58,6 +58,59 @@ def test_toolchain_verifier_executes_real_language_and_cross_abi_smokes() -> Non
     assert 'sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"' in verifier
 
 
+
+def test_ndk_elf_header_probe_accepts_real_arm_bytes_and_rejects_corruption() -> None:
+    """Run the real embedded NDK verifier on valid and adversarial ELF headers."""
+    import subprocess
+    import sys
+    import tempfile
+
+    verifier = read("scripts/verify_toolchain_startup.sh")
+    marker = "if ! python3 - \"$probe_dir/ndk-arm.o\" \"$probe_dir/ndk-aarch64.o\" <<'PY'\n"
+    assert verifier.count(marker) == 1
+    probe = verifier.split(marker, 1)[1].split("\nPY\n", 1)[0]
+
+    def elf_header(elf_class: int, machine: int) -> bytes:
+        header = bytearray(20)
+        header[:4] = b"\x7fELF"
+        header[4] = elf_class
+        header[5] = 1  # little endian
+        header[18:20] = machine.to_bytes(2, "little")
+        return bytes(header)
+
+    with tempfile.TemporaryDirectory(prefix="raf-ndk-elf-") as folder:
+        arm = Path(folder) / "arm.o"
+        arm64 = Path(folder) / "aarch64.o"
+
+        def run_probe() -> subprocess.CompletedProcess[str]:
+            return subprocess.run(
+                [sys.executable, "-c", probe, str(arm), str(arm64)],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+
+        arm.write_bytes(elf_header(1, 40))
+        arm64.write_bytes(elf_header(2, 183))
+        positive = run_probe()
+        assert positive.returncode == 0, positive.stderr
+        assert "NDK_ELF_ABI=PASS_SCOPED" in positive.stdout
+
+        for corrupted in (
+            b"NOT_ELF",
+            elf_header(1, 183),   # ARM32 class with AArch64 machine
+            elf_header(2, 40),    # ARM64 class with ARM machine
+            b"\x00" + elf_header(1, 40)[1:],  # invalid magic
+        ):
+            arm.write_bytes(corrupted)
+            negative = run_probe()
+            assert negative.returncode != 0, (
+                f"invalid ARM object unexpectedly passed: {corrupted!r}"
+            )
+            arm.write_bytes(elf_header(1, 40))
+
+        arm64.write_bytes(elf_header(2, 40))
+        assert run_probe().returncode != 0, "ARM64 machine mismatch accepted"
+
+
 def test_composite_action_is_immutable_and_prepares_bootstrap_once() -> None:
     action = read(".github/actions/rafaelia-android-setup/action.yml")
 
