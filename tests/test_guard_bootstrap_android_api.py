@@ -78,6 +78,30 @@ class ApiGateTests(unittest.TestCase):
         self.assertEqual(len(result["checks"]), len(gate.CRITICAL) + len(gate.SCRIPT_INTERPRETERS))
         self.assertIn("NOT_ELF", result["checks"][0]["reasons"])
 
+    def test_android10_rejects_transitive_libcrypto_memfd_import(self):
+        # A valid bin/bash does not prove its linked .so closure can load.
+        with tempfile.TemporaryDirectory() as d:
+            archive = Path(d) / "bootstrap.zip"
+            with zipfile.ZipFile(archive, "w") as z:
+                z.writestr("BOOTSTRAP_PROFILE.json",
+                           json.dumps({"arch": "arm",
+                                       "package_name": "com.termux.rafacodephi"}))
+                for name in gate.CRITICAL:
+                    z.writestr(name, b"\\x7fELF" + b"\\x01" * 64)
+                for name, interpreter in gate.SCRIPT_INTERPRETERS.items():
+                    z.writestr(name, b"#!" + interpreter + b"\\n")
+                z.writestr("lib/libcrypto.so.3", b"\\x7fELF" + b"\\x01" * 64)
+            def probe(_binary, arch, name, max_api):
+                reasons = ["UNRESOLVED_MEMFD_CREATE"] if name == "lib/libcrypto.so.3" else []
+                return {"entry": name, "arch": arch,
+                        "state": "BLOCKED" if reasons else "PASS_SCOPED_STATIC",
+                        "android_min_api": 29, "reasons": reasons}
+            with patch.object(gate, "inspect_elf", side_effect=probe):
+                report = gate.inspect_archive("arm", archive, 29)
+        self.assertEqual(report["state"], "BLOCKED")
+        blocked = {x["entry"]: x["reasons"] for x in report["checks"] if x["reasons"]}
+        self.assertEqual(blocked["lib/libcrypto.so.3"], ["UNRESOLVED_MEMFD_CREATE"])
+
     def test_pkg_shebang_references_private_bash(self):
         valid = b"#!/data/data/com.termux.rafacodephi/files/usr/bin/bash\nset -eu\n"
         self.assertEqual(gate.inspect_script(valid, "arm", "bin/pkg")["state"],
