@@ -43,8 +43,10 @@ def test_toolchain_verifier_executes_real_language_and_cross_abi_smokes() -> Non
     assert "build.ninja" in verifier and "rafcodephi-ninja-ok" in verifier
     assert "armv7a-linux-androideabi21-clang" in verifier
     assert "aarch64-linux-android21-clang" in verifier
-    assert "Machine:[[:space:]]+ARM" in verifier
-    assert "Machine:[[:space:]]+AArch64" in verifier
+    assert "NDK_ELF_ABI_MISMATCH" in verifier
+    assert 'int.from_bytes(data[18:20], "little")' in verifier
+    assert '(sys.argv[1], 1, 40)' in verifier
+    assert '(sys.argv[2], 2, 183)' in verifier
     assert '"schema": "rafcodephi.toolchain-startup/v1"' in verifier
     assert '[[ "$ndk_revision" == "$effective_ndk_version" ]]' in verifier
     assert '"termux_session_keyboard_device": "TOKEN_VAZIO_ENVIRONMENT_UNAVAILABLE"' in verifier
