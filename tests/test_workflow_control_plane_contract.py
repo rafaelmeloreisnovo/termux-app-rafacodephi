@@ -121,6 +121,39 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
         self.assertIn("artifact", self.scanner.ALLOWED_TRACKS)
         self.assertEqual(self.scanner.TOKEN_VAZIO, "TOKEN_VAZIO")
 
+
+    def test_reusable_overlap_is_review_only_and_ndk_lanes_are_distinct(self) -> None:
+        def row(lane: str, path: str, trigger: str = "pull_request") -> dict:
+            yml = (
+                "jobs:\n  build:\n    uses: ./.github/workflows/_reusable-arm32-compat.yml\n"
+                f"    with:\n      ndk_lane: {lane}\n"
+            )
+            return {
+                "path": path,
+                "ci_track": "ops",
+                "triggers": [trigger],
+                "reusable_signature": self.scanner.reusable_workload_signature(yml),
+            }
+
+        canonical = row("canonical", "canonical.yml")
+        ndk29 = row("ndk29", "ndk29.yml")
+        self.assertNotEqual(canonical["reusable_signature"], ndk29["reusable_signature"])
+        self.assertEqual([], self.scanner.workload_overlap_candidates([canonical, ndk29]))
+
+        overlapping = self.scanner.workload_overlap_candidates([
+            canonical, row("canonical", "same-lane.yml")
+        ])
+        self.assertEqual(len(overlapping), 1)
+        self.assertEqual(overlapping[0]["state"], "REVIEW_ONLY")
+        self.assertEqual(overlapping[0]["workload_equivalence"], "TOKEN_VAZIO")
+
+        manual = row("canonical", "manual.yml", trigger="workflow_dispatch")
+        self.assertEqual([], self.scanner.workload_overlap_candidates([manual, manual]))
+        self.assertEqual(
+            "TOKEN_VAZIO",
+            self.scanner.reusable_workload_signature("jobs:\n  build:\n    steps:\n      - run: ./gradlew test\n"),
+        )
+
     def test_vectra_is_callable_but_physical_pa_remains_separate(self) -> None:
         self.assertIn("workflow_call:", self.vectra)
         self.assertIn("claim_allowed", self.vectra)
