@@ -62,6 +62,11 @@ jobs:
           grep -Fq 'interactiveRecovery = !executionCommand.isPluginExecutionCommand' \
             app/src/main/java/com/termux/app/TermuxService.java
           echo 'HOST_FAILOVER_FAILBACK=PASS_SCOPED; ANDROID_E2E=TOKEN_VAZIO' >> "$GITHUB_STEP_SUMMARY"
+      - name: Validate exact NDK selection and toolchain receipt contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/test_toolchain_startup_contract.py
       - name: Scope summary (not device E2E)
         if: always()
         shell: bash
