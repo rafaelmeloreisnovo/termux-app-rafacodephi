@@ -17,6 +17,7 @@ import com.termux.shared.logger.Logger;
 import com.termux.shared.shell.command.environment.IShellEnvironment;
 import com.termux.shared.shell.ShellUtils;
 import com.termux.shared.termux.TermuxRuntimePaths;
+import com.termux.shared.termux.shell.command.environment.TermuxShellEnvironment;
 import com.termux.shared.termux.shell.TermuxQualityManager;
 import com.termux.terminal.TerminalSession;
 import com.termux.terminal.TerminalSessionClient;
@@ -77,32 +78,40 @@ public class TermuxSession {
                 }
             }
 
-            // Do not hard-gate terminal startup on bash: scan every supported login shell,
-            // then keep /system/bin/sh as the recovery shell when the runtime prefix is incomplete.
+            // A binary can be present and executable while its dynamic linker
+            // still fails (e.g. Bash API30 imported on an Android10/API29 device).
+            // Attempt each supported shell with a bounded read-only real
+            // subprocess, not a canExecute() / ELF-header-only guess.
+            // This also works with mixed ARM32/ARM64 APKs: Android's loader
+            // is the final ABI+symbol authority, not an inferred ABI string.
+            // Failover: Bash -> zsh -> fish -> sh -> /system/bin/sh.
+            // Failback: no positive/negative cache, so each new session retries
+            // the preferred shell after packages are repaired.
             if (!executionCommand.isFailsafe) {
-                StringBuilder foundCandidates = new StringBuilder();
+                HashMap<String, String> probeEnvironment = new HashMap<>();
+                try {
+                    if (shellEnvironmentClient instanceof TermuxShellEnvironment)
+                        probeEnvironment.putAll(((TermuxShellEnvironment) shellEnvironmentClient)
+                            .getEnvironment(currentPackageContext, false));
+                    if (additionalEnvironment != null)
+                        probeEnvironment.putAll(additionalEnvironment);
+                } catch (RuntimeException e) {
+                    Logger.logWarn(LOG_TAG, "Shell probe environment partially unavailable; using safe defaults");
+                }
+                File shellCwd = new File(executionCommand.workingDirectory);
                 for (String shellBinary : UnixShellEnvironment.LOGIN_SHELL_BINARIES) {
                     File shellFile = new File(defaultBinPath, shellBinary);
-                    if (shellFile.canExecute()) {
-                        // On Android 10 (API29), API30 ELF files can be executable on disk
-                        // but fail in the dynamic linker before Bash gets to run.
-                        // Skip ONLY shells with a proven incompatible Android ELF note.
-                        // Legacy script wrappers and compatible ELF retain their behavior.
-                        if (android.os.Build.VERSION.SDK_INT < 30) {
-                            int requiredApi = BootstrapElfApi.minimumAndroidApi(shellFile);
-                            if (requiredApi > android.os.Build.VERSION.SDK_INT) {
-                                Logger.logWarn(LOG_TAG, "Skipping incompatible shell " +
-                                    shellBinary + ": requires Android API " + requiredApi +
-                                    ", device API " + android.os.Build.VERSION.SDK_INT);
-                                continue;
-                            }
-                        }
-                        if (foundCandidates.length() > 0) foundCandidates.append(",");
-                        foundCandidates.append(shellBinary);
-                        if (executionCommand.executable == null) executionCommand.executable = shellFile.getAbsolutePath();
+                    if (!shellFile.isFile() || !shellFile.canExecute()) continue;
+                    boolean loadable = ShellRuntimeProbe.canRun(shellFile, shellCwd,
+                        probeEnvironment, ShellRuntimeProbe.DEFAULT_TIMEOUT_MS);
+                    if (loadable) {
+                        executionCommand.executable = shellFile.getAbsolutePath();
+                        Logger.logInfo(LOG_TAG, "runtime-probed login shell selected=" + shellBinary);
+                        break;
                     }
+                    Logger.logWarn(LOG_TAG, "runtime probe rejected shell=" + shellBinary +
+                        " (linker/ABI/missing-symbol/exit/timeout): trying next candidate");
                 }
-                Logger.logInfo(LOG_TAG, "shellCandidatesFound=" + (foundCandidates.length() == 0 ? "none" : foundCandidates.toString()));
             }
 
             if (executionCommand.executable == null) {
