@@ -12,6 +12,10 @@ on:
       - 'tests/test_guard_bootstrap_android_api.py'
       - '.github/workflows/bootstrap-elf-api-contract.yml'
       - '.github/workflows/real-pkg-apk-ci.yml'
+      - 'termux-shared/src/main/java/com/termux/shared/termux/shell/command/runner/terminal/ShellRuntimeProbe.java'
+      - 'termux-shared/src/main/java/com/termux/shared/termux/shell/command/runner/terminal/TermuxSession.java'
+      - 'app/src/main/java/com/termux/app/TermuxService.java'
+      - 'tests/java/ShellRuntimeProbeSmoke.java'
 
 permissions:
   contents: read
@@ -42,6 +46,22 @@ jobs:
           set -euo pipefail
           python3 -m py_compile scripts/guard_bootstrap_android_api.py tests/test_guard_bootstrap_android_api.py
           python3 -m unittest discover -s tests -p 'test_guard_bootstrap_android_api.py' -v
+      - name: Test normal terminal loader/probe/failover/failback (host no SDK)
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v javac
+          command -v java
+          probe_src=termux-shared/src/main/java/com/termux/shared/termux/shell/command/runner/terminal/ShellRuntimeProbe.java
+          mkdir -p "$RUNNER_TEMP/raf-shell-probe"
+          javac -encoding UTF-8 -d "$RUNNER_TEMP/raf-shell-probe" \
+            "$probe_src" tests/java/ShellRuntimeProbeSmoke.java
+          java -cp "$RUNNER_TEMP/raf-shell-probe" ShellRuntimeProbeSmoke
+          grep -Fq 'ShellRuntimeProbe.canRun(shellFile' \
+            termux-shared/src/main/java/com/termux/shared/termux/shell/command/runner/terminal/TermuxSession.java
+          grep -Fq 'interactiveRecovery = !executionCommand.isPluginExecutionCommand' \
+            app/src/main/java/com/termux/app/TermuxService.java
+          echo 'HOST_FAILOVER_FAILBACK=PASS_SCOPED; ANDROID_E2E=TOKEN_VAZIO' >> "$GITHUB_STEP_SUMMARY"
       - name: Scope summary (not device E2E)
         if: always()
         shell: bash
