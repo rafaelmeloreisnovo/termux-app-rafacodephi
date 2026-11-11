@@ -70,13 +70,7 @@ def test_optional_verbativo_audit_cannot_block_session_or_keyboard_startup() -> 
     on_create = activity.split("public void onCreate(Bundle savedInstanceState)", 1)[1].split(
         "private boolean ensureStorageAccessOrRequest", 1
     )[0]
-    verbativo_failure = on_create.split("if (!verbativoBootstrap.executeBootstrap())", 1)[1].split(
-        "} else {", 1
-    )[0]
-
-    assert "terminal initialization continues" in verbativo_failure
-    assert "mIsInvalidState" not in verbativo_failure
-    assert "return;" not in verbativo_failure
+    assert "executeBootstrap()" not in on_create
     assert "catch (LinkageError e)" in manager
 
     ordered_startup = (
@@ -89,10 +83,19 @@ def test_optional_verbativo_audit_cannot_block_session_or_keyboard_startup() -> 
     assert positions == sorted(positions)
     assert "ensureStorageAccessOrRequest()" not in on_create
 
+    post_session_audit = activity.split("private void startOptionalVerbativoAuditAfterSession()", 1)[1].split(
+        "private void requestStorageAccessAfterSessionReady", 1
+    )[0]
+    assert "new Thread" in post_session_audit
+    assert '"rafcodephi-verbativo-audit"' in post_session_audit
+    assert "executeBootstrap()" in post_session_audit
+    assert "mHasStartedOptionalVerbativoAudit" in post_session_audit
+
     initial_session = activity.split("private void createInitialSession(Intent intent)", 1)[1].split(
         "private void reloadProperties", 1
     )[0]
     assert initial_session.index("addNewSession") < initial_session.index("requestStorageAccessAfterSessionReady")
+    assert initial_session.index("addNewSession") < initial_session.index("startOptionalVerbativoAuditAfterSession")
     assert "mTermuxService != null && !mTermuxService.isTermuxSessionsEmpty()" in initial_session
     assert "shared-storage request deferred" in initial_session
     assert "mHasRequestedStorageAccess" in initial_session

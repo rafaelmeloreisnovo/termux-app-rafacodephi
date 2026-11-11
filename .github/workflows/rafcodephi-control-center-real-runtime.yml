@@ -60,7 +60,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:
-      TERMUX_PACKAGES_SELECTOR: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || (github.event_name == 'pull_request' && 'candidate' || 'canonical') }}
+      # Pull requests exercise the merged producer baseline. A distinct candidate
+      # remains opt-in through workflow_dispatch or an explicitly reviewed SHA.
+      TERMUX_PACKAGES_SELECTOR: ${{ github.event_name == 'workflow_dispatch' && inputs.termux_packages_ref || 'canonical' }}
       RAFCODEPHI_RUNTIME_REPOSITORY_STATE: BLOCKED_UNTIL_SIGNED_APT_PUBLISHED
       CLAIM_ALLOWED: 'false'
       PHYSICAL_ANDROID: TOKEN_VAZIO
@@ -125,7 +127,7 @@ jobs:
           mkdir -p build/reports
           set +e
           bash ./scripts/run-rafcodephi-bootstrap-docker.sh \
-            ./scripts/build-rafcodephi-real-bootstrap.sh --architectures arm,aarch64 \
+            bash ./scripts/build-rafcodephi-real-bootstrap.sh --architectures arm,aarch64 \
             2>&1 | tee build/reports/rafcodephi-control-center-real-bootstrap.log
           build_status="${PIPESTATUS[0]}"
           set -e

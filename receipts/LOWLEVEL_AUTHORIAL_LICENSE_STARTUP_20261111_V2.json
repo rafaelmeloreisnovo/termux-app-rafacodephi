@@ -1,0 +1,30 @@
+{
+  "schema": "rafcodephi.lowlevel-startup-license-receipt/v1",
+  "event": "rafcode:termux-app:lowlevel-license-startup:20261111:v2",
+  "parent_event": "rafcode:termux-app:lowlevel-license-startup:20261111:v1",
+  "parent_commit": "85cfe01acfa128b938db1b94bf81f85cd58c4e13",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "kind": "CI_STARTUP_ROUTE_CORRECTION",
+  "delta": [
+    "pull-request runtime build resolves the merged canonical termux-packages channel",
+    "disabled candidate channel remains fail-closed and available only after a distinct reviewed candidate exists",
+    "manual dispatch retains canonical, candidate or reviewed exact-SHA selection"
+  ],
+  "cause": {
+    "workflow_run": "42966289910",
+    "observed_error": "BLOCKED_NO_ACTIVE_UNMERGED_CANDIDATE",
+    "contract_state": "candidate=BLOCKED_NO_ACTIVE_UNMERGED_CANDIDATE; canonical=MERGED_BASELINE"
+  },
+  "evidence": {
+    "local_route_contract": "PASS_SCOPED_SOURCE",
+    "exact_head_ci": "PENDING",
+    "android_build": "TOKEN_VAZIO_NOT_RUN",
+    "physical_device": "TOKEN_VAZIO_NOT_RUN"
+  },
+  "gap": [
+    "exact-head CI must prove source checkout and Android build",
+    "physical Android shell, keyboard, pkg and proot startup remain unobserved"
+  ],
+  "rollback": "revert this receipt and the workflow/test delta together",
+  "claim_allowed": false
+}

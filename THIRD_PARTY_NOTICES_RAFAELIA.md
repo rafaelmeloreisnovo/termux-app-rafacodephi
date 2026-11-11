@@ -32,4 +32,13 @@ For every promoted RAFAELIA-only module retain: `source path + commit/ref + blob
 
 Missing evidence is `TOKEN_VAZIO`, never assumed authorship.
 
+## PRoot and independent authorial source
+
+The exact component boundary, source identities and non-import decisions are
+recorded in [`docs/LICENSE_BOUNDARY_AUTHORIAL_PROOT_V1.md`](docs/LICENSE_BOUNDARY_AUTHORIAL_PROOT_V1.md).
+The PRoot executable remains a separately produced GPL-2.0 package payload;
+the MIT source under `raf_authorial_v1/` remains an independent RAFCODEPHI
+microcore. Neither notice replaces the root GPL-3.0-only obligations for the
+combined Termux-derived Android application.
+
 This file is an engineering/compliance notice and does not replace the original upstream license files.

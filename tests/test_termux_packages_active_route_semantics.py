@@ -90,6 +90,10 @@ def main() -> int:
     assert "TERMUX_PACKAGES_RAF_REF: canonical" in apk_matrix
     assert "default: canonical" in v1 and "resolve_termux_packages_pin.py" in v1
     assert "default: canonical" in control and "resolve_termux_packages_pin.py" in control
+    assert "github.event_name == 'pull_request' && 'candidate'" not in control
+    assert "inputs.termux_packages_ref || 'canonical'" in control
+    assert "run-rafcodephi-bootstrap-docker.sh" in control
+    assert "bash ./scripts/build-rafcodephi-real-bootstrap.sh --architectures arm,aarch64" in control
     assert "TERMUX_PACKAGES_RAF_CHANNEL: canonical" in beta
     assert "resolve_termux_packages_pin.py" in beta
     assert "bcb1dfec1ecc72cd3acee80b5bf3706cead4849c" not in beta
