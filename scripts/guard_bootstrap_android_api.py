@@ -105,7 +105,15 @@ def inspect_archive(arch: str, filename: Path, max_api: int) -> dict:
                 raise ValueError("DUPLICATE_ARCHIVE_ENTRIES")
             if len(names) > 10000:
                 raise ValueError("ARCHIVE_ENTRY_LIMIT")
-            profile = json.loads(boot.read("BOOTSTRAP_PROFILE.json"))
+            profile_info = boot.getinfo("BOOTSTRAP_PROFILE.json")
+            if profile_info.file_size > 64 * 1024:
+                raise ValueError("PROFILE_SIZE_LIMIT")
+            try:
+                profile = json.loads(boot.read("BOOTSTRAP_PROFILE.json"))
+            except UnicodeError as exc:
+                raise ValueError("PROFILE_INVALID_ENCODING") from exc
+            if not isinstance(profile, dict):
+                raise ValueError("PROFILE_NOT_OBJECT")
             if profile.get("arch") != arch:
                 raise ValueError("ARCH_PROFILE_MISMATCH")
             if profile.get("package_name") != "com.termux.rafacodephi":
@@ -158,7 +166,7 @@ def inspect_archive(arch: str, filename: Path, max_api: int) -> dict:
             if all(x["state"] == "PASS_SCOPED_STATIC" for x in result["checks"]):
                 result["state"] = "PASS_SCOPED_STATIC"
     except (OSError, zipfile.BadZipFile, KeyError, ValueError,
-            json.JSONDecodeError) as exc:
+            UnicodeError, RuntimeError) as exc:
         result["reasons"].append(str(exc)[:200])
     return result
 

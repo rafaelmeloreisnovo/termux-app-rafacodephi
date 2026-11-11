@@ -122,6 +122,33 @@ class ApiGateTests(unittest.TestCase):
             result = gate.inspect_archive("arm", p, 29)
         self.assertIn("ARCH_PROFILE_MISMATCH", result["reasons"])
 
+    def test_profile_must_be_json_object_and_yield_typed_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "not-object.zip"
+            with zipfile.ZipFile(p, "w") as z:
+                z.writestr("BOOTSTRAP_PROFILE.json", "[]")
+            result = gate.inspect_archive("arm", p, 29)
+        self.assertEqual(result["state"], "BLOCKED")
+        self.assertIn("PROFILE_NOT_OBJECT", result["reasons"])
+
+    def test_profile_invalid_utf8_is_typed_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "invalid-encoding.zip"
+            with zipfile.ZipFile(p, "w") as z:
+                z.writestr("BOOTSTRAP_PROFILE.json", b"\xff")
+            result = gate.inspect_archive("arm", p, 29)
+        self.assertEqual(result["state"], "BLOCKED")
+        self.assertIn("PROFILE_INVALID_ENCODING", result["reasons"])
+
+    def test_profile_size_limit_blocks_before_read(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "large-profile.zip"
+            with zipfile.ZipFile(p, "w", compression=zipfile.ZIP_DEFLATED) as z:
+                z.writestr("BOOTSTRAP_PROFILE.json", b" " * (64 * 1024 + 1))
+            result = gate.inspect_archive("arm", p, 29)
+        self.assertEqual(result["state"], "BLOCKED")
+        self.assertIn("PROFILE_SIZE_LIMIT", result["reasons"])
+
     def test_duplicate_zip_names_block_before_inspection(self):
         import warnings
         with tempfile.TemporaryDirectory() as d:
