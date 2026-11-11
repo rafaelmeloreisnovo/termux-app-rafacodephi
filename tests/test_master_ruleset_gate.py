@@ -35,6 +35,18 @@ class MasterRulesetGuardTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.mod.validate_policy(bad)
 
+    def test_status_check_source_cannot_be_unpinned(self):
+        bad = copy.deepcopy(self.payload)
+        bad["rules"][-1]["parameters"]["required_status_checks"] = [{"context": "ci-head-contract"}]
+        with self.assertRaises(ValueError):
+            self.mod.validate_policy(bad)
+
+    def test_boolean_zero_is_not_a_review_count(self):
+        bad = copy.deepcopy(self.payload)
+        bad["rules"][-2]["parameters"]["required_approving_review_count"] = False
+        with self.assertRaises(ValueError):
+            self.mod.validate_policy(bad)
+
     def test_wrong_branch_fails_closed(self):
         bad = copy.deepcopy(self.payload)
         bad["conditions"]["ref_name"]["include"] = ["~ALL"]

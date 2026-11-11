@@ -44,17 +44,21 @@ def validate_policy(data: dict) -> None:
     if any("parameters" in by_type[name] for name in ("deletion", "non_fast_forward", "required_linear_history")):
         raise ValueError("unexpected base-rule parameter")
     pr = by_type["pull_request"].get("parameters", {})
-    if pr.get("required_approving_review_count") != 0:
-        raise ValueError("solo workflow uses 0 required human approvals")
-    if pr.get("required_review_thread_resolution") is not True:
-        raise ValueError("review threads must be resolved")
-    if pr.get("allowed_merge_methods") != ["squash"]:
-        raise ValueError("only enabled squash merge is permitted")
+    expected_pr = {
+        "required_approving_review_count": 0,
+        "dismiss_stale_reviews_on_push": False,
+        "require_code_owner_review": False,
+        "require_last_push_approval": False,
+        "required_review_thread_resolution": True,
+        "allowed_merge_methods": ["squash"],
+    }
+    if pr != expected_pr or type(pr.get("required_approving_review_count")) is not int:
+        raise ValueError("solo PR parameters must match exactly")
     status = by_type["required_status_checks"].get("parameters", {})
     if status.get("strict_required_status_checks_policy") is not True:
         raise ValueError("strict exact-head checks required")
-    if status.get("required_status_checks") != [{"context": CHECK}]:
-        raise ValueError("required check must be the unfiltered ci-head-contract job")
+    if status.get("required_status_checks") != [{"context": CHECK, "integration_id": 15368}]:
+        raise ValueError("required check must use GitHub Actions app 15368")
 
 
 def matches_live(desired: dict, live: dict) -> bool:
@@ -117,6 +121,7 @@ def canary_head_ready(head: str, token: str) -> bool:
         and run.get("status") == "completed"
         and run.get("conclusion") == "success"
         and (run.get("app") or {}).get("slug") == "github-actions"
+        and (run.get("app") or {}).get("id") == 15368
         for run in checks.get("check_runs", [])
     )
 

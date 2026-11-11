@@ -64,6 +64,7 @@ jobs:
         shell: bash
         env:
           GATE_RESULT: ${{ job.status }}
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           python3 - <<'PY'
           import json, os
@@ -72,7 +73,8 @@ jobs:
           dst.parent.mkdir(parents=True,exist_ok=True)
           result={
             "schema":"rafaelia.ci-head-contract-receipt/v1",
-            "head_sha":os.environ.get("GITHUB_SHA","TOKEN_VAZIO"),
+            "source_head_sha":os.environ.get("SOURCE_HEAD_SHA","TOKEN_VAZIO"),
+            "tested_sha":os.environ.get("GITHUB_SHA","TOKEN_VAZIO"),
             "event":os.environ.get("GITHUB_EVENT_NAME","TOKEN_VAZIO"),
             "run_id":os.environ.get("GITHUB_RUN_ID","TOKEN_VAZIO"),
             "run_attempt":os.environ.get("GITHUB_RUN_ATTEMPT","TOKEN_VAZIO"),
@@ -84,7 +86,8 @@ jobs:
           dst.write_text(json.dumps(result,indent=2,sort_keys=True)+"\n",encoding="utf-8")
           with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf-8") as fh:
             fh.write("## CI HEAD contract\n\n")
-            fh.write("- Head: "+result["head_sha"]+"\n")
+            fh.write("- Source head: "+result["source_head_sha"]+"\n")
+            fh.write("- Tested revision: "+result["tested_sha"]+"\n")
             fh.write("- Gate: "+result["gate_result"]+"\n")
             fh.write("- Android device and APK build: TOKEN_VAZIO\n")
           PY
