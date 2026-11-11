@@ -48,7 +48,10 @@ public class BetaReadinessContractTest {
     public void terminalStartupDoesNotHardGateOnBash() throws Exception {
         String source = read("termux-shared/src/main/java/com/termux/shared/termux/shell/command/runner/terminal/TermuxSession.java");
 
-        assertTrue(source.contains("Do not hard-gate terminal startup on bash"));
+        assertTrue("terminal selection must attempt a real bounded shell probe",
+            source.contains("ShellRuntimeProbe.canRun(shellFile"));
+        assertTrue("terminal selection must retry fallback when none load",
+            source.contains("executionCommand.executable = \"/system/bin/sh\";"));
         assertTrue(source.contains("LOGIN_SHELL_BINARIES"));
         assertTrue(source.contains("/system/bin/sh"));
         assertTrue("terminal boot must not fail before shell fallback just because bash is absent",
