@@ -87,10 +87,10 @@ class ApiGateTests(unittest.TestCase):
                            json.dumps({"arch": "arm",
                                        "package_name": "com.termux.rafacodephi"}))
                 for name in gate.CRITICAL:
-                    z.writestr(name, b"\\x7fELF" + b"\\x01" * 64)
+                    z.writestr(name, b"\x7fELF" + b"\x01" * 64)
                 for name, interpreter in gate.SCRIPT_INTERPRETERS.items():
-                    z.writestr(name, b"#!" + interpreter + b"\\n")
-                z.writestr("lib/libcrypto.so.3", b"\\x7fELF" + b"\\x01" * 64)
+                    z.writestr(name, b"#!" + interpreter + b"\n")
+                z.writestr("lib/libcrypto.so.3", b"\x7fELF" + b"\x01" * 64)
             def probe(_binary, arch, name, max_api):
                 reasons = ["UNRESOLVED_MEMFD_CREATE"] if name == "lib/libcrypto.so.3" else []
                 return {"entry": name, "arch": arch,
