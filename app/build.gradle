@@ -323,7 +323,27 @@ tasks.register("verifyBootstrapZipsPresent") {
         rafcodephiBootstrapZips.each { f ->
             if (!f.exists()) throw new GradleException("Missing bootstrap zip: ${f.absolutePath}")
         }
+        // Clang's assembler depfile does not track .incbin inputs. Include a
+        // content-addressed header so changing a ZIP rebuilds its blob object.
+        def header = layout.buildDirectory.file("generated/bootstrap/raf_bootstrap_hash.h").get().asFile
+        def content = "/* Generated from the exact embedded bootstrap archives. */\n"
+        rafcodephiBootstrapZips.eachWithIndex { f, index ->
+            def digest = java.security.MessageDigest.getInstance("SHA-256").digest(f.bytes).encodeHex().toString()
+            content += "/* ${f.name} SHA256 ${digest} */\n"
+        }
+        header.parentFile.mkdirs()
+        if (!header.exists() || header.getText("UTF-8") != content) {
+            header.setText(content, "UTF-8")
+        }
     }
+}
+
+// `gradlew clean assembleDebug` may otherwise schedule this generator before
+// :app:clean, which deletes build/generated/bootstrap/raf_bootstrap_hash.h and
+// leaves the assembler with a missing include. If clean tasks are in the same
+// graph, force every one of them to finish before regenerating the hash header.
+tasks.named("verifyBootstrapZipsPresent").configure {
+    mustRunAfter(tasks.named("clean"))
 }
 
 tasks.register("validateSideBySideContract", Exec) {
@@ -337,7 +357,25 @@ tasks.register("validateSideBySideContract", Exec) {
 // is an explicit upstream/source-built-real action, NOT an implicit bridge
 // generation side effect of assembleDebug/assembleRelease.
 tasks.matching { it.name == "preBuild" ||
-                 it.name.startsWith("externalNativeBuild") ||
+                 (it.name.startsWith("externalNativeBuild") && !it.name.startsWith("externalNativeBuildClean")) ||
+                 it.name.startsWith("configureNdkBuild") ||
+                 it.name.startsWith("buildNdkBuild") ||
                  it.name.startsWith("generateJsonModel") }.configureEach {
     dependsOn(tasks.named("verifyBootstrapZipsPresent"))
+}
+
+// Run after successful packaging: generated ZIP metadata is not proof that the
+// native library embedded those bytes (the assembler may have reused an object).
+tasks.matching { it.name == "assembleDebug" || it.name == "assembleRelease" }.configureEach {
+    def apkType = it.name == "assembleDebug" ? "debug" : "release"
+    doLast {
+        project.exec {
+            workingDir rootProject.projectDir
+            commandLine "python3", "scripts/verify_apk_bootstrap_payload.py",
+                "app/build/outputs/apk/${apkType}",
+                "--bootstrap-arm", "app/src/main/cpp/rewritten-bootstrap-arm.zip",
+                "--bootstrap-aarch64", "app/src/main/cpp/rewritten-bootstrap-aarch64.zip",
+                "--out", "app/build/reports/${apkType}-bootstrap-payloads.json"
+        }
+    }
 }

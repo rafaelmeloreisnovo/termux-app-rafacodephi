@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       route:
-        description: "Escolha UMA rota pronta. Combinações inválidas não são oferecidas; 10_PROVIDER audita proteção live."
+        description: "Escolha UMA rota pronta. 10_PROVIDER audita proteção live; 11_REAL_PKG_TOOLCHAIN constrói o APK APT real."
         required: true
         default: "01_DIAGNOSTICO — testes + contratos; sem build pesado"
         type: choice
@@ -21,8 +21,9 @@ on:
           - "06_EVIDENCIAS — gate APK + contrato E2E"
           - "07_E2E — contrato E2E isolado"
           - "08_VECTRA_V3 — metrologia/benchmark CI; PA físico continua separado"
-          - "09_ENTERPRISE — preflight principal completo; sem promover prova física"
+          - "09_ENTERPRISE — governança + ARM32; APT real permanece na rota 11"
           - "10_PROVIDER — auditar ruleset/proteção live do master"
+          - "11_REAL_PKG_TOOLCHAIN — sessão/teclado + APT real + Bash/Node/JDK/NDK/Ninja/fastboot"
       strict_governance:
         description: "Bloquear TOKEN_VAZIO de metadados de workflow durante esta rodada?"
         required: true
@@ -82,9 +83,10 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 env:
-  ORCHESTRATOR_SCHEMA: "rafaelia.rafcodephi-start-here/v3"
+  ORCHESTRATOR_SCHEMA: "rafaelia.rafcodephi-start-here/v4"
   CLAIM_ALLOWED: "false"
   RELEASE_ALLOWED: "false"
   PHYSICAL_ANDROID: "TOKEN_VAZIO"
@@ -104,7 +106,7 @@ defaults:
 
 jobs:
   route:
-    name: "🧭 0/10 Operador — resolver rota válida"
+    name: "🧭 0/11 Operador — resolver rota válida"
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -119,6 +121,7 @@ jobs:
       run_e2e: ${{ steps.plan.outputs.run_e2e }}
       run_vectra: ${{ steps.plan.outputs.run_vectra }}
       run_provider: ${{ steps.plan.outputs.run_provider }}
+      run_real_pkg: ${{ steps.plan.outputs.run_real_pkg }}
     steps:
       - name: Resolver sem combinações implícitas
         id: plan
@@ -141,6 +144,7 @@ jobs:
           run_e2e=false
           run_vectra=false
           run_provider=false
+          run_real_pkg=false
           explanation="PR/push: governança estática, sem build pesado implícito."
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
@@ -179,15 +183,19 @@ jobs:
                 route_id="08"; mission="vectra-v3"; run_vectra=true
                 explanation="Contratos/metrologia V3 em CI; PA físico continua TOKEN_VAZIO."
                 ;;
-              "09_ENTERPRISE — preflight principal completo; sem promover prova física")
+              "09_ENTERPRISE — governança + ARM32; APT real permanece na rota 11")
                 route_id="09"; mission="enterprise-preflight"; ndk_lane="canonical"
                 run_tests=true; run_arm32=true; run_bootstrap=true
                 run_evidence=true; run_e2e=true; run_vectra=true; run_provider=true
-                explanation="Preflight amplo: software + build + evidência + metrologia + proteção live do provider."
+                explanation="Preflight amplo de governança/ARM32; o APK com APT real usa a rota 11 explícita."
                 ;;
               "10_PROVIDER — auditar ruleset/proteção live do master")
                 route_id="10"; mission="provider-protection"; run_provider=true
                 explanation="Audita o ruleset ativo do master e falha se a proteção live não satisfizer o contrato."
+                ;;
+              "11_REAL_PKG_TOOLCHAIN — sessão/teclado + APT real + Bash/Node/JDK/NDK/Ninja/fastboot")
+                route_id="11"; mission="real-pkg-toolchain"; run_real_pkg=true
+                explanation="Valida inicialização da toolchain, sessão/teclado em fonte e constrói APKs com APT real."
                 ;;
               *)
                 echo "INVALID_ROUTE=$route" >&2
@@ -198,7 +206,7 @@ jobs:
 
           case "$strict" in true|false) ;; *) echo "INVALID_STRICT=$strict" >&2; exit 64 ;; esac
 
-          for pair in             "route_id=$route_id" "mission=$mission" "ndk_lane=$ndk_lane"             "strict_governance=$strict" "run_tests=$run_tests" "run_arm32=$run_arm32"             "run_bootstrap=$run_bootstrap" "run_evidence=$run_evidence"             "run_e2e=$run_e2e" "run_vectra=$run_vectra" "run_provider=$run_provider"; do
+          for pair in             "route_id=$route_id" "mission=$mission" "ndk_lane=$ndk_lane"             "strict_governance=$strict" "run_tests=$run_tests" "run_arm32=$run_arm32"             "run_bootstrap=$run_bootstrap" "run_evidence=$run_evidence"             "run_e2e=$run_e2e" "run_vectra=$run_vectra" "run_provider=$run_provider"             "run_real_pkg=$run_real_pkg"; do
             echo "$pair" >> "$GITHUB_OUTPUT"
           done
 
@@ -215,7 +223,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   inventory:
-    name: "🧾 1/10 Auditor — inventário, proveniência e governança"
+    name: "🧾 1/11 Auditor — inventário, proveniência e governança"
     needs: route
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -268,7 +276,7 @@ jobs:
             reports/action-reference-audit.json
 
   policy-contracts:
-    name: "🛡️ 2/10 Segurança/arquitetura — ABI + pure-core + runtime read-only"
+    name: "🛡️ 2/11 Segurança/arquitetura — ABI + pure-core + runtime read-only"
     needs: [route, inventory]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -313,49 +321,49 @@ jobs:
 
 
   provider-protection:
-    name: "🔐 3/10 Provider security — ruleset live"
+    name: "🔐 3/11 Provider security — ruleset live"
     if: needs.route.outputs.run_provider == 'true'
     needs: [route, inventory, policy-contracts]
     uses: ./.github/workflows/provider-protection-gate.yml
     secrets: inherit
 
   tests:
-    name: "🧪 4/10 QA — testes de software"
+    name: "🧪 4/11 QA — testes de software"
     if: needs.route.outputs.run_tests == 'true'
     needs: [route, inventory, policy-contracts]
     uses: ./.github/workflows/run_tests.yml
     secrets: inherit
 
   arm32-canonical:
-    name: "📱 5/10 Build — ARM32 canônico"
+    name: "📱 5/11 Build — ARM32 canônico"
     if: needs.route.outputs.run_arm32 == 'true' && needs.route.outputs.ndk_lane == 'canonical'
     needs: [route, inventory, policy-contracts]
     uses: ./.github/workflows/compatibility-arm32.yml
     secrets: inherit
 
   arm32-ndk29:
-    name: "📱 5/10 Build — ARM32 NDK29"
+    name: "📱 5/11 Build — ARM32 NDK29"
     if: needs.route.outputs.run_arm32 == 'true' && needs.route.outputs.ndk_lane == 'ndk29'
     needs: [route, inventory, policy-contracts]
     uses: ./.github/workflows/compatibility-arm32-ndk29.yml
     secrets: inherit
 
   bootstrap-contract:
-    name: "🧱 6/10 Bootstrap — contrato"
+    name: "🧱 6/11 Bootstrap — contrato"
     if: needs.route.outputs.run_bootstrap == 'true'
     needs: [route, inventory, policy-contracts]
     uses: ./.github/workflows/beta-real-bootstrap-contract.yml
     secrets: inherit
 
   evidence-contract:
-    name: "🔎 7/10 Evidence — APK gate"
+    name: "🔎 7/11 Evidence — APK gate"
     if: needs.route.outputs.run_evidence == 'true'
     needs: [route, inventory, policy-contracts]
     uses: ./.github/workflows/apk-evidence-gate.yml
     secrets: inherit
 
   e2e-proof-contract:
-    name: "🔗 8/10 Integração — E2E contract"
+    name: "🔗 8/11 Integração — E2E contract"
     if: needs.route.outputs.run_e2e == 'true'
     needs: [route, inventory, policy-contracts]
     uses: ./.github/workflows/rafaelia_e2e_product_proof.yml
@@ -364,14 +372,20 @@ jobs:
     secrets: inherit
 
   vectra-v3:
-    name: "📐 9/10 Metrologia — Vectra V3 CI"
+    name: "📐 9/11 Metrologia — Vectra V3 CI"
     if: needs.route.outputs.run_vectra == 'true'
     needs: [route, inventory, policy-contracts]
     uses: ./.github/workflows/vectra-grade-benchmarks.yml
     secrets: inherit
 
+  real-pkg-toolchain:
+    name: "🧰 10/11 APK — sessão/teclado + APT real + toolchain"
+    if: needs.route.outputs.run_real_pkg == 'true'
+    needs: [route, inventory, policy-contracts]
+    uses: ./.github/workflows/real-pkg-apk-ci.yml
+
   omega-summary:
-    name: "Ω 10/10 Auditor final — receipt + gate"
+    name: "Ω 11/11 Auditor final — receipt + gate"
     if: always()
     needs:
       - route
@@ -385,6 +399,7 @@ jobs:
       - evidence-contract
       - e2e-proof-contract
       - vectra-v3
+      - real-pkg-toolchain
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -404,6 +419,7 @@ jobs:
           EVIDENCE: ${{ needs.evidence-contract.result }}
           E2E: ${{ needs.e2e-proof-contract.result }}
           VECTRA: ${{ needs.vectra-v3.result }}
+          REAL_PKG_TOOLCHAIN: ${{ needs.real-pkg-toolchain.result }}
         run: |
           set -euo pipefail
           mkdir -p reports
@@ -424,6 +440,7 @@ jobs:
               "apk_evidence_contract": os.environ["EVIDENCE"],
               "e2e_proof_contract": os.environ["E2E"],
               "vectra_v3": os.environ["VECTRA"],
+              "real_pkg_toolchain": os.environ["REAL_PKG_TOOLCHAIN"],
           }
           required_by_route = {
               "AUTO": ["route", "inventory", "policy_contracts"],
@@ -437,6 +454,7 @@ jobs:
               "08": ["route", "inventory", "policy_contracts", "vectra_v3"],
               "09": ["route", "inventory", "policy_contracts", "provider_protection", "tests", "arm32_canonical", "bootstrap_contract", "apk_evidence_contract", "e2e_proof_contract", "vectra_v3"],
               "10": ["route", "inventory", "policy_contracts", "provider_protection"],
+              "11": ["route", "inventory", "policy_contracts", "real_pkg_toolchain"],
           }
           required = required_by_route.get(route_id)
           if required is None:

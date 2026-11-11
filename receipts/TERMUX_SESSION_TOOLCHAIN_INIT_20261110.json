@@ -1,0 +1,168 @@
+{
+  "schema": "rafcodephi.q01-q12-transition-receipt/v1",
+  "receipt_id": "TERMUX_SESSION_TOOLCHAIN_INIT_20261110",
+  "observed_at": "2026-11-10T20:05:24-03:00",
+  "event": "termux-session-keyboard-real-apt-toolchain-initialization",
+  "parent": "receipts/REAL_PKG_CI_RESULT_20261110.json",
+  "Q01": {
+    "agent_role": "Android runtime/provider implementation agent",
+    "repository_role": "RAFCODEPHI Termux app, bootstrap consumer, session/keyboard owner and Android CI producer"
+  },
+  "Q02": {
+    "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+    "ref": "fix/embed-real-pkg-bootstrap-20261109",
+    "base_commit": "b6fee5fa5631707662635a26e50f8cb585729e3c",
+    "base_tree": "fd31b3aee4e6e993c81357a1677ba3ad51d36a27",
+    "candidate_commit": "TOKEN_VAZIO_PROVENANCE_UNBOUND",
+    "bindings": [
+      {"path": "app/src/main/java/com/termux/app/TermuxActivity.java", "sha256": "2bbf4e215cad1e0a8e75ea326d5e567a3b55a93b7776b035d44b9ce8a974d7eb"},
+      {"path": "app/src/main/java/com/termux/app/bootstrap/VerbativoBootstrapManager.java", "sha256": "b93e8765a1fb03a3492386d4091bf341b8fab122d08ca07d89d8d7147c914d7b"},
+      {"path": "app/build.gradle", "sha256": "52f64b4754278b3b6b6e079297e568d9e035095f5783a6fd6aba9a4ef90a194d"},
+      {"path": "scripts/setup_android_toolchain.sh", "sha256": "871016ed36ee510e60ef8afa7d62590492b69a040ab3fb0ab823f68ba3d47c23"},
+      {"path": "scripts/verify_toolchain_startup.sh", "sha256": "1bdcc2402615c0dc9e2ca89593be53836feaf0f4aa535c9ffa5a35425ea8898f"},
+      {"path": ".github/actions/rafaelia-android-setup/action.yml", "sha256": "cbb19fbb7be81187996ae0451686013eb9c7a82a5403bb66f7c89a07275bbcf8"},
+      {"path": ".github/workflows/00_START_HERE.yml", "sha256": "de68f9adecf45ed8e5ce8a9c71363794c0d72b7107a2f2a923a7e0d363c604c5"},
+      {"path": ".github/workflows/_reusable-arm32-compat.yml", "sha256": "167c292d015d286b06ba4a512b805ea12b75c699b3ebfec80e441bbae057a2f8"},
+      {"path": ".github/workflows/real-pkg-apk-ci.yml", "sha256": "61141caa39863c106e86fbb4dc49314ee3a06f905297dda28bd227312a345358"},
+      {"path": "README_TERMUX.md", "sha256": "0c92cd4c8309468d99e71a80bc9850681dce6c6059ad305b0fa32ffad3ad268d"}
+    ]
+  },
+  "Q03": {
+    "local_authority": "Termux session, keyboard, bootstrap consumption, Android build and repository-local CI",
+    "write_scope": "current feature branch and append-only local receipts; no default-branch merge or release promotion",
+    "federated_authority": "Mapa owns cross-repository route/state; termux-packages owns package production"
+  },
+  "Q04": {
+    "evidence_scope": "source contracts, host tool startup, ARM32/ARM64 NDK compilation and debug APK build",
+    "excluded_claims": ["physical Android startup", "physical keyboard interaction", "pkg update on device", "fastboot device operation", "release signing"],
+    "boundary_statement": "CI_HOST_EXECUTION != APK_DEVICE_EXECUTION; SOURCE != ARTIFACT != EXECUTION != CLAIM"
+  },
+  "Q05": {
+    "opened_indices": [
+      "AGENTS.md",
+      "README_TERMUX.md",
+      "docs/agents/README.md",
+      "docs/00_BUG_MASTER_INDEX.md",
+      "tests/test_rafcodephi_startup_and_settings_contract.py",
+      "tests/test_workflow_control_plane_contract.py",
+      ".github/workflows/00_START_HERE.yml",
+      ".github/workflows/real-pkg-apk-ci.yml"
+    ],
+    "missing_indices": []
+  },
+  "Q06": {
+    "route_id": "Termux ARM32 / APK route",
+    "authority_repository": "rafaelmeloreisnovo/Mapa",
+    "authority_commit": "fc8ec765c937e86b4aa3c0fd3d017b2533e7f6f5",
+    "anchors": ["navigation/INDEX.md", "Termux Android runtime producer", "physical Android TOKEN_VAZIO"]
+  },
+  "Q07": {
+    "gaps": [
+      {
+        "token_id": "TERMUX_PHYSICAL_SESSION_KEYBOARD_20261110",
+        "token_type": "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING",
+        "state": "OPEN",
+        "source_ref": "receipts/TERMUX_SESSION_TOOLCHAIN_INIT_20261110.json#Q07",
+        "missing_field": "physical Android session, soft keyboard and pkg runtime receipt",
+        "why_empty": "no physical Android device is attached to this execution environment",
+        "evidence_needed": "exact APK hash, device context, activity/session/keyboard observation and pkg command exits",
+        "next_probe": "install the CI universal or ABI APK on the target device and run the bounded smoke",
+        "authority": "physical device operator",
+        "urgency": "high",
+        "closure_gate": "install exact candidate APK and retain session/keyboard/pkg command evidence",
+        "claim_allowed": false,
+        "created_at": "2026-11-10T20:05:24-03:00"
+      },
+      {
+        "token_id": "TERMUX_CANDIDATE_REMOTE_CI_20261110",
+        "token_type": "TOKEN_VAZIO_NOT_RUN",
+        "state": "OPEN",
+        "source_ref": "receipts/TERMUX_SESSION_TOOLCHAIN_INIT_20261110.json#Q07",
+        "missing_field": "remote GitHub Actions result for the candidate commit",
+        "why_empty": "the candidate tree has not yet been committed and pushed",
+        "evidence_needed": "candidate commit, run ID, job ID, terminal conclusion, artifact IDs and digests",
+        "next_probe": "push the exact tree to the existing feature ref and monitor real-pkg-apk-ci",
+        "authority": "GitHub Actions provider",
+        "urgency": "high",
+        "closure_gate": "push exact tree and observe terminal workflow conclusion plus artifact identities",
+        "claim_allowed": false,
+        "created_at": "2026-11-10T20:05:24-03:00"
+      },
+      {
+        "token_id": "TERMUX_DEVICE_DEVELOPER_PACKAGES_20261110",
+        "token_type": "TOKEN_VAZIO_EVIDENCE_INSUFFICIENT",
+        "state": "OPEN",
+        "source_ref": "receipts/TERMUX_SESSION_TOOLCHAIN_INIT_20261110.json#Q07",
+        "missing_field": "Node.js, OpenJDK, android-tools and NDK packages inside the signed device APT snapshot",
+        "why_empty": "the current 206-package signed preview proves apt/dpkg/pkg and Ninja but does not contain those developer packages",
+        "evidence_needed": "signed repository index and dependency closure for both ARM ABIs plus an exact embedded successor APK",
+        "next_probe": "extend the termux-packages developer profile and run its producer CI",
+        "authority": "rafaelmeloreisnovo/termux-packages",
+        "urgency": "high",
+        "closure_gate": "produce and sign a successor package snapshot, embed it, then run physical install/version probes",
+        "claim_allowed": false,
+        "created_at": "2026-11-10T20:05:24-03:00"
+      }
+    ]
+  },
+  "Q08": {
+    "scope": "current uncommitted candidate derived from base b6fee5f",
+    "staleness": "local observations are current for bound file SHA-256 values; remote candidate and device evidence remain open",
+    "evidence_refs": [
+      "73 pytest cases + 6 subtests PASS",
+      "GitHub Actions immutable reference audit: 26 PINNED_SHA",
+      "Gradle clean :app:assembleDebug PASS in 53 seconds",
+      "local toolchain startup receipt /tmp/rafcodephi-toolchain-pass.json"
+    ],
+    "artifact_identity": {
+      "arm64_debug_apk_sha256": "3d1f1e40b0c7660043bd84259458ea3ba9fb444cfc8cfa2b52d4e7f24e0cfbbc",
+      "arm32_debug_apk_sha256": "a9db0a1426e9f93bc30d5437b1d84c99741a13d6551cc37d68f19ef2327ba646",
+      "universal_debug_apk_sha256": "ebc5b95cc1c05ddb2c07b3733f8c746b39f31d47daf9fec54ff70477ae55d821",
+      "bootstrap_arm_sha256": "2bc6722bc8a9421116b67c42a0503f862a3b4a6e1c9ba2f9721883fd4e384654",
+      "bootstrap_aarch64_sha256": "3837400010ff4f9436d0fbc0acbfadfa1ba8079bf6222c24724071e94f440d50"
+    }
+  },
+  "Q09": {
+    "gates": [
+      {"id": "G_SESSION_KEYBOARD_SOURCE", "fixture_or_command": "pytest startup, service and workflow contracts", "falsifier": "optional audit or storage permission blocks service/session/keyboard setup", "exit_criterion": "all selected contracts pass", "result": "PASS"},
+      {"id": "G_TOOLCHAIN_HOST_STARTUP", "fixture_or_command": "scripts/verify_toolchain_startup.sh", "falsifier": "missing/wrong Bash, Node, JDK, SDK, fastboot, NDK, Ninja or ABI object", "exit_criterion": "version and execution receipt state PASS", "result": "PASS"},
+      {"id": "G_CLEAN_REAL_APT_APK", "fixture_or_command": "gradlew clean :app:assembleDebug", "falsifier": "clean removes generated hash header or APK payload verification fails", "exit_criterion": "three APKs built and payload check completes", "result": "PASS"},
+      {"id": "G_REMOTE_CI", "fixture_or_command": "real-pkg-apk-ci.yml", "falsifier": "any workflow step or artifact upload fails", "exit_criterion": "GitHub run succeeds with exact artifacts", "result": "TOKEN_VAZIO_NOT_RUN"},
+      {"id": "G_PHYSICAL_ANDROID", "fixture_or_command": "exact APK install and device smoke", "falsifier": "activity closes, no session/keyboard, apt/pkg or requested tools fail", "exit_criterion": "device receipt bound to APK hash", "result": "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING"}
+    ]
+  },
+  "Q10": {
+    "stop_conditions": ["dependency, authority, privacy or security blocker", "remote CI terminal failure", "physical device unavailable for device-only claims"],
+    "observed_stop_reason": "local implementation gates complete; remote CI is next observable probe"
+  },
+  "Q11": {
+    "local_receipt_path": "receipts/TERMUX_SESSION_TOOLCHAIN_INIT_20261110.json",
+    "mapa_delta": "TOKEN_VAZIO_NOT_RUN",
+    "drive_update": "deferred until exact remote CI run and artifact identities exist",
+    "supabase_update": "deferred until exact remote CI run and artifact identities exist",
+    "rationale": "publish successor evidence after the candidate receives immutable commit and CI identities"
+  },
+  "Q12": {
+    "governance": {"classification": "branch-scoped reversible implementation", "rationale": "no merge/release; rollback is exact base commit", "mutation_blocker": false},
+    "data": {"classification": "PUBLIC source and bounded build metadata", "rationale": "no user payload or device logs", "mutation_blocker": false},
+    "privacy": {"classification": "MINIMIZED", "rationale": "receipt omits account secrets, device IDs, user paths and raw environment", "mutation_blocker": false},
+    "security": {"classification": "HIGH integrity surface", "rationale": "bootstrap hashes, package trust, action pins, signing boundary and exported runtime behavior stay fail-closed", "mutation_blocker": false}
+  },
+  "transition": {
+    "goal_ids": ["TERMUX_SESSION_START", "TERMUX_KEYBOARD_START", "REAL_APT_APK", "HOST_TOOLCHAIN_STARTUP", "START_HERE_ROUTE_11"],
+    "urgency": "high",
+    "risk": "high",
+    "action": "remove optional native audit and optional storage from the first-session critical path; fix clean/native hash ordering; unify and execute the CI toolchain; add explicit real-APT route",
+    "falsifier": "source contract failure, tool startup failure, clean build failure, remote workflow failure or physical Android failure",
+    "exit_criterion": "local gates plus remote CI artifacts succeed; physical claims remain excluded until device receipt",
+    "stop_reason": "await immutable remote run before cross-system evidence append",
+    "evidence_refs": ["local test output", "local toolchain receipt", "local Gradle log", "local APK SHA-256 values"],
+    "F_ok": ["session and keyboard setup no longer gated by missing Verbativo JNI", "storage wizard occurs only after a session exists", "Node 24, JDK 21, NDK ARM/AArch64, Ninja and fastboot CLI start on host", "clean real-APT APK matrix builds", "route 11 and immutable actions are defined"],
+    "F_gap": ["remote candidate CI not yet run", "physical Android evidence missing", "device APT snapshot does not yet contain Node/OpenJDK/android-tools/NDK"],
+    "F_next": ["push exact candidate", "observe and repair CI to success", "append bounded Supabase event", "upload successor receipt/APK to Drive", "produce successor device developer-package snapshot"],
+    "uncertainty_delta": "startup blockers and clean-order failure closed locally; remote and physical uncertainty preserved",
+    "rollback": {"state": "AVAILABLE", "ref": "b6fee5fa5631707662635a26e50f8cb585729e3c", "procedure": "reset the feature ref to the base commit and preserve this receipt as historical evidence"}
+  },
+  "mutation_performed": true,
+  "claim_allowed": false
+}

@@ -8,6 +8,7 @@ RAFAELIA_NO_MALLOC ?= 1
 include $(CLEAR_VARS)
 LOCAL_MODULE := libtermux-bootstrap
 LOCAL_SRC_FILES := termux-bootstrap-zip.S termux-bootstrap.c
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../build/generated/bootstrap
 LOCAL_CFLAGS += -fno-common -ffunction-sections -fdata-sections
 LOCAL_LDFLAGS := -Wl,--gc-sections -Wl,-z,max-page-size=16384
 include $(BUILD_SHARED_LIBRARY)
