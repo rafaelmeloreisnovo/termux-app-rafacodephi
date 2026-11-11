@@ -1,0 +1,53 @@
+# ci_track: fast-static-contract
+# ci_abis: arm,aarch64
+# No APK build, runner-local Android simulation or publication.
+name: RAFCODEPHI · Bootstrap API compatibility contract
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'scripts/guard_bootstrap_android_api.py'
+      - 'tests/test_guard_bootstrap_android_api.py'
+      - '.github/workflows/bootstrap-elf-api-contract.yml'
+      - '.github/workflows/real-pkg-apk-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: raf-bootstrap-api-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-contract:
+    name: "🧭 Static ELF gate · adversarial tests"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout reviewed candidate (no persisted credentials)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Ensure readelf is available
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v python3
+          command -v readelf
+      - name: Compile host verifier and run negative/positive tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/guard_bootstrap_android_api.py tests/test_guard_bootstrap_android_api.py
+          python3 -m unittest discover -s tests -p 'test_guard_bootstrap_android_api.py' -v
+      - name: Scope summary (not device E2E)
+        if: always()
+        shell: bash
+        run: |
+          printf '%s\n' '### RAFCODEPHI · Bootstrap API contract' \
+            '' 'The above result is **host-only verifier testing**.' \
+            '- Real source-built bootstrap pair: TOKEN_VAZIO in this workflow' \
+            '- Android physical E2E: TOKEN_VAZIO' \
+            '- Release claim: false' >> "$GITHUB_STEP_SUMMARY"
