@@ -139,8 +139,10 @@ public class TermuxSession {
 
         HashMap<String, String> environment = shellEnvironmentClient.setupShellCommandEnvironment(currentPackageContext,
             executionCommand);
-        if (systemShellFallback) hardenSystemShellFallbackEnvironment(environment, executionCommand.workingDirectory);
         if (additionalEnvironment != null) environment.putAll(additionalEnvironment);
+        // Recovery always wins over inherited package-specific loader paths.
+        // This protects /system/bin/sh on API29 and all other supported ABIs.
+        if (systemShellFallback) hardenSystemShellFallbackEnvironment(environment, executionCommand.workingDirectory);
         List<String> environmentList = ShellEnvironmentUtils.convertEnvironmentToEnviron(environment);
         Collections.sort(environmentList);
         String[] environmentArray = environmentList.toArray(new String[0]);
@@ -204,6 +206,9 @@ public class TermuxSession {
         String systemPath = "/system/bin:/system/xbin";
         if (existingPath != null && !existingPath.isEmpty()) systemPath = systemPath + ":" + existingPath;
         environment.put(UnixShellEnvironment.ENV_PATH, systemPath);
+        environment.remove(UnixShellEnvironment.ENV_LD_LIBRARY_PATH);
+        environment.remove("LD_PRELOAD");
+        environment.put("RAFCODEPHI_SHELL_RECOVERY", "SYSTEM_SH");
 
         String tmp = environment.get(UnixShellEnvironment.ENV_TMPDIR);
         if (tmp == null || !isUsableDirectory(new File(tmp)))
