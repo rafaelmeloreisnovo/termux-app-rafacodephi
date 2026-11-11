@@ -74,8 +74,18 @@ class ApiGateTests(unittest.TestCase):
                 z.writestr("bin/bash", b"not-an-elf")
             result = gate.inspect_archive("arm", p, 29)
         self.assertEqual(result["state"], "BLOCKED")
-        self.assertEqual(len(result["checks"]), len(gate.CRITICAL))
+        self.assertEqual(len(result["checks"]), len(gate.CRITICAL) + len(gate.SCRIPT_INTERPRETERS))
         self.assertIn("NOT_ELF", result["checks"][0]["reasons"])
+
+    def test_pkg_shebang_references_private_bash(self):
+        valid = b"#!/data/data/com.termux.rafacodephi/files/usr/bin/bash\\nset -eu\\n"
+        self.assertEqual(gate.inspect_script(valid, "arm", "bin/pkg")["state"],
+                         "PASS_SCOPED_STATIC")
+
+    def test_pkg_shebang_wrong_package_prefix_is_blocked(self):
+        stale = b"#!/data/data/com.termux/files/usr/bin/bash\\n"
+        self.assertIn("SHEBANG_PREFIX_MISMATCH",
+                      gate.inspect_script(stale, "arm", "bin/pkg")["reasons"])
 
     def test_wrong_arch_profile_is_blocked(self):
         with tempfile.TemporaryDirectory() as d:

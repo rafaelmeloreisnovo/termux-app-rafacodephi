@@ -23,6 +23,11 @@ CRITICAL = (
     "bin/busybox", "bin/proot", "bin/ninja", "libexec/termux-api-broadcast",
 )
 ARCH = {"arm": ("ARM", 1), "aarch64": ("AArch64", 2)}
+PREFIX = "/data/data/com.termux.rafacodephi/files/usr"
+SCRIPT_INTERPRETERS = {
+    "bin/pkg": (PREFIX + "/bin/bash").encode("ascii"),
+    "bin/login": (PREFIX + "/bin/sh").encode("ascii"),
+}
 API_NOTE = re.compile(
     r"\bAndroid\b[^\n]*description data:\s*((?:[0-9a-fA-F]{2}\s+){4})"
 )
@@ -77,6 +82,15 @@ def inspect_elf(binary: bytes, arch: str, name: str, max_api: int) -> dict:
     return item
 
 
+def inspect_script(binary: bytes, arch: str, name: str) -> dict:
+    expected = b"#!" + SCRIPT_INTERPRETERS[name]
+    head = binary.split(b"\\n", 1)[0]
+    reasons = [] if head == expected else ["SHEBANG_PREFIX_MISMATCH"]
+    return {"entry": name, "arch": arch, "state": (
+        "PASS_SCOPED_STATIC" if not reasons else "BLOCKED"),
+        "android_min_api": None, "reasons": reasons}
+
+
 def inspect_archive(arch: str, filename: Path, max_api: int) -> dict:
     result = {"arch": arch, "archive": filename.name, "sha256": None,
               "state": "BLOCKED", "checks": [], "reasons": []}
@@ -111,6 +125,20 @@ def inspect_archive(arch: str, filename: Path, max_api: int) -> dict:
                     )
                     continue
                 result["checks"].append(inspect_elf(boot.read(name), arch, name, max_api))
+            for name in SCRIPT_INTERPRETERS:
+                if name not in names:
+                    result["checks"].append({
+                        "entry": name, "arch": arch, "state": "BLOCKED",
+                        "android_min_api": None, "reasons": ["REQUIRED_SCRIPT_MISSING"]
+                    })
+                    continue
+                if boot.getinfo(name).file_size > 256 * 1024:
+                    result["checks"].append({
+                        "entry": name, "arch": arch, "state": "BLOCKED",
+                        "android_min_api": None, "reasons": ["SCRIPT_SIZE_LIMIT"]
+                    })
+                    continue
+                result["checks"].append(inspect_script(boot.read(name), arch, name))
             if all(x["state"] == "PASS_SCOPED_STATIC" for x in result["checks"]):
                 result["state"] = "PASS_SCOPED_STATIC"
     except (OSError, zipfile.BadZipFile, KeyError, ValueError,
@@ -133,7 +161,7 @@ def main(argv=None) -> int:
     passed = sum(x["state"] == "PASS_SCOPED_STATIC" for x in results)
     doc = {
         "schema": "rafcodephi.bootstrap-elf-android-api/v1",
-        "scope": "STATIC_BOOTSTRAP_CRITICAL_ELFS_ONLY",
+        "scope": "STATIC_BOOTSTRAP_CRITICAL_ELFS_AND_SHEBANGS",
         "device_api_target": args.max_api,
         "archives": results,
         "state": "PASS_SCOPED_STATIC" if passed == len(results) else "BLOCKED",
