@@ -34,44 +34,8 @@ jobs:
           MODULES: ${{ inputs.modules || 'all' }}
         run: |
           set -euo pipefail
-          # Treat operator input only as data, never as shell source.
-          if [[ "$MODULES" == *
-
-      - name: Publish auditor summary
-        if: always()
-        run: |
-          if [ -f out/rafcodephi-auditor/auditor-report.md ]; then
-            sed -n '1,140p' out/rafcodephi-auditor/auditor-report.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo 'RAFCODEPHI auditor report was not generated.' >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Upload auditor artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: rafcodephi-auditor-${{ github.sha }}
-          path: out/rafcodephi-auditor/**
-          if-no-files-found: warn
-\n'* || "$MODULES" == *
-
-      - name: Publish auditor summary
-        if: always()
-        run: |
-          if [ -f out/rafcodephi-auditor/auditor-report.md ]; then
-            sed -n '1,140p' out/rafcodephi-auditor/auditor-report.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo 'RAFCODEPHI auditor report was not generated.' >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Upload auditor artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: rafcodephi-auditor-${{ github.sha }}
-          path: out/rafcodephi-auditor/**
-          if-no-files-found: warn
-\r'* || ${#MODULES} -gt 256 ]]; then
+          export LC_ALL=C
+          if (( ${#MODULES} > 256 )) || [[ ! "$MODULES" =~ ^[a-zA-Z[:blank:]]+$ ]]; then
             echo "INVALID_MODULE_LIST" >&2
             exit 64
           fi
