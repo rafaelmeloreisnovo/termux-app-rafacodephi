@@ -162,7 +162,7 @@ for filename, expected_class, expected_machine in (
     (sys.argv[2], 2, 183),  # ELFCLASS64, EM_AARCH64
 ):
     data = Path(filename).read_bytes()
-    if (len(data) < 20 or data[:4] != b"\\x7fELF"
+    if (len(data) < 20 or data[:4] != b"\x7fELF"
             or data[4] != expected_class or data[5] != 1
             or int.from_bytes(data[18:20], "little") != expected_machine):
         raise SystemExit("NDK_ELF_ABI_MISMATCH: " + filename)
