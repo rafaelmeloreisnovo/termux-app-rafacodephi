@@ -84,7 +84,7 @@ def inspect_elf(binary: bytes, arch: str, name: str, max_api: int) -> dict:
 
 def inspect_script(binary: bytes, arch: str, name: str) -> dict:
     expected = b"#!" + SCRIPT_INTERPRETERS[name]
-    head = binary.split(b"\\n", 1)[0]
+    head = binary.split(b"\n", 1)[0]
     reasons = [] if head == expected else ["SHEBANG_PREFIX_MISMATCH"]
     return {"entry": name, "arch": arch, "state": (
         "PASS_SCOPED_STATIC" if not reasons else "BLOCKED"),

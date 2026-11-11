@@ -78,12 +78,12 @@ class ApiGateTests(unittest.TestCase):
         self.assertIn("NOT_ELF", result["checks"][0]["reasons"])
 
     def test_pkg_shebang_references_private_bash(self):
-        valid = b"#!/data/data/com.termux.rafacodephi/files/usr/bin/bash\\nset -eu\\n"
+        valid = b"#!/data/data/com.termux.rafacodephi/files/usr/bin/bash\nset -eu\n"
         self.assertEqual(gate.inspect_script(valid, "arm", "bin/pkg")["state"],
                          "PASS_SCOPED_STATIC")
 
     def test_pkg_shebang_wrong_package_prefix_is_blocked(self):
-        stale = b"#!/data/data/com.termux/files/usr/bin/bash\\n"
+        stale = b"#!/data/data/com.termux/files/usr/bin/bash\n"
         self.assertIn("SHEBANG_PREFIX_MISMATCH",
                       gate.inspect_script(stale, "arm", "bin/pkg")["reasons"])
 
