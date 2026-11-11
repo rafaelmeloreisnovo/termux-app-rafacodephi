@@ -156,6 +156,7 @@ if [[ -f "$ANDROID_NDK_HOME/source.properties" ]]; then
   ndk_revision="$(sed -n 's/^Pkg.Revision[[:space:]]*=[[:space:]]*//p' "$ANDROID_NDK_HOME/source.properties" | sed -n '1p')"
 fi
 [[ "$ndk_revision" != "TOKEN_VAZIO_NDK_REVISION" ]] || fail "ndk_revision_missing"
+[[ "$ndk_revision" == "$effective_ndk_version" ]] || fail "ndk_revision_${ndk_revision}_expected_${effective_ndk_version}"
 
 mkdir -p "$(dirname "$OUTPUT_PATH")"
 script_sha256="$(sha256sum "$0" | awk '{print $1}')"
