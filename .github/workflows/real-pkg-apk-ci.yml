@@ -45,6 +45,41 @@ jobs:
           ref: affe71a12c903daf70ac46dcc83ffad7d49a870a
           path: package-source
           persist-credentials: false
+      - name: Download exact recovered source-built bootstrap pair
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/real-pkg-inputs
+          gh api repos/rafaelmeloreisnovo/termux-packages/actions/artifacts/13691798041/zip > build/real-pkg-inputs/arm.zip
+          gh api repos/rafaelmeloreisnovo/termux-packages/actions/artifacts/13692617039/zip > build/real-pkg-inputs/aarch64.zip
+          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+            https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt-preview-42658185015/repo/rafcodephi-archive-key.gpg \
+            -o build/real-pkg-inputs/rafcodephi-archive-key.gpg
+          python3 scripts/prepare_ci_real_pkg_bootstrap.py \
+            --inputs build/real-pkg-inputs --output build/real-pkg-bootstrap \
+            --key build/real-pkg-inputs/rafcodephi-archive-key.gpg \
+            --sealer package-source/scripts/build-rafcodephi-live-bootstrap.sh
+      # Reject incompatible recovered binaries before initializing SDK/NDK or building APKs.
+      # NDK used for the Android app does NOT rebuild an imported Termux bash.
+      - name: "[P0] Android 10 ELF/API and symbol compatibility (both ABIs)"
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/guard_bootstrap_android_api.py \
+            --arm build/real-pkg-bootstrap/rafcodephi-bootstrap-arm.zip \
+            --aarch64 build/real-pkg-bootstrap/rafcodephi-bootstrap-aarch64.zip \
+            --max-api 29 --out build/reports/bootstrap-android-api.json
+      - name: Upload bootstrap ELF preflight receipt (including FAIL)
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: RAFCODEPHI-bootstrap-android-api-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/reports/bootstrap-android-api.json
+          if-no-files-found: warn
+          retention-days: 30
+      # Costly host toolchain starts only after cheap custody and runtime-ABI gates.
       - name: Setup and execute host toolchain startup gates
         uses: ./.github/actions/rafaelia-android-setup
         with:
@@ -68,22 +103,6 @@ jobs:
           python3 -m venv build/ci-venv
           build/ci-venv/bin/pip install pytest==9.2.0 blake3==1.0.11
           echo "$PWD/build/ci-venv/bin" >> "$GITHUB_PATH"
-      - name: Download exact recovered source-built bootstrap pair
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p build/real-pkg-inputs
-          gh api repos/rafaelmeloreisnovo/termux-packages/actions/artifacts/13691798041/zip > build/real-pkg-inputs/arm.zip
-          gh api repos/rafaelmeloreisnovo/termux-packages/actions/artifacts/13692617039/zip > build/real-pkg-inputs/aarch64.zip
-          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
-            https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt-preview-42658185015/repo/rafcodephi-archive-key.gpg \
-            -o build/real-pkg-inputs/rafcodephi-archive-key.gpg
-          python3 scripts/prepare_ci_real_pkg_bootstrap.py \
-            --inputs build/real-pkg-inputs --output build/real-pkg-bootstrap \
-            --key build/real-pkg-inputs/rafcodephi-archive-key.gpg \
-            --sealer package-source/scripts/build-rafcodephi-live-bootstrap.sh
       - name: Verify current signed HTTPS package resolution
         run: |
           set -euo pipefail
@@ -100,7 +119,8 @@ jobs:
             tests/test_rafcodephi_signed_apt_import_contract.py \
             tests/test_device_signed_apt_smoke.py \
             tests/test_rafcodephi_startup_and_settings_contract.py \
-            tests/test_toolchain_startup_contract.py
+            tests/test_toolchain_startup_contract.py \
+            tests/test_guard_bootstrap_android_api.py
       - name: Import real APT bootstrap pair and bind Gradle hashes
         env:
           RAF_REAL_BOOTSTRAP_ZIP_ARM: ${{ github.workspace }}/build/real-pkg-bootstrap/rafcodephi-bootstrap-arm.zip
@@ -142,6 +162,7 @@ jobs:
             build/reports/rafcodephi-real-bootstrap-import-matrix.json
             build/reports/bootstrap-pair-transaction.json
             build/reports/toolchain-startup.json
+            build/reports/bootstrap-android-api.json
             build/real-pkg-bootstrap/ci-input-custody.json
           compression-level: 0
           if-no-files-found: error
