@@ -139,6 +139,22 @@ def inspect_archive(arch: str, filename: Path, max_api: int) -> dict:
                     })
                     continue
                 result["checks"].append(inspect_script(boot.read(name), arch, name))
+            # Shared libraries can make a healthy Bash fail at Android's linker
+            # even when bin/bash has an API29 note. Check the transitive native
+            # closure, not just the command entrypoints (libcrypto/libapt etc.).
+            for name in sorted(names):
+                if name in CRITICAL or not name.startswith(("lib/", "libexec/")):
+                    continue
+                if not re.search(r"\.so(?:\.[0-9]+)*$", name):
+                    continue
+                info = boot.getinfo(name)
+                if info.file_size > 32 * 1024 * 1024:
+                    result["checks"].append(
+                        {"entry": name, "arch": arch, "state": "BLOCKED",
+                         "android_min_api": None, "reasons": ["ELF_SIZE_LIMIT"]}
+                    )
+                    continue
+                result["checks"].append(inspect_elf(boot.read(name), arch, name, max_api))
             if all(x["state"] == "PASS_SCOPED_STATIC" for x in result["checks"]):
                 result["state"] = "PASS_SCOPED_STATIC"
     except (OSError, zipfile.BadZipFile, KeyError, ValueError,
