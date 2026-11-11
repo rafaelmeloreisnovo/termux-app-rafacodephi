@@ -1,6 +1,6 @@
 # ci_track: deprecated
 # ci_abis: arm64-v8a,armeabi-v7a
-name: 🔧 Build ARM32 Multi-Page Fix (Unified Workflow)
+name: "LEGACY / MultiArm32 / manual replay only"
 
 # Deprecated historical build; no implicit pushes. Canonical ARM lanes live
 # in _reusable-arm32-compat.yml behind START HERE. Explicit manual replay only.
