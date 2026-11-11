@@ -115,7 +115,25 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
             set(self.scanner.detect_triggers(flow_map)),
             {"push", "workflow_dispatch"},
         )
-        self.assertIn("on: [push, pull_request, workflow_dispatch]", self.top42)
+        self.assertIn("on:\n  push:\n    branches: [master]\n", self.top42)
+        self.assertIn("  pull_request:\n    branches: [master]\n", self.top42)
+        self.assertIn("  workflow_dispatch:\n", self.top42)
+
+    def test_auto_audit_workflows_are_branch_scoped_and_manual_isolated(self) -> None:
+        for name in (
+            "top42_bench.yml",
+            "audit-benchmark-contract.yml",
+            "rafcodephi-auditor.yml",
+        ):
+            workflow = (self.root / ".github/workflows" / name).read_text(encoding="utf-8")
+            self.assertIn("  push:\n    branches: [master]\n", workflow)
+            self.assertIn("  pull_request:\n    branches: [master]\n", workflow)
+            self.assertIn("  workflow_dispatch:", workflow)
+            self.assertIn("github.run_id", workflow)
+            self.assertIn(
+                "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
+                workflow,
+            )
 
     def test_scanner_track_contract_includes_artifact(self) -> None:
         self.assertIn("artifact", self.scanner.ALLOWED_TRACKS)
