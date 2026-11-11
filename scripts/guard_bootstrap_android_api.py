@@ -29,7 +29,7 @@ SCRIPT_INTERPRETERS = {
     "bin/login": (PREFIX + "/bin/sh").encode("ascii"),
 }
 API_NOTE = re.compile(
-    r"\bAndroid\b[^\n]*description data:\s*((?:[0-9a-fA-F]{2}\s+){4})"
+    r"\bAndroid\b[\s\S]{0,160}?description data:\s*((?:[0-9a-fA-F]{2}\s+){4})"
 )
 # The original device failure was specifically this Bionic symbol.
 LATE_IMPORT = re.compile(r"\bmemfd_create(?:@LIBC_R)?\b")

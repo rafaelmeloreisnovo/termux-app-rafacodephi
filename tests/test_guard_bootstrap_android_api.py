@@ -20,7 +20,8 @@ spec.loader.exec_module(gate)
 def tool_outputs(api=29, machine="ARM", bad_import=False, missing_note=False):
     notes = "" if missing_note else (
         "Displaying notes found in: .note.android.ident\n"
-        "  Android 0x00000084 NT_VERSION (version) description data: "
+        "  Android 0x00000084 NT_VERSION (version)\n"
+        "   description data: "
         + " ".join(f"{x:02x}" for x in api.to_bytes(4, "little")) + " \n"
     )
     symbols = "  11: 00000000 0 FUNC GLOBAL DEFAULT UND read@LIBC (2)\n"
