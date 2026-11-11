@@ -31,6 +31,9 @@ jobs:
       RAF_APT_TRUSTED_KEY_SHA256: 12beed0a1af401641bade1ae0d02f94d593bfc6cf8bda76d737d558b92df5f6b
       RAF_BOOTSTRAP_SOURCE: source-built-real
       TERMUX_SKIP_BOOTSTRAP_PREPARE: '1'
+      # Only the APK's native build uses this NDK. Imported Bash/APT
+      # must independently pass the Android API29 ELF gate above.
+      JITPACK_NDK_VERSION: '29.0.14206865'
       CLAIM_ALLOWED: 'false'
       PHYSICAL_ANDROID: TOKEN_VAZIO
     steps:
@@ -81,13 +84,15 @@ jobs:
           retention-days: 30
       # Costly host toolchain starts only after cheap custody and runtime-ABI gates.
       - name: Setup and execute host toolchain startup gates
+        id: startup
         uses: ./.github/actions/rafaelia-android-setup
         with:
           java-version: '21'
           node-version: '24'
           prepare-bootstrap: 'false'
       - name: Upload toolchain startup receipt
-        if: always()
+        # Do not create a second misleading failure if API29 preflight skipped setup.
+        if: ${{ always() && steps.startup.outcome != 'skipped' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: RAFCODEPHI-toolchain-startup-${{ github.run_id }}-${{ github.run_attempt }}
