@@ -152,6 +152,33 @@ jobs:
           done
           (cd app/build/outputs/apk/debug && sha256sum *real-pkg-ci-*.apk > SHA256SUMS.txt)
           printf 'source_commit=%s\nproducer_commit=e7f23f46d039d04577c035457c920047f03dc2a1\nrecovery_run=42657253878\nsigned_apt_snapshot_run=42658185015\nsigning=CI_ANDROID_DEBUG\ndevice_runtime=TOKEN_VAZIO\nclaim_allowed=false\n' "$GITHUB_SHA" > build/reports/real-pkg-apk-ci/BUILD_RECEIPT.txt
+      - name: Ensure universal installer contains both supported native ABIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+
+          apks = sorted(Path("app/build/outputs/apk/debug").glob("*real-pkg-ci-*_universal.apk"))
+          if len(apks) != 1:
+              raise SystemExit(f"UNIVERSAL_APK_COUNT_BLOCKED: expected=1 actual={len(apks)}")
+          with zipfile.ZipFile(apks[0]) as archive:
+              names = set(archive.namelist())
+              for abi in ("armeabi-v7a", "arm64-v8a"):
+                  prefix = f"lib/{abi}/"
+                  if not any(name.startswith(prefix) and name.endswith(".so") for name in names):
+                      raise SystemExit("UNIVERSAL_APK_MISSING_NATIVE_ABI: " + abi)
+          print("UNIVERSAL_APK_ABI=PASS_SCOPED_STATIC native_abis=armeabi-v7a,arm64-v8a device_runtime=TOKEN_VAZIO")
+          PY
+      - name: Upload single-file universal ARMv7 + ARM64 installer
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: RAFCODEPHI-universal-ARMv7-ARM64-${{ github.run_id }}
+          path: app/build/outputs/apk/debug/*real-pkg-ci-*_universal.apk
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload real APT APKs and verification receipts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
