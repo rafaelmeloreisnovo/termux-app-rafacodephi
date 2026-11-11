@@ -690,10 +690,19 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
         }
 
         Error bootstrapError = ensureBootstrapReadyForExecution(executionCommand, "TermuxSession");
-        if (bootstrapError != null) {
+        // Do not block an ordinary interactive terminal solely because real-pkg
+        // or bin/pkg is broken. The terminal's bounded shell probe will select
+        // an actually running installed shell, or the known Android system sh.
+        // Keep plugin/explicit commands fail-closed: they must NOT silently
+        // execute in the recovery shell with different semantics.
+        boolean interactiveRecovery = !executionCommand.isPluginExecutionCommand
+            && (executionCommand.executable == null || executionCommand.executable.isEmpty());
+        if (bootstrapError != null && !interactiveRecovery) {
             failExecutionCommandOnBootstrapNotReady(executionCommand, bootstrapError);
             return null;
         }
+        if (bootstrapError != null)
+            Logger.logWarn(LOG_TAG, "Interactive terminal recovery enabled without package-runtime claim");
 
         executionCommand.setShellCommandShellEnvironment = true;
         executionCommand.terminalTranscriptRows = mProperties.getTerminalTranscriptRows();
