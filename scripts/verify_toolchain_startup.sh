@@ -148,8 +148,29 @@ done
 
 "$arm_clang" -c "$probe_dir/ndk_probe.c" -o "$probe_dir/ndk-arm.o"
 "$aarch64_clang" -c "$probe_dir/ndk_probe.c" -o "$probe_dir/ndk-aarch64.o"
-"$llvm_readelf" -h "$probe_dir/ndk-arm.o" | grep -Eq 'Machine:[[:space:]]+ARM$' || fail "ndk_arm_object"
-"$llvm_readelf" -h "$probe_dir/ndk-aarch64.o" | grep -Eq 'Machine:[[:space:]]+AArch64$' || fail "ndk_aarch64_object"
+# LLVM readelf displays machine names differently between NDK releases.
+# Parse the ELF identity bytes instead: EI_CLASS + EI_DATA + e_machine.
+# Still require llvm-readelf to parse both objects successfully.
+"$llvm_readelf" -h "$probe_dir/ndk-arm.o" >/dev/null || fail "ndk_arm_header_unreadable"
+"$llvm_readelf" -h "$probe_dir/ndk-aarch64.o" >/dev/null || fail "ndk_aarch64_header_unreadable"
+if ! python3 - "$probe_dir/ndk-arm.o" "$probe_dir/ndk-aarch64.o" <<'PY'
+from pathlib import Path
+import sys
+
+for filename, expected_class, expected_machine in (
+    (sys.argv[1], 1, 40),   # ELFCLASS32, EM_ARM
+    (sys.argv[2], 2, 183),  # ELFCLASS64, EM_AARCH64
+):
+    data = Path(filename).read_bytes()
+    if (len(data) < 20 or data[:4] != b"\\x7fELF"
+            or data[4] != expected_class or data[5] != 1
+            or int.from_bytes(data[18:20], "little") != expected_machine):
+        raise SystemExit("NDK_ELF_ABI_MISMATCH: " + filename)
+print("NDK_ELF_ABI=PASS_SCOPED both native object headers")
+PY
+then
+  fail "ndk_compiled_elf_arch_mismatch"
+fi
 
 ndk_revision="TOKEN_VAZIO_NDK_REVISION"
 if [[ -f "$ANDROID_NDK_HOME/source.properties" ]]; then
