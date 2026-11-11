@@ -179,6 +179,12 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
             self.assertEqual(run("unknown").returncode, 64)
             self.assertEqual(run(" ").returncode, 64)
 
+    def test_catalog_families_are_navigation_not_proof(self) -> None:
+        family = self.scanner.workflow_family
+        self.assertEqual(family(Path("00_START_HERE.yml"), "ops"), "operator")
+        self.assertEqual(family(Path("ci-head-contract.yml"), "ops"), "required-contracts")
+        self.assertEqual(family(Path("MultiArm32.yml"), "deprecated"), "historical")
+        self.assertEqual(family(Path("compatibility-arm32-ndk29.yml"), "ops"), "abi-toolchain")
     def test_scanner_track_contract_includes_artifact(self) -> None:
         self.assertIn("artifact", self.scanner.ALLOWED_TRACKS)
         self.assertEqual(self.scanner.TOKEN_VAZIO, "TOKEN_VAZIO")

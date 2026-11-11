@@ -160,6 +160,27 @@ def workload_overlap_candidates(rows: list[dict[str, Any]]) -> list[dict[str, An
                 })
     return candidates
 
+def workflow_family(path: Path, track: str) -> str:
+    """Navigation heuristic only, not execution authority or evidence."""
+    name = path.name.lower()
+    if track == "deprecated":
+        return "historical"
+    if name == "00_start_here.yml":
+        return "operator"
+    if name in {"ci-head-contract.yml", "rafcodephi-workflow-syntax.yml"}:
+        return "required-contracts"
+    if any(token in name for token in ("arm32", "arm64", "abi_", "ndk", "multiarm")):
+        return "abi-toolchain"
+    if any(token in name for token in ("apk", "build", "release", "sign-")):
+        return "artifact-build"
+    if any(token in name for token in ("bootstrap", "pkg", "runtime", "termux", "loader")):
+        return "bootstrap-runtime"
+    if any(token in name for token in ("bench", "vectra")):
+        return "metrology"
+    if any(token in name for token in ("gate", "audit", "contract", "receipt", "safety", "policy", "workflow", "protection")):
+        return "governance-evidence"
+    return "specialist"
+
 def classify(path: Path, text: str) -> dict[str, Any]:
     track = header_value(text, "ci_track")
     abis = header_value(text, "ci_abis")
@@ -184,6 +205,8 @@ def classify(path: Path, text: str) -> dict[str, Any]:
         "name": name,
         "ci_track": track,
         "ci_abis": abis,
+        "family": workflow_family(path, track),
+        "catalog_basis": "FILENAME_HEURISTIC_NOT_EXECUTION",
         "role": role,
         "triggers": triggers,
         "has_permissions": present_key(text, "permissions"),
@@ -251,16 +274,22 @@ def markdown(rows: list[dict[str, Any]], errors: list[str], warnings: list[str],
     for role in sorted(counts):
         lines.append(f"- `{role}`: {counts[role]}")
 
+    families: dict[str, int] = {}
+    for row in rows:
+        families[row["family"]] = families.get(row["family"], 0) + 1
+    lines.extend(["", "## Navigational families (filename heuristic only)"])
+    for family in sorted(families):
+        lines.append(f"- {family}: {families[family]}")
     lines.extend([
         "",
         "## Inventory",
         "",
-        "| Workflow | Track | ABIs | Role | Dispatch | Call | Permissions | Concurrency | Timeout |",
-        "|---|---|---|---|---:|---:|---:|---:|---:|",
+        "| Workflow | Family | Track | ABIs | Role | Dispatch | Call | Permissions | Concurrency | Timeout |",
+        "|---|---|---|---|---|---:|---:|---:|---:|---:|",
     ])
     for row in rows:
         lines.append(
-            f"| `{row['path']}` | `{row['ci_track']}` | `{row['ci_abis']}` | `{row['role']}` | "
+            f"| `{row['path']}` | `{row['family']}` | `{row['ci_track']}` | `{row['ci_abis']}` | `{row['role']}` | "
             f"{'✓' if row['workflow_dispatch'] else '—'} | {'✓' if row['workflow_call'] else '—'} | "
             f"{'✓' if row['has_permissions'] else '—'} | {'✓' if row['has_concurrency'] else '—'} | "
             f"{'✓' if row['has_timeout'] else '—'} |"
@@ -308,6 +337,7 @@ def main() -> int:
         "claim_allowed": False,
         "strict": args.strict,
         "workflow_count": len(rows),
+        "family_counts": {family: sum(row["family"] == family for row in rows) for family in sorted({row["family"] for row in rows})},
         "error_count": len(errors),
         "warning_count": len(warnings),
         "errors": errors,

@@ -1,0 +1,102 @@
+# ci_track: ops
+# ci_abis: n/a
+# Required check: ci-head-contract; keep pull_request unfiltered.
+name: RAFCODEPHI CI HEAD Contract
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches:
+      - master
+      # Temporary branch-only canary for exact-HEAD evidence.
+      - refactor/ci-workflow-dedup-review-20261111
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-head-contract-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  ci-head-contract:
+    name: ci-head-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact event commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Parse all workflow YAML offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          ruby -rpsych -e 'Dir.glob(".github/workflows/*.{yml,yaml}").sort.each { |path| Psych.parse_file(path) }'
+
+      - name: Verify Python and Bash syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/ci/workflow_control_plane.py scripts/ci/master_ruleset_gate.py tests/test_workflow_control_plane_contract.py tests/test_master_ruleset_gate.py
+          bash -n scripts/rafcodephi_auditor.sh
+
+      - name: Audit inventory and operator routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/workflow_control_plane.py
+
+      - name: Run policy regression and adversarial tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p test_workflow_control_plane_contract.py -v
+          python3 -m unittest discover -s tests -p test_master_ruleset_gate.py -v
+          python3 -m unittest discover -s tests -p test_provider_protection_contract.py -v
+
+      - name: Emit scoped receipt after any outcome
+        if: always()
+        shell: bash
+        env:
+          GATE_RESULT: ${{ job.status }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          dst=Path("reports/ci-head-contract-receipt.json")
+          dst.parent.mkdir(parents=True,exist_ok=True)
+          result={
+            "schema":"rafaelia.ci-head-contract-receipt/v1",
+            "head_sha":os.environ.get("GITHUB_SHA","TOKEN_VAZIO"),
+            "event":os.environ.get("GITHUB_EVENT_NAME","TOKEN_VAZIO"),
+            "run_id":os.environ.get("GITHUB_RUN_ID","TOKEN_VAZIO"),
+            "run_attempt":os.environ.get("GITHUB_RUN_ATTEMPT","TOKEN_VAZIO"),
+            "gate_result":os.environ.get("GATE_RESULT","TOKEN_VAZIO"),
+            "device_runtime":"TOKEN_VAZIO_NOT_EXECUTED",
+            "apk_build":"TOKEN_VAZIO_NOT_EXECUTED",
+            "claim_allowed":False
+          }
+          dst.write_text(json.dumps(result,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf-8") as fh:
+            fh.write("## CI HEAD contract\n\n")
+            fh.write("- Head: "+result["head_sha"]+"\n")
+            fh.write("- Gate: "+result["gate_result"]+"\n")
+            fh.write("- Android device and APK build: TOKEN_VAZIO\n")
+          PY
+
+      - name: Preserve CI scope receipt
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: ci-head-contract-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            reports/ci-head-contract-receipt.json
+            reports/workflow-control-plane.json
+            reports/workflow-control-plane.md
+          if-no-files-found: warn
+          retention-days: 14

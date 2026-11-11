@@ -113,3 +113,32 @@ Não realizar big-bang delete só para reduzir a quantidade de YAML.
 `TOKEN_VAZIO != 0 != PASS`.
 
 `URGENCY != GATE_BYPASS`.
+
+## Evolução 2026-11-11 — CI HEAD e ruleset aditivo
+
+- **Pasta de execução:** manter os 85+ workflows de topo em `.github/workflows/`; mover para subpastas desativaria descoberta de Actions e quebraria referências `workflow_call`. Organização é **lógica**, via inventário e famílias, não por mover ou excluir YAML.
+- **Entrada manual única:** `00_START_HERE.yml`, com rotas 01–11; a rota `11_REAL_PKG_TOOLCHAIN` é a trilha explícita de APK com APT real. Outras trilhas não herdam seu PASS.
+- **Classificação gerada:** `scripts/ci/workflow_control_plane.py` acrescenta `family` e `family_counts`; classificação por nome é **heurística**, não equivalência de trabalhos. Relatório JSON/Markdown é gerado na CI; não manter um segundo catálogo manual concorrente.
+- **Contrato obrigatório barato:** `.github/workflows/ci-head-contract.yml` tem job chamado exatamente `ci-head-contract`, gatilho `pull_request` para master sem `paths` e teste por `push` no master e na branch de canário de revisão. Verifica sintaxe YAML, Python, Bash, inventário, testes de contrato e payload sem build Android. A prova física permanece `TOKEN_VAZIO`.
+- **Deduplicação segura:** apenas marcar `REVIEW_ONLY` quando existir assinatura estrutural repetida e evento automático compartilhado; NDK canônico ≠ NDK29; não eliminar um produtor sem equivalência comprovada.
+- **Ruleset adicional (não substitui o 21908888):** `governance/provider/RAFCODEPHI_MASTER_RULESET_APPLY_V1.json` define proteção só do default branch, PR obrigatório, zero aprovações humanas (trabalho solo), status check estrito `ci-head-contract`, squash e nenhum bypass próprio. O ruleset antigo continua cobrindo `~ALL`. A presença deste JSON **não** altera as regras do GitHub.
+- **Operação administrativa guardada:** `python3 scripts/ci/master_ruleset_gate.py` valida localmente; `--verify` somente lê o provider; `--apply --expected-head=<SHA_EXATO>` faz POST apenas quando houver check GitHub Actions verde no HEAD da branch de canário e um token de administração. Se existir ruleset de mesmo nome divergente, falha sem sobrescrever. Não automatizar esse POST em GitHub Actions nem expor credenciais.
+- **Limite da proteção:** status check de `workflow_dispatch` sozinho não satisfaz necessariamente a verificação exigida pelo PR; o check obrigatório usa `pull_request` e jamais filtros de caminho. Antes do rollout, confirmar check concluído no HEAD e após aplicar verificar que PR com check ausente/falho não consegue mesclar. `READBACK_MATCH_SCOPED != NEGATIVE_ENFORCEMENT_TEST`.
+- **Separação de evidências:** `ci-head-contract` confirma apenas contratos hospedados. APK e Bash físico dependem de build assinado e execução Android ARMv7/ARM64, com recibos distintos.
+- **Rollout:** `LOCAL_VALIDATE → BRANCH_PUSH_CI_HEAD → PROVIDER_CHECKS_READ → APPLY_EXPLICIT_ADMIN → PROVIDER_READBACK → NEGATIVE_FALSIFIER → PR_REVIEW → PROMOTION`. Em qualquer falha, `BLOCKED` e não mesclar. Sem exclusão nem force push. O alvo `PROVIDER_RULESET_TARGET.v3.json` é um contrato aspiracional mais amplo, não se confunde com o aditivo inicial, portanto seu gate pode continuar FAIL.
+- **Rollback:** não mesclar a branch em caso de regressão; revisão administrativa do novo ruleset por ID com readback e preservação do histórico, sem alterar o ruleset legado. Qualquer alteração de segurança após o POST requer ato administrativo explícito.
+
+### Procedimento Termux (sem guardar PAT em arquivo)
+
+```sh
+python3 scripts/ci/master_ruleset_gate.py
+python3 scripts/ci/master_ruleset_gate.py --verify
+# Somente depois de ci-head-contract:success no SHA exato:
+read -r -s -p 'GitHub PAT (repo administration:write): ' GH_TOKEN; printf '\n'
+export GH_TOKEN
+python3 scripts/ci/master_ruleset_gate.py --apply --expected-head="$(git rev-parse HEAD)"
+unset GH_TOKEN
+python3 scripts/ci/master_ruleset_gate.py --verify
+```
+
+A operação precisa ser executada em um checkout da branch de revisão na revisão exata. O token não deve ser publicado em YAML, issues, logs ou receipts. O CLI conectado à conversa atualmente não expõe a operação de escrita administrativa do ruleset.
