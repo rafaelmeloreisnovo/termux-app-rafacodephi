@@ -111,6 +111,55 @@ def detect_triggers(text: str) -> list[str]:
     return [trigger for trigger in TRIGGERS if trigger in found]
 
 
+
+# Static detection only: shared event + same reusable-call fingerprint is not
+# proof that paths, refs, runners or produced bytes are equivalent.
+AUTO_TRIGGERS = frozenset({
+    "push", "pull_request", "schedule", "release",
+    "repository_dispatch", "workflow_run",
+})
+
+
+def reusable_workload_signature(text: str) -> str:
+    """Fingerprint direct reusable calls; unknown is never interpreted as zero."""
+    calls = re.findall(
+        r"(?m)^\s{4,}uses:\s+(\./\.github/workflows/[\w.-]+\.ya?ml)(?:\s|$)",
+        text,
+    )
+    if not calls:
+        return TOKEN_VAZIO
+    selectors = re.findall(
+        r"(?m)^\s{6,}(ndk_lane|build_type|abi|target_sdk):\s*([^\n#]+)",
+        text,
+    )
+    return json.dumps(
+        {"calls": sorted(calls), "selectors": sorted((k, v.strip()) for k, v in selectors)},
+        sort_keys=True,
+    )
+
+
+def workload_overlap_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Report only candidates, never disable execution or promote PASS."""
+    candidates: list[dict[str, Any]] = []
+    for index, left in enumerate(rows):
+        signature = left["reusable_signature"]
+        if left["ci_track"] == "deprecated" or signature == TOKEN_VAZIO:
+            continue
+        for right in rows[index + 1 :]:
+            if right["ci_track"] == "deprecated" or right["reusable_signature"] != signature:
+                continue
+            shared = sorted(AUTO_TRIGGERS.intersection(left["triggers"]).intersection(right["triggers"]))
+            if shared:
+                candidates.append({
+                    "a": left["path"],
+                    "b": right["path"],
+                    "shared_events": shared,
+                    "state": "REVIEW_ONLY",
+                    "path_overlap": TOKEN_VAZIO,
+                    "workload_equivalence": TOKEN_VAZIO,
+                })
+    return candidates
+
 def classify(path: Path, text: str) -> dict[str, Any]:
     track = header_value(text, "ci_track")
     abis = header_value(text, "ci_abis")
@@ -142,6 +191,7 @@ def classify(path: Path, text: str) -> dict[str, Any]:
         "has_timeout": "timeout-minutes:" in text,
         "workflow_dispatch": manual,
         "workflow_call": callable_,
+        "reusable_signature": reusable_workload_signature(text),
     }
 
 
@@ -250,6 +300,7 @@ def main() -> int:
 
     rows = [classify(path, path.read_text(encoding="utf-8")) for path in paths]
     errors, warnings = validate(rows, args.strict)
+    overlaps = workload_overlap_candidates(rows)
 
     payload = {
         "schema": "rafaelia.workflow-control-plane/v2",
@@ -261,6 +312,8 @@ def main() -> int:
         "warning_count": len(warnings),
         "errors": errors,
         "warnings": warnings,
+        "workload_overlap_candidate_count": len(overlaps),
+        "workload_overlap_candidates": overlaps,
         "workflows": rows,
     }
 
@@ -269,7 +322,13 @@ def main() -> int:
     json_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    md_path.write_text(markdown(rows, errors, warnings, args.strict), encoding="utf-8")
+    md = markdown(rows, errors, warnings, args.strict)
+    md += "\n## Reusable workload overlap review (static only)\n\n"
+    md += f"- Candidate pairs: **{len(overlaps)}**; only matching reusable signatures and automatic events.\n"
+    md += "- Event/paths overlap and workload equivalence remain **TOKEN_VAZIO** until verified.\n"
+    for item in overlaps:
+        md += f"- REVIEW_ONLY: `{item['a']}` / `{item['b']}` (events: {', '.join(item['shared_events'])})\n"
+    md_path.write_text(md, encoding="utf-8")
 
     print(f"workflow_count={len(rows)}")
     print(f"state={payload['state']}")
