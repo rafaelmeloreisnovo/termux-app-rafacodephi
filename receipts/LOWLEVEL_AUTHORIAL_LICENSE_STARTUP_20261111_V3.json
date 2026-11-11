@@ -1,0 +1,31 @@
+{
+  "schema": "rafcodephi.lowlevel-startup-license-receipt/v1",
+  "event": "rafcode:termux-app:lowlevel-license-startup:20261111:v3",
+  "parent_event": "rafcode:termux-app:lowlevel-license-startup:20261111:v2",
+  "parent_commit": "1f96f70cb1916608cbd4c5b2aed010a9a7643e94",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "kind": "CI_PRODUCER_INVOCATION_CORRECTION",
+  "delta": [
+    "invoke the canonical producer build script through bash inside its Docker wrapper",
+    "preserve the producer blob and its repository authority without changing executable metadata"
+  ],
+  "cause": {
+    "workflow_run": "42966573238",
+    "producer_commit": "d65cd6c2afa9d16196ba0375aaff36833d530b41",
+    "observed_error": "env: ./scripts/build-rafcodephi-real-bootstrap.sh: Permission denied",
+    "observed_exit_code": 126,
+    "prior_gate": "packages pin resolution, exact checkout, prefix binding and startup contracts passed"
+  },
+  "evidence": {
+    "local_route_contract": "PASS_SCOPED_SOURCE",
+    "exact_head_ci": "PENDING",
+    "android_build": "TOKEN_VAZIO_NOT_RUN",
+    "physical_device": "TOKEN_VAZIO_NOT_RUN"
+  },
+  "gap": [
+    "source-built bootstrap and Android artifacts require a new exact-head CI run",
+    "physical Android shell, keyboard, pkg and proot startup remain unobserved"
+  ],
+  "rollback": "revert this receipt and the explicit bash invocation together",
+  "claim_allowed": false
+}

@@ -127,7 +127,7 @@ jobs:
           mkdir -p build/reports
           set +e
           bash ./scripts/run-rafcodephi-bootstrap-docker.sh \
-            ./scripts/build-rafcodephi-real-bootstrap.sh --architectures arm,aarch64 \
+            bash ./scripts/build-rafcodephi-real-bootstrap.sh --architectures arm,aarch64 \
             2>&1 | tee build/reports/rafcodephi-control-center-real-bootstrap.log
           build_status="${PIPESTATUS[0]}"
           set -e
