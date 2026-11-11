@@ -33,7 +33,60 @@ jobs:
         env:
           MODULES: ${{ inputs.modules || 'all' }}
         run: |
-          bash scripts/rafcodephi_auditor.sh "$MODULES"
+          set -euo pipefail
+          # Treat operator input only as data, never as shell source.
+          if [[ "$MODULES" == *
+
+      - name: Publish auditor summary
+        if: always()
+        run: |
+          if [ -f out/rafcodephi-auditor/auditor-report.md ]; then
+            sed -n '1,140p' out/rafcodephi-auditor/auditor-report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'RAFCODEPHI auditor report was not generated.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload auditor artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rafcodephi-auditor-${{ github.sha }}
+          path: out/rafcodephi-auditor/**
+          if-no-files-found: warn
+\n'* || "$MODULES" == *
+
+      - name: Publish auditor summary
+        if: always()
+        run: |
+          if [ -f out/rafcodephi-auditor/auditor-report.md ]; then
+            sed -n '1,140p' out/rafcodephi-auditor/auditor-report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'RAFCODEPHI auditor report was not generated.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload auditor artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rafcodephi-auditor-${{ github.sha }}
+          path: out/rafcodephi-auditor/**
+          if-no-files-found: warn
+\r'* || ${#MODULES} -gt 256 ]]; then
+            echo "INVALID_MODULE_LIST" >&2
+            exit 64
+          fi
+          read -r -a selected_modules <<< "$MODULES"
+          if (( ${#selected_modules[@]} == 0 )); then
+            echo "INVALID_MODULE_LIST: empty" >&2
+            exit 64
+          fi
+          for module in "${selected_modules[@]}"; do
+            case "$module" in
+              all|inventory|cpu|memory|storage|git|clang|busybox|proot|report) ;;
+              *) echo "INVALID_MODULE: $module" >&2; exit 64 ;;
+            esac
+          done
+          bash scripts/rafcodephi_auditor.sh "${selected_modules[@]}"
 
       - name: Publish auditor summary
         if: always()

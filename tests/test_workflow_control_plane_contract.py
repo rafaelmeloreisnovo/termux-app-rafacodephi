@@ -135,6 +135,50 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
                 workflow,
             )
 
+    def test_auditor_module_parser_preserves_multiple_safe_arguments(self) -> None:
+        import os
+        import subprocess
+        import tempfile
+
+        wf = (self.root / ".github/workflows/rafcodephi-auditor.yml").read_text(encoding="utf-8")
+        job = wf.split("      - name: Run RAFCODEPHI auditor\n", 1)[1]
+        job = job.split("\n      - name: Publish auditor summary", 1)[0]
+        body = job.split("        run: |\n", 1)[1]
+        script = "\n".join(line[10:] for line in body.splitlines() if line.strip())
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            (directory / "scripts").mkdir()
+            (directory / "scripts/rafcodephi_auditor.sh").write_text(
+                'printf "%s\\n" "$@" > selected_modules.txt\n', encoding="utf-8"
+            )
+
+            def run(modules: str):
+                return subprocess.run(
+                    ["bash", "-c", script],
+                    cwd=directory,
+                    env={**os.environ, "MODULES": modules},
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+
+            safe = run("cpu memory")
+            self.assertEqual(safe.returncode, 0, safe.stderr)
+            self.assertEqual(
+                (directory / "selected_modules.txt").read_text(encoding="utf-8"),
+                "cpu\nmemory\n",
+            )
+            (directory / "selected_modules.txt").unlink()
+
+            injection = run("cpu;touch INJECTED")
+            self.assertEqual(injection.returncode, 64)
+            self.assertFalse((directory / "INJECTED").exists())
+            self.assertFalse((directory / "selected_modules.txt").exists())
+
+            self.assertEqual(run("cpu\nmemory").returncode, 64)
+            self.assertEqual(run("unknown").returncode, 64)
+            self.assertEqual(run(" ").returncode, 64)
+
     def test_scanner_track_contract_includes_artifact(self) -> None:
         self.assertIn("artifact", self.scanner.ALLOWED_TRACKS)
         self.assertEqual(self.scanner.TOKEN_VAZIO, "TOKEN_VAZIO")
