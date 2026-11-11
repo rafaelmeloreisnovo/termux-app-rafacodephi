@@ -1,0 +1,41 @@
+{
+  "schema": "rafcodephi.lowlevel-startup-license-receipt/v1",
+  "event": "rafcode:termux-app:lowlevel-license-startup:20261111:v1",
+  "parent": "cd245310f47441698ab8e9de048105871c76de89",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "authority": "Android runtime producer; local startup, native boundary and notices only",
+  "goal": "Move optional native audit after shell startup and preserve authorial/upstream license boundaries",
+  "classification": {
+    "governance": "PUBLIC_SOURCE_DRAFT",
+    "data": "PUBLIC_SOURCE_AND_BUILD_METADATA",
+    "privacy": "NO_DEVICE_OR_USER_PAYLOAD",
+    "security": "STARTUP_AND_NATIVE_BOUNDARY"
+  },
+  "delta": [
+    "optional Verbativo audit removed from onCreate critical path",
+    "optional audit scheduled once after a terminal session exists",
+    "Termux GPLv3, independent MIT microcore and PRoot GPLv2 package boundaries documented",
+    "cross-repository duplicate blobs linked by provenance instead of recopied"
+  ],
+  "source_trees": {
+    "Vectras-VM-Android": "bb2807a252bcfbd09c9eb8c95b79a013e17c0249",
+    "RafCode-Magick": "6e15628b8382f832de08f3f08b2cab216b81ccaf",
+    "RafPolimata": "714be9f4f3058279c6ce50afb581c2bb7ea8e2cb",
+    "RafGitTools": "1a06ae32afbd7a8b60b5ca8d7b724598b2088582"
+  },
+  "evidence": {
+    "startup_contracts": "PASS_SCOPED_SOURCE",
+    "authorial_gcc_host_vectors": "PASS_SCOPED_HOST_OBJECTS",
+    "clang_host_vectors": "TOKEN_VAZIO_TOOL_MISSING",
+    "arm_object_gate": "TOKEN_VAZIO_TOOL_MISSING",
+    "android_build": "TOKEN_VAZIO_NOT_RUN",
+    "physical_device": "TOKEN_VAZIO_NOT_RUN"
+  },
+  "gap": [
+    "RafPolimata root authorial license decision unresolved",
+    "additional authorial license terms require human owner decision",
+    "exact-head CI and Android device startup not observed"
+  ],
+  "rollback": "reset candidate branch to cd245310f47441698ab8e9de048105871c76de89",
+  "claim_allowed": false
+}

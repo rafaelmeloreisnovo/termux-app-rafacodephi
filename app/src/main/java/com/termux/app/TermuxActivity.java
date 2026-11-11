@@ -90,6 +90,9 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
     /** Request optional shared-storage access only after a terminal session is ready. */
     private boolean mHasRequestedStorageAccess;
 
+    /** Run the optional native audit once, after the terminal has become usable. */
+    private boolean mHasStartedOptionalVerbativoAudit;
+
     /**
      * The connection to the {@link TermuxService}. Requested in {@link #onCreate(Bundle)} with a call to
      * {@link #bindService(Intent, ServiceConnection, int)}, and obtained and stored in
@@ -241,16 +244,6 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
             // An AlertDialog should have shown to kill the app, so we don't continue running activity code
             mIsInvalidState = true;
             return;
-        }
-
-        // Verbovivo is an optional native audit surface. The terminal bootstrap has its own
-        // fail-closed integrity gates in TermuxInstaller/BootstrapReadinessGate, so absence of
-        // this diagnostic library must never brick the activity before session/keyboard setup.
-        VerbativoBootstrapManager verbativoBootstrap = new VerbativoBootstrapManager(this);
-        if (!verbativoBootstrap.executeBootstrap()) {
-            Logger.logWarn(LOG_TAG, "Verbovivo diagnostic unavailable; terminal initialization continues");
-        } else {
-            Logger.logInfo(LOG_TAG, "Verbovivo bootstrap validation PASSED - " + verbativoBootstrap.formatMetrics());
         }
 
         setMargins();
@@ -505,6 +498,7 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
             } else {
                 mTermuxTerminalSessionActivityClient.setCurrentSession(mTermuxTerminalSessionActivityClient.getCurrentStoredSessionOrLast());
             }
+            startOptionalVerbativoAuditAfterSession();
             requestStorageAccessAfterSessionReady();
         }
 
@@ -536,6 +530,7 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
             }
             mTermuxTerminalSessionActivityClient.addNewSession(launchFailsafe, null);
             if (mTermuxService != null && !mTermuxService.isTermuxSessionsEmpty()) {
+                startOptionalVerbativoAuditAfterSession();
                 requestStorageAccessAfterSessionReady();
             } else {
                 Logger.logError(LOG_TAG, "Initial terminal session was not created; shared-storage request deferred");
@@ -543,6 +538,25 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         } catch (WindowManager.BadTokenException e) {
             // Activity finished - ignore.
         }
+    }
+
+    /**
+     * Keep the optional hosted/JNI audit outside the shell, keyboard and bootstrap critical path.
+     * Java/Android lifecycle code is a hosted boundary; the freestanding core remains native and
+     * syscall-free, while this adapter only schedules evidence collection after a real session.
+     */
+    private void startOptionalVerbativoAuditAfterSession() {
+        if (mHasStartedOptionalVerbativoAudit) return;
+        mHasStartedOptionalVerbativoAudit = true;
+        final Context applicationContext = getApplicationContext();
+        new Thread(() -> {
+            VerbativoBootstrapManager audit = new VerbativoBootstrapManager(applicationContext);
+            if (!audit.executeBootstrap()) {
+                Logger.logWarn(LOG_TAG, "Verbovivo diagnostic unavailable after session startup");
+            } else {
+                Logger.logInfo(LOG_TAG, "Verbovivo post-session validation PASSED - " + audit.formatMetrics());
+            }
+        }, "rafcodephi-verbativo-audit").start();
     }
 
     private void requestStorageAccessAfterSessionReady() {
