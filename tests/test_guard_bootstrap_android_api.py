@@ -149,6 +149,46 @@ class ApiGateTests(unittest.TestCase):
         self.assertEqual(result["state"], "BLOCKED")
         self.assertIn("PROFILE_SIZE_LIMIT", result["reasons"])
 
+    def test_profile_duplicate_keys_are_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "duplicate-profile-key.zip"
+            with zipfile.ZipFile(p, "w") as z:
+                z.writestr("BOOTSTRAP_PROFILE.json",
+                           '{"arch":"aarch64","arch":"arm",'
+                           '"package_name":"com.termux.rafacodephi"}')
+            result = gate.inspect_archive("arm", p, 29)
+        self.assertEqual(result["state"], "BLOCKED")
+        self.assertIn("PROFILE_DUPLICATE_JSON_KEY", result["reasons"])
+
+    def test_profile_stream_limit_even_if_metadata_is_inaccurate(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "misreported-profile.zip"
+            with zipfile.ZipFile(p, "w") as z:
+                z.writestr("BOOTSTRAP_PROFILE.json", "{}")
+            original_open = zipfile.ZipFile.open
+
+            def simulated_misreported_member(archive, name, *args, **kwargs):
+                if getattr(name, "filename", name) == "BOOTSTRAP_PROFILE.json":
+                    return io.BytesIO(b" " * (gate.PROFILE_MAX_BYTES + 1))
+                return original_open(archive, name, *args, **kwargs)
+
+            with patch.object(zipfile.ZipFile, "open",
+                              new=simulated_misreported_member):
+                result = gate.inspect_archive("arm", p, 29)
+        self.assertEqual(result["state"], "BLOCKED")
+        self.assertIn("PROFILE_SIZE_LIMIT", result["reasons"])
+
+    def test_unsupported_zip_method_yields_blocked_receipt(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "unsupported-compression.zip"
+            with zipfile.ZipFile(p, "w") as z:
+                z.writestr("BOOTSTRAP_PROFILE.json", "{}")
+            with patch.object(zipfile.ZipFile, "open",
+                              side_effect=NotImplementedError("UNSUPPORTED_ZIP_METHOD")):
+                result = gate.inspect_archive("arm", p, 29)
+        self.assertEqual(result["state"], "BLOCKED")
+        self.assertIn("UNSUPPORTED_ZIP_METHOD", result["reasons"])
+
     def test_duplicate_zip_names_block_before_inspection(self):
         import warnings
         with tempfile.TemporaryDirectory() as d:

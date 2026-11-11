@@ -33,6 +33,26 @@ API_NOTE = re.compile(
 )
 # The original device failure was specifically this Bionic symbol.
 LATE_IMPORT = re.compile(r"\bmemfd_create(?:@LIBC_R)?\b")
+PROFILE_MAX_BYTES = 64 * 1024
+
+
+def parse_profile_json(raw: bytes) -> dict:
+    """Reject ambiguous JSON keys before applying the bootstrap contract."""
+    def unique_keys(pairs):
+        fields = {}
+        for key, value in pairs:
+            if key in fields:
+                raise ValueError("PROFILE_DUPLICATE_JSON_KEY")
+            fields[key] = value
+        return fields
+
+    try:
+        profile = json.loads(raw, object_pairs_hook=unique_keys)
+    except UnicodeError as exc:
+        raise ValueError("PROFILE_INVALID_ENCODING") from exc
+    if not isinstance(profile, dict):
+        raise ValueError("PROFILE_NOT_OBJECT")
+    return profile
 
 
 def readelf(binary: bytes, *args: str) -> str:
@@ -106,14 +126,13 @@ def inspect_archive(arch: str, filename: Path, max_api: int) -> dict:
             if len(names) > 10000:
                 raise ValueError("ARCHIVE_ENTRY_LIMIT")
             profile_info = boot.getinfo("BOOTSTRAP_PROFILE.json")
-            if profile_info.file_size > 64 * 1024:
+            if profile_info.file_size > PROFILE_MAX_BYTES:
                 raise ValueError("PROFILE_SIZE_LIMIT")
-            try:
-                profile = json.loads(boot.read("BOOTSTRAP_PROFILE.json"))
-            except UnicodeError as exc:
-                raise ValueError("PROFILE_INVALID_ENCODING") from exc
-            if not isinstance(profile, dict):
-                raise ValueError("PROFILE_NOT_OBJECT")
+            with boot.open(profile_info) as profile_source:
+                profile_bytes = profile_source.read(PROFILE_MAX_BYTES + 1)
+            if len(profile_bytes) > PROFILE_MAX_BYTES:
+                raise ValueError("PROFILE_SIZE_LIMIT")
+            profile = parse_profile_json(profile_bytes)
             if profile.get("arch") != arch:
                 raise ValueError("ARCH_PROFILE_MISMATCH")
             if profile.get("package_name") != "com.termux.rafacodephi":
@@ -166,7 +185,7 @@ def inspect_archive(arch: str, filename: Path, max_api: int) -> dict:
             if all(x["state"] == "PASS_SCOPED_STATIC" for x in result["checks"]):
                 result["state"] = "PASS_SCOPED_STATIC"
     except (OSError, zipfile.BadZipFile, KeyError, ValueError,
-            UnicodeError, RuntimeError) as exc:
+            UnicodeError, RuntimeError, NotImplementedError) as exc:
         result["reasons"].append(str(exc)[:200])
     return result
 
