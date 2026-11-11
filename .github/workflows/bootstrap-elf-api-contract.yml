@@ -1,4 +1,4 @@
-# ci_track: fast-static-contract
+# ci_track: ops
 # ci_abis: arm,aarch64
 # No APK build, runner-local Android simulation or publication.
 name: RAFCODEPHI · Bootstrap API compatibility contract
