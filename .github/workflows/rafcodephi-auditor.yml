@@ -4,6 +4,9 @@ name: RAFCODEPHI Operational Auditor
 
 on:
   push:
+    branches: [master]
+  pull_request:
+    branches: [master]
   workflow_dispatch:
     inputs:
       modules:
@@ -11,6 +14,13 @@ on:
         required: false
         type: string
         default: all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rafcodephi-auditor-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || (github.event.pull_request.number || github.ref) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   auditor:
@@ -20,8 +30,10 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Run RAFCODEPHI auditor
+        env:
+          MODULES: ${{ inputs.modules || 'all' }}
         run: |
-          bash scripts/rafcodephi_auditor.sh ${{ inputs.modules || 'all' }}
+          bash scripts/rafcodephi_auditor.sh "$MODULES"
 
       - name: Publish auditor summary
         if: always()

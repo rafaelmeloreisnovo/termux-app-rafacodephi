@@ -1,7 +1,19 @@
 # ci_track: ops
 # ci_abis: n/a
 name: top42-bench
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: read
+
+concurrency:
+  group: top42-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || (github.event.pull_request.number || github.ref) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   top42:
     runs-on: ubuntu-latest
