@@ -46,6 +46,7 @@ def test_toolchain_verifier_executes_real_language_and_cross_abi_smokes() -> Non
     assert "Machine:[[:space:]]+ARM" in verifier
     assert "Machine:[[:space:]]+AArch64" in verifier
     assert '"schema": "rafcodephi.toolchain-startup/v1"' in verifier
+    assert '[[ "$ndk_revision" == "$effective_ndk_version" ]]' in verifier
     assert '"termux_session_keyboard_device": "TOKEN_VAZIO_ENVIRONMENT_UNAVAILABLE"' in verifier
     assert '"claim_allowed": False' in verifier
     assert '"state": "FAIL"' in verifier
@@ -80,6 +81,8 @@ def test_workflows_exercise_clean_build_and_expose_real_pkg_route() -> None:
     assert "./.github/actions/rafaelia-android-setup" in real_pkg
     assert "./gradlew clean :app:assembleDebug" in real_pkg
     assert "build/reports/toolchain-startup.json" in real_pkg
+    assert "JITPACK_NDK_VERSION: \'29.0.14206865\'" in real_pkg
+    assert "steps.startup.outcome != \'skipped\'" in real_pkg
     assert "./.github/actions/rafaelia-android-setup" in arm32
     assert "11_REAL_PKG_TOOLCHAIN" in start_here
     assert "./.github/workflows/real-pkg-apk-ci.yml" in start_here
