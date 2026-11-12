@@ -1,209 +1,41 @@
 # ci_track: ops
-# ci_abis: armeabi-v7a,arm64-v8a,universal
-name: RAFCODEPHI APK with real APT
+# ci_abis: armeabi-v7a,arm64-v8a
+# This is an orchestration wrapper: independent ABI pipelines, no mixed preflight.
+name: RAFCODEPHI APK with real APT — split ABI lanes
 on:
   workflow_dispatch:
   workflow_call:
-  push:
-    branches: [fix/embed-real-pkg-bootstrap-20261109]
+  pull_request:
+    branches: [master]
     paths:
-      - .github/actions/rafaelia-android-setup/action.yml
-      - .github/workflows/real-pkg-apk-ci.yml
-      - app/build.gradle
-      - app/src/main/java/com/termux/app/TermuxActivity.java
-      - app/src/main/java/com/termux/app/bootstrap/VerbativoBootstrapManager.java
-      - scripts/setup_android_toolchain.sh
-      - scripts/verify_toolchain_startup.sh
-      - scripts/prepare_ci_real_pkg_bootstrap.py
-      - tests/test_rafcodephi_startup_and_settings_contract.py
-      - tests/test_toolchain_startup_contract.py
+      - '.github/workflows/real-pkg-apk-ci.yml'
+      - '.github/workflows/_real-pkg-apk-lane.yml'
+      - '.github/workflows/real-pkg-apk-arm32.yml'
+      - '.github/workflows/real-pkg-apk-arm64.yml'
+      - 'scripts/guard_bootstrap_android_api.py'
+      - 'tests/test_guard_bootstrap_android_api.py'
+      - 'scripts/prepare_ci_real_pkg_bootstrap.py'
+      - 'app/**'
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: real-pkg-apk-${{ github.ref }}
+  group: real-pkg-split-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  build-real-pkg:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    env:
-      RAF_APT_TRUSTED_KEY_SHA256: 12beed0a1af401641bade1ae0d02f94d593bfc6cf8bda76d737d558b92df5f6b
-      RAF_BOOTSTRAP_SOURCE: source-built-real
-      TERMUX_SKIP_BOOTSTRAP_PREPARE: '1'
-      # Only the APK's native build uses this NDK. Imported Bash/APT
-      # must independently pass the Android API29 ELF gate above.
-      JITPACK_NDK_VERSION: '29.0.14206865'
-      CLAIM_ALLOWED: 'false'
-      PHYSICAL_ANDROID: TOKEN_VAZIO
-    steps:
-      - name: Checkout exact app candidate
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-      - name: Checkout immutable package sealer
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          repository: rafaelmeloreisnovo/termux-packages
-          ref: affe71a12c903daf70ac46dcc83ffad7d49a870a
-          path: package-source
-          persist-credentials: false
-      - name: Download exact recovered source-built bootstrap pair
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p build/real-pkg-inputs
-          gh api repos/rafaelmeloreisnovo/termux-packages/actions/artifacts/13691798041/zip > build/real-pkg-inputs/arm.zip
-          gh api repos/rafaelmeloreisnovo/termux-packages/actions/artifacts/13692617039/zip > build/real-pkg-inputs/aarch64.zip
-          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
-            https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt-preview-42658185015/repo/rafcodephi-archive-key.gpg \
-            -o build/real-pkg-inputs/rafcodephi-archive-key.gpg
-          python3 scripts/prepare_ci_real_pkg_bootstrap.py \
-            --inputs build/real-pkg-inputs --output build/real-pkg-bootstrap \
-            --key build/real-pkg-inputs/rafcodephi-archive-key.gpg \
-            --sealer package-source/scripts/build-rafcodephi-live-bootstrap.sh
-      # Reject incompatible recovered binaries before initializing SDK/NDK or building APKs.
-      # NDK used for the Android app does NOT rebuild an imported Termux bash.
-      - name: "[P0] Android 10 ELF/API and symbol compatibility (both ABIs)"
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 scripts/guard_bootstrap_android_api.py \
-            --arm build/real-pkg-bootstrap/rafcodephi-bootstrap-arm.zip \
-            --aarch64 build/real-pkg-bootstrap/rafcodephi-bootstrap-aarch64.zip \
-            --max-api 29 --out build/reports/bootstrap-android-api.json
-      - name: Upload bootstrap ELF preflight receipt (including FAIL)
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: RAFCODEPHI-bootstrap-android-api-${{ github.run_id }}-${{ github.run_attempt }}
-          path: build/reports/bootstrap-android-api.json
-          if-no-files-found: warn
-          retention-days: 30
-      # Costly host toolchain starts only after cheap custody and runtime-ABI gates.
-      - name: Setup and execute host toolchain startup gates
-        id: startup
-        uses: ./.github/actions/rafaelia-android-setup
-        with:
-          java-version: '21'
-          node-version: '24'
-          prepare-bootstrap: 'false'
-      - name: Upload toolchain startup receipt
-        # Do not create a second misleading failure if API29 preflight skipped setup.
-        if: ${{ always() && steps.startup.outcome != 'skipped' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: RAFCODEPHI-toolchain-startup-${{ github.run_id }}-${{ github.run_attempt }}
-          path: build/reports/toolchain-startup.json
-          if-no-files-found: error
-          retention-days: 30
-      - name: Install build-time verification dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install --yes --no-install-recommends b3sum
-          python3 -m venv build/ci-venv
-          build/ci-venv/bin/pip install pytest==9.2.0 blake3==1.0.11
-          echo "$PWD/build/ci-venv/bin" >> "$GITHUB_PATH"
-      - name: Verify current signed HTTPS package resolution
-        run: |
-          set -euo pipefail
-          python3 package-source/scripts/test_recovered_apt_resolution.py \
-            --base build/reports/ci-https-apt --repo build/real-pkg-inputs \
-            --url https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt-preview-42658185015/repo
-      - name: Verify consumer contracts
-        run: |
-          set -euo pipefail
-          python3 -m pytest -q \
-            tests/test_bootstrap_package_install_contract.py \
-            tests/test_bootstrap_evidence_contract.py \
-            tests/test_source_built_real_bootstrap.py \
-            tests/test_rafcodephi_signed_apt_import_contract.py \
-            tests/test_device_signed_apt_smoke.py \
-            tests/test_rafcodephi_startup_and_settings_contract.py \
-            tests/test_toolchain_startup_contract.py \
-            tests/test_guard_bootstrap_android_api.py
-      - name: Import real APT bootstrap pair and bind Gradle hashes
-        env:
-          RAF_REAL_BOOTSTRAP_ZIP_ARM: ${{ github.workspace }}/build/real-pkg-bootstrap/rafcodephi-bootstrap-arm.zip
-          RAF_REAL_BOOTSTRAP_ZIP_AARCH64: ${{ github.workspace }}/build/real-pkg-bootstrap/rafcodephi-bootstrap-aarch64.zip
-          RAF_REAL_BOOTSTRAP_MANIFEST: ${{ github.workspace }}/build/real-pkg-bootstrap/RAFCODEPHI_REAL_BOOTSTRAP_MANIFEST.txt
-        run: bash scripts/prepare_bootstrap_env.sh --github-env --skip-android-preflight
-      - name: Build APK matrix and verify exact embedded native ZIPs
-        env:
-          TERMUX_APK_VERSION_TAG: real-pkg-ci-${{ github.run_id }}
-        run: ./gradlew clean :app:assembleDebug --no-daemon --max-workers=2
-      - name: Verify APK signatures and record hashes
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p build/reports/real-pkg-apk-ci
-          signer="${ANDROID_APKSIGNER:?setup_android_toolchain.sh did not export ANDROID_APKSIGNER}"
-          test -x "$signer"
-          printf '%s\n' '{"expected":{"package":"com.termux.rafacodephi","version_name":"0.118.0-rafacodephi"},"requirements":{"apk_signature_v1":true,"apk_signature_v2":true}}' > build/reports/real-pkg-apk-ci/contract.json
-          for apk in app/build/outputs/apk/debug/*real-pkg-ci-*.apk; do
-            test -s "$apk"
-            python3 scripts/verify_apk_evidence.py "$apk" \
-              --contract build/reports/real-pkg-apk-ci/contract.json --apksigner "$signer" \
-              --out "build/reports/real-pkg-apk-ci/$(basename "$apk").json"
-          done
-          (cd app/build/outputs/apk/debug && sha256sum *real-pkg-ci-*.apk > SHA256SUMS.txt)
-          printf 'source_commit=%s\nproducer_commit=e7f23f46d039d04577c035457c920047f03dc2a1\nrecovery_run=42657253878\nsigned_apt_snapshot_run=42658185015\nsigning=CI_ANDROID_DEBUG\ndevice_runtime=TOKEN_VAZIO\nclaim_allowed=false\n' "$GITHUB_SHA" > build/reports/real-pkg-apk-ci/BUILD_RECEIPT.txt
-      - name: Ensure universal installer contains both supported native ABIs
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          import zipfile
-
-          apks = sorted(Path("app/build/outputs/apk/debug").glob("*real-pkg-ci-*_universal.apk"))
-          if len(apks) != 1:
-              raise SystemExit(f"UNIVERSAL_APK_COUNT_BLOCKED: expected=1 actual={len(apks)}")
-          with zipfile.ZipFile(apks[0]) as archive:
-              names = set(archive.namelist())
-              for abi in ("armeabi-v7a", "arm64-v8a"):
-                  prefix = f"lib/{abi}/"
-                  if not any(name.startswith(prefix) and name.endswith(".so") for name in names):
-                      raise SystemExit("UNIVERSAL_APK_MISSING_NATIVE_ABI: " + abi)
-          print("UNIVERSAL_APK_ABI=PASS_SCOPED_STATIC native_abis=armeabi-v7a,arm64-v8a device_runtime=TOKEN_VAZIO")
-          PY
-      - name: Upload single-file universal ARMv7 + ARM64 installer
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: RAFCODEPHI-universal-ARMv7-ARM64-${{ github.run_id }}
-          path: app/build/outputs/apk/debug/*real-pkg-ci-*_universal.apk
-          compression-level: 0
-          if-no-files-found: error
-          retention-days: 30
-      - name: Upload real APT APKs and verification receipts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: RAFCODEPHI-real-pkg-APKs-${{ github.run_id }}
-          path: |
-            app/build/outputs/apk/debug/*real-pkg-ci-*.apk
-            app/build/outputs/apk/debug/SHA256SUMS.txt
-            app/build/outputs/apk/debug/output-metadata.json
-            app/build/reports/debug-bootstrap-payloads.json
-            build/reports/real-pkg-apk-ci/
-            build/reports/ci-https-apt/*.json
-            build/reports/ci-https-apt/*.log
-            build/reports/rafcodephi-real-bootstrap-import-matrix.json
-            build/reports/bootstrap-pair-transaction.json
-            build/reports/toolchain-startup.json
-            build/reports/bootstrap-android-api.json
-            build/real-pkg-bootstrap/ci-input-custody.json
-          compression-level: 0
-          if-no-files-found: error
-          retention-days: 30
-      - name: Upload imported bootstrap pair for reconstruction
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: RAFCODEPHI-real-pkg-bootstraps-${{ github.run_id }}
-          path: build/real-pkg-bootstrap/
-          compression-level: 0
-          if-no-files-found: error
-          retention-days: 30
+  arm32-api29-ndk29:
+    name: ARM32 API29 · NDK r29 · real APT
+    uses: ./.github/workflows/_real-pkg-apk-lane.yml
+    with:
+      arch: arm
+      abi: armeabi-v7a
+      max_api: 29
+      ndk_version: '29.0.14206865'
+  arm64-api30-canonical:
+    name: ARM64 API30 · canonical NDK · real APT
+    uses: ./.github/workflows/_real-pkg-apk-lane.yml
+    with:
+      arch: aarch64
+      abi: arm64-v8a
+      max_api: 30
+      ndk_version: '26.3.11579264'
