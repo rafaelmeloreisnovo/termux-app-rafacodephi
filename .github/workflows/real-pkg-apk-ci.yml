@@ -16,7 +16,7 @@ on:
         default: '9b293d4a527dca67350f60a7344ec4b9b37709c2'
   workflow_call:
   push:
-    branches: [fix/embed-real-pkg-bootstrap-20261109]
+    branches: [fix/embed-real-pkg-bootstrap-20261109, fix/consume-existing-real-apt-ninja-43126603251]
     paths:
       - .github/actions/rafaelia-android-setup/action.yml
       - .github/workflows/real-pkg-apk-ci.yml
@@ -61,6 +61,8 @@ jobs:
           ref: affe71a12c903daf70ac46dcc83ffad7d49a870a
           path: package-source
           persist-credentials: false
+      - name: Validate Python consumer entrypoint
+        run: python3 -m py_compile scripts/prepare_ci_real_pkg_bootstrap.py
       - name: Reuse completed real APT and Ninja producer archives (ARM + ARM64)
         env:
           GH_TOKEN: ${{ github.token }}
