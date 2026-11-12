@@ -92,8 +92,9 @@ def inspect_elf(binary: bytes, arch: str, name: str, max_api: int) -> dict:
             if api > max_api:
                 item["reasons"].append("ANDROID_MIN_API_EXCEEDS_TARGET")
         dynsym = readelf(binary, "--dyn-syms")
+        # memfd_create was introduced at API 30: reject on API 29, not on API 30+.
         if any(" UND " in row and LATE_IMPORT.search(row)
-               for row in dynsym.splitlines()):
+               for row in dynsym.splitlines()) and (item["android_min_api"] is None or item["android_min_api"] < 30):
             item["reasons"].append("UNRESOLVED_MEMFD_CREATE")
     except (ValueError, OSError, subprocess.TimeoutExpired) as exc:
         item["reasons"].append("ELF_INSPECTION_ERROR:" + str(exc)[:180])
@@ -194,13 +195,16 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--arm", required=True, type=Path)
     parser.add_argument("--aarch64", required=True, type=Path)
+    parser.add_argument("--only", choices=("arm", "aarch64"),
+                        help="Audit exactly one ABI (independent pipeline lane)")
     parser.add_argument("--max-api", type=int, default=29)
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args(argv)
     if not 21 <= args.max_api <= 35:
         parser.error("--max-api must be between 21 and 35")
-    results = [inspect_archive(arch, path, args.max_api) for arch, path in
-               (("arm", args.arm), ("aarch64", args.aarch64))]
+    paths = {"arm": args.arm, "aarch64": args.aarch64}
+    selected = (args.only,) if args.only else ("arm", "aarch64")
+    results = [inspect_archive(arch, paths[arch], args.max_api) for arch in selected]
     passed = sum(x["state"] == "PASS_SCOPED_STATIC" for x in results)
     doc = {
         "schema": "rafcodephi.bootstrap-elf-android-api/v1",
