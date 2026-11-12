@@ -151,7 +151,8 @@ android {
             def requiredAbiFilters = project.findProperty('termux.abi.matrix').toString().split(',').findAll { it?.trim() }
             def optionalAbiFilters = project.findProperty('termux.abi.optional').toString().split(',').findAll { it?.trim() }
             include(*((requiredAbiFilters + optionalAbiFilters) as String[]))
-            universalApk = true
+            // Default remains true; ABI-isolated CI may set -Ptermux.abi.universal=false.
+            universalApk = project.findProperty('termux.abi.universal').toString().toBoolean()
         }
     }
 
