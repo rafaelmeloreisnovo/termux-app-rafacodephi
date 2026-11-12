@@ -128,6 +128,9 @@ jobs:
       - name: "🧭 Validate RAFAELIA Build Surface Contract"
         run: python3 scripts/validate_rafaelia_build_surface_contract.py
 
+      - name: "🧪 Validate APK Output Discovery (fail-closed)"
+        run: python3 -m unittest discover -s scripts/tests -p "test_apk_output_discovery.py" -v
+
       - name: "✅ Validate Gradle Wrapper"
         uses: gradle/actions/wrapper-validation@v6
 
