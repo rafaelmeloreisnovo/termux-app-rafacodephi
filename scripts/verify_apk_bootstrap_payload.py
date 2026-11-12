@@ -6,12 +6,49 @@ Artifact payload gate only; APK signing and Android execution are separate gates
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import struct
 import zipfile
 
 SPECS = {'armeabi-v7a': (1, 40, 'arm'), 'arm64-v8a': (2, 183, 'aarch64')}
 
+
+
+def discover_packaged_apk_directory(requested: Path, expected_tag: str = '') -> Path:
+    """Find one packaged APK matrix by AGP metadata, not guessed layout.
+
+    Only used when the legacy <build>/outputs/apk/<type> directory is absent.
+    Fail closed on missing, incomplete, stale-tag or ambiguous outputs.
+    """
+    if requested.name not in ('debug', 'release') or requested.parent.name != 'apk':
+        raise ValueError('unsupported APK output discovery path: ' + str(requested))
+    build_root = requested.parents[2]
+    candidates = []
+    for source in (build_root / 'outputs' / 'apk', build_root / 'intermediates' / 'apk'):
+        if not source.is_dir():
+            continue
+        for metadata_path in sorted(source.rglob('output-metadata.json')):
+            if metadata_path.parent.name != requested.name:
+                continue
+            metadata = json.loads(metadata_path.read_text(encoding='utf-8'))
+            if metadata.get('variantName') not in (None, requested.name):
+                continue
+            names = [entry['outputFile'] for entry in metadata.get('elements', [])]
+            if not names:
+                raise ValueError('empty APK output metadata: ' + str(metadata_path))
+            if any(Path(name).name != name or not name.endswith('.apk') for name in names):
+                raise ValueError('unsafe APK metadata output path: ' + str(metadata_path))
+            if expected_tag and not all(name.startswith('termux-app_' + expected_tag + '_') for name in names):
+                continue
+            if any(not (metadata_path.parent / name).is_file() or
+                   (metadata_path.parent / name).stat().st_size == 0 for name in names):
+                raise ValueError('metadata references missing/empty APK: ' + str(metadata_path))
+            candidates.append(metadata_path.parent)
+    if len(candidates) != 1:
+        raise ValueError('APK directory discovery requires exactly one candidate, got ' +
+                         str(len(candidates)) + ': ' + ', '.join(map(str, candidates)))
+    return candidates[0]
 
 def embedded_zip(elf, abi):
     elf_class, machine, _ = SPECS[abi]
@@ -114,8 +151,11 @@ if __name__ == '__main__':
     a = p.parse_args()
     try:
         bootstraps = {'arm': a.bootstrap_arm, 'aarch64': a.bootstrap_aarch64}
-        if a.apk.is_dir():
-            metadata = json.loads((a.apk / 'output-metadata.json').read_text())
+        apk = a.apk
+        if not apk.exists() and apk.parent.name == 'apk' and apk.name in ('debug', 'release'):
+            apk = discover_packaged_apk_directory(apk, os.environ.get('TERMUX_APK_VERSION_TAG', ''))
+        if apk.is_dir():
+            metadata = json.loads((apk / 'output-metadata.json').read_text())
             artifacts = []
             for entry in metadata['elements']:
                 name = entry['outputFile']
@@ -124,13 +164,13 @@ if __name__ == '__main__':
                 filters = [f['value'] for f in entry.get('filters', []) if f['filterType'] == 'ABI']
                 abis = [abi for abi in filters if abi in SPECS] if filters else list(SPECS)
                 if abis:
-                    artifacts.append(verify(a.apk / name, bootstraps, abis))
+                    artifacts.append(verify(apk / name, bootstraps, abis))
             if not artifacts:
                 raise ValueError('no canonical ARM APK outputs found')
             result = {'schema': 'rafcodephi.apk-bootstrap-matrix/v1', 'status': 'PASS',
                       'artifacts': artifacts, 'device_runtime': 'TOKEN_VAZIO', 'claim_allowed': False}
         else:
-            result = verify(a.apk, bootstraps, a.abi or list(SPECS))
+            result = verify(apk, bootstraps, a.abi or list(SPECS))
     except (ValueError, KeyError, OSError, zipfile.BadZipFile) as error:
         raise SystemExit(str(error))
     text = json.dumps(result, indent=2) + '\n'
