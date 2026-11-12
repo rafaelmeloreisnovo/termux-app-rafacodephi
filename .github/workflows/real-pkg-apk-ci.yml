@@ -26,6 +26,7 @@ on:
       - scripts/setup_android_toolchain.sh
       - scripts/verify_toolchain_startup.sh
       - scripts/prepare_ci_real_pkg_bootstrap.py
+      - tests/test_bootstrap_package_install_contract.py
       - tests/test_rafcodephi_startup_and_settings_contract.py
       - tests/test_toolchain_startup_contract.py
 permissions:
