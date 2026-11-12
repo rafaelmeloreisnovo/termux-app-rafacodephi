@@ -372,6 +372,15 @@ public class TermuxTerminalViewClient extends TermuxTerminalViewClientBase {
 
     @Override
     public boolean onCodePoint(final int codePoint, boolean ctrlDown, TerminalSession session) {
+        // Soft-keyboard Enter can arrive as Ctrl+M ('m' + ctrlDown)
+        // after TerminalView normalizes a committed newline.
+        // Accept Ctrl+J too; never remove an active terminal session.
+        if (!session.isRunning() &&
+                (codePoint == '\r' || codePoint == '\n' ||
+                 (ctrlDown && (codePoint == 'j' || codePoint == 'm')))) {
+            mTermuxTerminalSessionActivityClient.removeFinishedSession(session);
+            return true;
+        }
         if (mVirtualFnKeyDown) {
             int resultingKeyCode = -1;
             int resultingCodePoint = -1;
