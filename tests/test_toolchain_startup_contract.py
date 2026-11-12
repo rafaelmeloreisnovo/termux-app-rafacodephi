@@ -128,16 +128,30 @@ def test_composite_action_is_immutable_and_prepares_bootstrap_once() -> None:
 
 def test_workflows_exercise_clean_build_and_expose_real_pkg_route() -> None:
     real_pkg = read(".github/workflows/real-pkg-apk-ci.yml")
+    real_pkg_lane = read(".github/workflows/_real-pkg-apk-lane.yml")
+    arm32_entry = read(".github/workflows/real-pkg-apk-arm32.yml")
+    arm64_entry = read(".github/workflows/real-pkg-apk-arm64.yml")
     arm32 = read(".github/workflows/_reusable-arm32-compat.yml")
     start_here = read(".github/workflows/00_START_HERE.yml")
     gradle = read("app/build.gradle")
 
     assert "workflow_call:" in real_pkg
-    assert "./.github/actions/rafaelia-android-setup" in real_pkg
-    assert "./gradlew clean :app:assembleDebug" in real_pkg
-    assert "build/reports/toolchain-startup.json" in real_pkg
-    assert "JITPACK_NDK_VERSION: \'29.0.14206865\'" in real_pkg
-    assert "steps.startup.outcome != \'skipped\'" in real_pkg
+    assert "arm32-api29-ndk29:" in real_pkg
+    assert "arm64-api30-canonical:" in real_pkg
+    assert "max_api: 29" in real_pkg and "max_api: 30" in real_pkg
+    assert "ndk_version: '29.0.14206865'" in real_pkg
+    assert "ndk_version: '26.3.11579264'" in real_pkg
+    assert "workflow_call:" in real_pkg_lane
+    assert "./.github/actions/rafaelia-android-setup" in real_pkg_lane
+    assert "./gradlew clean :app:assembleDebug" in real_pkg_lane
+    assert "build/reports/toolchain-startup.json" in real_pkg_lane
+    assert "JITPACK_NDK_VERSION: ${{ inputs.ndk_version }}" in real_pkg_lane
+    assert "steps.startup.outcome != 'skipped'" in real_pkg_lane
+    assert '--only "${{ inputs.arch }}"' in real_pkg_lane
+    assert "BLOCKED_ABI_LANE_MISMATCH" in real_pkg_lane
+    assert "abi: armeabi-v7a" in arm32_entry
+    assert "abi: arm64-v8a" in arm64_entry
+    assert "max_api: 29" in arm32_entry and "max_api: 30" in arm64_entry
     assert "./.github/actions/rafaelia-android-setup" in arm32
     assert "11_REAL_PKG_TOOLCHAIN" in start_here
     assert "./.github/workflows/real-pkg-apk-ci.yml" in start_here
