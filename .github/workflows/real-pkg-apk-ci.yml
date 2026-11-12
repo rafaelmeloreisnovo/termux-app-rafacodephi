@@ -5,17 +5,6 @@ name: RAFCODEPHI APK with real APT — split ABI lanes
 on:
   workflow_dispatch:
   workflow_call:
-  pull_request:
-    branches: [master]
-    paths:
-      - '.github/workflows/real-pkg-apk-ci.yml'
-      - '.github/workflows/_real-pkg-apk-lane.yml'
-      - '.github/workflows/real-pkg-apk-arm32.yml'
-      - '.github/workflows/real-pkg-apk-arm64.yml'
-      - 'scripts/guard_bootstrap_android_api.py'
-      - 'tests/test_guard_bootstrap_android_api.py'
-      - 'scripts/prepare_ci_real_pkg_bootstrap.py'
-      - 'app/**'
 permissions:
   contents: read
   actions: read
