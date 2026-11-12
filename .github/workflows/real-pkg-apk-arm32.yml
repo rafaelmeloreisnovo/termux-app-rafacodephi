@@ -1,0 +1,19 @@
+# ci_track: ops
+# ci_abis: armeabi-v7a
+# ABI-specific manual entrypoint: no matrix ambiguity.
+name: "RAFCODEPHI real APT · ARM32 29.0.14206865"
+on:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  real-apt-arm32:
+    name: "ARM32 · bootstrap real · API 29"
+    uses: ./.github/workflows/_real-pkg-apk-lane.yml
+    with:
+      arch: arm
+      abi: armeabi-v7a
+      max_api: 29
+      ndk_version: '29.0.14206865'
