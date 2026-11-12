@@ -33,17 +33,31 @@ def tool_outputs(api=29, machine="ARM", bad_import=False, missing_note=False):
 
 class ApiGateTests(unittest.TestCase):
     def inspect(self, api=29, machine="ARM", bad_import=False,
-                missing_note=False, elf=True, arch="arm"):
+                missing_note=False, elf=True, arch="arm", max_api=29):
         outputs = tool_outputs(api, machine, bad_import, missing_note)
         binary = b"\x7fELF" + bytes([gate.ARCH[arch][1]]) + b"\0" * 100 if elf else b"TEXT"
         with patch.object(gate, "readelf", side_effect=lambda _data, flag: outputs[flag]):
-            return gate.inspect_elf(binary, arch, "bin/bash", 29)
+            return gate.inspect_elf(binary, arch, "bin/bash", max_api)
 
     def test_api29_without_unresolved_memfd_passes_static_scope(self):
         self.assertEqual(self.inspect()["state"], "PASS_SCOPED_STATIC")
 
     def test_api30_is_blocked_on_android10(self):
         self.assertIn("ANDROID_MIN_API_EXCEEDS_TARGET", self.inspect(api=30)["reasons"])
+
+    def test_arm64_api30_memfd_import_is_valid_for_android11(self):
+        result = self.inspect(api=30, machine="AArch64", bad_import=True,
+                              arch="aarch64", max_api=30)
+        self.assertEqual(result["state"], "PASS_SCOPED_STATIC")
+
+    def test_arm32_api30_remains_blocked_for_android10(self):
+        result = self.inspect(api=30, arch="arm", max_api=29)
+        self.assertIn("ANDROID_MIN_API_EXCEEDS_TARGET", result["reasons"])
+
+    def test_api29_memfd_is_rejected_even_with_higher_target(self):
+        result = self.inspect(api=29, machine="AArch64", bad_import=True,
+                              arch="aarch64", max_api=30)
+        self.assertIn("UNRESOLVED_MEMFD_CREATE", result["reasons"])
 
     def test_api29_with_memfd_import_is_blocked(self):
         self.assertIn("UNRESOLVED_MEMFD_CREATE",
@@ -200,6 +214,21 @@ class ApiGateTests(unittest.TestCase):
                     z.writestr("BOOTSTRAP_PROFILE.json", "{}")
             result = gate.inspect_archive("arm", p, 29)
         self.assertIn("DUPLICATE_ARCHIVE_ENTRIES", result["reasons"])
+
+    def test_cli_abi_lane_does_not_require_other_archive(self):
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            out = base / "one-lane.json"
+            state = gate.main(["--arm", str(base / "not-arm.zip"),
+                               "--aarch64", str(base / "not-aarch64.zip"),
+                               "--only", "aarch64", "--max-api", "30",
+                               "--out", str(out)])
+            doc = json.loads(out.read_text())
+        self.assertEqual(state, 1)
+        self.assertEqual(len(doc["archives"]), 1)
+        self.assertEqual(doc["archives"][0]["arch"], "aarch64")
+        self.assertEqual(doc["device_api_target"], 30)
+        self.assertFalse(doc["claim_allowed"])
 
     def test_cli_writes_blocked_receipt_even_when_inputs_missing(self):
         with tempfile.TemporaryDirectory() as d:
