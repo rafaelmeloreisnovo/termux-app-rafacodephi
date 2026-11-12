@@ -68,6 +68,11 @@ jobs:
           ref: affe71a12c903daf70ac46dcc83ffad7d49a870a
           path: package-source
           persist-credentials: false
+      - name: Test source-pair custody and negative API/hash cases (cheap)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p 'test_prepare_ci_api29_pair.py' -v
       - name: Download SHA-pinned API29 source-built bootstrap pair (producer 43126603251)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -146,7 +151,8 @@ jobs:
             tests/test_device_signed_apt_smoke.py \
             tests/test_rafcodephi_startup_and_settings_contract.py \
             tests/test_toolchain_startup_contract.py \
-            tests/test_guard_bootstrap_android_api.py
+            tests/test_guard_bootstrap_android_api.py \
+            tests/test_prepare_ci_api29_pair.py
       - name: Import real APT bootstrap pair and bind Gradle hashes
         env:
           RAF_REAL_BOOTSTRAP_ZIP_ARM: ${{ github.workspace }}/build/real-pkg-bootstrap/rafcodephi-bootstrap-arm.zip
