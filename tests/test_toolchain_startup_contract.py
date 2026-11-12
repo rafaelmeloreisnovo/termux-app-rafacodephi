@@ -149,6 +149,10 @@ def test_workflows_exercise_clean_build_and_expose_real_pkg_route() -> None:
     assert "steps.startup.outcome != 'skipped'" in real_pkg_lane
     assert '--only "${{ inputs.arch }}"' in real_pkg_lane
     assert "BLOCKED_ABI_LANE_MISMATCH" in real_pkg_lane
+    assert "-Ptermux.abi.matrix=${{ inputs.abi }}" in real_pkg_lane
+    assert "-Ptermux.abi.universal=false" in real_pkg_lane
+    assert "universalApk = project.findProperty('termux.abi.universal').toString().toBoolean()" in gradle
+    assert "  pull_request:" not in real_pkg
     assert "abi: armeabi-v7a" in arm32_entry
     assert "abi: arm64-v8a" in arm64_entry
     assert "max_api: 29" in arm32_entry and "max_api: 30" in arm64_entry
