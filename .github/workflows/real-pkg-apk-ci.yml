@@ -3,6 +3,17 @@
 name: RAFCODEPHI APK with real APT
 on:
   workflow_dispatch:
+    inputs:
+      producer_run_id:
+        description: Successful real ARM/ARM64 source-build run (no rebuild)
+        type: string
+        required: true
+        default: '43126603251'
+      producer_sha:
+        description: Exact source commit that produced APT and Ninja
+        type: string
+        required: true
+        default: '9b293d4a527dca67350f60a7344ec4b9b37709c2'
   workflow_call:
   push:
     branches: [fix/embed-real-pkg-bootstrap-20261109]
@@ -36,6 +47,8 @@ jobs:
       JITPACK_NDK_VERSION: '29.0.14206865'
       CLAIM_ALLOWED: 'false'
       PHYSICAL_ANDROID: TOKEN_VAZIO
+      PRODUCER_RUN_ID: ${{ inputs.producer_run_id || '43126603251' }}
+      PRODUCER_SHA: ${{ inputs.producer_sha || '9b293d4a527dca67350f60a7344ec4b9b37709c2' }}
     steps:
       - name: Checkout exact app candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -48,19 +61,31 @@ jobs:
           ref: affe71a12c903daf70ac46dcc83ffad7d49a870a
           path: package-source
           persist-credentials: false
-      - name: Download exact recovered source-built bootstrap pair
+      - name: Reuse completed real APT and Ninja producer archives (ARM + ARM64)
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
+          [[ "$PRODUCER_RUN_ID" =~ ^[0-9]+$ ]] || { echo 'invalid producer run ID'; exit 2; }
+          [[ "$PRODUCER_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'invalid producer SHA'; exit 2; }
+          run_json="$(gh api "repos/rafaelmeloreisnovo/termux-packages/actions/runs/$PRODUCER_RUN_ID")"
+          test "$(jq -r .conclusion <<<"$run_json")" = success
+          test "$(jq -r .head_sha <<<"$run_json")" = "$PRODUCER_SHA"
           mkdir -p build/real-pkg-inputs
-          gh api repos/rafaelmeloreisnovo/termux-packages/actions/artifacts/13691798041/zip > build/real-pkg-inputs/arm.zip
-          gh api repos/rafaelmeloreisnovo/termux-packages/actions/artifacts/13692617039/zip > build/real-pkg-inputs/aarch64.zip
+          for arch in arm aarch64; do
+            expected="rafcodephi-real-bootstrap-${PRODUCER_RUN_ID}-${arch}"
+            artifact_id="$(gh api "repos/rafaelmeloreisnovo/termux-packages/actions/runs/$PRODUCER_RUN_ID/artifacts?per_page=100" \
+              --jq ".artifacts[] | select(.name == \"$expected\") | .id")"
+            [[ "$artifact_id" =~ ^[0-9]+$ ]] || { echo "missing/ambiguous producer artifact: $expected"; exit 2; }
+            gh api "repos/rafaelmeloreisnovo/termux-packages/actions/artifacts/$artifact_id/zip" \
+              > "build/real-pkg-inputs/$arch.zip"
+            test -s "build/real-pkg-inputs/$arch.zip"
+          done
           curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
             https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt-preview-42658185015/repo/rafcodephi-archive-key.gpg \
             -o build/real-pkg-inputs/rafcodephi-archive-key.gpg
-          python3 scripts/prepare_ci_real_pkg_bootstrap.py \
+          python3 scripts/prepare_ci_real_pkg_bootstrap.py --producer-artifacts \
             --inputs build/real-pkg-inputs --output build/real-pkg-bootstrap \
             --key build/real-pkg-inputs/rafcodephi-archive-key.gpg \
             --sealer package-source/scripts/build-rafcodephi-live-bootstrap.sh
@@ -151,7 +176,7 @@ jobs:
               --out "build/reports/real-pkg-apk-ci/$(basename "$apk").json"
           done
           (cd app/build/outputs/apk/debug && sha256sum *real-pkg-ci-*.apk > SHA256SUMS.txt)
-          printf 'source_commit=%s\nproducer_commit=e7f23f46d039d04577c035457c920047f03dc2a1\nrecovery_run=42657253878\nsigned_apt_snapshot_run=42658185015\nsigning=CI_ANDROID_DEBUG\ndevice_runtime=TOKEN_VAZIO\nclaim_allowed=false\n' "$GITHUB_SHA" > build/reports/real-pkg-apk-ci/BUILD_RECEIPT.txt
+          printf 'source_commit=%s\nproducer_commit=%s\nproducer_run=%s\nsigned_apt_snapshot_run=42658185015\nsigning=CI_ANDROID_DEBUG\ndevice_runtime=TOKEN_VAZIO\nclaim_allowed=false\n' "$GITHUB_SHA" "$PRODUCER_SHA" "$PRODUCER_RUN_ID" > build/reports/real-pkg-apk-ci/BUILD_RECEIPT.txt
       - name: Ensure universal installer contains both supported native ABIs
         shell: bash
         run: |
