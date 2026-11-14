@@ -393,5 +393,66 @@ class ProviderProtectionContractTests(unittest.TestCase):
         )
 
 
+    def test_fetch_live_rulesets_handles_all_scope_without_unproven_exclusions(self) -> None:
+        from unittest.mock import patch
+
+        repo = "rafaelmeloreisnovo/termux-app-rafacodephi"
+        cases = [
+            ("all", ["~ALL"], [], True),
+            ("default", ["~DEFAULT_BRANCH"], [], True),
+            ("exact", ["refs/heads/master"], [], True),
+            ("other", ["refs/heads/develop"], [], False),
+            ("excluded", ["~ALL"], ["refs/heads/master"], False),
+            ("unknown_exclusion", ["~ALL"], ["refs/heads/m*"], False),
+            ("unknown_inclusion", ["refs/heads/m*"], [], False),
+            ("missing_exclusion", ["~ALL"], None, False),
+        ]
+        for label, include, exclude, expected in cases:
+            with self.subTest(case=label):
+                ref_name = {"include": include}
+                if exclude is not None:
+                    ref_name["exclude"] = exclude
+                listed = [{"id": 21908888, "enforcement": "active"}]
+                detail = {
+                    "id": 21908888,
+                    "conditions": {"ref_name": ref_name},
+                    "rules": [{"type": "deletion"}],
+                }
+                with patch.object(self.mod, "github_get", side_effect=[listed, detail]) as getter:
+                    observed = self.mod.fetch_live_rulesets(repo, "master", "")
+                self.assertEqual(len(observed), int(expected))
+                self.assertEqual(getter.call_count, 2)
+
+    def test_current_all_scope_is_visible_but_p0_stays_failed(self) -> None:
+        from unittest.mock import patch
+
+        repo = "rafaelmeloreisnovo/termux-app-rafacodephi"
+        listed = [{"id": 21908888, "enforcement": "active"}]
+        detail = {
+            "id": 21908888,
+            "enforcement": "active",
+            "conditions": {"ref_name": {"include": ["~ALL"], "exclude": []}},
+            "rules": [
+                {"type": "deletion"},
+                {"type": "non_fast_forward"},
+                {"type": "required_linear_history"},
+            ],
+            "bypass_actors": [
+                {"actor_type": "RepositoryRole", "actor_id": 5, "bypass_mode": "always"},
+                {"actor_type": "Integration", "actor_id": 1144995, "bypass_mode": "always"},
+            ],
+            "current_user_can_bypass": "always",
+        }
+        with patch.object(self.mod, "github_get", side_effect=[listed, detail]):
+            observed = self.mod.fetch_live_rulesets(repo, "master", "")
+        self.assertEqual(len(observed), 1)
+        receipt = self._evaluate(observed)
+        self.assertEqual(receipt["gate"], "FAIL")
+        codes = {item["code"] for item in receipt["failures"]}
+        self.assertIn("MISSING_RULE_TYPES", codes)
+        self.assertIn("UNJUSTIFIED_ALWAYS_BYPASS_ACTORS", codes)
+
+
+
 if __name__ == "__main__":
     unittest.main()

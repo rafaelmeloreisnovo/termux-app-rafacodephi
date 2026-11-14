@@ -1,0 +1,29 @@
+{
+  "schema": "rafaelia.p0_provider_scope_hotfix_receipt/v1",
+  "event": "MU-TERMUX-PROVIDER-SCOPE-ALL-20261113-S1",
+  "parent": "https://github.com/rafaelmeloreisnovo/RafGitTools/issues/678",
+  "kind": "SOURCE_PATCH_CANDIDATE_AND_ADMIN_PLAN",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "base_commit": "ce3527a7b8ee8f00f0c3673c82f3f243394b8d9d",
+  "branch": "fix/provider-scope-all-p0-20261113",
+  "provenance": {
+    "evaluator_original_blob": "2c49946776c656f6b1ad9b4abe69cb6cb875d869",
+    "test_original_blob": "68048ba491f4fd82745d6ac8d967fd2eb3ce8a5e",
+    "admin_plan_original_blob": "4d60c748b6d23c875eb197dee808f2e22cdbe77f",
+    "provider_ruleset_updated_at": "2026-11-03T12:30:14.454-03:00"
+  },
+  "scope": [
+    "evaluator recognizes active ~ALL with explicit empty exclusions",
+    "adversarial unit tests",
+    "append-only new admin plan"
+  ],
+  "status": "IMPLEMENTED_PENDING_EXACT_HEAD_TEST",
+  "remote_write_verification": "REQUIRE_READBACK",
+  "provider_admin_mutation": "NOT_RUN",
+  "provider_negative_merge_rejection": "NOT_RUN",
+  "physical_device_validation": "NOT_RUN",
+  "claim_allowed": false,
+  "critical_gap": "ACTIVE_RULESET_HAS_NO_REQUIRED_PR_CHECKS_AND_HAS_ALWAYS_BYPASS_ACTORS",
+  "next": "Verify branch head and blobs; run exact-head tests; admin authority must test live provider enforcement separately.",
+  "rollback": "Leave master unchanged; discard this isolated branch or use reviewed successor commit; preserve history."
+}

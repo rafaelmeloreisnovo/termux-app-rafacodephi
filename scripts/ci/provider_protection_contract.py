@@ -86,7 +86,13 @@ def fetch_live_rulesets(repository: str, default_branch: str, token: str) -> lis
         detail = github_get(base + f"/rulesets/{item['id']}", token)
         cond = ((detail.get("conditions") or {}).get("ref_name") or {})
         includes = set(cond.get("include") or [])
-        if "~DEFAULT_BRANCH" in includes or f"refs/heads/{default_branch}" in includes:
+        exclusions = cond.get("exclude")
+        # An unknown exclusion can hide the default branch; never infer a
+        # protected scope from a partial or unrecognized branch condition.
+        if not isinstance(exclusions, list) or exclusions:
+            continue
+        if ("~ALL" in includes or "~DEFAULT_BRANCH" in includes
+                or f"refs/heads/{default_branch}" in includes):
             applicable.append(detail)
 
     return applicable

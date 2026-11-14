@@ -1,0 +1,94 @@
+{
+  "schema": "rafaelia.provider_ruleset_admin_delta/v1",
+  "version": 2,
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "target_branch": "master",
+  "authority": "GitHub provider ruleset administration",
+  "status": "PROPOSED_UNAPPLIED",
+  "apply_state": "BLOCKED_EXTERNAL_ADMIN_AUTHORITY_AND_NEGATIVE_GATE",
+  "supersedes_path": "governance/provider/PROVIDER_RULESET_ADMIN_DELTA_20260926.v1.json",
+  "observation_source": "https://api.github.com/repos/rafaelmeloreisnovo/termux-app-rafacodephi/rulesets/21908888",
+  "precondition": {
+    "ruleset_id": 21908888,
+    "ruleset_updated_at": "2026-11-03T12:30:14.454-03:00",
+    "enforcement": "active",
+    "ref_name_include": [
+      "~ALL"
+    ],
+    "ref_name_exclude": [],
+    "observed_rule_types": [
+      "deletion",
+      "non_fast_forward",
+      "required_linear_history"
+    ],
+    "observed_always_bypass_actors": [
+      {
+        "actor_type": "RepositoryRole",
+        "actor_id": 5,
+        "bypass_mode": "always"
+      },
+      {
+        "actor_type": "Integration",
+        "actor_id": 1144995,
+        "bypass_mode": "always"
+      }
+    ],
+    "current_user_can_bypass": "always",
+    "on_mismatch": "ABORT_STALE_PLAN"
+  },
+  "desired_policy_source": "governance/provider/PROVIDER_RULESET_TARGET.v3.json",
+  "operations": [
+    {
+      "kind": "RECHECK_PROVIDER_PRECONDITION_AND_BRANCH_SCOPE",
+      "require_exact_version": true
+    },
+    {
+      "kind": "ENSURE_REQUIRED_STATUS_CHECKS",
+      "strict": true,
+      "contexts": [
+        "provider-protection"
+      ],
+      "require_exact_head_integration_identity": true
+    },
+    {
+      "kind": "ALIGN_PULL_REQUEST_POLICY",
+      "source": "governance/provider/PROVIDER_RULESET_TARGET.v3.json",
+      "require_review_thread_resolution": true
+    },
+    {
+      "kind": "REVIEW_ALWAYS_BYPASS_ACTOR",
+      "actor_type": "RepositoryRole",
+      "actor_id": 5,
+      "required_resolution": "IDENTIFY_AND_JUSTIFY_OR_REMOVE"
+    },
+    {
+      "kind": "REVIEW_ALWAYS_BYPASS_ACTOR",
+      "actor_type": "Integration",
+      "actor_id": 1144995,
+      "required_resolution": "IDENTIFY_AND_JUSTIFY_OR_REMOVE"
+    },
+    {
+      "kind": "TEST_PROVIDER_NEGATIVE_REJECTION",
+      "cases": [
+        "missing_required_check",
+        "failed_required_check",
+        "stale_head",
+        "unjustified_bypass"
+      ],
+      "must_not_merge_probe": true
+    }
+  ],
+  "unresolved_design_gap": "TARGET_V3_REQUIRES_ZERO_APPROVING_REVIEWS; THIS DOES_NOT_PROVE_INDEPENDENT_REVIEW_FOR_SOLO_MAINTENANCE",
+  "known_limitations": [
+    "Managed GitHub connection cannot administer rulesets",
+    "Branch protection classic GET returned 403",
+    "No exact-head CI or negative merge rejection evidenced",
+    "Any changed ruleset updated_at invalidates this plan",
+    "Code quality and signature requirements require compatibility review"
+  ],
+  "postcondition": {
+    "gate": "PASS_SCOPED_ONLY_AFTER_PROVIDER_READBACK_AND_NEGATIVE_TEST",
+    "claim_allowed": false
+  },
+  "rollback": "Preserve original ruleset snapshot; reversible provider-admin successor change only after provider readback; no force-reset or history deletion."
+}
