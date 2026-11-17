@@ -114,10 +114,10 @@ else
   descriptors="$(printf '%s' "${descriptors}" | sed '/^$/d' | sort -u)"
   printf '\n[dex_class_descriptors]\n%s\n' "${descriptors}" | tee -a "${REPORT}"
   for descriptor in \
-    'Lcom/termux/rafcodephi/loader/LoaderActivity;' \
-    'Lcom/termux/rafcodephi/loader/BootstrapInstallService;' \
-    'Lcom/termux/rafcodephi/loader/BootstrapSourcePolicy;' \
-    'Lcom/termux/rafcodephi/loader/VerifiedBootstrapProvider;'; do
+    'Lcom/termux/rafacodephi/loader/LoaderActivity;' \
+    'Lcom/termux/rafacodephi/loader/BootstrapInstallService;' \
+    'Lcom/termux/rafacodephi/loader/BootstrapSourcePolicy;' \
+    'Lcom/termux/rafacodephi/loader/VerifiedBootstrapProvider;'; do
     if grep -Fxq -- "${descriptor}" <<<"${descriptors}"; then pass "dex:${descriptor}"; else fail "DEX missing ${descriptor}"; fi
   done
 fi
