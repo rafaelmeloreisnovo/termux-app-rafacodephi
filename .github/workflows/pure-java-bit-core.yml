@@ -1,0 +1,42 @@
+name: pure Java bit core custody
+on:
+  pull_request:
+    branches: [master, 'phase-2/authorial-bit-library-gates']
+    paths:
+      - 'configs/lowlevel-selection.v2.json'
+      - 'app/src/main/java/com/termux/rafacodephi/lowlevel/**'
+      - 'scripts/verify_pure_java_bit_core.sh'
+      - '.github/workflows/pure-java-bit-core.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  java-bit-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify behavior and mutation sensitivity
+        run: bash scripts/verify_pure_java_bit_core.sh
+      - name: Bind receipt to source and run
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p artifacts/receipts
+          {
+            printf 'schema=rafcodephi.java-pure-bit-receipt/v1\n'
+            printf 'source_commit=%s\n' "$GITHUB_SHA"
+            printf 'run_id=%s\n' "$GITHUB_RUN_ID"
+            printf 'scope=JVM_HOSTED_ONLY\n'
+            printf 'device_runtime=TOKEN_VAZIO_NOT_RUN\n'
+            printf 'claim_allowed=false\n'
+            sha256sum configs/lowlevel-selection.v2.json \
+              app/src/main/java/com/termux/rafacodephi/lowlevel/AuthorialBitOps.java \
+              app/src/main/java/com/termux/rafacodephi/lowlevel/AuthorialBitOpsAdversarial.java \
+              scripts/verify_pure_java_bit_core.sh
+          } > artifacts/receipts/java-pure-bit.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: java-pure-bit-receipt
+          path: artifacts/receipts/java-pure-bit.txt
