@@ -10,5 +10,5 @@ grep -q '"claim_allowed": false' "$manifest"
 grep -q 'PURE_CORE' "$manifest"; grep -q 'PLATFORM_GATE' "$manifest"; grep -q 'HOSTED_BOUNDARY' "$manifest"
 ! grep -Eq '^import[[:space:]]' "$java_file"
 ! grep -Eq 'java\.(util|lang|math|nio|io)' "$java_file"
-grep -q 'no library calls' "$java_file"
+grep -q 'without library calls' "$java_file"
 printf '%s\n' 'LOWLEVEL_CONTRACT_STATIC_PASS'
