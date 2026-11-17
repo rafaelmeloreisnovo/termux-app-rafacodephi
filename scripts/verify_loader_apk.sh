@@ -84,7 +84,7 @@ else
   fail "manifest must disable cleartext traffic"
 fi
 
-mapfile -t dex_files < <(unzip -Z1 "${APK}" | grep -E '^classes([0-9]*)?\\.dex$' || true)
+mapfile -t dex_files < <(unzip -Z1 "${APK}" | grep -E '^classes([0-9]*)?\.dex$' || true)
 dex_count="${#dex_files[@]}"
 record "dex_count=${dex_count}"
 # API 21+ supports native multidex. Restrict the loader to its observed one-
@@ -109,14 +109,14 @@ else
     dex_sha="$(unzip -p "${APK}" "${dex_name}" | sha256sum | awk '{print $1}')"
     record "dex_sha256[${dex_name}]=${dex_sha}"
     this_descriptors="$(unzip -p "${APK}" "${dex_name}" | strings -a | grep -oE 'L[A-Za-z0-9_/$.-]+;' || true)"
-    descriptors+="${this_descriptors}"$'\\n'
+    descriptors+="${this_descriptors}"$'\n'
   done
   descriptors="$(printf '%s' "${descriptors}" | sed '/^$/d' | sort -u)"
-  printf '\\n[dex_class_descriptors]\\n%s\\n' "${descriptors}" | tee -a "${REPORT}"
-  for descriptor in \\
-    'Lcom/termux/rafcodephi/loader/LoaderActivity;' \\
-    'Lcom/termux/rafcodephi/loader/BootstrapInstallService;' \\
-    'Lcom/termux/rafcodephi/loader/BootstrapSourcePolicy;' \\
+  printf '\n[dex_class_descriptors]\n%s\n' "${descriptors}" | tee -a "${REPORT}"
+  for descriptor in \
+    'Lcom/termux/rafcodephi/loader/LoaderActivity;' \
+    'Lcom/termux/rafcodephi/loader/BootstrapInstallService;' \
+    'Lcom/termux/rafcodephi/loader/BootstrapSourcePolicy;' \
     'Lcom/termux/rafcodephi/loader/VerifiedBootstrapProvider;'; do
     if grep -Fxq -- "${descriptor}" <<<"${descriptors}"; then pass "dex:${descriptor}"; else fail "DEX missing ${descriptor}"; fi
   done
