@@ -1,0 +1,29 @@
+{
+  "schema": "rafcodephi.validation-successor/v1",
+  "event_id": "MU-TERMUXAPP-DEX-20261117-S2",
+  "parent_source_commit": "1b157d2e729c68f8b006192d5275a2d856031e43",
+  "parent_receipt": "docs/receipts/JAVA_DEX_VALIDATION_20261117_S1.json",
+  "delta": "Replace fail-open rg dependency scan with Python prerequisite and reject forbidden dependencies in three negative fixtures",
+  "evidence": [
+    "S1 exact-head java-bit-core run44078325773 SUCCESS: real D8 build and 9 DEX tests",
+    "S1 static contract and Java vectors run44078325935 SUCCESS",
+    "local dependency rejection test: native/new/Integer.bitCount return21",
+    "local Java 4096 vectors and bit mutation exit0"
+  ],
+  "regressions_separated": {
+    "provider_contract": "25 identical baseline/current failures; baseline df146571; no runtime source changed",
+    "service_snapshot": "already rejects baseline app/build.gradle hash52f64b47; historical receipt expected102b34da; successor hash drift correctly rejected",
+    "bootstrap_install": "same missing prose-token failure reproduced at baseline and current",
+    "rewrite_workflows": "CI missing :app:rewriteBootstraps task; no such task in unchanged baseline Gradle; no replacement task invented"
+  },
+  "remaining": [
+    "new_exact_head_CI_NOT_OBSERVED",
+    "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING",
+    "TOKEN_VAZIO_PERFORMANCE_UNMEASURED",
+    "independent_review_and_provider_enforcement_blocked"
+  ],
+  "decision": "HOLD",
+  "claim_allowed": false,
+  "rollback": "revert only scoped successor, preserve history",
+  "observed_at": "2026-11-17T11:59:29.418Z"
+}

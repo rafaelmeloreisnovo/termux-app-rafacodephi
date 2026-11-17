@@ -13,9 +13,15 @@ assert m['default_backend']=='JAVA_PURE'
 assert m['backends']['JAVA_PURE']['native_library_required'] is False
 assert m['claim_allowed'] is False
 PY
-if rg -n '(^[[:space:]]*import[[:space:]]|\bnative\b|System\.loadLibrary|\b(Math|Arrays|Integer|Long|BitSet|ByteBuffer)\s*\.)' "$src"; then
-  echo "UNEXPECTED_LIBRARY_OR_NATIVE_REFERENCE"; exit 21
-fi
+python3 - "$src" <<'PY'
+from pathlib import Path
+import re, sys
+source=Path(sys.argv[1]).read_text(encoding='utf-8')
+source=re.sub(r'/\*.*?\*/|//[^\n]*', '', source, flags=re.S)
+if re.search(r'\b(import|native|new)\b|System\s*\.\s*load(?:Library)?\b|\b(Math|Arrays|Integer|Long|BitSet|ByteBuffer)\s*\.', source):
+    print('UNEXPECTED_LIBRARY_OR_NATIVE_REFERENCE', file=sys.stderr)
+    raise SystemExit(21)
+PY
 build_dir="$(mktemp -d)"
 trap 'rm -r -- "$build_dir"' EXIT
 javac --release 8 -Xlint:all,-options -Werror -d "$build_dir" "$src" "$testsrc"

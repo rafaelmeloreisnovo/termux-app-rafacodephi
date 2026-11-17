@@ -29,7 +29,7 @@ bash scripts/verify_java_bit_android.sh . /tmp/raf-bit-new-output
 python3 scripts/verify_java_bit_dex.py app/build/outputs/apk/debug
 ```
 
-Requires hosted JDK, Python 3, Bash, ripgrep and Android build-tools D8 (CI pins
+Requires hosted JDK, Python 3, Bash and Android build-tools D8 (CI pins
 build-tools 35.0.0). Local D8 used 8.6.27, JDK 21.0.13. Java compilation targets
 release 8 for the Android API-21 floor. JDK 21 marks the Java-8 *option* obsolete:
 only options-category lint is excluded; code warnings remain `-Xlint:all` and
@@ -73,3 +73,18 @@ F_ok: JVM correctness/mutation, emitted DEX presence and predecessor APK evidenc
 F_gap: new full APK build, ART/device, native consumer receipt, measured hardware
 choice and independent review. F_next: exact-head CI then the same-device benchmark.
 `claim_allowed=false`.
+
+## Successor S2 — CI observations
+
+The first new CI passed the real D8 build, nine DEX tests and Java vectors, but
+also showed `rg: command not found`: the old shell `if rg ...` treated unavailable
+scanner as a clean result. S2 replaces that call with a Python check executed as
+a prerequisite; three forbidden-dependency fixtures must exit 21.
+
+Separate debt is preserved: provider verifier has the same 25 failures before
+and after this delta; the September service receipt rejects even baseline hashes;
+bootstrap-install checks a missing prose token in baseline and current; two legacy
+rewrite jobs call a Gradle task absent from the unchanged baseline. None of these
+states is erased, skipped deliberately or relabeled PASS by this change. Repairing
+provider IPC or reconstructing bootstrap tasks requires their own bounded source
+and regression gates. Full new builds and physical Android remain separate.

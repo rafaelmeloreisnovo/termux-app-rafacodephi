@@ -9,6 +9,7 @@ on:
       - 'scripts/verify_lowlevel_contract.sh'
       - 'scripts/verify_java_bit_*'
       - 'tests/test_java_bit_dex.py'
+      - 'tests/test_pure_java_dependency_gate.py'
       - 'tools/lowlevel/java/**'
       - 'app/build.gradle'
       - 'app/proguard-rules.pro'
@@ -33,7 +34,9 @@ jobs:
           bash scripts/verify_lowlevel_contract.sh
       - name: Verify behavior and mutation sensitivity
         id: verify
-        run: bash scripts/verify_pure_java_bit_core.sh
+        run: |
+          bash scripts/verify_pure_java_bit_core.sh
+          python3 tests/test_pure_java_dependency_gate.py
       - name: Build and inspect actual DEX, exercise negative fixtures
         id: dex
         run: |
