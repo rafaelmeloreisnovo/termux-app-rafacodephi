@@ -17,6 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Verify behavior and mutation sensitivity
+        id: verify
         run: bash scripts/verify_pure_java_bit_core.sh
       - name: Bind receipt to source and run
         if: always()
