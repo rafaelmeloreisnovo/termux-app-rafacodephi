@@ -1,0 +1,63 @@
+name: lowlevel custody gates
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'configs/lowlevel-selection.v1.json'
+      - 'app/src/main/java/com/termux/rafacodephi/lowlevel/**'
+      - 'scripts/verify_lowlevel_contract.sh'
+      - 'docs/**'
+      - 'LICENSE-RAFCODEPHI-STUDY-RESEARCH.md'
+  push:
+    branches: [master]
+    paths:
+      - 'configs/lowlevel-selection.v1.json'
+      - 'app/src/main/java/com/termux/rafacodephi/lowlevel/**'
+      - 'scripts/verify_lowlevel_contract.sh'
+permissions:
+  contents: read
+  pull-requests: read
+concurrency:
+  group: lowlevel-custody-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  static-contract:
+    name: static contract and authorial Java vectors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify contract and provenance boundary
+        run: bash scripts/verify_lowlevel_contract.sh "$GITHUB_WORKSPACE"
+      - name: Compile isolated Java primitives
+        run: |
+          mkdir -p /tmp/rafcodephi-lowlevel/classes
+          javac -Xlint:all -d /tmp/rafcodephi-lowlevel/classes \
+            app/src/main/java/com/termux/rafacodephi/lowlevel/AuthorialBitOps.java \
+            app/src/main/java/com/termux/rafacodephi/lowlevel/AuthorialBitOpsVectors.java
+      - name: Run deterministic vectors without framework
+        run: |
+          cat >/tmp/rafcodephi-lowlevel/Main.java <<'EOF'
+          import com.termux.rafacodephi.lowlevel.AuthorialBitOpsVectors;
+          final class Main {
+            public static void main(String[] args) {
+              int result = AuthorialBitOpsVectors.run();
+              if (result != 0) throw new AssertionError("vector=" + result);
+            }
+          }
+          EOF
+          javac -cp /tmp/rafcodephi-lowlevel/classes -d /tmp/rafcodephi-lowlevel/classes /tmp/rafcodephi-lowlevel/Main.java
+          java -cp /tmp/rafcodephi-lowlevel/classes Main
+      - name: Emit bounded receipt
+        run: |
+          mkdir -p artifacts/receipts
+          sha256sum configs/lowlevel-selection.v1.json \
+            app/src/main/java/com/termux/rafacodephi/lowlevel/AuthorialBitOps.java \
+            app/src/main/java/com/termux/rafacodephi/lowlevel/AuthorialBitOpsVectors.java \
+            LICENSE-RAFCODEPHI-STUDY-RESEARCH.md > artifacts/receipts/lowlevel-static.sha256
+          printf '%s\n' 'receipt_scope=static_contract_and_hosted_java_vectors' >> artifacts/receipts/lowlevel-static.sha256
+          printf '%s\n' 'claim_allowed=false' >> artifacts/receipts/lowlevel-static.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lowlevel-static-receipt
+          path: artifacts/receipts/lowlevel-static.sha256
