@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
         if(errno || !end || *end || count<1 || count>100000000ul) return 64;
     }
     if(argc>2) {
-        char *end=NULL;errno=0;count=strtoul(argv[2],&end,10);
+        char *end=NULL;errno=0;rounds=strtoul(argv[2],&end,10);
         if(errno || !end || *end || rounds<1 || rounds>30) return 64;
     }
     const uint64_t expected=((uint64_t)count*((uint64_t)count+1u))/2u;
