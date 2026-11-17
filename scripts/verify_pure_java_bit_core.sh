@@ -18,11 +18,11 @@ if rg -n '(^[[:space:]]*import[[:space:]]|\bnative\b|System\.loadLibrary|\b(Math
 fi
 build_dir="$(mktemp -d)"
 trap 'rm -r -- "$build_dir"' EXIT
-javac -Xlint:all -Werror -d "$build_dir" "$src" "$testsrc"
+javac --release 8 -Xlint:all,-options -Werror -d "$build_dir" "$src" "$testsrc"
 java -cp "$build_dir" com.termux.rafacodephi.lowlevel.AuthorialBitOpsAdversarial
 # Falsifier: one changed parity constant must be detected by the same vectors.
 sed 's/0x6996/0x6997/' "$src" > "$build_dir/AuthorialBitOps.java"
-javac -d "$build_dir" "$build_dir/AuthorialBitOps.java" "$testsrc"
+javac --release 8 -Xlint:all,-options -Werror -d "$build_dir" "$build_dir/AuthorialBitOps.java" "$testsrc"
 if java -cp "$build_dir" com.termux.rafacodephi.lowlevel.AuthorialBitOpsAdversarial >/dev/null 2>&1; then
   echo "MUTATION_SURVIVED"; exit 22
 fi

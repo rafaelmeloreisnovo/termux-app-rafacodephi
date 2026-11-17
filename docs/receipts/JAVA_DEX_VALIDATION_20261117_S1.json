@@ -1,0 +1,91 @@
+{
+  "schema": "rafcodephi.validation-successor/v1",
+  "event_id": "MU-TERMUXAPP-DEX-20261117-S1",
+  "parent_source_commit": "df14657125a77e24073575a3ac9953913a195da3",
+  "scope": "HOST_JVM_DEX_AND_PREDECESSOR_APK_INSPECTION",
+  "source_repo": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "target_branch": "phase-3/pure-java-bit-core-v2",
+  "authority": "user-request-20261117; producer-local AGENTS.md",
+  "classification": {
+    "governance": "REVIEW_ONLY",
+    "data": "PUBLIC_SOURCE_SYNTHETIC_TESTS",
+    "privacy": "NO_DEVICE_PERSONAL_DATA",
+    "security": "NO_PROVIDER_OR_SIGNING_CHANGE"
+  },
+  "executions": [
+    "JDK21.0.13 Java8-target compile+4096 vectors+single-bit mutation exit0",
+    "D8 8.6.27 min-api21 actual DEX compile exit0",
+    "DEX adversarial suite 9 tests exit0",
+    "JVM -Xint vector run exit0",
+    "JVM benchmark harness smoke exit0; no Android timing claim",
+    "predecessor run44071230540 artifact14322757146: 3 APK class-definition/API checks exit0",
+    "3 YAML parsed; bash syntax; git diff --check"
+  ],
+  "historical_failures": [
+    "legacy static gate exit1 because comment changed",
+    "first local DEX mutation suite had bytearray TypeError in 2 tests; fixed conversion, rerun passed"
+  ],
+  "source_file_sha256": [
+    {
+      "path": ".github/workflows/_reusable-arm32-compat.yml",
+      "sha256": "457d084d000f25539631f9b822c4fc724914dd418fe9a0f0fb6cf44c20cae559"
+    },
+    {
+      "path": ".github/workflows/lowlevel-custody-gates.yml",
+      "sha256": "504abdcfc2a424f89ec1ac8832ef87ac8a934c06f33a198d7f63ec83ede44306"
+    },
+    {
+      "path": ".github/workflows/pure-java-bit-core.yml",
+      "sha256": "c58665712884f84b894fcaeb8ab5e3ebc68b627e615928095fcbd09a5d7eb814"
+    },
+    {
+      "path": "app/build.gradle",
+      "sha256": "1c2b56cff8e05e385478411bed54c597a358b9dafee6c806246a06fe5511b68f"
+    },
+    {
+      "path": "app/proguard-rules.pro",
+      "sha256": "52b93bc3f977ba3b6e7649263cc620299c9356a64c0b214ff12e7a26af33a537"
+    },
+    {
+      "path": "docs/JAVA_DEX_ELF_VALIDATION_V3.md",
+      "sha256": "7a702d0a483b16633c29baef1c389fa0a8054c4b2b3767294a53df1e3a7a1a8e"
+    },
+    {
+      "path": "docs/JAVA_PURE_BIT_CORE_V2.md",
+      "sha256": "cd9e92a35baa93ac17ba9bd0b3db30827bff1954ab3f18a0df086bafb86c92f8"
+    },
+    {
+      "path": "scripts/verify_java_bit_android.sh",
+      "sha256": "8eb85f1636b7b611eae55294e02f821298e65510de0eafe3c031f2ec83ed6f95"
+    },
+    {
+      "path": "scripts/verify_java_bit_dex.py",
+      "sha256": "3ffd611b3d689895984e129c217c70bdd72a55d5873fc3d3a4d7e8d4298b438a"
+    },
+    {
+      "path": "scripts/verify_lowlevel_contract.sh",
+      "sha256": "19c7f960540a2cb18bd27322c4610adbd25ddc6d5f67a0dc9b79445bd029418f"
+    },
+    {
+      "path": "scripts/verify_pure_java_bit_core.sh",
+      "sha256": "05f94cc7e54e5c5e9794ad233c115ffd1918b4a8bf9c0bd869010378db95f06b"
+    },
+    {
+      "path": "tests/test_java_bit_dex.py",
+      "sha256": "324a5abe5c4128b694bf1acfa7469501f08843b259d7a434333d94a628b6279f"
+    },
+    {
+      "path": "tools/lowlevel/java/BitOpsBenchmark.java",
+      "sha256": "d94394eb0de8a38e67cc5f2a50e21d64210550e3e1be9b0a38e4c74d3a14df67"
+    }
+  ],
+  "gaps": [
+    "TOKEN_VAZIO_PHYSICAL_EVIDENCE_MISSING",
+    "TOKEN_VAZIO_PERFORMANCE_UNMEASURED",
+    "TOKEN_VAZIO_GOVERNANCE_BLOCKED",
+    "new_exact_head_CI_NOT_OBSERVED"
+  ],
+  "rollback": "scoped revert successor; no history deletion",
+  "claim_allowed": false,
+  "observed_at": "2026-11-17T11:54:43.961Z"
+}

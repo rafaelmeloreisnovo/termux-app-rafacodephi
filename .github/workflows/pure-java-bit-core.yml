@@ -6,6 +6,12 @@ on:
       - 'configs/lowlevel-selection.v2.json'
       - 'app/src/main/java/com/termux/rafacodephi/lowlevel/**'
       - 'scripts/verify_pure_java_bit_core.sh'
+      - 'scripts/verify_lowlevel_contract.sh'
+      - 'scripts/verify_java_bit_*'
+      - 'tests/test_java_bit_dex.py'
+      - 'tools/lowlevel/java/**'
+      - 'app/build.gradle'
+      - 'app/proguard-rules.pro'
       - '.github/workflows/pure-java-bit-core.yml'
   workflow_dispatch:
 permissions:
@@ -16,28 +22,58 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Assert source identity and predecessor contract
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          bash scripts/verify_lowlevel_contract.sh
       - name: Verify behavior and mutation sensitivity
         id: verify
         run: bash scripts/verify_pure_java_bit_core.sh
+      - name: Build and inspect actual DEX, exercise negative fixtures
+        id: dex
+        run: |
+          export D8="${ANDROID_HOME}/build-tools/35.0.0/d8"
+          test -x "$D8"
+          bash scripts/verify_java_bit_android.sh . "$RUNNER_TEMP/bit-core-android"
       - name: Bind receipt to source and run
         if: always()
         shell: bash
+        env:
+          VECTOR_OUTCOME: ${{ steps.verify.outcome }}
+          DEX_OUTCOME: ${{ steps.dex.outcome }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           mkdir -p artifacts/receipts
           {
             printf 'schema=rafcodephi.java-pure-bit-receipt/v1\n'
-            printf 'source_commit=%s\n' "$GITHUB_SHA"
+            printf 'source_commit=%s\n' "$(git rev-parse HEAD)"
+            printf 'expected_head=%s\n' "$PR_HEAD"
+            printf 'event_sha=%s\n' "$GITHUB_SHA"
             printf 'run_id=%s\n' "$GITHUB_RUN_ID"
-            printf 'scope=JVM_HOSTED_ONLY\n'
+            printf 'scope=JVM_VECTORS_AND_DEX_API_PRESENCE\n'
+            printf 'vectors=%s\ndex=%s\n' "$VECTOR_OUTCOME" "$DEX_OUTCOME"
             printf 'device_runtime=TOKEN_VAZIO_NOT_RUN\n'
             printf 'claim_allowed=false\n'
             sha256sum configs/lowlevel-selection.v2.json \
               app/src/main/java/com/termux/rafacodephi/lowlevel/AuthorialBitOps.java \
               app/src/main/java/com/termux/rafacodephi/lowlevel/AuthorialBitOpsAdversarial.java \
               scripts/verify_pure_java_bit_core.sh
+            javac -version
+            if test -x "${ANDROID_HOME}/build-tools/35.0.0/d8"; then
+              "${ANDROID_HOME}/build-tools/35.0.0/d8" --version
+            fi
           } > artifacts/receipts/java-pure-bit.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: java-pure-bit-receipt
-          path: artifacts/receipts/java-pure-bit.txt
+          path: |
+            artifacts/receipts/java-pure-bit.txt
+            ${{ runner.temp }}/bit-core-android/dex-receipt.json
+            ${{ runner.temp }}/bit-core-android/artifact-sha256.txt
+            ${{ runner.temp }}/bit-core-android/bit-core-device.jar

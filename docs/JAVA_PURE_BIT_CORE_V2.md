@@ -1,5 +1,8 @@
 # Java puro: seleção, custódia e limite
 
+Sucessor de validação: [Java/DEX/ELF V3](JAVA_DEX_ELF_VALIDATION_V3.md).
+Os limites históricos abaixo permanecem como estado da fase 3 original.
+
 Predecessor: phase-2/authorial-bit-library-gates. Esta fase mantém a API existente de AuthorialBitOps e acrescenta o backend JAVA_PURE como seleção explícita v2. O manifesto v1 continua como histórico.
 
 A biblioteca usa operadores primitivos de Java para read/write/count/parity. Não importa bibliotecas nem carrega JNI ou ELF. Seu bytecode continua executado por JVM/ART: "Java puro" descreve a dependência do módulo, não uma execução sem runtime.
