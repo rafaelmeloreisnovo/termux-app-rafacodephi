@@ -57,6 +57,13 @@ public final class RafAssistantArenaV1Adversarial {
         check(b.heartbeat(999) == RafAssistantArenaV1.ERR_CLOCK, 43);
         check(b.isSafeMode() && b.read(0) == 0, 44);
         check(b.armWatchdog(0, 10) == RafAssistantArenaV1.ERR_STATE, 45);
+        RafAssistantArenaV1 c = new RafAssistantArenaV1();
+        check(c.armWatchdog(-100, 20) == RafAssistantArenaV1.OK, 46);
+        check(c.heartbeat(-90) == RafAssistantArenaV1.OK, 47);
+        check(c.heartbeat(-69) == RafAssistantArenaV1.ERR_TIMEOUT, 48);
+        RafAssistantArenaV1 d = new RafAssistantArenaV1();
+        check(d.armWatchdog(Long.MAX_VALUE - 4, 20) == RafAssistantArenaV1.OK, 49);
+        check(d.heartbeat(Long.MIN_VALUE + 5) == RafAssistantArenaV1.OK, 50);
         return 0;
     }
     public static void main(String[] args) {
