@@ -92,7 +92,7 @@ public final class RafAssistantArenaV1 {
 
     /** Host supplies an already verified monotonic timestamp and duration. */
     public int armWatchdog(long nowNanos, long timeoutNanos) {
-        if (safeMode || nowNanos < 0 || timeoutNanos <= 0) return ERR_STATE;
+        if (safeMode || timeoutNanos <= 0) return ERR_STATE;
         lastBeat = nowNanos;
         maxGap = timeoutNanos;
         watchdogArmed = true;
@@ -102,11 +102,14 @@ public final class RafAssistantArenaV1 {
     /** Cooperative deadline check. On violation, undo pending writes and fail closed. */
     public int heartbeat(long nowNanos) {
         if (!watchdogArmed || safeMode) return ERR_STATE;
-        if (nowNanos < lastBeat) {
+        // System.nanoTime() has an arbitrary (possibly negative) origin.
+        // Elapsed subtraction also handles a wrap while intervals stay < 2^63 ns.
+        final long elapsed = nowNanos - lastBeat;
+        if (elapsed < 0) {
             tripSafeMode();
             return ERR_CLOCK;
         }
-        if (nowNanos - lastBeat > maxGap) {
+        if (elapsed > maxGap) {
             tripSafeMode();
             return ERR_TIMEOUT;
         }
