@@ -2,13 +2,14 @@ name: lowlevel custody gates
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, 'phase-2/authorial-bit-library-gates']
     paths:
       - 'configs/lowlevel-selection.v1.json'
       - 'app/src/main/java/com/termux/rafacodephi/lowlevel/**'
       - 'scripts/verify_lowlevel_contract.sh'
       - 'docs/**'
       - 'LICENSE-RAFCODEPHI-STUDY-RESEARCH.md'
+      - '.github/workflows/lowlevel-custody-gates.yml'
   push:
     branches: [master]
     paths:
@@ -27,12 +28,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - name: Verify contract and provenance boundary
         run: bash scripts/verify_lowlevel_contract.sh "$GITHUB_WORKSPACE"
       - name: Compile isolated Java primitives
         run: |
           mkdir -p /tmp/rafcodephi-lowlevel/classes
-          javac -Xlint:all -d /tmp/rafcodephi-lowlevel/classes \
+          javac --release 8 -Xlint:all,-options -Werror -d /tmp/rafcodephi-lowlevel/classes \
             app/src/main/java/com/termux/rafacodephi/lowlevel/AuthorialBitOps.java \
             app/src/main/java/com/termux/rafacodephi/lowlevel/AuthorialBitOpsVectors.java
       - name: Run deterministic vectors without framework

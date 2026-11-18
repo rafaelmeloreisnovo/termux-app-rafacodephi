@@ -8,7 +8,8 @@ license="$root/LICENSE-RAFCODEPHI-STUDY-RESEARCH.md"
 for f in "$manifest" "$java_file" "$vectors" "$license"; do test -f "$f" || { echo "MISSING:$f"; exit 20; }; done
 grep -q '"claim_allowed": false' "$manifest"
 grep -q 'PURE_CORE' "$manifest"; grep -q 'PLATFORM_GATE' "$manifest"; grep -q 'HOSTED_BOUNDARY' "$manifest"
-! grep -Eq '^import[[:space:]]' "$java_file"
-! grep -Eq 'java\.(util|lang|math|nio|io)' "$java_file"
-grep -q 'without library calls' "$java_file"
+# Inspect the actual implementation; prose changes are not a semantic gate.
+if grep -Eq '^[[:space:]]*import[[:space:]]|java\.(util|lang|math|nio|io)|System\.loadLibrary|^[[:space:]]*public[[:space:]]+static[[:space:]]+native' "$java_file"; then
+  echo 'UNEXPECTED_HOSTED_OR_NATIVE_DEPENDENCY'; exit 21
+fi
 printf '%s\n' 'LOWLEVEL_CONTRACT_STATIC_PASS'
