@@ -1,0 +1,91 @@
+name: assistant Java arena — JVM/DEX custody
+
+on:
+  push:
+    branches: ['feature/assistant-java-arena-v1-20261118']
+    paths:
+      - '.github/workflows/assistant-java-arena-jvm-dex.yml'
+      - 'app/src/main/java/com/termux/rafacodephi/assistant/**'
+      - 'tools/assistant/java/**'
+      - 'scripts/verify_assistant_java_android.sh'
+      - 'scripts/verify_assistant_arena_dex.py'
+      - 'tests/test_assistant_arena_dex.py'
+  pull_request:
+    branches: ['phase-2/authorial-bit-library-gates']
+    paths:
+      - '.github/workflows/assistant-java-arena-jvm-dex.yml'
+      - 'app/src/main/java/com/termux/rafacodephi/assistant/**'
+      - 'tools/assistant/java/**'
+      - 'scripts/verify_assistant_java_android.sh'
+      - 'scripts/verify_assistant_arena_dex.py'
+      - 'tests/test_assistant_arena_dex.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: assistant-java-arena-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  jvm-and-dex:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Exact commit and Python parser syntax
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          python3 -m py_compile scripts/verify_assistant_arena_dex.py tests/test_assistant_arena_dex.py
+      - name: JVM vectors, benchmark, D8, DEX, mutations
+        id: gate
+        run: |
+          test -n "$ANDROID_HOME"
+          export D8="$ANDROID_HOME/build-tools/35.0.0/d8"
+          test -x "$D8"
+          bash scripts/verify_assistant_java_android.sh . "$RUNNER_TEMP/assistant-arena-android"
+      - name: Evidence receipt (never promote device claims)
+        if: always()
+        env:
+          GATE_OUTCOME: ${{ steps.gate.outcome }}
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          mkdir -p artifacts/receipts
+          {
+            printf 'schema=rafaelia.assistant-java-arena-ci/v1\n'
+            printf 'head_sha=%s\n' "$(git rev-parse HEAD)"
+            printf 'expected_sha=%s\n' "$EXPECTED_SHA"
+            printf 'run_id=%s\n' "$GITHUB_RUN_ID"
+            printf 'gate_outcome=%s\n' "$GATE_OUTCOME"
+            printf 'scope=JVM_JAVA8_AND_DEX_STRUCTURE\n'
+            printf 'art_device=TOKEN_VAZIO_NOT_RUN\n'
+            printf 'armv7_device=TOKEN_VAZIO_NOT_RUN\n'
+            printf 'native_backend=TOKEN_VAZIO_NOT_RUN\n'
+            printf 'claim_allowed=false\n'
+            sha256sum \
+              app/src/main/java/com/termux/rafacodephi/assistant/RafAssistantArenaV1.java \
+              app/src/main/java/com/termux/rafacodephi/assistant/RafAssistantArenaV1Adversarial.java \
+              tools/assistant/java/RafAssistantArenaBenchmark.java \
+              scripts/verify_assistant_java_android.sh \
+              scripts/verify_assistant_arena_dex.py \
+              tests/test_assistant_arena_dex.py
+            javac -version
+            if test -x "$ANDROID_HOME/build-tools/35.0.0/d8"; then
+              "$ANDROID_HOME/build-tools/35.0.0/d8" --version
+            fi
+          } > artifacts/receipts/assistant-arena-ci.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: assistant-java-arena-review-receipt
+          if-no-files-found: warn
+          path: |
+            artifacts/receipts/assistant-arena-ci.txt
+            ${{ runner.temp }}/assistant-arena-android/dex-receipt.json
+            ${{ runner.temp }}/assistant-arena-android/sha256-receipt.txt
+            ${{ runner.temp }}/assistant-arena-android/jvm-benchmark.csv
+            ${{ runner.temp }}/assistant-arena-android/assistant-arena-device.jar
