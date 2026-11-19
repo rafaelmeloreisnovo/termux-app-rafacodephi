@@ -10,3 +10,5 @@
 -dontobfuscate
 #-renamesourcefileattribute SourceFile
 #-keepattributes SourceFile,LineNumberTable
+# Public Java bit API must survive release shrinking for the artifact gate.
+-keep class com.termux.rafacodephi.lowlevel.AuthorialBitOps { *; }

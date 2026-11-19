@@ -13,6 +13,7 @@ import copy
 import hashlib
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -101,6 +102,39 @@ def validate_source_bindings(bindings: Any, root: Path, verify_hashes: bool) -> 
             observed = sha256_file(resolved)
             require(observed == item["sha256"], f"{ctx}.sha256: source drift for {path}; expected {item['sha256']}, observed {observed}")
     return len(seen_paths)
+
+
+def verify_archived_source_bindings(receipt: dict[str, Any], root: Path) -> int:
+    """Bind an immutable historical receipt to its recorded Git commit/tree.
+
+    A September snapshot must not be compared with November working-tree bytes.
+    Missing Git objects, changed blobs or changed digests fail closed.
+    """
+    source = receipt["source"]
+    commit = source["commit"]
+
+    def git(*args: str) -> bytes:
+        try:
+            return subprocess.run(
+                ["git", *args], cwd=root, check=True, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            ).stdout
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise ValidationError(f"archive git object unavailable: {args[0]}") from exc
+
+    tree = git("rev-parse", f"{commit}^{{tree}}").decode("ascii").strip()
+    require(tree == source["tree"], "source.tree: historic tree mismatch")
+    count = 0
+    for binding in receipt["source_bindings"]:
+        path = binding["path"]
+        expected_blob = binding["git_blob_sha"]
+        actual_blob = git("rev-parse", f"{commit}:{path}").decode("ascii").strip()
+        require(actual_blob == expected_blob, f"archive blob drift: {path}")
+        historical_bytes = git("show", f"{commit}:{path}")
+        actual_digest = hashlib.sha256(historical_bytes).hexdigest()
+        require(actual_digest == binding["sha256"], f"archive sha256 drift: {path}")
+        count += 1
+    return count
 
 
 def validate_gates(gates: Any) -> dict[str, int]:
@@ -212,12 +246,21 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("receipt", nargs="?", type=Path, default=DEFAULT_RECEIPT)
     parser.add_argument("--skip-source-hash-check", action="store_true")
+    parser.add_argument("--verify-archived-source", action="store_true")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
 
     try:
         receipt = load_receipt(args.receipt)
-        report = validate_receipt(receipt, ROOT, verify_hashes=not args.skip_source_hash_check)
+        require(not (args.verify_archived_source and args.skip_source_hash_check),
+                "archive mode cannot skip hash verification")
+        check_worktree = not (args.skip_source_hash_check or args.verify_archived_source)
+        report = validate_receipt(receipt, ROOT, verify_hashes=check_worktree)
+        if args.verify_archived_source:
+            report["source_bindings_verified_archived"] = verify_archived_source_bindings(receipt, ROOT)
+            report["state"] = "DOCUMENTED_ARCHIVED_SOURCE_SNAPSHOT"
+        elif args.skip_source_hash_check:
+            report["state"] = "STRUCTURE_ONLY_SOURCE_HASH_NOT_VERIFIED"
         if args.self_test:
             invalid = copy.deepcopy(receipt)
             invalid["decision"]["claim_allowed"] = True
@@ -228,6 +271,15 @@ def main() -> int:
                 rejected = True
             require(rejected, "self-test: promoted runtime claim was accepted")
             report["negative_promotion_rejected"] = True
+            if args.verify_archived_source:
+                forged = copy.deepcopy(receipt)
+                forged["source_bindings"][0]["sha256"] = "0" * 64
+                try:
+                    verify_archived_source_bindings(forged, ROOT)
+                except ValidationError:
+                    report["negative_archive_digest_rejected"] = True
+                else:
+                    raise ValidationError("self-test: forged historic digest accepted")
         print(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2))
         return 0
     except ValidationError as exc:

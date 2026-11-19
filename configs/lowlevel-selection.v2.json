@@ -1,0 +1,41 @@
+{
+  "schema": "rafcodephi.lowlevel-selection/v2",
+  "supersedes": "configs/lowlevel-selection.v1.json",
+  "owner": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "default_backend": "JAVA_PURE",
+  "selection_explicit": true,
+  "backends": {
+    "JAVA_PURE": {
+      "source": "app/src/main/java/com/termux/rafacodephi/lowlevel/AuthorialBitOps.java",
+      "artifact": "JVM_CLASS_OR_ANDROID_DEX",
+      "runtime": "JVM_OR_ART",
+      "native_library_required": false,
+      "allowed_dependencies": "Java primitive operators only",
+      "scope": "fixed-width 32-bit bit operations"
+    },
+    "NATIVE_OPTIONAL": {
+      "languages": [
+        "C",
+        "RUST",
+        "ASM"
+      ],
+      "artifact": "ELF",
+      "runtime": "platform ABI",
+      "requires_separate_receipt": true
+    }
+  },
+  "required_gates": [
+    "source_ref",
+    "javac_compile",
+    "adversarial_vectors",
+    "mutation_falsifier",
+    "source_sha256",
+    "test_sha256"
+  ],
+  "pending_gates": [
+    "DEX_BYTE_INSPECTION",
+    "ANDROID_DEVICE_RUNTIME",
+    "PERFORMANCE_COMPARISON"
+  ],
+  "claim_allowed": false
+}
