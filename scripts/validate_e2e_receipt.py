@@ -103,7 +103,8 @@ def validate_structure(doc: dict) -> list[str]:
             errors.append(f"device.package must be {PACKAGE}")
         if d.get("prefix") != PREFIX:
             errors.append(f"device.prefix must be {PREFIX}")
-        if d.get("abi") not in ABIS:
+        device_abi = d.get("abi")
+        if not isinstance(device_abi, str) or device_abi not in ABIS:
             errors.append(f"device.abi must be one of {sorted(ABIS)}")
         for key in ("manufacturer", "model", "android_release", "installed_apk_path"):
             if not isinstance(d.get(key), str) or not d.get(key):
@@ -224,7 +225,7 @@ def emit_result(ok: bool, reason: str, receipt: dict | None = None) -> None:
         "gate": "PASS" if ok else "BLOCKED",
         "reason": reason,
     }
-    if receipt:
+    if isinstance(receipt, dict):
         result["receipt_id"] = receipt.get("receipt_id")
     print(json.dumps(result, sort_keys=True))
 
