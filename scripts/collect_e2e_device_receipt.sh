@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077  # Device receipts are private unless explicitly reviewed for disclosure.
 
 # RAFCODEPHI physical-device receipt collector.
 # Runs inside installed com.termux.rafacodephi without root.
@@ -257,8 +258,18 @@ PY
 if [[ -z "$OUT" ]]; then
   OUT="reports/device-e2e/${generated_at//[:+]/_}-${abi}.json"
 fi
-mkdir -p "$(dirname "$OUT")"
-cp "$tmp_json" "$OUT"
+# Append-only: never overwrite a previous device observation, even on retry.
+receipt_dir="$(dirname -- "$OUT")"
+mkdir -p -- "$receipt_dir"
+receipt_tmp="$(mktemp "$receipt_dir/.e2e-receipt.XXXXXXXX")" || die "RECEIPT_TEMP_CREATE_FAILED"
+trap 'rm -rf "$workdir"; rm -f "$receipt_tmp"' EXIT
+cp -- "$tmp_json" "$receipt_tmp" || die "RECEIPT_TEMP_WRITE_FAILED"
+chmod 600 "$receipt_tmp" || die "RECEIPT_PERMISSIONS_FAILED"
+# Hard link is atomic and fails if the destination already exists (also blocks symlinks).
+ln -- "$receipt_tmp" "$OUT" || die "RECEIPT_DESTINATION_EXISTS_OR_LINK_FAILED"
+rm -f -- "$receipt_tmp"
+receipt_tmp=""
+
 
 printf 'receipt=%s\n' "$OUT"
 printf 'receipt_sha256=%s\n' "$(sha256sum "$OUT" | awk '{print $1}')"
