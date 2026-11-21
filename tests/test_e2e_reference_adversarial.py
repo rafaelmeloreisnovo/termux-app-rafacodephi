@@ -87,6 +87,24 @@ class ReceiptInputValidationTests(unittest.TestCase):
             with self.assertRaises(gate.ReceiptError):
                 gate.load(file)
 
+    def test_unhashable_abi_is_blocked_cleanly(self):
+        receipt = structurally_valid_receipt()
+        receipt["device"]["abi"] = ["armeabi-v7a"]
+        self.assertIn("device.abi", "; ".join(gate.validate_structure(receipt)))
+
+    def test_unhashable_stage_is_blocked_cleanly(self):
+        receipt = structurally_valid_receipt()
+        receipt["stages"]["device"] = {"unexpected": "object"}
+        self.assertIn("stages.device", "; ".join(gate.validate_structure(receipt)))
+
+    def test_non_dict_result_does_not_crash(self):
+        from io import StringIO
+        from contextlib import redirect_stdout
+        out = StringIO()
+        with redirect_stdout(out):
+            gate.emit_result(False, "receipt must be object", ["invalid"])
+        self.assertIn('"gate": "BLOCKED"', out.getvalue())
+
     def test_oversized_receipt_is_blocked(self):
         with tempfile.TemporaryDirectory() as td:
             file = Path(td) / "oversized.json"
