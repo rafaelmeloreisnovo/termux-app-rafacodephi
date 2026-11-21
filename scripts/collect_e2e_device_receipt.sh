@@ -49,7 +49,8 @@ while (($#)); do
   esac
 done
 
-command -v python3 >/dev/null 2>&1 || die "python3 is required"
+command -v python3 >/dev/null 2>&1 || die "PYTHON_NOT_INSTALLED"
+python3 -c 'import json, hashlib' >/dev/null 2>&1 || die "PYTHON_RUNTIME_BROKEN: dynamic linker or Python initialization failed"
 command -v sha256sum >/dev/null 2>&1 || die "sha256sum is required"
 command -v getprop >/dev/null 2>&1 || die "Android getprop unavailable"
 command -v pm >/dev/null 2>&1 || die "Android package manager CLI unavailable"
@@ -68,7 +69,11 @@ case "$abi" in
   *) die "unsupported ABI for canonical RAFCODEPHI proof: $abi" ;;
 esac
 
-[[ "${PREFIX:-}" == "$EXPECTED_PREFIX" ]] || die "PREFIX drift: ${PREFIX:-<unset>} != $EXPECTED_PREFIX"
+# /data/user/0 and /data/data may be aliases for this app's private prefix.
+[[ -n "${PREFIX:-}" ]] || die "PREFIX_UNSET"
+actual_prefix="$(readlink -f "$PREFIX")" || die "PREFIX_UNRESOLVABLE"
+expected_prefix="$(readlink -f "$EXPECTED_PREFIX")" || die "EXPECTED_PREFIX_UNRESOLVABLE"
+[[ -d "$actual_prefix" && "$actual_prefix" == "$expected_prefix" ]] || die "PREFIX_DRIFT"
 
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
@@ -153,7 +158,9 @@ command -v pkg >/dev/null 2>&1 || die "pkg not in PATH"
 command -v apt >/dev/null 2>&1 || die "apt not in PATH"
 apt --version >/dev/null 2>&1 || die "apt --version failed"
 
-apk_listing="$(pm path "$PACKAGE" 2>/dev/null || true)"
+# Never substitute an inferred APK path or falsely mark runtime custody PASS.
+apk_listing="$(pm path "$PACKAGE" 2>"$workdir/pm.stderr")" || \
+  die "ANDROID_PACKAGE_MANAGER_UNAVAILABLE: pm path failed; installed APK hash unverified"
 apk_path="$(printf '%s\n' "$apk_listing" | sed -n 's/^package://p' | head -n 1)"
 [[ -n "$apk_path" ]] || die "pm path could not resolve installed $PACKAGE"
 [[ -r "$apk_path" ]] || die "installed APK is not readable: $apk_path"
