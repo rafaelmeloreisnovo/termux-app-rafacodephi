@@ -93,7 +93,7 @@ public class VerbativoBootstrapManager {
 
             convergenceReceipt = candidateReceipt.clone();
             initialized = true;
-            Log.i(TAG, "✅ Verbovivo bootstrap validation PASSED");
+            Log.i(TAG, "Verbovivo local diagnostic receipt validated and persisted; device E2E remains unverified");
             return true;
 
         } catch (Exception e) {
@@ -125,7 +125,7 @@ public class VerbativoBootstrapManager {
     }
 
     /**
-     * Store receipt for audit trail and device attestation.
+     * Store a local diagnostic receipt for audit. This is not remote/device attestation.
      * Receipt is stored in app's private data directory.
      */
     private boolean storeReceipt(byte[] receipt) {
