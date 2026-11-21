@@ -19,6 +19,8 @@ on:
       - 'scripts/emit_e2e_build_receipt.py'
       - 'scripts/collect_e2e_device_receipt.sh'
       - 'scripts/validate_e2e_receipt.py'
+      - 'tests/test_e2e_reference_adversarial.py'
+      - 'tests/test_e2e_collector_emission.py'
       - 'docs/RAFCODEPHI_E2E_PRODUCT_PROOF_V1.md'
       - '.github/workflows/rafaelia_e2e_product_proof.yml'
       - 'reports/device-e2e/**'
@@ -61,6 +63,12 @@ jobs:
 
       - name: Run promotion semantics self-test
         run: python3 scripts/validate_e2e_receipt.py --self-test
+
+      - name: Reject malformed and self-authorized reference receipts
+        run: python3 -m unittest discover -s tests -p 'test_e2e_reference_adversarial.py'
+
+      - name: Validate collector's literal Python emitter against injection inputs
+        run: python3 -m unittest discover -s tests -p 'test_e2e_collector_emission.py'
 
       - name: Guard claim boundary
         shell: bash

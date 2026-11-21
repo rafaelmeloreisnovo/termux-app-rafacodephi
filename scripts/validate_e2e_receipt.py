@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+from datetime import datetime
 from pathlib import Path
 
 SCHEMA = "rafcodephi.e2e-device-receipt/v1"
@@ -39,23 +40,40 @@ def canonical_receipt_id(doc: dict) -> str:
 
 def validate_structure(doc: dict) -> list[str]:
     errors: list[str] = []
+    if not isinstance(doc, dict):
+        return ["receipt must be a JSON object"]
     required = {"schema", "receipt_id", "generated_at", "provenance", "device", "workload", "stages", "claim_allowed"}
     missing = sorted(required - set(doc))
+    extras = sorted(set(doc) - required)
     if missing:
         errors.append(f"missing top-level keys: {', '.join(missing)}")
         return errors
+    if extras:
+        errors.append(f"unexpected top-level keys: {', '.join(extras)}")
 
     if doc["schema"] != SCHEMA:
         errors.append(f"schema must be {SCHEMA!r}")
     if not is_hex(doc["receipt_id"], 64):
         errors.append("receipt_id must be lowercase SHA-256")
-    if not isinstance(doc["generated_at"], str) or len(doc["generated_at"]) < 20:
+    if not isinstance(doc["generated_at"], str) or not doc["generated_at"]:
         errors.append("generated_at is missing/invalid")
+    else:
+        try:
+            stamp = datetime.fromisoformat(doc["generated_at"].replace("Z", "+00:00"))
+            if stamp.tzinfo is None or stamp.utcoffset() is None:
+                errors.append("generated_at must include timezone offset")
+        except ValueError:
+            errors.append("generated_at must be ISO-8601")
 
     p = doc.get("provenance")
     if not isinstance(p, dict):
         errors.append("provenance must be an object")
     else:
+        expected_p = {"repository", "git_commit", "build_receipt_sha256", "apk_sha256",
+                      "bootstrap_source_repository", "bootstrap_source_commit",
+                      "bootstrap_source_manifest_sha256", "bootstrap_sha256", "bootstrap_profile_sha256"}
+        if set(p) != expected_p:
+            errors.append("provenance keys are missing or unexpected")
         if p.get("repository") != REPO:
             errors.append(f"provenance.repository must be {REPO}")
         if p.get("bootstrap_source_repository") != "rafaelmeloreisnovo/termux-packages":
@@ -77,11 +95,16 @@ def validate_structure(doc: dict) -> list[str]:
     if not isinstance(d, dict):
         errors.append("device must be an object")
     else:
+        expected_d = {"manufacturer", "model", "android_release", "abi", "package",
+                      "prefix", "installed_apk_path", "installed_apk_sha256"}
+        if set(d) != expected_d:
+            errors.append("device keys are missing or unexpected")
         if d.get("package") != PACKAGE:
             errors.append(f"device.package must be {PACKAGE}")
         if d.get("prefix") != PREFIX:
             errors.append(f"device.prefix must be {PREFIX}")
-        if d.get("abi") not in ABIS:
+        device_abi = d.get("abi")
+        if not isinstance(device_abi, str) or device_abi not in ABIS:
             errors.append(f"device.abi must be one of {sorted(ABIS)}")
         for key in ("manufacturer", "model", "android_release", "installed_apk_path"):
             if not isinstance(d.get(key), str) or not d.get(key):
@@ -93,10 +116,12 @@ def validate_structure(doc: dict) -> list[str]:
     if not isinstance(w, dict):
         errors.append("workload must be an object")
     else:
+        if set(w) != {"command", "exit_code", "stdout_sha256"}:
+            errors.append("workload keys are missing or unexpected")
         if not isinstance(w.get("command"), str) or not w.get("command"):
             errors.append("workload.command must be non-empty")
-        if not isinstance(w.get("exit_code"), int):
-            errors.append("workload.exit_code must be integer")
+        if type(w.get("exit_code")) is not int:
+            errors.append("workload.exit_code must be integer (not boolean)")
         if not is_hex(w.get("stdout_sha256"), 64):
             errors.append("workload.stdout_sha256 must be lowercase SHA-256")
 
@@ -107,11 +132,14 @@ def validate_structure(doc: dict) -> list[str]:
         if set(stages) != set(STAGES):
             errors.append("stages must contain exactly: " + ", ".join(STAGES))
         for key in STAGES:
-            if stages.get(key) not in STATUS:
-                errors.append(f"stages.{key} has invalid status {stages.get(key)!r}")
+            status = stages.get(key)
+            if not isinstance(status, str) or status not in STATUS:
+                errors.append(f"stages.{key} has invalid status {status!r}")
+        if stages.get("reproduction") != "TOKEN_VAZIO":
+            errors.append("single device receipt cannot claim reproduction")
 
-    if not isinstance(doc.get("claim_allowed"), bool):
-        errors.append("claim_allowed must be boolean")
+    if doc.get("claim_allowed") is not False:
+        errors.append("single device receipt must set claim_allowed=false")
 
     if not errors and doc["receipt_id"] != canonical_receipt_id(doc):
         errors.append("receipt_id does not match canonical SHA-256 of receipt content")
@@ -157,16 +185,36 @@ def promotion_state(receipt: dict, reference: dict | None) -> tuple[bool, str]:
     ref_bad = [k for k in first_six if reference["stages"][k] != "PASS"]
     if ref_bad:
         return False, "reference receipt has non-PASS stages: " + ", ".join(ref_bad)
+    if reference["workload"]["exit_code"] != 0:
+        return False, "reference workload exit_code is non-zero"
+    if reference["device"]["installed_apk_sha256"] != reference["provenance"]["apk_sha256"]:
+        return False, "reference installed APK hash differs from build provenance"
+    if reference.get("claim_allowed") is True:
+        return False, "reference receipt attempted to self-authorize"
     mismatch = same_observation(receipt, reference)
     if mismatch:
         return False, "reproduction mismatch: " + ", ".join(mismatch)
     return True, "two independent receipts reproduce the same cross-repo build/workload observation"
 
 
+MAX_RECEIPT_BYTES = 1024 * 1024
+
+
+def reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict:
+    doc = {}
+    for key, value in pairs:
+        if key in doc:
+            raise ReceiptError(f"duplicate JSON key: {key}")
+        doc[key] = value
+    return doc
+
+
 def load(path: Path) -> dict:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        if path.stat().st_size > MAX_RECEIPT_BYTES:
+            raise ReceiptError(f"{path}: receipt exceeds 1 MiB limit")
+        return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=reject_duplicate_keys)
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ReceiptError(f"{path}: {exc}") from exc
 
 
@@ -177,7 +225,7 @@ def emit_result(ok: bool, reason: str, receipt: dict | None = None) -> None:
         "gate": "PASS" if ok else "BLOCKED",
         "reason": reason,
     }
-    if receipt:
+    if isinstance(receipt, dict):
         result["receipt_id"] = receipt.get("receipt_id")
     print(json.dumps(result, sort_keys=True))
 

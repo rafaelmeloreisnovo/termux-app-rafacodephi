@@ -106,6 +106,25 @@ def test_optional_verbativo_audit_cannot_block_session_or_keyboard_startup() -> 
     assert "toggleTerminalToolbar" in keyboard
 
 
+def test_verbativo_receipt_storage_fails_closed_without_disabling_terminal() -> None:
+    manager = read("app/src/main/java/com/termux/app/bootstrap/VerbativoBootstrapManager.java")
+    activity = read("app/src/main/java/com/termux/app/TermuxActivity.java")
+    assert "initialized = false;" in manager
+    assert "convergenceReceipt = null;" in manager
+    assert "candidateReceipt.length != RECEIPT_BYTES" in manager
+    assert "if (!storeReceipt(candidateReceipt))" in manager
+    assert "convergenceReceipt = candidateReceipt.clone();" in manager
+    assert "return initialized && convergenceReceipt != null ? convergenceReceipt.clone() : null;" in manager
+    assert "File.createTempFile(" in manager
+    assert "stream.getFD().sync();" in manager
+    assert "temp.renameTo(destination)" in manager
+    assert "Arrays.equals(receipt, persisted)" in manager
+    assert "receiptFile.length() != RECEIPT_BYTES" in manager
+    assert "while (offset < data.length)" in manager
+    assert "stream.read() != -1" in manager
+    assert "terminal initialization continues" in activity
+
+
 def test_settings_entries_are_bound_on_ui_thread_and_activity_launches_return_to_ui_thread() -> None:
     settings = read("app/src/main/java/com/termux/app/activities/SettingsActivity.java")
 
