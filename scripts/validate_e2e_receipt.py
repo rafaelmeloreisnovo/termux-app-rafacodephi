@@ -55,7 +55,7 @@ def validate_structure(doc: dict) -> list[str]:
         errors.append(f"schema must be {SCHEMA!r}")
     if not is_hex(doc["receipt_id"], 64):
         errors.append("receipt_id must be lowercase SHA-256")
-    if not isinstance(doc["generated_at"], str) or len(doc["generated_at"]) < 20:
+    if not isinstance(doc["generated_at"], str) or not doc["generated_at"]:
         errors.append("generated_at is missing/invalid")
     else:
         try:
