@@ -182,38 +182,59 @@ set -e
 stdout_sha256="$(sha256sum "$stdout_file" | awk '{print $1}')"
 
 tmp_json="$workdir/receipt.json"
-python3 - "$tmp_json" <<PY
-import hashlib, json, pathlib
-out = pathlib.Path(${tmp_json@Q})
+# Pass values as argv with a quoted heredoc: no shell text may become Python source.
+# This remains local diagnostic evidence and cannot self-promote to device E2E.
+python3 - \
+  "$tmp_json" "$generated_at" "$APP_REPO" "$APP_GIT_COMMIT" \
+  "$BUILD_RECEIPT_SHA256" "$APK_SHA256" "$BOOTSTRAP_SOURCE_REPOSITORY" \
+  "$BOOTSTRAP_SOURCE_COMMIT" "$BOOTSTRAP_SOURCE_MANIFEST_SHA256" \
+  "$BOOTSTRAP_SHA256" "$BOOTSTRAP_PROFILE_SHA256" \
+  "$manufacturer" "$model" "$android_release" "$abi" "$PACKAGE" \
+  "$EXPECTED_PREFIX" "$apk_path" "$installed_apk_sha256" \
+  "$WORKLOAD" "$workload_rc" "$stdout_sha256" <<'PY'
+import hashlib
+import json
+import pathlib
+import sys
+
+(
+    output, generated_at, app_repo, app_commit, build_receipt_sha256,
+    apk_sha256, bootstrap_source_repository, bootstrap_source_commit,
+    bootstrap_source_manifest_sha256, bootstrap_sha256, bootstrap_profile_sha256,
+    manufacturer, model, android_release, abi, package, prefix,
+    apk_path, installed_apk_sha256, workload, workload_rc, stdout_sha256,
+) = sys.argv[1:]
+
+out = pathlib.Path(output)
 doc = {
     "schema": "rafcodephi.e2e-device-receipt/v1",
     "receipt_id": "0" * 64,
-    "generated_at": ${generated_at@Q},
+    "generated_at": generated_at,
     "provenance": {
-        "repository": ${APP_REPO@Q},
-        "git_commit": ${APP_GIT_COMMIT@Q},
-        "build_receipt_sha256": ${BUILD_RECEIPT_SHA256@Q},
-        "apk_sha256": ${APK_SHA256@Q},
-        "bootstrap_source_repository": ${BOOTSTRAP_SOURCE_REPOSITORY@Q},
-        "bootstrap_source_commit": ${BOOTSTRAP_SOURCE_COMMIT@Q},
-        "bootstrap_source_manifest_sha256": ${BOOTSTRAP_SOURCE_MANIFEST_SHA256@Q},
-        "bootstrap_sha256": ${BOOTSTRAP_SHA256@Q},
-        "bootstrap_profile_sha256": ${BOOTSTRAP_PROFILE_SHA256@Q},
+        "repository": app_repo,
+        "git_commit": app_commit,
+        "build_receipt_sha256": build_receipt_sha256,
+        "apk_sha256": apk_sha256,
+        "bootstrap_source_repository": bootstrap_source_repository,
+        "bootstrap_source_commit": bootstrap_source_commit,
+        "bootstrap_source_manifest_sha256": bootstrap_source_manifest_sha256,
+        "bootstrap_sha256": bootstrap_sha256,
+        "bootstrap_profile_sha256": bootstrap_profile_sha256,
     },
     "device": {
-        "manufacturer": ${manufacturer@Q},
-        "model": ${model@Q},
-        "android_release": ${android_release@Q},
-        "abi": ${abi@Q},
-        "package": ${PACKAGE@Q},
-        "prefix": ${EXPECTED_PREFIX@Q},
-        "installed_apk_path": ${apk_path@Q},
-        "installed_apk_sha256": ${installed_apk_sha256@Q},
+        "manufacturer": manufacturer,
+        "model": model,
+        "android_release": android_release,
+        "abi": abi,
+        "package": package,
+        "prefix": prefix,
+        "installed_apk_path": apk_path,
+        "installed_apk_sha256": installed_apk_sha256,
     },
     "workload": {
-        "command": ${WORKLOAD@Q},
-        "exit_code": int(${workload_rc@Q}),
-        "stdout_sha256": ${stdout_sha256@Q},
+        "command": workload,
+        "exit_code": int(workload_rc),
+        "stdout_sha256": stdout_sha256,
     },
     "stages": {
         "packages": "PASS",
