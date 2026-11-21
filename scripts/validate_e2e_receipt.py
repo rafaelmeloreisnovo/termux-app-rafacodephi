@@ -157,6 +157,12 @@ def promotion_state(receipt: dict, reference: dict | None) -> tuple[bool, str]:
     ref_bad = [k for k in first_six if reference["stages"][k] != "PASS"]
     if ref_bad:
         return False, "reference receipt has non-PASS stages: " + ", ".join(ref_bad)
+    if reference["workload"]["exit_code"] != 0:
+        return False, "reference workload exit_code is non-zero"
+    if reference["device"]["installed_apk_sha256"] != reference["provenance"]["apk_sha256"]:
+        return False, "reference installed APK hash differs from build provenance"
+    if reference.get("claim_allowed") is True:
+        return False, "reference receipt attempted to self-authorize"
     mismatch = same_observation(receipt, reference)
     if mismatch:
         return False, "reproduction mismatch: " + ", ".join(mismatch)
