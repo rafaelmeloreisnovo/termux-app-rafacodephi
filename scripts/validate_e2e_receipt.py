@@ -131,8 +131,9 @@ def validate_structure(doc: dict) -> list[str]:
         if set(stages) != set(STAGES):
             errors.append("stages must contain exactly: " + ", ".join(STAGES))
         for key in STAGES:
-            if stages.get(key) not in STATUS:
-                errors.append(f"stages.{key} has invalid status {stages.get(key)!r}")
+            status = stages.get(key)
+            if not isinstance(status, str) or status not in STATUS:
+                errors.append(f"stages.{key} has invalid status {status!r}")
         if stages.get("reproduction") != "TOKEN_VAZIO":
             errors.append("single device receipt cannot claim reproduction")
 
