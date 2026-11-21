@@ -60,6 +60,14 @@ class PhysicalCollectorEmissionTests(unittest.TestCase):
             self.assertEqual(receipt["stages"]["reproduction"], "TOKEN_VAZIO")
             self.assertEqual(VALIDATOR.validate_structure(receipt), [])
 
+    def test_receipts_are_private_append_only(self) -> None:
+        text = COLLECTOR.read_text(encoding="utf-8")
+        self.assertIn("umask 077", text)
+        self.assertIn('receipt_tmp="$(mktemp "$receipt_dir/.e2e-receipt.XXXXXXXX")"', text)
+        self.assertIn('chmod 600 "$receipt_tmp"', text)
+        self.assertIn('ln -- "$receipt_tmp" "$OUT"', text)
+        self.assertNotIn('cp "$tmp_json" "$OUT"', text)
+
     def test_collector_rejects_non_literal_heredoc_regression(self) -> None:
         text = COLLECTOR.read_text(encoding="utf-8")
         self.assertNotIn("${WORKLOAD@Q}", text)
