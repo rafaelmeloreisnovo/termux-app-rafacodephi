@@ -5,7 +5,11 @@ inputs:
   java-version:
     description: Java version used by Android/Gradle builds.
     required: false
-    default: '17'
+    default: '21'
+  node-version:
+    description: Maintained Node.js LTS used by JavaScript tooling and startup smoke tests.
+    required: false
+    default: '24'
   prepare-bootstrap:
     description: Prepare and hash embedded bootstrap archives.
     required: false
@@ -15,16 +19,16 @@ runs:
   using: composite
   steps:
     - name: Setup Java
-      uses: actions/setup-java@v5
+      uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
       with:
         distribution: temurin
         java-version: ${{ inputs.java-version }}
         cache: gradle
 
-    - name: Setup Android command-line tools
-      uses: android-actions/setup-android@v4
+    - name: Setup Node.js LTS
+      uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903
       with:
-        packages: platform-tools
+        node-version: ${{ inputs.node-version }}
 
     - name: Install strict BLAKE3 checksum tool
       if: inputs.prepare-bootstrap == 'true'
@@ -40,7 +44,16 @@ runs:
 
     - name: Install canonical Android toolchain
       shell: bash
+      env:
+        TERMUX_SKIP_BOOTSTRAP_PREPARE: '1'
       run: ./scripts/ci_android_preflight.sh
+
+    - name: Verify Bash, JavaScript, JDK, NDK, Ninja and fastboot startup
+      shell: bash
+      env:
+        RAFCODEPHI_EXPECT_JAVA_MAJOR: ${{ inputs.java-version }}
+        RAFCODEPHI_EXPECT_NODE_MAJOR: ${{ inputs.node-version }}
+      run: bash ./scripts/verify_toolchain_startup.sh
 
     - name: Prepare bootstrap environment
       if: inputs.prepare-bootstrap == 'true'

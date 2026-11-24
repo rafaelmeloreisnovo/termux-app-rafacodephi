@@ -101,12 +101,18 @@ read_prop() {
 
 COMPILE_SDK_VERSION="$(read_prop compileSdkVersion)"
 TARGET_SDK_VERSION="$(read_prop targetSdkVersion)"
-NDK_VERSION="$(read_prop ndkVersion)"
+CANONICAL_NDK_VERSION="$(read_prop ndkVersion)"
+EFFECTIVE_NDK_VERSION="${JITPACK_NDK_VERSION:-$CANONICAL_NDK_VERSION}"
 BUILD_TOOLS_VERSION="$(read_prop buildToolsVersion)"
 
-if [[ -z "$COMPILE_SDK_VERSION" || -z "$TARGET_SDK_VERSION" || -z "$NDK_VERSION" ]]; then
+if [[ -z "$COMPILE_SDK_VERSION" || -z "$TARGET_SDK_VERSION" || -z "$CANONICAL_NDK_VERSION" ]]; then
   echo "❌ Missing required Android toolchain keys in $GRADLE_PROPERTIES_FILE"
   echo "Required: compileSdkVersion, targetSdkVersion, ndkVersion"
+  exit 1
+fi
+
+if [[ ! "$EFFECTIVE_NDK_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "❌ Invalid effective NDK version: $EFFECTIVE_NDK_VERSION" >&2
   exit 1
 fi
 
@@ -117,7 +123,8 @@ fi
 echo "📦 Android toolchain source of truth: $GRADLE_PROPERTIES_FILE"
 echo "compileSdkVersion=$COMPILE_SDK_VERSION"
 echo "targetSdkVersion=$TARGET_SDK_VERSION"
-echo "ndkVersion=$NDK_VERSION"
+echo "canonicalNdkVersion=$CANONICAL_NDK_VERSION"
+echo "effectiveNdkVersion=$EFFECTIVE_NDK_VERSION"
 echo "buildToolsVersion=$BUILD_TOOLS_VERSION"
 
 ANDROID_SDK_PATH="$(resolve_sdk_root || true)"
@@ -153,12 +160,92 @@ if [[ "$sdkmanager_license_status" -ne 0 ]]; then
   exit "$sdkmanager_license_status"
 fi
 
-sdkmanager \
-  "platform-tools" \
-  "platforms;android-${COMPILE_SDK_VERSION}" \
-  "build-tools;${BUILD_TOOLS_VERSION}" \
-  "ndk;${NDK_VERSION}" \
+SDK_PACKAGES=(
+  "platform-tools"
+  "platforms;android-${COMPILE_SDK_VERSION}"
+  "build-tools;${BUILD_TOOLS_VERSION}"
+  "ndk;${EFFECTIVE_NDK_VERSION}"
   "cmake;3.22.1"
+)
+
+sdk_install_ok=false
+for attempt in 1 2; do
+  if sdkmanager "${SDK_PACKAGES[@]}"; then
+    sdk_install_ok=true
+    break
+  fi
+  echo "⚠️ Android SDK installation attempt ${attempt}/2 failed" >&2
+done
+if [[ "$sdk_install_ok" != true ]]; then
+  echo "❌ Android SDK/NDK package installation failed after two attempts" >&2
+  exit 1
+fi
+
+ANDROID_NDK_PATH="${ANDROID_SDK_PATH}/ndk/${EFFECTIVE_NDK_VERSION}"
+ANDROID_BUILD_TOOLS_PATH="${ANDROID_SDK_PATH}/build-tools/${BUILD_TOOLS_VERSION}"
+ANDROID_PLATFORM_TOOLS_PATH="${ANDROID_SDK_PATH}/platform-tools"
+ANDROID_CMDLINE_TOOLS_PATH="${ANDROID_SDK_PATH}/cmdline-tools/latest/bin"
+ANDROID_CMAKE_PATH="${ANDROID_SDK_PATH}/cmake/3.22.1"
+ANDROID_APKSIGNER_PATH="${ANDROID_BUILD_TOOLS_PATH}/apksigner"
+
+NDK_PREBUILT_BIN=""
+for candidate in "${ANDROID_NDK_PATH}"/toolchains/llvm/prebuilt/*/bin; do
+  if [[ -d "$candidate" ]]; then
+    NDK_PREBUILT_BIN="$candidate"
+    break
+  fi
+done
+
+for executable in \
+  "${ANDROID_PLATFORM_TOOLS_PATH}/adb" \
+  "${ANDROID_PLATFORM_TOOLS_PATH}/fastboot" \
+  "${ANDROID_NDK_PATH}/ndk-build" \
+  "${ANDROID_CMAKE_PATH}/bin/ninja" \
+  "$ANDROID_APKSIGNER_PATH"; do
+  if [[ ! -x "$executable" ]]; then
+    echo "❌ Required Android tool is not executable: $executable" >&2
+    exit 1
+  fi
+done
+if [[ -z "$NDK_PREBUILT_BIN" ]]; then
+  echo "❌ NDK LLVM prebuilt bin directory was not found under $ANDROID_NDK_PATH" >&2
+  exit 1
+fi
+
+export ANDROID_HOME="$ANDROID_SDK_PATH"
+export ANDROID_SDK_ROOT="$ANDROID_SDK_PATH"
+export ANDROID_NDK_HOME="$ANDROID_NDK_PATH"
+export ANDROID_NDK_ROOT="$ANDROID_NDK_PATH"
+export ANDROID_APKSIGNER="$ANDROID_APKSIGNER_PATH"
+export APKSIGNER="$ANDROID_APKSIGNER_PATH"
+export PATH="${ANDROID_CMDLINE_TOOLS_PATH}:${ANDROID_PLATFORM_TOOLS_PATH}:${ANDROID_BUILD_TOOLS_PATH}:${ANDROID_CMAKE_PATH}/bin:${ANDROID_NDK_PATH}:${NDK_PREBUILT_BIN}:$PATH"
+
+if [[ -n "${GITHUB_ENV:-}" ]]; then
+  {
+    printf 'ANDROID_HOME=%s\n' "$ANDROID_HOME"
+    printf 'ANDROID_SDK_ROOT=%s\n' "$ANDROID_SDK_ROOT"
+    printf 'ANDROID_NDK_HOME=%s\n' "$ANDROID_NDK_HOME"
+    printf 'ANDROID_NDK_ROOT=%s\n' "$ANDROID_NDK_ROOT"
+    printf 'ANDROID_APKSIGNER=%s\n' "$ANDROID_APKSIGNER"
+    printf 'APKSIGNER=%s\n' "$APKSIGNER"
+    printf 'RAFCODEPHI_EFFECTIVE_NDK_VERSION=%s\n' "$EFFECTIVE_NDK_VERSION"
+  } >> "$GITHUB_ENV"
+fi
+if [[ -n "${GITHUB_PATH:-}" ]]; then
+  {
+    printf '%s\n' "$ANDROID_CMDLINE_TOOLS_PATH"
+    printf '%s\n' "$ANDROID_PLATFORM_TOOLS_PATH"
+    printf '%s\n' "$ANDROID_BUILD_TOOLS_PATH"
+    printf '%s\n' "${ANDROID_CMAKE_PATH}/bin"
+    printf '%s\n' "$ANDROID_NDK_PATH"
+    printf '%s\n' "$NDK_PREBUILT_BIN"
+  } >> "$GITHUB_PATH"
+fi
+
+adb version | sed -n '1p'
+fastboot --version | sed -n '1p'
+ndk-build --version | sed -n '1p'
+ninja --version
 
 ensure_ci_blake3() {
   command -v b3sum >/dev/null 2>&1 && return 0
