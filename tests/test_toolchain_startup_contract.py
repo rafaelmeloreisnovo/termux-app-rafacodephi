@@ -114,7 +114,7 @@ def test_ndk_elf_header_probe_accepts_real_arm_bytes_and_rejects_corruption() ->
 def test_composite_action_is_immutable_and_prepares_bootstrap_once() -> None:
     action = read(".github/actions/rafaelia-android-setup/action.yml")
 
-    assert "actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6" in action
+    assert "actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad" in action
     assert "actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903" in action
     assert "android-actions/setup-android@" not in action
     assert "default: '21'" in action

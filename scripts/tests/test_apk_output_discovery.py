@@ -2,9 +2,11 @@
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from scripts.verify_apk_bootstrap_payload import discover_packaged_apk_directory as resolve
+from scripts.verify_java_bit_dex import artifact_paths
 
 
 class ApkDiscoveryTests(unittest.TestCase):
@@ -27,6 +29,25 @@ class ApkDiscoveryTests(unittest.TestCase):
         expected = self.build / 'outputs' / 'apk' / 'apt-android-7' / 'debug'
         self.make(expected, ['termux-app_v1_arm64-v8a.apk'])
         self.assertEqual(resolve(self.requested, 'v1'), expected)
+
+    def test_dex_gate_uses_only_metadata_outputs(self):
+        folder = self.build / 'outputs' / 'apk' / 'apt-android-7' / 'debug'
+        name = 'termux-app_v1_arm64-v8a.apk'
+        self.make(folder, [name])
+        (folder / 'unlisted.apk').write_bytes(b'stale')
+        with patch.dict('os.environ', {'TERMUX_APK_VERSION_TAG': 'v1'}):
+            self.assertEqual(artifact_paths(self.requested), [folder / name])
+
+    def test_dex_gate_rejects_stale_or_duplicate_metadata(self):
+        folder = self.build / 'outputs' / 'apk' / 'apt-android-7' / 'debug'
+        name = 'termux-app_v1_arm64-v8a.apk'
+        self.make(folder, [name, name])
+        with patch.dict('os.environ', {'TERMUX_APK_VERSION_TAG': 'old'}):
+            with self.assertRaisesRegex(ValueError, 'exactly one'):
+                artifact_paths(self.requested)
+        with patch.dict('os.environ', {'TERMUX_APK_VERSION_TAG': 'v1'}):
+            with self.assertRaisesRegex(ValueError, 'duplicate APK'):
+                artifact_paths(self.requested)
 
     def test_intermediates_fallback(self):
         expected = self.build / 'intermediates' / 'apk' / 'apt-android-7' / 'debug'
