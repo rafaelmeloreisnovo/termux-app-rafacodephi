@@ -43,6 +43,12 @@ def resolve(doc: dict, selector: str) -> tuple[str, str]:
     channel = channels.get(selector)
     if not isinstance(channel, dict):
         die(f"unknown pin channel {selector!r}; expected canonical, candidate, or exact SHA")
+    # An already-merged producer PR cannot remain a runnable preview channel.
+    # Fail closed with a typed cause, but allow an explicitly supplied exact SHA.
+    if selector == "candidate" and channel.get("state") == "BLOCKED_NO_ACTIVE_UNMERGED_CANDIDATE":
+        die("BLOCKED_NO_ACTIVE_UNMERGED_CANDIDATE: select canonical or a reviewed exact SHA")
+    if selector == "canonical" and channel.get("state") != "MERGED_BASELINE":
+        die("canonical source is not a verified merged baseline")
     commit = channel.get("commit")
     if not isinstance(commit, str) or not SHA_RE.fullmatch(commit):
         die(f"invalid commit for channel {selector!r}: {commit!r}")

@@ -1,0 +1,30 @@
+{
+  "schema": "rafcodephi.ci-delivery-result/v1",
+  "event": "ci-real-pkg-build-completed",
+  "parent_receipt": "receipts/REAL_PKG_CI_20261110.json",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "source_commit": "87a14ab4b4e73b106483e5e98fdbf6f13e214c7f",
+  "run_id": 42811514174,
+  "job_id": 129813837427,
+  "status": "success",
+  "url": "https://github.com/rafaelmeloreisnovo/termux-app-rafacodephi/actions/runs/42811514174",
+  "apk_artifact": {
+    "id": 13763245199,
+    "name": "RAFCODEPHI-real-pkg-APKs-42811514174",
+    "bytes": 133913802,
+    "sha256": "2532612577c10ceddb32f2c616fd12d65a8238f0701cdc586394561440b63e77"
+  },
+  "bootstrap_artifact": {
+    "id": 13763725017,
+    "name": "RAFCODEPHI-real-pkg-bootstraps-42811514174",
+    "bytes": 48359441,
+    "sha256": "73b84079ee5e9d16618bc011db58b72dd08114c7d40361d55a270a240c5f9627"
+  },
+  "gates": ["signed HTTPS APT package resolution", "consumer contracts", "real-pkg pair import", "debug APK matrix", "exported ELF bootstrap payload equality", "APK v1/v2 signatures", "artifact uploads"],
+  "F_ok": ["all CI job steps completed successfully", "universal ARM32 ARM64 APKs and receipts available in Actions artifacts"],
+  "F_gap": ["physical Android execution TOKEN_VAZIO", "official release signing not promoted"],
+  "F_next": ["download CI APK artifacts", "install the appropriate APK and run physical pkg smoke"],
+  "claim_allowed": false,
+  "device_runtime": "TOKEN_VAZIO",
+  "signing": "CI_ANDROID_DEBUG"
+}

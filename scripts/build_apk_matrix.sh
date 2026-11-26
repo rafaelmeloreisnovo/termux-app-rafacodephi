@@ -202,10 +202,11 @@ done
   echo "release_track=${RELEASE_TRACK}";
   echo "generated_at_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)";
   echo "signing_keystore=$(basename "${KEYSTORE_PATH}")";
-  cat dist/source-contract/TERMUX_PACKAGES_RAFCODEPHI_SOURCE.env 2>/dev/null || true;
+  # Contract lines are appended after the manifest header by the fail-closed helper.
   echo "signed_release_apks_required=$(printf "%s " "${required_abis[@]}")";
   find unsigned signed -type f -name '*.apk' | sort;
 } > ARTIFACT_MANIFEST.txt )
+bash scripts/append_apk_source_contract.sh "${OUT_DIR}/ARTIFACT_MANIFEST.txt"
 record_diag "- artifact_manifest: success"
 info "Artifacts generated in ${OUT_DIR}"
 cat "${OUT_DIR}/ARTIFACT_MANIFEST.txt"

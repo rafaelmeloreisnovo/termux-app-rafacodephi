@@ -9,6 +9,8 @@ on:
       - 'rafaelia/freestanding-*'
     paths:
       - 'bootstrap/proot_freestanding.c'
+      - 'bootstrap/raf_guard_v1/**'
+      - 'tests/raf_tool_name_guard_test.c'
       - 'bootstrap/proot_syscall_bridge.h'
       - 'scripts/build_freestanding_real_arm_bootstrap.py'
       - 'scripts/validate_freestanding_gate_emulated_runtime.py'
@@ -21,6 +23,8 @@ on:
   pull_request:
     paths:
       - 'bootstrap/proot_freestanding.c'
+      - 'bootstrap/raf_guard_v1/**'
+      - 'tests/raf_tool_name_guard_test.c'
       - 'bootstrap/proot_syscall_bridge.h'
       - 'bootstrap_src/common/bin/proot'
       - 'scripts/build_freestanding_real_arm_bootstrap.py'
@@ -53,6 +57,33 @@ jobs:
           grep -q 'DEVICE=TOKEN_VAZIO' scripts/build_freestanding_real_arm_bootstrap.py
           grep -q 'RUNTIME_PROVEN_EMULATED' scripts/validate_freestanding_gate_emulated_runtime.py
           grep -q 'device_runtime_state.*TOKEN_VAZIO' scripts/validate_freestanding_gate_emulated_runtime.py
+
+  tool-basename-guard:
+    name: Pure C11 basename adversarial gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: GCC and Clang Werror UBSan and freestanding purity
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/raf-guard-purity.c <<'C'
+          #include "bootstrap/raf_guard_v1/raf_tool_name_guard.h"
+          int raf_guard_purity(const char *p) { return raf_tool_name_is_safe(p); }
+          C
+          for cc in gcc clang; do
+            "$cc" -std=c11 -O2 -Wall -Wextra -Werror -pedantic \
+              -fsanitize=undefined -fno-sanitize-recover=all \
+              tests/raf_tool_name_guard_test.c -o "/tmp/raf-guard-$cc"
+            "/tmp/raf-guard-$cc"
+            "$cc" -std=c11 -O2 -ffreestanding -fno-builtin \
+              -Wall -Wextra -Werror -I. -c /tmp/raf-guard-purity.c \
+              -o "/tmp/raf-guard-purity-$cc.o"
+            test -z "$(nm -u "/tmp/raf-guard-purity-$cc.o")"
+          done
+          grep -q 'raf_tool_name_is_safe(tool)' bootstrap/proot_freestanding.c
+          echo 'RAF_TOOL_NAME_GUARD_PASS; DEVICE=TOKEN_VAZIO; claim_allowed=false'
 
   static-elf:
     runs-on: ubuntu-24.04

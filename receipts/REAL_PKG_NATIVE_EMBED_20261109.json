@@ -1,0 +1,45 @@
+{
+  "event": "real-pkg-native-payload-rebind",
+  "parent": "bridge-delivery-rejected; incremental native payload mismatch reproduced",
+  "repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "base_commit": "0653ac63538b333460a1c739c593440911cff496",
+  "authority": "app build graph and exact native bootstrap artifact validation; branch-only source change",
+  "goal": "embed real APT/dpkg/pkg payload and bind it to a signed package source",
+  "classification": {
+    "governance": "reversible build-system fix; no default-branch merge or official release",
+    "data": "public source and bounded artifact digests",
+    "privacy": "no device data or private signing keys",
+    "security": "exact ELF blob comparison and independent archive-key pin; no trust bypass"
+  },
+  "observed_failure": {
+    "changed_zip_without_source_change": "native .o depfile referenced only termux-bootstrap-zip.S",
+    "stale_elf_bytes_arm": 44788,
+    "stale_elf_bytes_aarch64": 46608,
+    "real_zip_bytes_arm": 22707340,
+    "real_zip_bytes_aarch64": 25648115
+  },
+  "change": "generate a SHA256 dependency header before every NDK configure/build; include it in assembly; compare exported ELF blob/blob_size to exact source ZIP after packaging",
+  "executions": [
+    "41 selected app tests and 6 subtests passed",
+    "old bridge APK rejected with APK_EMBEDDED_BOOTSTRAP_MISMATCH",
+    "ZIP-comment-only incremental mutation rebuilt and matched both ARM payloads",
+    "original imported ZIPs restored and final debug matrix rebuilt",
+    "post-package native payload matrix PASS for universal and both split APKs"
+  ],
+  "producer_source_commit": "e7f23f46d039d04577c035457c920047f03dc2a1",
+  "producer_source_run": 41904631252,
+  "recovery_run": 42657253878,
+  "signed_apt_snapshot_run": 42658185015,
+  "repository_url": "https://raw.githubusercontent.com/rafaelmeloreisnovo/termux-packages/rafcodephi-apt-preview-42658185015/repo",
+  "archive_key_sha256": "12beed0a1af401641bade1ae0d02f94d593bfc6cf8bda76d737d558b92df5f6b",
+  "bootstrap_sha256": {
+    "arm": "2bc6722bc8a9421116b67c42a0503f862a3b4a6e1c9ba2f9721883fd4e384654",
+    "aarch64": "3837400010ff4f9436d0fbc0acbfadfa1ba8079bf6222c24724071e94f440d50"
+  },
+  "F_ok": ["real payload import passed", "native .incbin dependency repaired", "signed HTTPS APT index and dependency downloads passed on host for ARM32 and ARM64"],
+  "F_gap": ["physical Android install and pkg execution: TOKEN_VAZIO", "official release signing and production APT identity not promoted"],
+  "F_next": ["install this exact APK and run pkg update then pkg install nano ninja python", "record APK/bootstrap hash and device result"],
+  "rollback": "revert this branch source change; preserve prior artifacts and receipts",
+  "claim_allowed": false,
+  "device_runtime": "TOKEN_VAZIO"
+}

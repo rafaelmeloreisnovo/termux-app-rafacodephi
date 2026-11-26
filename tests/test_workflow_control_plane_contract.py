@@ -40,6 +40,7 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
             "08_VECTRA_V3",
             "09_ENTERPRISE",
             "10_PROVIDER",
+            "11_REAL_PKG_TOOLCHAIN",
         ):
             self.assertIn(token, self.control)
         self.assertIn("INVALID_ROUTE", self.control)
@@ -82,6 +83,7 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
         self.assertIn("URGENCY_DOES_NOT_BYPASS_GATES", self.control)
         self.assertIn("provider_protection", self.control)
         self.assertIn("./.github/workflows/provider-protection-gate.yml", self.control)
+        self.assertIn("./.github/workflows/real-pkg-apk-ci.yml", self.control)
         self.assertIn("Emitir receipt antes de decidir PASS/FAIL", self.control)
 
     def test_arm32_wrappers_delegate_to_one_reusable_pillar(self) -> None:
@@ -138,6 +140,7 @@ class WorkflowControlPlaneContractTests(unittest.TestCase):
         self.assertIn(".github/workflows/00_START_HERE.yml", relative)
         self.assertIn(".github/workflows/_reusable-arm32-compat.yml", relative)
         self.assertIn(".github/workflows/provider-protection-gate.yml", relative)
+        self.assertIn(".github/workflows/real-pkg-apk-ci.yml", relative)
 
         records = self.action_audit.audit(self.root, paths)
         mutable = [

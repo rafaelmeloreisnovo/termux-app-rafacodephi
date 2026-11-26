@@ -183,7 +183,9 @@ def test_application_environment_and_terminal_share_runtime_path_graph() -> None
     ]:
         assert token in env
 
-    assert "Do not hard-gate terminal startup on bash" in session
+    assert "ShellRuntimeProbe.canRun(shellFile, shellCwd," in session
+    assert "if (!shellFile.isFile() || !shellFile.canExecute()) continue;" in session
+    assert "executionCommand.executable = shellFile.getAbsolutePath();" in session
     assert "LOGIN_SHELL_BINARIES" in session
     assert "/system/bin/sh" in session
 
