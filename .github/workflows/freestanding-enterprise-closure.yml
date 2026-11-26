@@ -58,7 +58,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_RAF_CHANNEL: canonical
+  # PR proof consumes the immutable candidate; default builds stay on merged main.
+  TERMUX_PACKAGES_RAF_CHANNEL: ${{ github.event_name == 'pull_request' && 'candidate' || 'canonical' }}
   TERMUX_PACKAGES_RAF_REQUIRE_PINNED: 'true'
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
@@ -109,6 +110,9 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ubuntu-24.04
     timeout-minutes: 240
+    env:
+      TERMUX_DOCKER_USE_SUDO: '1'
+      TERMUX_BUILDER_IMAGE_NAME: ghcr.io/termux-play-store/package-builder@sha256:09cdbb34db05274dfcdf0e52430de2980e3e58aa34fa122a05c014bf67e24124
     steps:
       - name: Checkout RAFCODEPHI app
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7 (pinned verified official tag)
@@ -154,6 +158,7 @@ jobs:
             scripts/validate-rafcodephi-build-properties.sh
             scripts/run-docker.sh
             scripts/run-rafcodephi-bootstrap-docker.sh
+            scripts/ci/rafcodephi_prepare_ndk29.sh
             scripts/build-rafcodephi-real-bootstrap.sh
             scripts/repair_rafcodephi_bootstrap_symlinks.py
             scripts/generate-bootstraps.sh
@@ -179,8 +184,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/reports
+          # Use the same SHA-bound NDK29 preparation as the package producer.
+          bash scripts/run-docker.sh bash scripts/ci/rafcodephi_prepare_ndk29.sh \
+            2>&1 | tee build/reports/rafcodephi-freestanding-ndk29-prepare.log
           chmod +x scripts/run-docker.sh scripts/build-rafcodephi-real-bootstrap.sh scripts/run-rafcodephi-bootstrap-docker.sh
-          bash ./scripts/run-rafcodephi-bootstrap-docker.sh \
+          bash ./scripts/run-rafcodephi-bootstrap-docker.sh env \
+            NDK=/home/builder/.termux-build/android-ndk-r29 \
             ./scripts/build-rafcodephi-real-bootstrap.sh \
             --architectures arm,aarch64 \
             2>&1 | tee build/reports/rafcodephi-freestanding-real-bootstrap.log

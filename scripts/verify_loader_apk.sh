@@ -87,10 +87,31 @@ fi
 mapfile -t dex_files < <(unzip -Z1 "${APK}" | grep -E '^classes([0-9]*)?\.dex$' || true)
 dex_count="${#dex_files[@]}"
 record "dex_count=${dex_count}"
-if [[ "${dex_count}" -ne 1 ]]; then
-  fail "functional loader requires exactly one DEX, actual=${dex_count}"
+# API 21+ supports native multidex. Restrict the loader to its observed one-
+# or two-DEX layout and validate every archive entry, not just classes.dex.
+# Extra DEX files, gaps, duplicate names or missing entrypoint classes fail.
+if (( dex_count < 1 || dex_count > 2 )); then
+  fail "functional loader requires one or two DEX files, actual=${dex_count}"
 else
-  descriptors="$(unzip -p "${APK}" "${dex_files[0]}" | strings -a | grep -oE 'L[A-Za-z0-9_/$.-]+;' | sort -u || true)"
+  descriptors=""
+  for (( dex_index=0; dex_index<dex_count; dex_index++ )); do
+    expected_name="classes.dex"
+    if (( dex_index > 0 )); then expected_name="classes$((dex_index + 1)).dex"; fi
+    dex_name="${dex_files[dex_index]}"
+    if [[ "${dex_name}" != "${expected_name}" ]]; then
+      fail "noncanonical DEX sequence expected=${expected_name} actual=${dex_name}"
+      continue
+    fi
+    if ! unzip -tqq "${APK}" "${dex_name}" >/dev/null 2>&1; then
+      fail "unreadable DEX archive entry: ${dex_name}"
+      continue
+    fi
+    dex_sha="$(unzip -p "${APK}" "${dex_name}" | sha256sum | awk '{print $1}')"
+    record "dex_sha256[${dex_name}]=${dex_sha}"
+    this_descriptors="$(unzip -p "${APK}" "${dex_name}" | strings -a | grep -oE 'L[A-Za-z0-9_/$.-]+;' || true)"
+    descriptors+="${this_descriptors}"$'\n'
+  done
+  descriptors="$(printf '%s' "${descriptors}" | sed '/^$/d' | sort -u)"
   printf '\n[dex_class_descriptors]\n%s\n' "${descriptors}" | tee -a "${REPORT}"
   for descriptor in \
     'Lcom/termux/rafacodephi/loader/LoaderActivity;' \
@@ -100,7 +121,6 @@ else
     if grep -Fxq -- "${descriptor}" <<<"${descriptors}"; then pass "dex:${descriptor}"; else fail "DEX missing ${descriptor}"; fi
   done
 fi
-
 payloads="$(unzip -Z1 "${APK}" | grep -Ei '(^|/)(bootstrap|payload).*(\.zip|\.tar|\.gz)$' || true)"
 if [[ -z "${payloads}" ]]; then
   pass no_embedded_bootstrap_payload

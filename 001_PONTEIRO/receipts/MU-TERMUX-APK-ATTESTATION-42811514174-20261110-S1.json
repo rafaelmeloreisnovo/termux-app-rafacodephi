@@ -1,0 +1,59 @@
+{
+  "schema": "rafaelia.mu-write/v1",
+  "mu_id": "MU-TERMUX-APK-ATTESTATION-42811514174-20261110-S1",
+  "timestamp_utc": "2026-11-10T12:37:01Z",
+  "parent": "master@0653ac63538b333460a1c739c593440911cff496",
+  "kind": "ADDITIVE_CONFIG_HOST_TEST_RECEIPT",
+  "producer_repository": "rafaelmeloreisnovo/termux-app-rafacodephi",
+  "branch": "rafcode/apk-device-attestation-42811514174-20261110",
+  "authority": "local Android app producer: configuration/script/host gate only",
+  "route": "NOVOexport/001_PONTEIRO/RAFCODEPHI_APK_ATTESTATION_42811514174_V1.md",
+  "source": {
+    "ci_run_id": "42811514174",
+    "upload_scope": "offline user-supplied APK+receipts",
+    "source_commit": "TOKEN_VAZIO",
+    "build_receipt_sha256": "TOKEN_VAZIO"
+  },
+  "delta": "Added immutable APK variant manifest, read-only ADB installed-base hash attestor, 9-case host negative tests and scoped CI gate. No app installation or master mutation.",
+  "repo_file_blobs": {
+    "manifest": "82b12f2870e86d9f5c4c6306075b9d0939eeb7d0",
+    "attestor": "5227fa4221d45d966ee24b838452a0c976015208",
+    "host_tests": "865df1433faf397767634875f6df18eb1c3cd9dc",
+    "ci_workflow": "f5f5ac7aae6988931cf712dd749ac70cf12d079b",
+    "runbook": "2ce799493cd499eeb3eb8ead1f45c96c5b859d0f"
+  },
+  "local_test": {
+    "command": "python3 -m unittest discover -s tests -p test_attest_installed_apk.py -v",
+    "assertions": "9/9 PASS_SCOPED (host mocks)",
+    "android_hardware": "NOT_RUN",
+    "ci_exact_head": "TOKEN_VAZIO"
+  },
+  "governance": {
+    "risk": "LOW_READ_ONLY",
+    "data": "PUBLIC_CONFIG_AND_HASH_ONLY",
+    "privacy": "NO_SERIAL_NO_PRIVATE_DEVICE_LOGS",
+    "security": "FAIL_CLOSED",
+    "rollback": "close draft PR or scoped revert, no delete",
+    "claim_allowed": false,
+    "release_allowed": false
+  },
+  "evidence_gap": [
+    "EXACT_INSTALLED_APK_NOT_ATTESTED",
+    "PA_RECEIPT_NOT_BOUND_TO_INSTALL",
+    "APT_PKG_PROOT_E2E_NOT_RUN",
+    "RELEASE_SIGNATURE_NOT_VERIFIED",
+    "SOURCE_COMMIT_BUILD_RECEIPT_NOT_BOUND"
+  ],
+  "routes": [
+    "P",
+    "C",
+    "R",
+    "I",
+    "E"
+  ],
+  "r3": {
+    "F_ok": "manifest, script, host tests, CI workflow and runbook persisted with GitHub readback; nine mock tests passed",
+    "F_gap": "physical installation/PA linkage, source/receipt, signed release and E2E pending",
+    "F_next": "CI exact-head then read-only single-device attestation; independent E2E and signing after"
+  }
+}

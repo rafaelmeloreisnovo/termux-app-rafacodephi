@@ -158,8 +158,8 @@ matrix = {
     "api_package": "com.termux.rafacodephi.api",
     "api_receiver_component": "com.termux.rafacodephi.api/com.termux.api.TermuxApiReceiver",
     "api_access_control": "SIGNATURE_PERMISSION_NO_SHARED_UID",
-    "package_repo_runtime_state": "BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED",
-    "apt_update_guard": "RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED",
+    "package_repo_runtime_state": next(iter({r["package_repo_runtime_state"] for r in receipts.values()})) if len({r["package_repo_runtime_state"] for r in receipts.values()}) == 1 else "TOKEN_VAZIO_INCONSISTENT_ARCH",
+    "apt_update_guard": next(iter({r["apt_update_guard"] for r in receipts.values()})) if len({r["apt_update_guard"] for r in receipts.values()}) == 1 else "TOKEN_VAZIO_INCONSISTENT_ARCH",
     "architectures": receipts,
     "source_manifest": str(manifest_path),
     "source_manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
@@ -169,6 +169,16 @@ matrix = {
     "claim_allowed_device_runtime": False,
     "device_runtime_proof": "TOKEN_VAZIO",
 }
+if matrix["package_repo_runtime_state"] == "TOKEN_VAZIO_INCONSISTENT_ARCH" or matrix["apt_update_guard"] == "TOKEN_VAZIO_INCONSISTENT_ARCH":
+    raise SystemExit("mixed signed/blocked APT modes in ARM/AArch64 bootstrap pair")
+# The legacy default is intentionally fail-closed. A signed candidate
+# must have passed the independent key hash gate in both imports.
+allowed = {
+    "BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED": "RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED",
+    "SIGNED_REPOSITORY_CONFIGURED": "DISABLED_SIGNED_REPOSITORY_CONFIGURED",
+}
+if matrix["package_repo_runtime_state"] not in allowed or matrix["apt_update_guard"] != allowed[matrix["package_repo_runtime_state"]]:
+    raise SystemExit("unrecognized or mismatched APT repository state")
 matrix_path.parent.mkdir(parents=True, exist_ok=True)
 matrix_path.write_text(json.dumps(matrix, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY

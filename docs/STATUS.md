@@ -1,3 +1,5 @@
+> **Atualização de leitura (31/10/2026):** este STATUS mantém o corte histórico de 26/09/2026. Para o HEAD atual e os limites de evidência, consulte [SOURCE_TRUTH_20261031.md](SOURCE_TRUTH_20261031.md). Nenhum teste/device foi promovido nesta reconciliação.
+
 # STATUS — fonte de verdade de build, runtime e conclusão
 
 > Última revisão: 2026-09-26  

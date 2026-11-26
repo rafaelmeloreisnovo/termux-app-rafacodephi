@@ -95,7 +95,30 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
     server_version = "RAFAELIAHealth/1"
     sys_version = ""
 
+    def _trusted_host(self) -> bool:
+        # HTTP Host is untrusted input; a loopback bind alone does not
+        # prohibit DNS-rebinding or cross-origin browser requests.
+        values = self.headers.get_all("Host", [])
+        if len(values) != 1:
+            return False
+        host = values[0].strip().lower()
+        port = self.server.server_port  # type: ignore[attr-defined]
+        accepted = (
+            (f"[::1]:{port}",) if self.server.address_family == socket.AF_INET6
+            else (f"127.0.0.1:{port}", f"localhost:{port}")
+        )
+        return host in accepted
+
+    def _allow_read(self, *, include_body: bool = True) -> bool:
+        if self._trusted_host():
+            return True
+        self._send(400, error_payload("invalid_host", "host_not_loopback"),
+                   include_body=include_body)
+        return False
+
     def do_GET(self) -> None:  # noqa: N802 - stdlib handler contract
+        if not self._allow_read():
+            return
         if self.path not in ALLOWED_PATHS:
             self._send(404, error_payload("not_found", "path_not_allowed"))
             return
@@ -103,6 +126,8 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
         self._send(200, snapshot_payload(snapshot))
 
     def do_HEAD(self) -> None:  # noqa: N802
+        if not self._allow_read(include_body=False):
+            return
         if self.path not in ALLOWED_PATHS:
             self._send(404, b"", include_body=False)
             return
@@ -125,6 +150,7 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
         return
 
     def _send(self, code: int, body: bytes, *, include_body: bool = True) -> None:
+        self.close_connection = True
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
@@ -138,6 +164,12 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
 
 class HealthHTTPServer(HTTPServer):
     allow_reuse_address = True
+
+    def get_request(self):
+        # Limit idle or stalled localhost clients; no extra workers are created.
+        connection, peer = super().get_request()
+        connection.settimeout(3.0)
+        return connection, peer
 
     def __init__(
         self,

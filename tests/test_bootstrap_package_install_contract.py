@@ -28,6 +28,9 @@ def test_rewritten_bootstraps_are_declared_and_preflight_materialized() -> None:
         assert f'.incbin "{zip_name}"' in asm
 
     assert "verifyBootstrapZipsPresent" in build_gradle
+    assert 'dependsOn(tasks.named("verifyBootstrapZipsPresent"))' in build_gradle
+    assert 'it.name == "preBuild"' in build_gradle
+    assert 'it.name.startsWith("externalNativeBuild")' in build_gradle
     assert "externalNativeBuild" in build_gradle
     assert "validateSideBySideContract" in build_gradle
     assert "Bootstrap source:" in preflight
@@ -180,7 +183,9 @@ def test_application_environment_and_terminal_share_runtime_path_graph() -> None
     ]:
         assert token in env
 
-    assert "Do not hard-gate terminal startup on bash" in session
+    assert "ShellRuntimeProbe.canRun(shellFile, shellCwd," in session
+    assert "if (!shellFile.isFile() || !shellFile.canExecute()) continue;" in session
+    assert "executionCommand.executable = shellFile.getAbsolutePath();" in session
     assert "LOGIN_SHELL_BINARIES" in session
     assert "/system/bin/sh" in session
 
@@ -246,3 +251,41 @@ def test_catalog_never_promotes_unknown_hash_to_trust_automatically() -> None:
     assert 'candidate_state' in script
     assert '"PENDING_OWNER_REVIEW"' in script
     assert 'item.get("status") != "OWNER_APPROVED"' in script
+
+
+def test_bootstrap_prepare_routes_never_call_nonexistent_gradle_task() -> None:
+    prepare = read("scripts/verify_bootstrap_contract.sh")
+    assert "RAF_BOOTSTRAP_SOURCE:-local" in prepare
+    assert "bash scripts/build_bootstrap_profile.sh" in prepare
+    assert "bash scripts/prepare_bootstrap_env.sh --print-env" in prepare
+    assert "rafcodephi-bootstrap-env.sh" in prepare
+    assert "mktemp build/reports/.rafcodephi-bootstrap-env." in prepare
+    assert "mv -f \"$temp_env\" \"$env_file\"" in prepare
+    assert '\"$export_count\" != \"8\"' in prepare
+    assert '\"$invalid_count\" != \"0\"' in prepare
+    assert "UPSTREAM_PREFIX_BINARY_RISK" in prepare
+    assert "./gradlew :app:downloadBootstraps" not in prepare
+
+
+def test_runtime_pkg_claim_is_not_inferred_from_bootstrap_generation() -> None:
+    producer = read("scripts/prepare_bootstrap_env.sh")
+    script = read("scripts/device_pkg_smoke.sh")
+    assert "BLOCKED_CUSTOM_REPOSITORY_NOT_PUBLISHED" in producer
+    assert "RAFCODEPHI_PACKAGE_REPOSITORY_NOT_PUBLISHED" in producer
+    assert "REQUIRE_REAL_PKG" in script
+    assert "DEVICE_REAL_PKG_VALIDATED" in script
+
+def test_bootstrap_prepare_shell_syntax_and_case_closure() -> None:
+    """A token-only contract missed a truncated grep + duplicated case/esac block."""
+    import subprocess
+
+    script = ROOT / "scripts/verify_bootstrap_contract.sh"
+    proc = subprocess.run(["bash", "-n", str(script)], capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+    source = script.read_text(encoding="utf-8")
+    assert source.count("  --prepare)") == 1
+    assert source.count("  --prepare-dev)") == 1
+    assert source.count("  --runtime-prefix-only)") == 1
+    assert source.rstrip().endswith("esac")
+    assert source.count("    check_runtime_prefix") == 4
+    assert 'invalid_count="$(grep -Evc' in source

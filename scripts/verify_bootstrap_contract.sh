@@ -197,7 +197,39 @@ check_bootstraps(){
 case "${1:-}" in
   --prepare)
     check_free_space
-    ./gradlew :app:downloadBootstraps --no-daemon
+    case "${RAF_BOOTSTRAP_SOURCE:-local}" in
+      local)
+        log "Preparing local BRIDGE_ONLY bootstrap; pkg update/install and device runtime remain TOKEN_VAZIO"
+        bash scripts/build_bootstrap_profile.sh
+        ;;
+      source-built-real)
+        log "Importing hash-bound source-built-real ARM/AArch64 pair; device runtime remains TOKEN_VAZIO"
+        # Verify the exact source-built ZIPs before publishing a Gradle environment.
+        mkdir -p build/reports
+        env_file="build/reports/rafcodephi-bootstrap-env.sh"
+        temp_env="$(mktemp build/reports/.rafcodephi-bootstrap-env.XXXXXX)"
+        if bash scripts/prepare_bootstrap_env.sh --print-env > "$temp_env"; then
+          export_count="$(grep -Ec '^export TERMUX_BOOTSTRAP_(SHA256|BLAKE3)_(AARCH64|ARM|I686|X86_64)=[0-9a-f]{64}$' "$temp_env" || true)"
+          invalid_count="$(grep -Evc '^export TERMUX_BOOTSTRAP_(SHA256|BLAKE3)_(AARCH64|ARM|I686|X86_64)=[0-9a-f]{64}$' "$temp_env" || true)"
+          if [[ "$export_count" != "8" || "$invalid_count" != "0" ]]; then
+            rm -f "$temp_env"
+            fail "Source-built hash environment incomplete or malformed: expected 8 exact ZIP digests, found valid=$export_count invalid=$invalid_count"
+          fi
+          chmod 600 "$temp_env"
+          mv -f "$temp_env" "$env_file"
+          log "Hash-bound build environment saved: $env_file (source this file before Gradle assemble)"
+        else
+          rm -f "$temp_env"
+          fail "Source-built preflight failed; no replacement environment published"
+        fi
+        ;;
+      upstream)
+        fail "UPSTREAM_PREFIX_BINARY_RISK: upstream com.termux bootstrap is not RAFCODEPHI runtime proof; use source-built-real"
+        ;;
+      *)
+        fail "Unsupported RAF_BOOTSTRAP_SOURCE='${RAF_BOOTSTRAP_SOURCE}'"
+        ;;
+    esac
     check_bootstraps
     check_runtime_prefix
     ;;

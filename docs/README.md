@@ -1,3 +1,5 @@
+> **Comece pelo estado verificado em 31/10/2026:** [SOURCE_TRUTH_20261031.md](SOURCE_TRUTH_20261031.md). Configuração/limites pinados ao HEAD; os índices e status abaixo também preservam histórico. `DRAFT/HOLD · claim_allowed=false`.
+
 # Centro de Documentação — RAFCODEΦ / RAFAELIA
 
 > Ponto de entrada moderno para navegação, governança documental e excelência operacional.

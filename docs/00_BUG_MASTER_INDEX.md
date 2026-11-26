@@ -189,3 +189,12 @@ MODULE_A_CONSTANT != MODULE_B_CONSTANT unless an explicit bridge says so
 ```
 
 Se o source atual ainda não foi examinado para um claim específico, usar `TOKEN_VAZIO`/`HYPOTHESIS`, não preencher por memória.
+
+
+## 2026-10-24 — bootstrap contract CI coverage
+
+[Source gate receipt](../receipts/BOOTSTRAP_SOURCE_GATE_20261024.md): missing trigger inputs and exact-head verification; no Android runtime promotion.
+
+## Contrato APT / Bootstrap / Ninja V1
+
+[Implementação, limites de evidência, teste no aparelho e receipt](../001_PONTEIRO/APT_BOOTSTRAP_NINJA_V1.md).

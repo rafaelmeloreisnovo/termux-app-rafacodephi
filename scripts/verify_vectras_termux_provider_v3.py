@@ -45,7 +45,13 @@ def require(text: str, snippets: list[str], label: str, errors: list[str]) -> No
 
 
 def parse_default_package(build: str) -> str | None:
-    match = re.search(r'def\s+appPackageName\s*=\s*"([^"]+)"', build)
+    # The Gradle default is an explicit fallback to an environment override.
+    # Resolve the literal default only; never classify a dynamic CI override
+    # as observed without a corresponding build receipt.
+    match = re.search(
+        r'appPackageName\s*=\s*System\.getenv\("TERMUX_APP_PACKAGE_NAME"\)\s*\?:\s*"([^"]+)"',
+        build,
+    )
     return match.group(1) if match else None
 
 
@@ -93,9 +99,9 @@ def main() -> int:
     require(
         constants,
         [
-            'RUN_COMMAND_SERVICE_NAME = TERMUX_PACKAGE_NAME + ".app.RunCommandService"',
-            'RUN_COMMAND_PERMISSION = TERMUX_PACKAGE_NAME + ".permission.RUN_COMMAND"',
-            'RUN_COMMAND_ACTION = TERMUX_PACKAGE_NAME + ".RUN_COMMAND"',
+            'RUN_COMMAND_SERVICE_NAME = TERMUX_APP_CODE_PACKAGE_NAME + ".app.RunCommandService"',
+            'public static final class RUN_COMMAND_SERVICE',
+            'ACTION_RUN_COMMAND = TERMUX_PACKAGE_NAME + ".RUN_COMMAND"',
             'EXTRA_COMMAND_PATH = TERMUX_PACKAGE_NAME + ".RUN_COMMAND_PATH"',
             'EXTRA_ARGUMENTS = TERMUX_PACKAGE_NAME + ".RUN_COMMAND_ARGUMENTS"',
             'EXTRA_WORKDIR = TERMUX_PACKAGE_NAME + ".RUN_COMMAND_WORKDIR"',
@@ -120,7 +126,7 @@ def main() -> int:
         [
             'APP_SHELL("app-shell")',
             'TERMINAL_SESSION("terminal-session")',
-            'public static Runner runnerOf(String runnerName)',
+            'public static Runner runnerOf(String name)',
         ],
         "execution_command",
         errors,
@@ -130,15 +136,15 @@ def main() -> int:
     require(
         service,
         [
-            'TermuxConstants.TERMUX_SERVICE.EXTRA_COMMAND_PATH',
-            'TermuxConstants.TERMUX_SERVICE.EXTRA_ARGUMENTS',
-            'TermuxConstants.TERMUX_SERVICE.EXTRA_WORKDIR',
-            'TermuxConstants.TERMUX_SERVICE.EXTRA_RUNNER',
-            'TermuxConstants.TERMUX_SERVICE.EXTRA_PENDING_INTENT',
-            'ExecutionCommand.Runner.runnerOf',
+            'RUN_COMMAND_SERVICE.EXTRA_COMMAND_PATH',
+            'RUN_COMMAND_SERVICE.EXTRA_ARGUMENTS',
+            'RUN_COMMAND_SERVICE.EXTRA_WORKDIR',
+            'RUN_COMMAND_SERVICE.EXTRA_RUNNER',
+            'RUN_COMMAND_SERVICE.EXTRA_PENDING_INTENT',
+            'Runner.runnerOf(executionCommand.runner)',
             'TermuxFileUtils.getCanonicalPath',
             'new ExecutionCommand(',
-            'ResultSender.sendCommandResultData',
+            'execIntent.putExtra(TERMUX_SERVICE.EXTRA_PENDING_INTENT',
         ],
         "run_command_service",
         errors,
@@ -148,14 +154,14 @@ def main() -> int:
     require(
         plugin_utils,
         [
-            'resultConfig.resultBundleKey = TermuxConstants.TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE',
-            'resultConfig.resultStdoutKey = TermuxConstants.TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE_STDOUT',
-            'resultConfig.resultStdoutOriginalLengthKey = TermuxConstants.TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE_STDOUT_ORIGINAL_LENGTH',
-            'resultConfig.resultStderrKey = TermuxConstants.TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE_STDERR',
-            'resultConfig.resultStderrOriginalLengthKey = TermuxConstants.TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE_STDERR_ORIGINAL_LENGTH',
-            'resultConfig.resultExitCodeKey = TermuxConstants.TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE_EXIT_CODE',
-            'resultConfig.resultErrCodeKey = TermuxConstants.TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE_ERR',
-            'resultConfig.resultErrmsgKey = TermuxConstants.TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE_ERRMSG',
+            'resultConfig.resultBundleKey = TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE',
+            'resultConfig.resultStdoutKey = TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE_STDOUT',
+            'resultConfig.resultStdoutOriginalLengthKey = TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE_STDOUT_ORIGINAL_LENGTH',
+            'resultConfig.resultStderrKey = TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE_STDERR',
+            'resultConfig.resultStderrOriginalLengthKey = TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE_STDERR_ORIGINAL_LENGTH',
+            'resultConfig.resultExitCodeKey = TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE_EXIT_CODE',
+            'resultConfig.resultErrCodeKey = TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE_ERR',
+            'resultConfig.resultErrmsgKey = TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE_ERRMSG',
         ],
         "plugin_utils",
         errors,
@@ -166,9 +172,9 @@ def main() -> int:
         sender,
         [
             'resultBundle.putString(resultConfig.resultStdoutKey',
-            'resultBundle.putInt(resultConfig.resultStdoutOriginalLengthKey',
+            'resultBundle.putString(resultConfig.resultStdoutOriginalLengthKey',
             'resultBundle.putString(resultConfig.resultStderrKey',
-            'resultBundle.putInt(resultConfig.resultStderrOriginalLengthKey',
+            'resultBundle.putString(resultConfig.resultStderrOriginalLengthKey',
             'resultBundle.putInt(resultConfig.resultExitCodeKey',
             'resultBundle.putInt(resultConfig.resultErrCodeKey',
             'resultBundle.putString(resultConfig.resultErrmsgKey',

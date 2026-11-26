@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:rafcodephi:dual-engine-benchmark-receipt:v1",
+  "title": "RAFCODEPHI dual engine benchmark receipt v1",
+  "description": "One observation, not a runtime or performance claim.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "engine",
+    "workload_id",
+    "workload_version",
+    "algorithm_id",
+    "input_seed",
+    "operations",
+    "checksum_sha256",
+    "elapsed_ns",
+    "artifact_sha256",
+    "android_api",
+    "abi",
+    "run_state",
+    "claim_allowed",
+    "evidence_ref"
+  ],
+  "properties": {
+    "schema": {
+      "const": "rafcodephi.dual-engine-benchmark-receipt/v1"
+    },
+    "engine": {
+      "enum": [
+        "JAVA",
+        "NATIVE"
+      ]
+    },
+    "workload_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]{2,127}$"
+    },
+    "workload_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "algorithm_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]{2,127}$"
+    },
+    "input_seed": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{16}$"
+    },
+    "operations": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "checksum_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "elapsed_ns": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "artifact_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "android_api": {
+      "type": "integer",
+      "minimum": 29
+    },
+    "abi": {
+      "enum": [
+        "armeabi-v7a",
+        "arm64-v8a"
+      ]
+    },
+    "run_state": {
+      "enum": [
+        "NOT_RUN",
+        "OBSERVED",
+        "FAILED"
+      ]
+    },
+    "claim_allowed": {
+      "const": false
+    },
+    "evidence_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 512
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "run_state": {
+            "const": "OBSERVED"
+          }
+        },
+        "required": [
+          "run_state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checksum_sha256": {
+            "type": "string"
+          },
+          "elapsed_ns": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "artifact_sha256": {
+            "type": "string"
+          },
+          "evidence_ref": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "run_state": {
+            "const": "NOT_RUN"
+          }
+        },
+        "required": [
+          "run_state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checksum_sha256": {
+            "type": "null"
+          },
+          "elapsed_ns": {
+            "type": "null"
+          },
+          "artifact_sha256": {
+            "type": "null"
+          },
+          "evidence_ref": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

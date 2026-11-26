@@ -116,6 +116,9 @@ jobs:
       - name: Install test dependencies
         run: python3 -m pip install --disable-pip-version-check pytest
 
+      - name: Parse bootstrap preparation shell (fail closed)
+        run: bash -n scripts/verify_bootstrap_contract.sh
+
       - name: Validate static bootstrap install contract
         run: python3 tools/validate_bootstrap_package_install_contract.py
 
