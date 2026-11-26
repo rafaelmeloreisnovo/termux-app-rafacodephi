@@ -85,9 +85,23 @@ def fetch_live_rulesets(repository: str, default_branch: str, token: str) -> lis
             continue
         detail = github_get(base + f"/rulesets/{item['id']}", token)
         cond = ((detail.get("conditions") or {}).get("ref_name") or {})
-        includes = set(cond.get("include") or [])
-        if "~DEFAULT_BRANCH" in includes or f"refs/heads/{default_branch}" in includes:
-            applicable.append(detail)
+        # Only positively established coverage counts. GitHub's ~ALL includes
+        # the default branch, but exclusions take precedence. Do not infer
+        # coverage from unsupported glob syntax or malformed conditions.
+        if detail.get("target", "branch") != "branch" or detail.get("enforcement") != "active":
+            continue
+        includes = cond.get("include")
+        excludes = cond.get("exclude")
+        if not isinstance(includes, list) or not isinstance(excludes, list):
+            continue
+        if any(not isinstance(x, str) for x in includes + excludes):
+            continue
+        known = {"~ALL", "~DEFAULT_BRANCH", f"refs/heads/{default_branch}"}
+        if not known.intersection(includes) or known.intersection(excludes):
+            continue
+        if any(x.startswith("~") or any(ch in x for ch in "*?[]\\") for x in excludes):
+            continue
+        applicable.append(detail)
 
     return applicable
 
