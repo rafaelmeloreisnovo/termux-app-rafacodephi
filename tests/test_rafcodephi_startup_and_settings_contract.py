@@ -63,6 +63,49 @@ def test_installer_and_native_guard_do_not_treat_archive_symlink_metadata_as_a_r
     assert "if (!symlinks || !sh || !pkg)" in source
 
 
+def test_optional_verbativo_audit_cannot_block_session_or_keyboard_startup() -> None:
+    activity = read("app/src/main/java/com/termux/app/TermuxActivity.java")
+    manager = read("app/src/main/java/com/termux/app/bootstrap/VerbativoBootstrapManager.java")
+
+    on_create = activity.split("public void onCreate(Bundle savedInstanceState)", 1)[1].split(
+        "private boolean ensureStorageAccessOrRequest", 1
+    )[0]
+    verbativo_failure = on_create.split("if (!verbativoBootstrap.executeBootstrap())", 1)[1].split(
+        "} else {", 1
+    )[0]
+
+    assert "terminal initialization continues" in verbativo_failure
+    assert "mIsInvalidState" not in verbativo_failure
+    assert "return;" not in verbativo_failure
+    assert "catch (LinkageError e)" in manager
+
+    ordered_startup = (
+        "setTermuxTerminalViewAndClients();",
+        "setTerminalToolbarView(savedInstanceState);",
+        "setToggleKeyboardView();",
+        "startAndBindTermuxServiceOrFail();",
+    )
+    positions = [on_create.index(token) for token in ordered_startup]
+    assert positions == sorted(positions)
+    assert "ensureStorageAccessOrRequest()" not in on_create
+
+    initial_session = activity.split("private void createInitialSession(Intent intent)", 1)[1].split(
+        "private void reloadProperties", 1
+    )[0]
+    assert initial_session.index("addNewSession") < initial_session.index("requestStorageAccessAfterSessionReady")
+    assert "mTermuxService != null && !mTermuxService.isTermuxSessionsEmpty()" in initial_session
+    assert "shared-storage request deferred" in initial_session
+    assert "mHasRequestedStorageAccess" in initial_session
+    assert "private terminal session remains enabled" in initial_session
+
+    keyboard = activity.split("private void setToggleKeyboardView()", 1)[1].split(
+        "@SuppressLint", 1
+    )[0]
+    assert "R.id.toggle_keyboard_button" in keyboard
+    assert "onToggleSoftKeyboardRequest" in keyboard
+    assert "toggleTerminalToolbar" in keyboard
+
+
 def test_settings_entries_are_bound_on_ui_thread_and_activity_launches_return_to_ui_thread() -> None:
     settings = read("app/src/main/java/com/termux/app/activities/SettingsActivity.java")
 

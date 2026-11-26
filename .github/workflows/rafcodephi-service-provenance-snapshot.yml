@@ -41,13 +41,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout exact revision
-        uses: actions/checkout@v7.0.1
+      - name: Checkout exact revision and immutable historic source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Validate receipt schema and source bindings
         run: |
           python3 -m py_compile tools/validate_rafcodephi_service_provenance_receipt.py
-          python3 tools/validate_rafcodephi_service_provenance_receipt.py --self-test
+          # Archived snapshot is verified at the exact recorded Git commit/tree.
+          python3 tools/validate_rafcodephi_service_provenance_receipt.py --verify-archived-source --self-test
 
       - name: Validate dependency graph
         run: |
@@ -57,20 +60,24 @@ jobs:
       - name: Validate static bootstrap guard
         run: python3 tools/validate_terminal_service_bootstrap_gap.py
 
-      - name: Detect stale Vectras failure snapshot
+      - name: Validate current Vectras contract independently of archived evidence
         shell: bash
         run: |
-          set +e
-          output="$(python3 scripts/verify_vectras_termux_provider_v3.py --output "$RUNNER_TEMP/vectras-provider.json" 2>&1)"
-          status=$?
-          set -e
-          printf '%s\n' "$output"
-          if [ "$status" -eq 0 ]; then
-            echo "Receipt is stale: Vectras verifier now passes; update the receipt before promotion."
-            exit 1
-          fi
-          if ! grep -q '"error_count": 25' <<< "$output"; then
-            echo "Receipt is stale: Vectras failure signature changed; update the receipt before promotion."
-            exit 1
-          fi
-          echo "PASS: snapshot still records the current Vectras static-contract failure; runtime promotion remains blocked."
+          set -euo pipefail
+          python3 scripts/verify_vectras_termux_provider_v3.py --output "$RUNNER_TEMP/vectras-provider.json"
+          python3 - "$RUNNER_TEMP/vectras-provider.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          assert data["state"] == "PASS_STATIC_PROVIDER_CONTRACT", data["errors"]
+          assert data["claim_allowed"] is False
+          assert data["provider_package"] == "com.termux.rafacodephi"
+          assert data["checks"] and all(data["checks"].values()), data["checks"]
+          assert data["runtime_boundary"] and all(
+              value == "TOKEN_VAZIO" for value in data["runtime_boundary"].values()
+          ), data["runtime_boundary"]
+          print("CURRENT_PROVIDER=PASS_STATIC_ONLY")
+          print("ARCHIVED_20260901_RECEIPT=HISTORICAL_NOT_CURRENT")
+          print("CLAIM_ALLOWED=false")
+          PY

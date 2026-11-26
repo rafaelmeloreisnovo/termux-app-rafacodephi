@@ -268,6 +268,15 @@
       "closure_gate": "Supply causal design/mechanistic evidence or keep the claim non-causal.",
       "default_urgency": "high",
       "claim_allowed": false
+    },
+    {
+      "code": "TOKEN_VAZIO_UTIL",
+      "family": "utility",
+      "definition": "The claimed practical benefit or operational utility has not been measured for a bounded workload.",
+      "use_when": "A module or refactor is called useful, faster, smaller or safer without a comparable workload, baseline and measurement.",
+      "closure_gate": "Record a bounded use case, baseline, metric, exact artifact, observed result and falsifying comparison; do not infer authorship or provenance.",
+      "default_urgency": "medium",
+      "claim_allowed": false
     }
   ]
 }

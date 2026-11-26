@@ -87,6 +87,9 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
     /** Avoid starting/binding the TermuxService multiple times. */
     private boolean mIsTermuxServiceStartedAndBound;
 
+    /** Request optional shared-storage access only after a terminal session is ready. */
+    private boolean mHasRequestedStorageAccess;
+
     /**
      * The connection to the {@link TermuxService}. Requested in {@link #onCreate(Bundle)} with a call to
      * {@link #bindService(Intent, ServiceConnection, int)}, and obtained and stored in
@@ -240,15 +243,15 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
             return;
         }
 
-        // Execute Verbovivo bootstrap convergence validation
-        // This must happen before TermuxService startup to ensure app integrity
+        // Verbovivo is an optional native audit surface. The terminal bootstrap has its own
+        // fail-closed integrity gates in TermuxInstaller/BootstrapReadinessGate, so absence of
+        // this diagnostic library must never brick the activity before session/keyboard setup.
         VerbativoBootstrapManager verbativoBootstrap = new VerbativoBootstrapManager(this);
         if (!verbativoBootstrap.executeBootstrap()) {
-            Logger.logError(LOG_TAG, "Verbovivo bootstrap validation FAILED - app initialization blocked");
-            mIsInvalidState = true;
-            return;
+            Logger.logWarn(LOG_TAG, "Verbovivo diagnostic unavailable; terminal initialization continues");
+        } else {
+            Logger.logInfo(LOG_TAG, "Verbovivo bootstrap validation PASSED - " + verbativoBootstrap.formatMetrics());
         }
-        Logger.logInfo(LOG_TAG, "Verbovivo bootstrap validation PASSED - " + verbativoBootstrap.formatMetrics());
 
         setMargins();
 
@@ -281,17 +284,14 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
 
         FileReceiverActivity.updateFileReceiverActivityComponentsState(this);
 
-        // On Android 11+ (especially with targetSdk>=30), Termux will often touch primary external
-        // storage (e.g. ~/storage/shared) early during initialization or soon after. If the user
-        // has not granted legacy/managing external storage permission, this can lead to failures
-        // that look like "opens then instantly closes". So we request permission BEFORE starting
-        // the TermuxService.
-        if (!ensureStorageAccessOrRequest()) {
-            // Permission request UI has been launched. Wait for callback.
-            return;
-        }
-
+        // The private PREFIX, terminal session and soft keyboard do not require shared-storage
+        // permission. Start the service first so a denied/deferred storage grant cannot leave the
+        // activity without a shell. The method is idempotent for permission callbacks/rebinds.
         startAndBindTermuxServiceOrFail();
+
+        // Shared-storage permission is requested only after the initial session exists. Launching
+        // a settings activity here can stop this activity before onServiceConnected() and strand
+        // first boot without a session.
     }
 
     /**
@@ -505,6 +505,7 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
             } else {
                 mTermuxTerminalSessionActivityClient.setCurrentSession(mTermuxTerminalSessionActivityClient.getCurrentStoredSessionOrLast());
             }
+            requestStorageAccessAfterSessionReady();
         }
 
         // Update the {@link TerminalSession} and {@link TerminalEmulator} clients.
@@ -534,8 +535,22 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
                 launchFailsafe = intent.getExtras().getBoolean(TERMUX_ACTIVITY.EXTRA_FAILSAFE_SESSION, false);
             }
             mTermuxTerminalSessionActivityClient.addNewSession(launchFailsafe, null);
+            if (mTermuxService != null && !mTermuxService.isTermuxSessionsEmpty()) {
+                requestStorageAccessAfterSessionReady();
+            } else {
+                Logger.logError(LOG_TAG, "Initial terminal session was not created; shared-storage request deferred");
+            }
         } catch (WindowManager.BadTokenException e) {
             // Activity finished - ignore.
+        }
+    }
+
+    private void requestStorageAccessAfterSessionReady() {
+        if (mHasRequestedStorageAccess) return;
+        mHasRequestedStorageAccess = true;
+
+        if (!ensureStorageAccessOrRequest()) {
+            Logger.logInfo(LOG_TAG, "Shared-storage permission pending; private terminal session remains enabled");
         }
     }
 
@@ -907,10 +922,7 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         Logger.logVerbose(LOG_TAG, "onActivityResult: requestCode: " + requestCode + ", resultCode: "  + resultCode + ", data: "  + IntentUtils.getIntentString(data));
         if (requestCode == PermissionUtils.REQUEST_GRANT_STORAGE_PERMISSION) {
             requestStoragePermission(true);
-            // If permission granted, we can now start/bind the service.
-            if (ensureStorageAccessOrRequest()) {
-                startAndBindTermuxServiceOrFail();
-            }
+            startAndBindTermuxServiceOrFail();
         }
     }
 
@@ -920,10 +932,7 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         Logger.logVerbose(LOG_TAG, "onRequestPermissionsResult: requestCode: " + requestCode + ", permissions: "  + Arrays.toString(permissions) + ", grantResults: "  + Arrays.toString(grantResults));
         if (requestCode == PermissionUtils.REQUEST_GRANT_STORAGE_PERMISSION) {
             requestStoragePermission(true);
-            // If permission granted, we can now start/bind the service.
-            if (ensureStorageAccessOrRequest()) {
-                startAndBindTermuxServiceOrFail();
-            }
+            startAndBindTermuxServiceOrFail();
         }
     }
 

@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_BUILD_SHA: 8fcb13afd14398b496ec0c90026a6765fa09c54b
+  TERMUX_PACKAGES_BUILD_SHA: d65cd6c2afa9d16196ba0375aaff36833d530b41
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
 
@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 240
     steps:
       - name: Checkout app
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 1
@@ -43,7 +43,7 @@ jobs:
           cache: gradle
 
       - name: Checkout patched current termux-packages
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: rafaelmeloreisnovo/termux-packages
           ref: ${{ env.TERMUX_PACKAGES_BUILD_SHA }}

@@ -32,7 +32,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERMUX_PACKAGES_RAF_CHANNEL: candidate
+  TERMUX_PACKAGES_RAF_CHANNEL: canonical
   TERMUX_PACKAGES_RAF_REQUIRE_PINNED: 'true'
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
@@ -43,12 +43,12 @@ jobs:
     timeout-minutes: 240
     steps:
       - name: Checkout RafCodePhi app
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Validate semantic custody and resolve candidate source
+      - name: Validate semantic custody and resolve merged canonical source
         shell: bash
         run: |
           set -euo pipefail
@@ -69,8 +69,8 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      - name: Checkout patched termux-packages candidate
-        uses: actions/checkout@v7.0.1
+      - name: Checkout pinned merged termux-packages producer
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: rafaelmeloreisnovo/termux-packages
           ref: ${{ env.TERMUX_PACKAGES_SHA }}
@@ -78,7 +78,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Preflight complete candidate source capability set
+      - name: Preflight complete pinned producer source capability set
         working-directory: termux-packages
         shell: bash
         run: |

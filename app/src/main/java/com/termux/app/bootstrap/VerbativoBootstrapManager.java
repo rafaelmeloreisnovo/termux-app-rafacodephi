@@ -89,6 +89,11 @@ public class VerbativoBootstrapManager {
         } catch (Exception e) {
             Log.e(TAG, "Bootstrap validation exception", e);
             return false;
+        } catch (LinkageError e) {
+            // The convergence engine is an optional audit surface. Missing or ABI-incompatible
+            // native symbols must be reported without blocking the terminal session startup.
+            Log.e(TAG, "Bootstrap validation native linkage unavailable", e);
+            return false;
         }
     }
 

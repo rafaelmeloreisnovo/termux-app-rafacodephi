@@ -196,8 +196,15 @@ def validate() -> list[str]:
         "TERMUX_REAL_PKG_RELOCATION_CLAIM_ALLOWED", "false",
     ):
         require(shell_env, token, "runtime shell environment", errors)
+    # Validate the actual shell-selection fallback, not an incidental comment.
+    # A bash-only startup must fail this structural contract, including when
+    # the comment text still exists elsewhere in the source.
     for token in (
-        "Do not hard-gate terminal startup on bash", "LOGIN_SHELL_BINARIES", "/system/bin/sh",
+        "for (String shellBinary : UnixShellEnvironment.LOGIN_SHELL_BINARIES)",
+        "if (!shellFile.isFile() || !shellFile.canExecute()) continue;",
+        "ShellRuntimeProbe.canRun(shellFile, shellCwd,",
+        "executionCommand.executable = shellFile.getAbsolutePath();",
+        'executionCommand.executable = "/system/bin/sh";',
         "TermuxRuntimePaths.layoutState()",
     ):
         require(session, token, "terminal startup fallback", errors)

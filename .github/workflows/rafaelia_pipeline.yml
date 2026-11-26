@@ -95,7 +95,7 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -127,6 +127,9 @@ jobs:
 
       - name: "🧭 Validate RAFAELIA Build Surface Contract"
         run: python3 scripts/validate_rafaelia_build_surface_contract.py
+
+      - name: "🧪 Validate APK Output Discovery (fail-closed)"
+        run: python3 -m unittest discover -s scripts/tests -p "test_apk_output_discovery.py" -v
 
       - name: "✅ Validate Gradle Wrapper"
         uses: gradle/actions/wrapper-validation@v6
@@ -237,7 +240,7 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -282,7 +285,7 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -341,7 +344,7 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -408,7 +411,7 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -465,7 +468,7 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -505,7 +508,7 @@ jobs:
 
     steps:
       - name: "📥 Checkout Repository"
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 

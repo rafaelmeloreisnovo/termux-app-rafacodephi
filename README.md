@@ -1,3 +1,5 @@
+> **Estado documentado em 31/10/2026 — DRAFT/HOLD:** [fonte, configuração Android, bootstrap e gaps verificados no HEAD](docs/SOURCE_TRUTH_20261031.md). Este sucessor prevalece para a leitura atual; materiais datados abaixo são predecessores e não comprovam CI/device/release.
+
 > **Reconciliação documental 25/10/2026 — DRAFT/HOLD:** [Novo mapa de diretórios, aplicações, evidências e lacunas](docs/RAFAELIA_DOCS_RECONCILIATION_20261025.md). Os textos datados abaixo permanecem como predecessores; claims operacionais dependem do HEAD e de testes próprios.
 
 # Termux Application - RafaCodePhi Fork
