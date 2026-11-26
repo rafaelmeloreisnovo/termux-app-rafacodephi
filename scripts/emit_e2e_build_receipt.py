@@ -88,7 +88,8 @@ def validate_source_manifest(doc: dict) -> None:
         "device_runtime": "TOKEN_VAZIO",
         "claim_allowed": False,
     }
-    drift = [k for k, v in expected.items() if doc.get(k) != v]
+    drift = [k for k, v in expected.items()
+             if type(doc.get(k)) is not type(v) or doc.get(k) != v]
     if drift:
         raise BuildReceiptError("bootstrap source manifest drift: " + ", ".join(drift))
     arch_abi = {"arm": "armeabi-v7a", "aarch64": "arm64-v8a"}
@@ -137,7 +138,8 @@ def verify_real_bootstrap_in_apk(apk: Path, bootstrap_zip: Path, source: dict) -
                 "claim_allowed": False,
                 "release_allowed": False,
             }
-            if any(profile.get(k) != v for k, v in expected_fields.items()):
+            if any(type(profile.get(k)) is not type(v) or profile.get(k) != v
+                   for k, v in expected_fields.items()):
                 raise BuildReceiptError("BOOTSTRAP_PROFILE_DRIFT")
             raw_profile = json.dumps(profile, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
             if hashlib.sha256(raw_profile).hexdigest() != source["bootstrap_profile_sha256"]:
@@ -244,6 +246,31 @@ def self_test() -> int:
                 assert "APK_EMBEDDED_BOOTSTRAP_MISMATCH" in str(exc)
             else:
                 raise AssertionError("unrelated embedded bootstrap must be rejected")
+        # JSON numbers compare equal to booleans in Python; never accept them
+        # as explicit non-promotion flags, even with internally matching hashes.
+        for malformed in (0, 0.0, None, "false"):
+            try:
+                validate_source_manifest(dict(source, claim_allowed=malformed))
+            except BuildReceiptError:
+                pass
+            else:
+                raise AssertionError("non-boolean source claim_allowed must be rejected")
+        for field in ("claim_allowed", "release_allowed"):
+            bad_profile = dict(profile)
+            bad_profile[field] = 0
+            bad_bootstrap = root / "bad-profile.zip"
+            with zipfile.ZipFile(bad_bootstrap, "w") as archive:
+                archive.writestr("BOOTSTRAP_PROFILE.json", json.dumps(bad_profile))
+            bad_bytes = json.dumps(bad_profile, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+            bad_source = dict(source, artifact_size=bad_bootstrap.stat().st_size,
+                              artifact_sha256=sha256_file(bad_bootstrap),
+                              bootstrap_profile_sha256=hashlib.sha256(bad_bytes).hexdigest())
+            try:
+                verify_real_bootstrap_in_apk(apk, bad_bootstrap, bad_source)
+            except BuildReceiptError as exc:
+                assert "BOOTSTRAP_PROFILE_DRIFT" in str(exc)
+            else:
+                raise AssertionError("non-boolean bootstrap flag must be rejected")
         bootstrap.write_bytes(b"drift")
         try:
             emit(source_manifest_path=source_path, bootstrap_zip=bootstrap,
