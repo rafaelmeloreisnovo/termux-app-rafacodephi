@@ -155,12 +155,28 @@ def verify(path):
             "device_runtime": "TOKEN_VAZIO_NOT_RUN", "performance": "TOKEN_VAZIO_PERFORMANCE_UNMEASURED"}
 
 
+def artifact_paths(path):
+    # Share the bootstrap gate's bounded AGP metadata discovery.
+    if not path.exists() and path.parent.name == "apk" and path.name in ("debug", "release"):
+        import os
+        if __package__:
+            from .verify_apk_bootstrap_payload import discover_packaged_apk_directory
+        else:
+            from verify_apk_bootstrap_payload import discover_packaged_apk_directory
+        folder = discover_packaged_apk_directory(path, os.environ.get("TERMUX_APK_VERSION_TAG", ""))
+        metadata = json.loads((folder / "output-metadata.json").read_text(encoding="utf-8"))
+        names = [entry["outputFile"] for entry in metadata["elements"]]
+        require(len(names) == len(set(names)), "duplicate APK metadata outputs")
+        return [folder / name for name in sorted(names)]
+    return sorted(path.glob("*.apk")) if path.is_dir() else [path]
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("artifacts", nargs="+", type=Path)
     args = parser.parse_args()
     paths = []
     for path in args.artifacts:
-        paths.extend(sorted(path.glob("*.apk")) if path.is_dir() else [path])
+        paths.extend(artifact_paths(path))
     require(bool(paths), "no artifacts")
     print(json.dumps([verify(p) for p in paths], indent=2))
