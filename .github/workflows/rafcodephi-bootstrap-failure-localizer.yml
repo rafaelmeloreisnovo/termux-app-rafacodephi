@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  TERMUX_PACKAGES_BUILD_SHA: fd9b9c7ccb2ad385ed3a43619fe909fad4d92937
+  TERMUX_PACKAGES_BUILD_SHA: 7a96fb224de59f32e9e3e3c40a8235e9a5a3c8d9
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'
 
@@ -21,13 +21,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 1
 
       - name: Checkout exact termux-packages source
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: rafaelmeloreisnovo/termux-packages
           ref: ${{ env.TERMUX_PACKAGES_BUILD_SHA }}
@@ -75,9 +75,10 @@ jobs:
         run: |
           set -uo pipefail
           mkdir -p build/reports
-          chmod +x scripts/run-docker.sh scripts/build-rafcodephi-real-bootstrap.sh scripts/run-rafcodephi-bootstrap-docker.sh
+          test -f scripts/run-rafcodephi-bootstrap-docker.sh
+          test -f scripts/build-rafcodephi-real-bootstrap.sh
           set +e
-          bash ./scripts/run-rafcodephi-bootstrap-docker.sh ./scripts/build-rafcodephi-real-bootstrap.sh --architectures arm \
+          bash ./scripts/run-rafcodephi-bootstrap-docker.sh bash ./scripts/build-rafcodephi-real-bootstrap.sh --architectures arm \
             2>&1 | tee build/reports/bootstrap-arm.log
           rc=${PIPESTATUS[0]}
           set -e
@@ -96,7 +97,7 @@ jobs:
           set -uo pipefail
           mkdir -p build/reports
           set +e
-          bash ./scripts/run-rafcodephi-bootstrap-docker.sh ./scripts/build-rafcodephi-real-bootstrap.sh --architectures aarch64 \
+          bash ./scripts/run-rafcodephi-bootstrap-docker.sh bash ./scripts/build-rafcodephi-real-bootstrap.sh --architectures aarch64 \
             2>&1 | tee build/reports/bootstrap-aarch64.log
           rc=${PIPESTATUS[0]}
           set -e
@@ -123,7 +124,7 @@ jobs:
           d={
             'schema':'rafcodephi.bootstrap-failure-localizer/v3',
             'app_sha':'${{ github.sha }}',
-            'termux_packages_sha':'fd9b9c7ccb2ad385ed3a43619fe909fad4d92937',
+            'termux_packages_sha':os.environ['TERMUX_PACKAGES_BUILD_SHA'],
             'host_suite':'noble',
             'corrective_hypothesis':'stale_non_noble_doxygen_host_dependency_names',
             'package_identity_pre_materialized':True,
@@ -133,7 +134,7 @@ jobs:
             'aarch64_log_sha256':digest('bootstrap-aarch64.log'),
             'physical_android':'TOKEN_VAZIO',
             'claim_allowed':False,
-            'invariants':['probe_preconditions_match_parent_lane','diagnostic_PASS != usable_APK_PASS','ABI_localization != root_cause','corrective_patch != closure_until_rerun','TOKEN_VAZIO != PASS']
+            'invariants':['diagnostic_source_is_explicitly_pinned_not_parent_lane_equivalence','diagnostic_PASS != usable_APK_PASS','ABI_localization != root_cause','corrective_patch != closure_until_rerun','TOKEN_VAZIO != PASS']
           }
           (reports/'bootstrap-localizer-receipt.json').write_text(json.dumps(d,indent=2,sort_keys=True)+'\n')
           print(json.dumps(d,indent=2,sort_keys=True))
