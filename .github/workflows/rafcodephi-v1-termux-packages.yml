@@ -14,6 +14,7 @@ on:
     branches: [master]
     paths:
       - '.github/workflows/rafcodephi-v1-termux-packages.yml'
+      - 'scripts/prepare_bootstrap_env.sh'
       - 'data/contracts/termux-packages-rafcodephi-pin.v1.json'
       - 'scripts/resolve_termux_packages_pin.py'
       - 'docs/RAFCODEPHI_V1_TERMUX_PACKAGES.md'

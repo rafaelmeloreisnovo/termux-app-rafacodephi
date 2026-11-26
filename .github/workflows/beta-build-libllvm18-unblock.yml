@@ -9,6 +9,7 @@ on:
     paths:
       - '.github/workflows/beta-build-libllvm18-unblock.yml'
       - 'data/contracts/termux-packages-rafcodephi-pin.v1.json'
+      - 'scripts/prepare_bootstrap_env.sh'
       - 'scripts/resolve_termux_packages_pin.py'
       - 'scripts/validate_rafcodephi_packages_source.sh'
       - 'scripts/rafcodephi_packages_bridge.sh'
@@ -18,6 +19,7 @@ on:
     paths:
       - '.github/workflows/beta-build-libllvm18-unblock.yml'
       - 'data/contracts/termux-packages-rafcodephi-pin.v1.json'
+      - 'scripts/prepare_bootstrap_env.sh'
       - 'scripts/resolve_termux_packages_pin.py'
       - 'scripts/validate_rafcodephi_packages_source.sh'
       - 'scripts/rafcodephi_packages_bridge.sh'
@@ -277,6 +279,21 @@ jobs:
           print(json.dumps(doc, indent=2, sort_keys=True))
           PY
 
+      # Debian epoch filenames may contain colons; upload-artifact rejects them.
+      # Preserve exact names and bytes inside a tar, leaving the producer tree untouched.
+      - name: Archive raw Debian custody without renaming producer files
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=termux-packages/artifacts/rafcodephi-bootstrap
+          if [[ -d "$root/debs" ]]; then
+            mkdir -p build/reports
+            tar -C "$root" -cf build/reports/rafcodephi-bootstrap-debs.tar debs
+            tar -C "$root" -df build/reports/rafcodephi-bootstrap-debs.tar
+            sha256sum build/reports/rafcodephi-bootstrap-debs.tar > build/reports/rafcodephi-bootstrap-debs.tar.sha256
+          fi
+
       - name: Upload usable beta artifacts and custody evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -290,3 +307,4 @@ jobs:
             build/reports/
             termux-packages/build/reports/
             termux-packages/artifacts/rafcodephi-bootstrap/
+            !termux-packages/artifacts/rafcodephi-bootstrap/debs/**
