@@ -10,16 +10,18 @@
   ],
   "channels": {
     "canonical": {
-      "commit": "d65cd6c2afa9d16196ba0375aaff36833d530b41",
+      "commit": "7a96fb224de59f32e9e3e3c40a8235e9a5a3c8d9",
       "branch": "main",
       "state": "MERGED_BASELINE",
-      "previous_commit": "b5499741aada8a779099b4fd7aa0fd5067169bb8",
-      "source_scope": "Observed packages main after merged #174, #179, #183 and #184. PR183 source-build CI run 41904631252 passed at its historical head; main exact-SHA APK handoff, signed APT publishing and Android execution remain unproven.",
+      "previous_commit": "d65cd6c2afa9d16196ba0375aaff36833d530b41",
+      "source_scope": "Observed producer main at merge #175 (workflow-only delta after #196). #196 ARM/AArch64 staged libpython API29 gate passed at historical producer head; exact merged source APK, signed APT and physical execution remain unproven.",
       "source_lineage_prs": [
         174,
         179,
         183,
-        184
+        184,
+        196,
+        175
       ],
       "build_gate": "BLOCKED_MAIN_EXACT_SHA_APK_AND_SIGNED_APT_NOT_PROVEN",
       "claim_allowed": false,
@@ -164,6 +166,35 @@
       "event": "SUPERSEDED_AFTER_MERGE",
       "merged_pr": 183,
       "merged_head_sha": "e7f23f46d039d04577c035457c920047f03dc2a1"
+    },
+    {
+      "channel": "canonical",
+      "value": {
+        "commit": "d65cd6c2afa9d16196ba0375aaff36833d530b41",
+        "branch": "main",
+        "state": "MERGED_BASELINE",
+        "previous_commit": "b5499741aada8a779099b4fd7aa0fd5067169bb8",
+        "source_scope": "Observed packages main after merged #174, #179, #183 and #184. PR183 source-build CI run 41904631252 passed at its historical head; main exact-SHA APK handoff, signed APT publishing and Android execution remain unproven.",
+        "source_lineage_prs": [
+          174,
+          179,
+          183,
+          184
+        ],
+        "build_gate": "BLOCKED_MAIN_EXACT_SHA_APK_AND_SIGNED_APT_NOT_PROVEN",
+        "claim_allowed": false,
+        "physical_android": "TOKEN_VAZIO"
+      },
+      "superseded_on": "2026-11-26",
+      "reason": "Producer #196 merged; #175 subsequently merged with workflow-only delta; canonical consumer source must include Python API29 fix. Exact-head APK and physical runtime remain unproven.",
+      "event": "SUPERSEDED_AFTER_MERGE",
+      "merged_pr": 196,
+      "merged_prs": [
+        196,
+        175
+      ],
+      "merge_commit": "3940aa58ec5367304823529990d08570d5205b12",
+      "successor_commit": "7a96fb224de59f32e9e3e3c40a8235e9a5a3c8d9"
     }
   ]
 }

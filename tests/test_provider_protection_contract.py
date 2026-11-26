@@ -70,6 +70,31 @@ class ProviderProtectionContractTests(unittest.TestCase):
             default_branch="master",
         )
 
+    def test_all_branches_ruleset_coverage_and_exclusions(self) -> None:
+        from unittest.mock import patch
+        for include, exclude, target, expected in (
+            (["~ALL"], [], "branch", True),
+            (["~DEFAULT_BRANCH"], [], "branch", True),
+            (["refs/heads/master"], ["refs/heads/other"], "branch", True),
+            (["~ALL"], ["refs/heads/master"], "branch", False),
+            (["~ALL"], ["~DEFAULT_BRANCH"], "branch", False),
+            (["~ALL"], ["refs/heads/m*"], "branch", False),
+            (["~ALL"], [], "tag", False),
+            (["refs/heads/other"], [], "branch", False),
+        ):
+            with self.subTest(include=include, exclude=exclude, target=target):
+                live = self._live_ruleset()[0]
+                live["target"] = target
+                live["conditions"]["ref_name"] = {"include": include, "exclude": exclude}
+                with patch.object(self.mod, "github_get", side_effect=[[live], live]):
+                    actual = self.mod.fetch_live_rulesets("owner/repo", "master", "")
+                self.assertEqual(bool(actual), expected)
+        live = self._live_ruleset(include_status=False)[0]
+        live["conditions"]["ref_name"]["include"] = ["~ALL"]
+        with patch.object(self.mod, "github_get", side_effect=[[live], live]):
+            actual = self.mod.fetch_live_rulesets("owner/repo", "master", "")
+        self.assertEqual(self._evaluate(actual)["gate"], "FAIL")
+
     def test_target_schema_is_canonical(self) -> None:
         self.assertEqual(
             self.contract["schema"],

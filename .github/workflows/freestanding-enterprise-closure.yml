@@ -58,8 +58,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # PR proof consumes the immutable candidate; default builds stay on merged main.
-  TERMUX_PACKAGES_RAF_CHANNEL: ${{ github.event_name == 'pull_request' && 'candidate' || 'canonical' }}
+  # No active producer candidate is verified; use the immutable merged baseline.
+  TERMUX_PACKAGES_RAF_CHANNEL: canonical
   TERMUX_PACKAGES_RAF_REQUIRE_PINNED: 'true'
   CLAIM_ALLOWED: 'false'
   PHYSICAL_ANDROID: 'TOKEN_VAZIO'

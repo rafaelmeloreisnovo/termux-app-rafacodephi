@@ -250,7 +250,7 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         if (!verbativoBootstrap.executeBootstrap()) {
             Logger.logWarn(LOG_TAG, "Verbovivo diagnostic unavailable; terminal initialization continues");
         } else {
-            Logger.logInfo(LOG_TAG, "Verbovivo bootstrap validation PASSED - " + verbativoBootstrap.formatMetrics());
+            Logger.logInfo(LOG_TAG, "Verbovivo diagnostic=PASS_SCOPED_LOCAL - " + verbativoBootstrap.formatMetrics());
         }
 
         setMargins();

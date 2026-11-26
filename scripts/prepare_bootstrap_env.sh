@@ -39,6 +39,16 @@ else
   ./scripts/ci_android_preflight.sh >&2
 fi
 
+# Strict hashing is mandatory even when the caller skips Android setup.
+# Reuse the existing Ubuntu build-host b3sum dependency; never disable the gate.
+if [[ "${GITHUB_ACTIONS:-false}" == "true" ]] && ! command -v b3sum >/dev/null 2>&1; then
+  log "Provisioning existing strict BLAKE3 checksum tool before bootstrap preparation"
+  sudo apt-get update >&2
+  sudo apt-get install --yes --no-install-recommends b3sum >&2
+  command -v b3sum >/dev/null 2>&1 || { log "ERROR: b3sum unavailable after installation"; exit 1; }
+  b3sum --version >&2
+fi
+
 BOOTSTRAP_SOURCE="${RAF_BOOTSTRAP_SOURCE:-local}"
 PROFILE_REQUIREMENT="auto"
 SOURCE_BUILT_RECEIPT_MATRIX=""

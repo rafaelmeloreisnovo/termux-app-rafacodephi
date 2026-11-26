@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077  # Device receipts are private unless explicitly reviewed for disclosure.
 
 # RAFCODEPHI physical-device receipt collector.
 # Runs inside installed com.termux.rafacodephi without root.
@@ -49,7 +50,8 @@ while (($#)); do
   esac
 done
 
-command -v python3 >/dev/null 2>&1 || die "python3 is required"
+command -v python3 >/dev/null 2>&1 || die "PYTHON_NOT_INSTALLED"
+python3 -c 'import json, hashlib' >/dev/null 2>&1 || die "PYTHON_RUNTIME_BROKEN: dynamic linker or Python initialization failed"
 command -v sha256sum >/dev/null 2>&1 || die "sha256sum is required"
 command -v getprop >/dev/null 2>&1 || die "Android getprop unavailable"
 command -v pm >/dev/null 2>&1 || die "Android package manager CLI unavailable"
@@ -68,7 +70,11 @@ case "$abi" in
   *) die "unsupported ABI for canonical RAFCODEPHI proof: $abi" ;;
 esac
 
-[[ "${PREFIX:-}" == "$EXPECTED_PREFIX" ]] || die "PREFIX drift: ${PREFIX:-<unset>} != $EXPECTED_PREFIX"
+# /data/user/0 and /data/data may be aliases for this app's private prefix.
+[[ -n "${PREFIX:-}" ]] || die "PREFIX_UNSET"
+actual_prefix="$(readlink -f "$PREFIX")" || die "PREFIX_UNRESOLVABLE"
+expected_prefix="$(readlink -f "$EXPECTED_PREFIX")" || die "EXPECTED_PREFIX_UNRESOLVABLE"
+[[ -d "$actual_prefix" && "$actual_prefix" == "$expected_prefix" ]] || die "PREFIX_DRIFT"
 
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
@@ -153,7 +159,9 @@ command -v pkg >/dev/null 2>&1 || die "pkg not in PATH"
 command -v apt >/dev/null 2>&1 || die "apt not in PATH"
 apt --version >/dev/null 2>&1 || die "apt --version failed"
 
-apk_listing="$(pm path "$PACKAGE" 2>/dev/null || true)"
+# Never substitute an inferred APK path or falsely mark runtime custody PASS.
+apk_listing="$(pm path "$PACKAGE" 2>"$workdir/pm.stderr")" || \
+  die "ANDROID_PACKAGE_MANAGER_UNAVAILABLE: pm path failed; installed APK hash unverified"
 apk_path="$(printf '%s\n' "$apk_listing" | sed -n 's/^package://p' | head -n 1)"
 [[ -n "$apk_path" ]] || die "pm path could not resolve installed $PACKAGE"
 [[ -r "$apk_path" ]] || die "installed APK is not readable: $apk_path"
@@ -175,38 +183,59 @@ set -e
 stdout_sha256="$(sha256sum "$stdout_file" | awk '{print $1}')"
 
 tmp_json="$workdir/receipt.json"
-python3 - "$tmp_json" <<PY
-import hashlib, json, pathlib
-out = pathlib.Path(${tmp_json@Q})
+# Pass values as argv with a quoted heredoc: no shell text may become Python source.
+# This remains local diagnostic evidence and cannot self-promote to device E2E.
+python3 - \
+  "$tmp_json" "$generated_at" "$APP_REPO" "$APP_GIT_COMMIT" \
+  "$BUILD_RECEIPT_SHA256" "$APK_SHA256" "$BOOTSTRAP_SOURCE_REPOSITORY" \
+  "$BOOTSTRAP_SOURCE_COMMIT" "$BOOTSTRAP_SOURCE_MANIFEST_SHA256" \
+  "$BOOTSTRAP_SHA256" "$BOOTSTRAP_PROFILE_SHA256" \
+  "$manufacturer" "$model" "$android_release" "$abi" "$PACKAGE" \
+  "$EXPECTED_PREFIX" "$apk_path" "$installed_apk_sha256" \
+  "$WORKLOAD" "$workload_rc" "$stdout_sha256" <<'PY'
+import hashlib
+import json
+import pathlib
+import sys
+
+(
+    output, generated_at, app_repo, app_commit, build_receipt_sha256,
+    apk_sha256, bootstrap_source_repository, bootstrap_source_commit,
+    bootstrap_source_manifest_sha256, bootstrap_sha256, bootstrap_profile_sha256,
+    manufacturer, model, android_release, abi, package, prefix,
+    apk_path, installed_apk_sha256, workload, workload_rc, stdout_sha256,
+) = sys.argv[1:]
+
+out = pathlib.Path(output)
 doc = {
     "schema": "rafcodephi.e2e-device-receipt/v1",
     "receipt_id": "0" * 64,
-    "generated_at": ${generated_at@Q},
+    "generated_at": generated_at,
     "provenance": {
-        "repository": ${APP_REPO@Q},
-        "git_commit": ${APP_GIT_COMMIT@Q},
-        "build_receipt_sha256": ${BUILD_RECEIPT_SHA256@Q},
-        "apk_sha256": ${APK_SHA256@Q},
-        "bootstrap_source_repository": ${BOOTSTRAP_SOURCE_REPOSITORY@Q},
-        "bootstrap_source_commit": ${BOOTSTRAP_SOURCE_COMMIT@Q},
-        "bootstrap_source_manifest_sha256": ${BOOTSTRAP_SOURCE_MANIFEST_SHA256@Q},
-        "bootstrap_sha256": ${BOOTSTRAP_SHA256@Q},
-        "bootstrap_profile_sha256": ${BOOTSTRAP_PROFILE_SHA256@Q},
+        "repository": app_repo,
+        "git_commit": app_commit,
+        "build_receipt_sha256": build_receipt_sha256,
+        "apk_sha256": apk_sha256,
+        "bootstrap_source_repository": bootstrap_source_repository,
+        "bootstrap_source_commit": bootstrap_source_commit,
+        "bootstrap_source_manifest_sha256": bootstrap_source_manifest_sha256,
+        "bootstrap_sha256": bootstrap_sha256,
+        "bootstrap_profile_sha256": bootstrap_profile_sha256,
     },
     "device": {
-        "manufacturer": ${manufacturer@Q},
-        "model": ${model@Q},
-        "android_release": ${android_release@Q},
-        "abi": ${abi@Q},
-        "package": ${PACKAGE@Q},
-        "prefix": ${EXPECTED_PREFIX@Q},
-        "installed_apk_path": ${apk_path@Q},
-        "installed_apk_sha256": ${installed_apk_sha256@Q},
+        "manufacturer": manufacturer,
+        "model": model,
+        "android_release": android_release,
+        "abi": abi,
+        "package": package,
+        "prefix": prefix,
+        "installed_apk_path": apk_path,
+        "installed_apk_sha256": installed_apk_sha256,
     },
     "workload": {
-        "command": ${WORKLOAD@Q},
-        "exit_code": int(${workload_rc@Q}),
-        "stdout_sha256": ${stdout_sha256@Q},
+        "command": workload,
+        "exit_code": int(workload_rc),
+        "stdout_sha256": stdout_sha256,
     },
     "stages": {
         "packages": "PASS",
@@ -229,8 +258,18 @@ PY
 if [[ -z "$OUT" ]]; then
   OUT="reports/device-e2e/${generated_at//[:+]/_}-${abi}.json"
 fi
-mkdir -p "$(dirname "$OUT")"
-cp "$tmp_json" "$OUT"
+# Append-only: never overwrite a previous device observation, even on retry.
+receipt_dir="$(dirname -- "$OUT")"
+mkdir -p -- "$receipt_dir"
+receipt_tmp="$(mktemp "$receipt_dir/.e2e-receipt.XXXXXXXX")" || die "RECEIPT_TEMP_CREATE_FAILED"
+trap 'rm -rf "$workdir"; rm -f "$receipt_tmp"' EXIT
+cp -- "$tmp_json" "$receipt_tmp" || die "RECEIPT_TEMP_WRITE_FAILED"
+chmod 600 "$receipt_tmp" || die "RECEIPT_PERMISSIONS_FAILED"
+# Hard link is atomic and fails if the destination already exists (also blocks symlinks).
+ln -- "$receipt_tmp" "$OUT" || die "RECEIPT_DESTINATION_EXISTS_OR_LINK_FAILED"
+rm -f -- "$receipt_tmp"
+receipt_tmp=""
+
 
 printf 'receipt=%s\n' "$OUT"
 printf 'receipt_sha256=%s\n' "$(sha256sum "$OUT" | awk '{print $1}')"

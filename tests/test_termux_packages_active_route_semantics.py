@@ -41,7 +41,7 @@ def main() -> int:
     canonical = doc["channels"]["canonical"]
     candidate = doc["channels"]["candidate"]
     assert canonical["state"] == "MERGED_BASELINE"
-    assert canonical["commit"] == "d65cd6c2afa9d16196ba0375aaff36833d530b41"
+    assert canonical["commit"] == "7a96fb224de59f32e9e3e3c40a8235e9a5a3c8d9"
     assert candidate["state"] == "BLOCKED_NO_ACTIVE_UNMERGED_CANDIDATE"
     assert candidate["promotion_target"] == "canonical"
     assert canonical["commit"] != candidate["commit"]
@@ -52,7 +52,7 @@ def main() -> int:
     }
     assert candidate["commit"] == "TOKEN_VAZIO"
     assert 174 in merged_history
-    assert canonical["source_lineage_prs"] == [174, 179, 183, 184]
+    assert canonical["source_lineage_prs"] == [174, 179, 183, 184, 196, 175]
     assert canonical["build_gate"] == "BLOCKED_MAIN_EXACT_SHA_APK_AND_SIGNED_APT_NOT_PROVEN"
     assert 183 in merged_history
     assert "pull_request" not in candidate
@@ -90,6 +90,10 @@ def main() -> int:
     assert "TERMUX_PACKAGES_RAF_REF: canonical" in apk_matrix
     assert "default: canonical" in v1 and "resolve_termux_packages_pin.py" in v1
     assert "default: canonical" in control and "resolve_termux_packages_pin.py" in control
+    enterprise = (ROOT / ".github/workflows/freestanding-enterprise-closure.yml").read_text()
+    assert "TERMUX_PACKAGES_RAF_CHANNEL: canonical" in enterprise
+    for route in (control, enterprise):
+        assert "github.event_name == 'pull_request' && 'candidate'" not in route
     assert "TERMUX_PACKAGES_RAF_CHANNEL: canonical" in beta
     assert "resolve_termux_packages_pin.py" in beta
     assert "bcb1dfec1ecc72cd3acee80b5bf3706cead4849c" not in beta

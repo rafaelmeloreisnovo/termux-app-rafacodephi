@@ -13,15 +13,18 @@ import android.util.Log;
 import com.termux.rafaelia.VerbativoCore;
 
 import java.io.File;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.Locale;
 
 public class VerbativoBootstrapManager {
     private static final String TAG = "VerbativoBootstrap";
     private static final String RECEIPT_DIR = "verbovivo";
     private static final String RECEIPT_FILE = "convergence_receipt.bin";
+    private static final int RECEIPT_BYTES = 26;
 
     private final Context context;
     private byte[] convergenceReceipt;
@@ -38,6 +41,9 @@ public class VerbativoBootstrapManager {
      * @return true if bootstrap passed validation, false if failed (fail-closed)
      */
     public boolean executeBootstrap() {
+        // A retry must never inherit the previous invocation's validated state.
+        initialized = false;
+        convergenceReceipt = null;
         Log.i(TAG, "Starting Verbovivo bootstrap validation");
 
         try {
@@ -49,26 +55,26 @@ public class VerbativoBootstrapManager {
             Log.d(TAG, "✓ Verbovivo core initialized");
 
             // Step 2: Generate convergence receipt
-            convergenceReceipt = VerbativoCore.generateConvergenceReceipt();
-            if (convergenceReceipt == null || convergenceReceipt.length < 26) {
+            byte[] candidateReceipt = VerbativoCore.generateConvergenceReceipt();
+            if (candidateReceipt == null || candidateReceipt.length != RECEIPT_BYTES) {
                 Log.e(TAG, "Failed to generate convergence receipt");
                 return false;
             }
             Log.d(TAG, "✓ Convergence receipt generated (26 bytes)");
 
             // Step 3: Validate receipt structure
-            if (VerbativoCore.validateConvergenceReceipt(convergenceReceipt) != 0) {
+            if (VerbativoCore.validateConvergenceReceipt(candidateReceipt) != 0) {
                 Log.e(TAG, "Convergence receipt validation failed");
                 return false;
             }
             Log.d(TAG, "✓ Receipt validation passed");
 
             // Step 4: Extract and log metrics
-            long h_norm = decodeUint64BE(convergenceReceipt, 0);
-            long c_norm = decodeUint64BE(convergenceReceipt, 8);
-            long phi_fst = decodeUint64BE(convergenceReceipt, 16);
-            int attractor_id = convergenceReceipt[24] & 0xFF;
-            int status = convergenceReceipt[25] & 0xFF;
+            long h_norm = decodeUint64BE(candidateReceipt, 0);
+            long c_norm = decodeUint64BE(candidateReceipt, 8);
+            long phi_fst = decodeUint64BE(candidateReceipt, 16);
+            int attractor_id = candidateReceipt[24] & 0xFF;
+            int status = candidateReceipt[25] & 0xFF;
 
             double h_percent = (h_norm * 100.0) / 0x10000;
             double c_percent = (c_norm * 100.0) / 0x10000;
@@ -79,11 +85,15 @@ public class VerbativoBootstrapManager {
                 h_percent, c_percent, phi_percent, attractor_id, status));
 
             // Step 5: Store receipt for audit/attestation
-            storeReceipt();
-            Log.d(TAG, "✓ Receipt stored for audit trail");
+            if (!storeReceipt(candidateReceipt)) {
+                Log.e(TAG, "Convergence receipt persistence/readback failed");
+                return false;
+            }
+            Log.d(TAG, "✓ Receipt stored and read back");
 
+            convergenceReceipt = candidateReceipt.clone();
             initialized = true;
-            Log.i(TAG, "✅ Verbovivo bootstrap validation PASSED");
+            Log.i(TAG, "Verbovivo local diagnostic receipt validated and persisted; device E2E remains unverified");
             return true;
 
         } catch (Exception e) {
@@ -104,7 +114,7 @@ public class VerbativoBootstrapManager {
      * @return convergence receipt (26 bytes) or null if not available
      */
     public byte[] getConvergenceReceipt() {
-        return convergenceReceipt;
+        return initialized && convergenceReceipt != null ? convergenceReceipt.clone() : null;
     }
 
     /**
@@ -115,50 +125,68 @@ public class VerbativoBootstrapManager {
     }
 
     /**
-     * Store receipt for audit trail and device attestation.
+     * Store a local diagnostic receipt for audit. This is not remote/device attestation.
      * Receipt is stored in app's private data directory.
      */
-    private void storeReceipt() {
+    private boolean storeReceipt(byte[] receipt) {
+        if (receipt == null || receipt.length != RECEIPT_BYTES) return false;
+        File temp = null;
         try {
             File receiptDir = new File(context.getFilesDir(), RECEIPT_DIR);
-            if (!receiptDir.exists() && !receiptDir.mkdirs()) {
+            if (!receiptDir.isDirectory() && !receiptDir.mkdirs()) {
                 Log.w(TAG, "Failed to create receipt directory");
-                return;
+                return false;
             }
 
-            File receiptFile = new File(receiptDir, RECEIPT_FILE);
-            java.io.FileOutputStream fos = new java.io.FileOutputStream(receiptFile);
-            fos.write(convergenceReceipt);
-            fos.close();
+            // Unique temporary file in the same directory: no partial final receipt.
+            temp = File.createTempFile("convergence_receipt.", ".tmp", receiptDir);
+            try (FileOutputStream stream = new FileOutputStream(temp)) {
+                stream.write(receipt);
+                stream.getFD().sync();
+            }
 
-            Log.d(TAG, "Receipt stored: " + receiptFile.getAbsolutePath());
+            File destination = new File(receiptDir, RECEIPT_FILE);
+            if (!temp.renameTo(destination)) {
+                Log.w(TAG, "Could not atomically replace receipt");
+                return false;
+            }
 
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to store receipt", e);
+            // Readback is required before the audit layer reports success.
+            byte[] persisted = retrieveStoredReceipt();
+            return Arrays.equals(receipt, persisted);
+        } catch (IOException | SecurityException e) {
+            Log.w(TAG, "Failed to store/readback receipt", e);
+            return false;
+        } finally {
+            if (temp != null && temp.exists() && !temp.delete()) {
+                Log.w(TAG, "Could not clean temporary receipt");
+            }
         }
     }
 
     /**
-     * Retrieve stored convergence receipt for inspection/audit.
-     *
-     * @return receipt bytes or null if not available
+     * Read a bounded binary receipt; reject short, oversized or truncated files.
+     * This is storage-integrity checking, not independent cryptographic attestation.
      */
     public byte[] retrieveStoredReceipt() {
+        File receiptFile = new File(context.getFilesDir(), RECEIPT_DIR + "/" + RECEIPT_FILE);
         try {
-            File receiptFile = new File(context.getFilesDir(), RECEIPT_DIR + "/" + RECEIPT_FILE);
-            if (!receiptFile.exists()) {
+            if (!receiptFile.isFile() || receiptFile.length() != RECEIPT_BYTES) {
                 return null;
             }
-
-            java.io.FileInputStream fis = new java.io.FileInputStream(receiptFile);
-            byte[] data = new byte[(int)receiptFile.length()];
-            fis.read(data);
-            fis.close();
-
+            byte[] data = new byte[RECEIPT_BYTES];
+            try (FileInputStream stream = new FileInputStream(receiptFile)) {
+                int offset = 0;
+                while (offset < data.length) {
+                    int read = stream.read(data, offset, data.length - offset);
+                    if (read <= 0) return null;
+                    offset += read;
+                }
+                if (stream.read() != -1) return null;
+            }
             return data;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to retrieve receipt", e);
+        } catch (IOException | SecurityException e) {
+            Log.w(TAG, "Failed to retrieve receipt", e);
             return null;
         }
     }
